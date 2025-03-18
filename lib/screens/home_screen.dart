@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:miniature_paint_finder/data/sample_data.dart';
-import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/components/library_tab.dart';
+import 'package:miniature_paint_finder/components/paint_list_tab.dart';
+import 'package:miniature_paint_finder/components/profile_tab.dart';
+import 'package:miniature_paint_finder/components/search_tab.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
-import 'package:miniature_paint_finder/screens/paint_detail_screen.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -15,9 +18,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Lista de elementos del drawer
+  final List<Map<String, dynamic>> _drawerItems = [
+    {
+      'icon': Icons.inventory_2_outlined,
+      'text': 'Inventory',
+      'index': -1,
+      'screen': 'inventory',
+    },
+    {'icon': Icons.favorite_border, 'text': 'Wishlist', 'index': -1},
+    {'icon': Icons.colorize_outlined, 'text': 'Paint Sets', 'index': -1},
+    {
+      'icon': Icons.auto_awesome_mosaic,
+      'text': 'Library',
+      'index': -2,
+      'screen': 'library',
+    },
+    {
+      'icon': Icons.collections_bookmark_outlined,
+      'text': 'My Library',
+      'index': 1,
+    },
+    {'icon': Icons.palette_outlined, 'text': 'My Palettes', 'index': -1},
+  ];
+
+  final List<Map<String, dynamic>> _bottomDrawerItems = [
+    {'icon': Icons.settings_outlined, 'text': 'Settings', 'index': -1},
+    {'icon': Icons.help_outline, 'text': 'Help & Feedback', 'index': -1},
+  ];
 
   static const List<Widget> _screens = <Widget>[
     PaintListTab(),
+    LibraryTab(),
     SearchTab(),
     ProfileTab(),
   ];
@@ -28,23 +62,57 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  void _closeDrawer() {
+    Navigator.pop(context);
+  }
+
+  void _navigateToScreen(String screen) {
+    _closeDrawer();
+
+    switch (screen) {
+      case 'library':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LibraryScreen()),
+        );
+        break;
+
+      case 'inventory':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const InventoryScreen()),
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar:
-          _selectedIndex == 0
+          _selectedIndex == 0 || _selectedIndex == 1
               ? AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: _openDrawer,
+                ),
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Hi Angelo,'),
-                    Text(
-                      'You have 5 paints pending this week',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(_selectedIndex == 0 ? 'Hi Angelo,' : 'My Library'),
+                    if (_selectedIndex == 0)
+                      Text(
+                        'You have 5 paints pending this week',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                   ],
                 ),
                 actions: [
@@ -73,7 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               )
               : AppBar(
-                title: Text(_selectedIndex == 1 ? 'Search' : 'Profile'),
+                leading: IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: _openDrawer,
+                ),
+                title: Text(_selectedIndex == 2 ? 'Search' : 'Profile'),
                 actions: [
                   IconButton(
                     icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
@@ -88,6 +160,134 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+      drawer: Theme(
+        data: Theme.of(context).copyWith(
+          canvasColor:
+              Theme.of(context).brightness == Brightness.dark
+                  ? AppTheme.darkSurface
+                  : Colors.white,
+        ),
+        child: Drawer(
+          elevation: 10,
+          width: MediaQuery.of(context).size.width * 0.75,
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Cabecera del Drawer
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 24,
+                    horizontal: 16,
+                  ),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 28,
+                        backgroundImage: NetworkImage(
+                          'https://randomuser.me/api/portraits/men/1.jpg',
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Angelo',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Paint Collector',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white70
+                                      : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(),
+
+                // Elementos del menú
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _drawerItems.length,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemBuilder: (context, index) {
+                      final item = _drawerItems[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        child: _buildDrawerItem(
+                          icon: item['icon'],
+                          text: item['text'],
+                          isSelected: _selectedIndex == item['index'],
+                          onTap: () {
+                            if (item['screen'] != null) {
+                              _navigateToScreen(item['screen']);
+                              return;
+                            }
+
+                            final targetIndex = item['index'];
+                            if (targetIndex >= 0) {
+                              setState(() {
+                                _selectedIndex = targetIndex;
+                              });
+                            }
+                            _closeDrawer();
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Botones inferiores
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Divider(),
+                    ...List.generate(_bottomDrawerItems.length, (index) {
+                      final item = _bottomDrawerItems[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
+                        child: _buildDrawerItem(
+                          icon: item['icon'],
+                          text: item['text'],
+                          isSelected: false,
+                          onTap: () {
+                            _closeDrawer();
+                          },
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: _screens.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -111,6 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.collections_bookmark_outlined),
+              activeIcon: Icon(Icons.collections_bookmark),
+              label: 'My Library',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.search_outlined),
               activeIcon: Icon(Icons.search),
               label: 'Search',
@@ -127,603 +332,32 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
 
-class PaintListTab extends StatelessWidget {
-  const PaintListTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final paints = SampleData.getPaints();
-
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tarjeta de puntos (similar a la tarjeta azul en la imagen)
-            Card(
-              color: AppTheme.primaryBlue,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${paints.length * 30} Points',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Great job! Keep adding paints to your collection.',
-                            style: TextStyle(fontSize: 14, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.primaryBlue,
-                      ),
-                      child: const Text('Add new paint'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Sección de Pendientes (como las tarjetas Law of Motion en la imagen)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Recent Paints',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                TextButton(onPressed: () {}, child: const Text('See all')),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.5,
-              ),
-              itemCount: 4,
-              itemBuilder: (context, index) {
-                final paint = paints[index];
-                return PaintGridCard(
-                  paint: paint,
-                  color: AppTheme.getCategoryColor(index),
-                );
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // Sección de Categorías (como los botones de Subjects en la imagen)
-            Text('Categories', style: Theme.of(context).textTheme.titleMedium),
-
-            const SizedBox(height: 12),
-
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.5,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                CategoryCard(
-                  title: 'Citadel',
-                  count: 7,
-                  color: AppTheme.primaryBlue,
-                  onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Vallejo',
-                  count: 3,
-                  color: AppTheme.pinkColor,
-                  onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Army Painter',
-                  count: 0,
-                  color: AppTheme.purpleColor,
-                  onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Scale75',
-                  count: 0,
-                  color: AppTheme.orangeColor,
-                  onTap: () {},
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Lista de todas las pinturas
-            Text('All Paints', style: Theme.of(context).textTheme.titleMedium),
-
-            const SizedBox(height: 12),
-
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: paints.length,
-              itemBuilder: (context, index) {
-                final paint = paints[index];
-                return PaintCard(paint: paint);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class PaintGridCard extends StatelessWidget {
-  final Paint paint;
-  final Color color;
-
-  const PaintGridCard({super.key, required this.paint, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaintDetailScreen(paint: paint),
-          ),
-        );
-      },
-      child: Card(
-        color: color.withOpacity(0.1),
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                paint.name,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(paint.brand, style: Theme.of(context).textTheme.bodySmall),
-              const Spacer(),
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Color(
-                        int.parse(paint.colorHex.substring(1, 7), radix: 16) +
-                            0xFF000000,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    paint.category,
-                    style: TextStyle(fontSize: 12, color: color),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class CategoryCard extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color color;
-  final VoidCallback onTap;
-
-  const CategoryCard({
-    super.key,
-    required this.title,
-    required this.count,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            if (count > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  count.toString(),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class PaintCard extends StatelessWidget {
-  final Paint paint;
-
-  const PaintCard({super.key, required this.paint});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PaintDetailScreen(paint: paint),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Color(
-                    int.parse(paint.colorHex.substring(1, 7), radix: 16) +
-                        0xFF000000,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      paint.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          paint.brand,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.lightBlue,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            paint.category,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (paint.isMetallic)
-                          Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'Metallic',
-                              style: TextStyle(fontSize: 10),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppTheme.textGrey),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SearchTab extends StatelessWidget {
-  const SearchTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Find Paints by Color',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          const TextField(
-            decoration: InputDecoration(
-              hintText: 'Enter color name or hex code',
-              prefixIcon: Icon(Icons.color_lens),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Or take a photo to match',
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // Camera functionality would go here
-              },
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Take Photo'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Popular Colors',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ColorChip(color: Colors.red[900]!, label: 'Red'),
-              ColorChip(color: Colors.blue[800]!, label: 'Blue'),
-              ColorChip(color: Colors.green[700]!, label: 'Green'),
-              ColorChip(color: Colors.amber[600]!, label: 'Yellow'),
-              ColorChip(color: Colors.purple[500]!, label: 'Purple'),
-              ColorChip(color: Colors.black, label: 'Black'),
-              ColorChip(color: Colors.white, label: 'White'),
-              ColorChip(color: Colors.grey, label: 'Grey'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ColorChip extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const ColorChip({super.key, required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      avatar: CircleAvatar(backgroundColor: color, radius: 12),
-      label: Text(label),
-    );
-  }
-}
-
-class ProfileTab extends StatelessWidget {
-  const ProfileTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-          const SizedBox(height: 16),
-          const Text(
-            'User Profile',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 32),
-          ProfileMenuItem(
-            icon: Icons.collections,
-            title: 'My Collection',
-            onTap: () {
-              // Navigate to collection screen
-            },
-          ),
-          ProfileMenuItem(
-            icon: Icons.favorite,
-            title: 'Favorites',
-            onTap: () {
-              // Navigate to favorites screen
-            },
-          ),
-          ProfileMenuItem(
-            icon: Icons.history,
-            title: 'Recent Searches',
-            onTap: () {
-              // Navigate to recent searches
-            },
-          ),
-          ProfileMenuItem(
-            icon: Icons.settings,
-            title: 'Settings',
-            onTap: () {
-              // Navigate to settings screen
-            },
-          ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Theme Settings',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                RadioListTile<String>(
-                  title: const Text('System Theme'),
-                  value: ThemeProvider.SYSTEM_THEME,
-                  groupValue: themeProvider.themePreference,
-                  onChanged: (value) {
-                    if (value != null) {
-                      themeProvider.setThemeMode(value);
-                    }
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('Light Theme'),
-                  value: ThemeProvider.LIGHT_THEME,
-                  groupValue: themeProvider.themePreference,
-                  onChanged: (value) {
-                    if (value != null) {
-                      themeProvider.setThemeMode(value);
-                    }
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('Dark Theme'),
-                  value: ThemeProvider.DARK_THEME,
-                  groupValue: themeProvider.themePreference,
-                  onChanged: (value) {
-                    if (value != null) {
-                      themeProvider.setThemeMode(value);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          OutlinedButton.icon(
-            onPressed: () {
-              // Login functionality will be added later
-            },
-            icon: const Icon(Icons.login),
-            label: const Text('Sign In'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(50),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProfileMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const ProfileMenuItem({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      leading: Icon(
+        icon,
+        color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade600,
+        size: 24,
+      ),
+      title: Text(
+        text,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? AppTheme.primaryBlue : null,
+        ),
+      ),
       onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      dense: true,
+      tileColor: isSelected ? AppTheme.lightBlue.withOpacity(0.3) : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }
