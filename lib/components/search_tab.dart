@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/components/color_chip.dart';
 import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/components/basic_image_viewer.dart';
 
 class SearchTab extends StatefulWidget {
   const SearchTab({super.key});
@@ -235,11 +236,60 @@ class _ColorSearchViewState extends State<ColorSearchView> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ImageColorPicker(
-                  imageFile: widget.imageFile,
-                  onColorPicked: (color) {
-                    // Handle picked color
+                Text('Ruta de la imagen: ${widget.imageFile.path}'),
+                Text(
+                  'Tamaño del archivo: ${(widget.imageFile.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                ),
+                Text(
+                  '¿Existe el archivo? ${widget.imageFile.existsSync() ? 'Sí' : 'No'}',
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      widget.imageFile,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error,
+                              color: Colors.red,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Error: $error'),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Intentando mostrar imagen en: ${widget.imageFile.path}',
+                        ),
+                      ),
+                    );
                   },
+                  child: const Text('Verificar imagen'),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 400,
+                  child: BasicImageViewer(imageFile: widget.imageFile),
                 ),
               ],
             ),

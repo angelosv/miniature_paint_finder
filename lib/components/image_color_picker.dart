@@ -1,33 +1,17 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-class ColorPoint {
-  final Offset position;
-  final Color color;
-  final String hexCode;
-  final String rgbCode;
-
-  ColorPoint({
-    required this.position,
-    required this.color,
-    required this.hexCode,
-    required this.rgbCode,
-  });
-}
 
 class ImageColorPicker extends StatefulWidget {
   final File imageFile;
-  final Function(Color color) onColorPicked;
+  final Function(List<Color> colors) onColorsSelected;
 
   const ImageColorPicker({
     Key? key,
     required this.imageFile,
-    required this.onColorPicked,
+    required this.onColorsSelected,
   }) : super(key: key);
 
   @override
@@ -36,12 +20,15 @@ class ImageColorPicker extends StatefulWidget {
 
 class _ImageColorPickerState extends State<ImageColorPicker> {
   ui.Image? _image;
-  List<ColorPoint> _selectedPoints = [];
-  bool _isImageLoading = true;
+  ByteData? _imageBytes;
+  int _imageWidth = 0;
+  int _imageHeight = 0;
+  bool _isLoading = true;
+  List<_ColorPoint> _selectedColors = [];
+
+  // Para zoom
   final TransformationController _transformationController =
       TransformationController();
-
-  final GlobalKey _imageKey = GlobalKey();
 
   @override
   void initState() {
@@ -57,349 +44,328 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
 
   Future<void> _loadImage() async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
+
       final bytes = await widget.imageFile.readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes);
       final frameInfo = await codec.getNextFrame();
+      final image = frameInfo.image;
+
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      );
 
       setState(() {
-        _image = frameInfo.image;
-        _isImageLoading = false;
+        _image = image;
+        _imageBytes = byteData;
+        _imageWidth = image.width;
+        _imageHeight = image.height;
+        _isLoading = false;
       });
     } catch (e) {
-      print('Error al cargar la imagen: $e');
+      print('Error loading image: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  Future<Color> _getImagePixelColor(
-    BuildContext context,
-    Offset globalPosition,
-  ) async {
-    if (_image == null) return Colors.transparent;
-
-    // Obtenemos el widget de imagen
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final Size size = renderBox.size;
-
-    // Convertimos la posición global a local
-    final localPosition = renderBox.globalToLocal(globalPosition);
-
-    // Calculamos la posición relativa (0-1) dentro del widget
-    double dx = localPosition.dx / size.width;
-    double dy = localPosition.dy / size.height;
-
-    // Nos aseguramos de que estamos dentro de los límites
-    if (dx < 0 || dx > 1 || dy < 0 || dy > 1) {
-      return Colors.transparent;
-    }
+  Color? _getPixelColor(double relativeX, double relativeY) {
+    if (_image == null || _imageBytes == null) return null;
 
     try {
-      // Calculamos la posición en pixels en la imagen original
-      int px = (dx * _image!.width).floor();
-      int py = (dy * _image!.height).floor();
+      // Calcular la posición del pixel en la imagen original
+      int pixelX = (relativeX * _imageWidth).round();
+      int pixelY = (relativeY * _imageHeight).round();
 
-      // Corregimos los límites
-      px = math.max(0, math.min(px, _image!.width - 1));
-      py = math.max(0, math.min(py, _image!.height - 1));
+      // Verificar límites
+      if (pixelX < 0 ||
+          pixelX >= _imageWidth ||
+          pixelY < 0 ||
+          pixelY >= _imageHeight) {
+        return null;
+      }
 
-      // Obtenemos los datos de la imagen
-      final ByteData? byteData = await _image!.toByteData(
-        format: ui.ImageByteFormat.rawRgba,
-      );
-      if (byteData == null) return Colors.transparent;
+      // Calcular la posición en bytes (4 bytes por pixel: RGBA)
+      int bytePosition = 4 * (pixelY * _imageWidth + pixelX);
 
-      // Calculamos el índice en el array de bytes
-      final int index = (py * _image!.width + px) * 4;
+      // Verificar que no nos pasamos del tamaño
+      if (bytePosition < 0 || bytePosition + 3 >= _imageBytes!.lengthInBytes) {
+        return null;
+      }
 
-      // Obtenemos los componentes RGBA
-      final int r = byteData.getUint8(index);
-      final int g = byteData.getUint8(index + 1);
-      final int b = byteData.getUint8(index + 2);
-      final int a = byteData.getUint8(index + 3);
+      // Leer los valores RGBA
+      int r = _imageBytes!.getUint8(bytePosition);
+      int g = _imageBytes!.getUint8(bytePosition + 1);
+      int b = _imageBytes!.getUint8(bytePosition + 2);
+      int a = _imageBytes!.getUint8(bytePosition + 3);
 
       return Color.fromARGB(a, r, g, b);
     } catch (e) {
-      print('Error al obtener el color: $e');
-      return Colors.transparent;
+      print('Error getting pixel color: $e');
+      return null;
     }
   }
 
-  void _handleTapDown(TapDownDetails details) async {
+  String _colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+  }
+
+  void _handleImageTap(TapDownDetails details) {
     if (_image == null) return;
 
-    try {
-      final color = await _getImagePixelColor(
-        _imageKey.currentContext!,
-        details.globalPosition,
-      );
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset localPosition = box.globalToLocal(details.globalPosition);
 
-      if (color != Colors.transparent) {
-        final String hexCode =
-            '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
-        final String rgbCode =
-            'RGB(${color.red}, ${color.green}, ${color.blue})';
+    // Obtener el tamaño del widget
+    final renderSize = box.size;
 
-        // Convertimos la posición global a posición relativa al widget
-        final RenderBox renderBox =
-            _imageKey.currentContext!.findRenderObject() as RenderBox;
-        final Offset localPosition = renderBox.globalToLocal(
-          details.globalPosition,
+    // Ajustar según el zoom actual
+    final Matrix4 transform = _transformationController.value;
+    final Matrix4 inverseTransform = Matrix4.inverted(transform);
+    final Offset adjustedPosition = MatrixUtils.transformPoint(
+      inverseTransform,
+      localPosition,
+    );
+
+    // Calcular la posición relativa
+    final double relativeX = adjustedPosition.dx / renderSize.width;
+    final double relativeY = adjustedPosition.dy / renderSize.height;
+
+    // Verificar que está dentro de los límites
+    if (relativeX < 0 || relativeX > 1 || relativeY < 0 || relativeY > 1) {
+      return;
+    }
+
+    // Obtener el color
+    final color = _getPixelColor(relativeX, relativeY);
+
+    if (color != null) {
+      setState(() {
+        _selectedColors.add(
+          _ColorPoint(
+            x: relativeX,
+            y: relativeY,
+            color: color,
+            hex: _colorToHex(color),
+          ),
         );
+      });
 
-        setState(() {
-          _selectedPoints.add(
-            ColorPoint(
-              position: localPosition,
-              color: color,
-              hexCode: hexCode,
-              rgbCode: rgbCode,
-            ),
-          );
-        });
-
-        widget.onColorPicked(color);
-      }
-    } catch (e) {
-      print('Error en tap: $e');
+      widget.onColorsSelected(_selectedColors.map((p) => p.color).toList());
     }
   }
 
-  void _removePoint(int index) {
+  void _removeColor(int index) {
     setState(() {
-      _selectedPoints.removeAt(index);
+      _selectedColors.removeAt(index);
     });
+    widget.onColorsSelected(_selectedColors.map((p) => p.color).toList());
+  }
+
+  void _clearColors() {
+    setState(() {
+      _selectedColors.clear();
+    });
+    widget.onColorsSelected([]);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isImageLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Procesando imagen...'),
-          ],
-        ),
+    if (_isLoading) {
+      return const SizedBox(
+        height: 400,
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final screenHeight = MediaQuery.of(context).size.height;
-    final imageHeight = screenHeight * 0.5; // 50% de la altura de la pantalla
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: imageHeight,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(12),
+        // Instrucciones
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Utiliza dos dedos para hacer zoom • Toca para seleccionar un color',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                InteractiveViewer(
-                  transformationController: _transformationController,
-                  boundaryMargin: const EdgeInsets.all(20),
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: GestureDetector(
-                    key: _imageKey,
-                    onTapDown: _handleTapDown,
-                    child: Center(
-                      child: Image.file(widget.imageFile, fit: BoxFit.contain),
-                    ),
+        ),
+
+        // Imagen con zoom
+        Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: GestureDetector(
+            onTapDown: _handleImageTap,
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: Stack(
+                children: [
+                  // Imagen
+                  Center(
+                    child: Image.file(widget.imageFile, fit: BoxFit.contain),
                   ),
-                ),
-                // Puntos seleccionados
-                for (final point in _selectedPoints)
-                  Positioned(
-                    left: point.position.dx - 10,
-                    top: point.position.dy - 10,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: point.color.withOpacity(0.7),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+
+                  // Puntos de color
+                  for (int i = 0; i < _selectedColors.length; i++)
+                    Positioned(
+                      left:
+                          _selectedColors[i].x *
+                              MediaQuery.of(context).size.width -
+                          10,
+                      top: _selectedColors[i].y * 300 - 10,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _selectedColors[i].color,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color:
+                                  _isLightColor(_selectedColors[i].color)
+                                      ? Colors.black
+                                      : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                Positioned(
-                  bottom: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'Haz zoom con dos dedos y toca para seleccionar colores',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
-        if (_selectedPoints.isNotEmpty) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+        // Lista de colores
+        Container(
+          height: 100,
+          color: Colors.grey[200],
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Colores Seleccionados',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Colores seleccionados (${_selectedColors.length})',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (_selectedColors.isNotEmpty)
+                    TextButton(
+                      onPressed: _clearColors,
+                      child: const Text('Limpiar todo'),
+                    ),
+                ],
               ),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _selectedPoints.clear();
-                  });
-                },
-                icon: const Icon(Icons.delete_outline, size: 16),
-                label: const Text('Limpiar Todo'),
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+
+              Expanded(
+                child:
+                    _selectedColors.isEmpty
+                        ? const Center(
+                          child: Text(
+                            'Toca la imagen para seleccionar colores',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
+                        : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _selectedColors.length,
+                          itemBuilder: (context, index) {
+                            final point = _selectedColors[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12, top: 4),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Stack(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: point.color,
+                                          border: Border.all(
+                                            color: Colors.grey[300]!,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: -5,
+                                        top: -5,
+                                        child: GestureDetector(
+                                          onTap: () => _removeColor(index),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 12,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    point.hex,
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(8),
-                      topRight: Radius.circular(8),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 30), // Para ícono de eliminar
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        flex: 1,
-                        child: Text(
-                          'Color',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          children: const [
-                            Text(
-                              'Hex',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.copy, size: 14),
-                          ],
-                        ),
-                      ),
-                      const Expanded(
-                        flex: 2,
-                        child: Text(
-                          'RGB',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _selectedPoints.length,
-                  itemBuilder: (context, index) {
-                    final point = _selectedPoints[index];
-                    return Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      child: ListTile(
-                        dense: true,
-                        leading: GestureDetector(
-                          onTap: () => _removePoint(index),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: point.color,
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: point.hexCode),
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Código hex copiado al portapapeles',
-                                      ),
-                                      duration: Duration(seconds: 1),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  point.hexCode,
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                point.rgbCode,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ],
     );
   }
+
+  bool _isLightColor(Color color) {
+    return (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) /
+            255 >
+        0.5;
+  }
+}
+
+class _ColorPoint {
+  final double x;
+  final double y;
+  final Color color;
+  final String hex;
+
+  _ColorPoint({
+    required this.x,
+    required this.y,
+    required this.color,
+    required this.hex,
+  });
 }

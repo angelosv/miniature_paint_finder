@@ -42,6 +42,16 @@ class _PaintListTabState extends State<PaintListTab> {
     });
   }
 
+  void _onColorsSelected(List<Color> colors) {
+    setState(() {
+      if (colors.isNotEmpty) {
+        _selectedColor = colors.last;
+        _pickedColors.clear();
+        _pickedColors.addAll(colors);
+      }
+    });
+  }
+
   void _addColor() {
     if (_selectedColor != Colors.transparent) {
       setState(() {
@@ -169,7 +179,7 @@ class _PaintListTabState extends State<PaintListTab> {
                       // Componente de selección de color de imagen
                       ImageColorPicker(
                         imageFile: _imageFile!,
-                        onColorPicked: _onColorPicked,
+                        onColorsSelected: _onColorsSelected,
                       ),
 
                       const SizedBox(height: 16),
