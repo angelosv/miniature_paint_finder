@@ -1395,7 +1395,6 @@ class _PaintListTabState extends State<PaintListTab> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
       builder: (context) {
         return StatefulBuilder(
@@ -1695,8 +1694,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                   ),
                                                 ),
                                                 Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
+                                                  mainAxisSize: MainAxisSize.min,
                                                   children: [
                                                     Icon(
                                                       Icons.qr_code,
@@ -1714,17 +1712,13 @@ class _PaintListTabState extends State<PaintListTab> {
                                                             as String,
                                                         style: TextStyle(
                                                           fontSize: 12,
-                                                          fontFamily:
-                                                              'monospace',
+                                                          fontFamily: 'monospace',
                                                           color:
                                                               isDarkMode
                                                                   ? Colors.white
-                                                                  : Colors
-                                                                      .black,
+                                                                  : Colors.black,
                                                         ),
-                                                        overflow:
-                                                            TextOverflow
-                                                                .ellipsis,
+                                                        overflow: TextOverflow.ellipsis,
                                                       ),
                                                     ),
                                                   ],
