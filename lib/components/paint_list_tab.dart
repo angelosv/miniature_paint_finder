@@ -345,164 +345,223 @@ class _PaintListTabState extends State<PaintListTab> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Paso 1: Elegir marcas
-              _buildStepCard(
-                context,
-                stepNumber: 1,
-                title: 'Choose your brands',
-                subtitle: 'Select brands where to search for matching colors',
-                icon: Icons.palette_outlined,
-                color: AppTheme.primaryBlue,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 10),
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showBrandSelectionModal(context),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Select Paint Brands'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
-                          foregroundColor: Colors.white,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - 100,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Paso 1: Elegir marcas
+                _buildStepCard(
+                  context,
+                  stepNumber: 1,
+                  title: 'Choose your brands',
+                  subtitle: 'Select brands where to search for matching colors',
+                  icon: Icons.palette_outlined,
+                  color: AppTheme.primaryBlue,
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 10),
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showBrandSelectionModal(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Select Paint Brands'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Show selected brands preview in a scrollable row
-                    SizedBox(
-                      height: 110, // Fixed height for the scrollable area
-                      child:
-                          _paintBrands
-                                  .where((brand) => brand['selected'] == true)
-                                  .isEmpty
-                              ? Center(
-                                child: Text(
-                                  'No brands selected yet',
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              )
-                              : ListView(
-                                scrollDirection: Axis.horizontal,
-                                children:
-                                    _paintBrands
-                                        .where(
-                                          (brand) => brand['selected'] == true,
-                                        )
-                                        .map(
-                                          (brand) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              right: 8.0,
-                                            ),
-                                            child: _buildBrandChip(
-                                              name: brand['name'],
-                                              color: brand['color'],
-                                              isSelected: true,
-                                              context: context,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Paso 2: Elegir imagen
-              _buildStepCard(
-                context,
-                stepNumber: 2,
-                title: 'Choose your image',
-                subtitle: 'Select or take a photo to find matching colors',
-                icon: Icons.image_search,
-                color: AppTheme.pinkColor,
-                content: ImageColorPicker(
-                  imageFile: _imageFile,
-                  onColorsSelected: _onColorsSelected,
-                  onImageSelected: (file) {
-                    setState(() {
-                      _imageFile = file;
-                    });
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Paso 3: Seleccionar colores (siempre visible)
-              _buildStepCard(
-                context,
-                stepNumber: 3,
-                title: 'Selected colors',
-                subtitle: 'Review and save your selected color palette',
-                icon: Icons.search,
-                color: AppTheme.purpleColor,
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-
-                    // Lista de colores seleccionados
-                    _pickedColors.isEmpty
-                        ? const Text(
-                          'No colors selected yet. Add colors from the image above.',
-                        )
-                        : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              height: 70,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _pickedColors.length,
-                                itemBuilder: (context, index) {
-                                  return _buildColorSwatchItem(
-                                    _pickedColors[index],
-                                    index,
-                                  );
-                                },
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Botón para guardar colores seleccionados
-                            _pickedColors.isNotEmpty
-                                ? ElevatedButton.icon(
-                                  onPressed: () {
-                                    _showSelectedColorsModal(context);
-                                  },
-                                  icon: const Icon(Icons.search),
-                                  label: const Text('Find matching paints'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.purpleColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                      horizontal: 16,
+                      const SizedBox(height: 16),
+                      // Show selected brands preview in a scrollable row
+                      SizedBox(
+                        height: 110, // Fixed height for the scrollable area
+                        child:
+                            _paintBrands
+                                    .where((brand) => brand['selected'] == true)
+                                    .isEmpty
+                                ? Center(
+                                  child: Text(
+                                    'No brands selected yet',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
                                     ),
                                   ),
                                 )
-                                : Container(),
+                                : ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  children:
+                                      _paintBrands
+                                          .where(
+                                            (brand) =>
+                                                brand['selected'] == true,
+                                          )
+                                          .map(
+                                            (brand) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 8.0,
+                                              ),
+                                              child: _buildBrandChip(
+                                                name: brand['name'],
+                                                color: brand['color'],
+                                                isSelected: true,
+                                                context: context,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Paso 2: Elegir imagen
+                _buildStepCard(
+                  context,
+                  stepNumber: 2,
+                  title: 'Choose your image',
+                  subtitle: 'Select or take a photo to find matching colors',
+                  icon: Icons.image_search,
+                  color: AppTheme.pinkColor,
+                  content: ImageColorPicker(
+                    imageFile: _imageFile,
+                    onColorsSelected: _onColorsSelected,
+                    onImageSelected: (file) {
+                      setState(() {
+                        _imageFile = file;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Paso 3: Seleccionar colores (siempre visible)
+                _buildStepCard(
+                  context,
+                  stepNumber: 3,
+                  title: 'Selected colors',
+                  subtitle: 'Review and save your selected color palette',
+                  icon: Icons.search,
+                  color: AppTheme.purpleColor,
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 10),
+
+                      // Añadir el botón Clear all si hay colores seleccionados
+                      if (_pickedColors.isNotEmpty)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Selected colors (${_pickedColors.length})',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white
+                                          : null,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _pickedColors.clear();
+                                });
+                              },
+                              child: Text(
+                                'Clear all',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.lightBlue[300]
+                                          : null,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                  ],
+
+                      // Lista de colores seleccionados
+                      _pickedColors.isEmpty
+                          ? const Text(
+                            'No colors selected yet. Add colors from the image above.',
+                          )
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                height: 70,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _pickedColors.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildColorSwatchItem(
+                                      _pickedColors[index],
+                                      index,
+                                    );
+                                  },
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Botón para buscar pinturas coincidentes
+                              Center(
+                                child:
+                                    _pickedColors.isNotEmpty
+                                        ? ElevatedButton.icon(
+                                          onPressed: () {
+                                            _showSelectedColorsModal(context);
+                                          },
+                                          icon: const Icon(Icons.search),
+                                          label: const Text(
+                                            'Find matching paints',
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppTheme.purpleColor,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                              horizontal: 16,
+                                            ),
+                                          ),
+                                        )
+                                        : Container(),
+                              ),
+                            ],
+                          ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Espacio adicional al final para evitar overflow
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -532,6 +591,7 @@ class _PaintListTabState extends State<PaintListTab> {
           isDarkMode ? Color.lerp(Colors.grey[900], Colors.black, 0.3) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Encabezado del paso
           Container(
@@ -568,6 +628,7 @@ class _PaintListTabState extends State<PaintListTab> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
@@ -629,6 +690,7 @@ class _PaintListTabState extends State<PaintListTab> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             height: 50,
@@ -763,6 +825,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Container(
                                       height: 40,
@@ -792,12 +855,16 @@ class _PaintListTabState extends State<PaintListTab> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      brand['name'] as String,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        color: isDarkMode ? Colors.white : null,
+                                    Flexible(
+                                      child: Text(
+                                        brand['name'] as String,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              isDarkMode ? Colors.white : null,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     if (brand['selected'] as bool)
@@ -966,6 +1033,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         // Left: Color swatch
                                         Container(
@@ -1509,6 +1578,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Row(
                                         crossAxisAlignment:
@@ -1546,6 +1616,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
                                                   paint['name'] as String,
@@ -1630,6 +1701,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                           children: [
                                             // Color swatch and code
                                             Row(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Container(
                                                   width: 24,
@@ -1647,6 +1719,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                                 Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   children: [
                                                     Text(
                                                       'Color code:',
@@ -1680,56 +1754,62 @@ class _PaintListTabState extends State<PaintListTab> {
                                             ),
 
                                             // Barcode
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Barcode:',
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    color:
-                                                        isDarkMode
-                                                            ? Colors.grey[400]
-                                                            : Colors.grey[600],
-                                                  ),
-                                                ),
-                                                Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.qr_code,
-                                                      size: 14,
+                                            Flexible(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'Barcode:',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
                                                       color:
                                                           isDarkMode
                                                               ? Colors.grey[400]
                                                               : Colors
                                                                   .grey[600],
                                                     ),
-                                                    const SizedBox(width: 4),
-                                                    Flexible(
-                                                      child: Text(
-                                                        paint['barcode']
-                                                            as String,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontFamily:
-                                                              'monospace',
-                                                          color:
-                                                              isDarkMode
-                                                                  ? Colors.white
-                                                                  : Colors
-                                                                      .black,
-                                                        ),
-                                                        overflow:
-                                                            TextOverflow
-                                                                .ellipsis,
+                                                  ),
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.qr_code,
+                                                        size: 14,
+                                                        color:
+                                                            isDarkMode
+                                                                ? Colors
+                                                                    .grey[400]
+                                                                : Colors
+                                                                    .grey[600],
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                                      const SizedBox(width: 4),
+                                                      Flexible(
+                                                        child: Text(
+                                                          paint['barcode']
+                                                              as String,
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontFamily:
+                                                                'monospace',
+                                                            color:
+                                                                isDarkMode
+                                                                    ? Colors
+                                                                        .white
+                                                                    : Colors
+                                                                        .black,
+                                                          ),
+                                                          overflow:
+                                                              TextOverflow
+                                                                  .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1828,6 +1908,7 @@ class _PaintListTabState extends State<PaintListTab> {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Stack(
             children: [

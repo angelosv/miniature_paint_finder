@@ -279,6 +279,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Mostrar imagen o selector de imagen
         _currentImageFile == null
@@ -303,6 +304,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.image_search,
@@ -322,6 +324,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
           const SizedBox(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               _buildOptionButton(
                 icon: Icons.photo_camera,
@@ -356,6 +359,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: Colors.white, size: 32),
             const SizedBox(height: 8),
@@ -383,11 +387,13 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           color: isDarkMode ? Colors.grey[850] : null,
           child: Row(
+            mainAxisSize: MainAxisSize.max,
             children: [
               IconButton(
                 icon: Icon(
@@ -487,130 +493,6 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                 ],
               ),
             ),
-          ),
-        ),
-
-        Container(
-          height: 100,
-          color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Selected colors (${_selectedColors.length})',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : null,
-                    ),
-                  ),
-                  if (_selectedColors.isNotEmpty)
-                    TextButton(
-                      onPressed: _clearColors,
-                      child: Text(
-                        'Clear all',
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.lightBlue[300] : null,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-
-              Expanded(
-                child:
-                    _selectedColors.isEmpty
-                        ? Center(
-                          child: Text(
-                            'Tap the image to select colors',
-                            style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              color:
-                                  isDarkMode ? Colors.grey[500] : Colors.grey,
-                            ),
-                          ),
-                        )
-                        : ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _selectedColors.length,
-                          itemBuilder: (context, index) {
-                            final point = _selectedColors[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 12, top: 4),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Stack(
-                                    children: [
-                                      Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: point.color,
-                                          border: Border.all(
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey[600]!
-                                                    : Colors.grey[300]!,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: -5,
-                                        top: -5,
-                                        child: GestureDetector(
-                                          onTap: () => _removeColor(index),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(2),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  isDarkMode
-                                                      ? Colors.grey[800]
-                                                      : Colors.white,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color:
-                                                    isDarkMode
-                                                        ? Colors.grey[600]!
-                                                        : Colors.white,
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Icon(
-                                              Icons.close,
-                                              size: 12,
-                                              color:
-                                                  isDarkMode
-                                                      ? Colors.red[300]
-                                                      : Colors.red,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    point.hex,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color:
-                                          isDarkMode ? Colors.grey[400] : null,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-              ),
-            ],
           ),
         ),
       ],
