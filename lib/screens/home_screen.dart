@@ -97,69 +97,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar:
-          _selectedIndex == 0 || _selectedIndex == 1
-              ? AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: _openDrawer,
-                ),
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_selectedIndex == 0 ? 'Hi Angelo,' : 'My Library'),
-                    if (_selectedIndex == 0)
-                      Text(
-                        'You have 5 paints pending this week',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                  ],
-                ),
-                actions: [
-                  IconButton(
-                    icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
-                    tooltip: 'Toggle theme',
-                    onPressed: () {
-                      final newTheme =
-                          isDarkMode
-                              ? ThemeProvider.LIGHT_THEME
-                              : ThemeProvider.DARK_THEME;
-                      themeProvider.setThemeMode(newTheme);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {},
-                  ),
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundImage: NetworkImage(
-                      'https://randomuser.me/api/portraits/men/1.jpg',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                ],
-              )
-              : AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: _openDrawer,
-                ),
-                title: Text(_selectedIndex == 2 ? 'Search' : 'Profile'),
-                actions: [
-                  IconButton(
-                    icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
-                    tooltip: 'Toggle theme',
-                    onPressed: () {
-                      final newTheme =
-                          isDarkMode
-                              ? ThemeProvider.LIGHT_THEME
-                              : ThemeProvider.DARK_THEME;
-                      themeProvider.setThemeMode(newTheme);
-                    },
-                  ),
-                ],
-              ),
+      appBar: AppBar(
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu_rounded,
+            color: isDarkMode ? Colors.white : AppTheme.marineBlue,
+            size: 26,
+          ),
+          onPressed: _openDrawer,
+          tooltip: 'Menu',
+        ),
+        title: Text(
+          'MiniPaint',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : AppTheme.marineBlue,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: isDarkMode ? AppTheme.marineGold : AppTheme.marineBlue,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: () {
+              final newTheme =
+                  isDarkMode
+                      ? ThemeProvider.LIGHT_THEME
+                      : ThemeProvider.DARK_THEME;
+              themeProvider.setThemeMode(newTheme);
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: isDarkMode ? Colors.white : AppTheme.marineBlue,
+            ),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
+        backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        elevation: 0,
+      ),
       drawer: Theme(
         data: Theme.of(context).copyWith(
           canvasColor:
@@ -189,44 +171,58 @@ class _HomeScreenState extends State<HomeScreen> {
                       end: Alignment.bottomRight,
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppTheme.marineGold,
-                            width: 2,
-                          ),
-                        ),
-                        child: const CircleAvatar(
-                          radius: 28,
-                          backgroundImage: NetworkImage(
-                            'https://randomuser.me/api/portraits/men/1.jpg',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          Text(
-                            'Angelo',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                          Icon(
+                            Icons.palette,
+                            size: 32,
+                            color: AppTheme.marineOrange,
                           ),
+                          const SizedBox(width: 12),
                           Text(
-                            'Paint Collector',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppTheme.marineGold.withOpacity(0.9),
-                              fontWeight: FontWeight.w500,
+                            'MiniPaint',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.color_lens_outlined,
+                              size: 16,
+                              color: AppTheme.marineGold,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Find your perfect paint',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

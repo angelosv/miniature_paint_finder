@@ -720,9 +720,15 @@ class _AuthScreenState extends State<AuthScreen>
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                        ).hasMatch(value)) {
+                        // Check if it's a demo account (allow it)
+                        if (value == 'demo@miniaturepaintfinder.com') {
+                          return null;
+                        }
+                        // Basic email validation
+                        final emailRegex = RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                        );
+                        if (!emailRegex.hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
@@ -758,8 +764,27 @@ class _AuthScreenState extends State<AuthScreen>
                         if (value == null || value.isEmpty) {
                           return 'Please enter a password';
                         }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
+                        // Allow demo password
+                        if (value == 'password123') {
+                          return null;
+                        }
+                        // Password requirements
+                        if (value.length < 8) {
+                          return 'Password must be at least 8 characters';
+                        }
+                        // Check for mixed case, numbers, and special characters
+                        final hasUppercase = value.contains(RegExp(r'[A-Z]'));
+                        final hasLowercase = value.contains(RegExp(r'[a-z]'));
+                        final hasNumbers = value.contains(RegExp(r'[0-9]'));
+                        final hasSpecialChars = value.contains(
+                          RegExp(r'[!@#$%^&*(),.?":{}|<>]'),
+                        );
+
+                        if (!hasUppercase ||
+                            !hasLowercase ||
+                            !hasNumbers ||
+                            !hasSpecialChars) {
+                          return 'Password must include uppercase, lowercase, \nnumbers and special characters';
                         }
                         return null;
                       },
@@ -900,6 +925,17 @@ class _AuthScreenState extends State<AuthScreen>
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
+                        // Check if it's a demo account (always allow it)
+                        if (value == 'demo@miniaturepaintfinder.com') {
+                          return null;
+                        }
+                        // Basic email validation for non-demo emails
+                        final emailRegex = RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                        );
+                        if (!emailRegex.hasMatch(value)) {
+                          return 'Please enter a valid email';
+                        }
                         return null;
                       },
                     ),
@@ -932,6 +968,17 @@ class _AuthScreenState extends State<AuthScreen>
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';
+                        }
+                        // Always allow the demo password
+                        if (value == 'password123') {
+                          return null;
+                        }
+                        // For real passwords (not demo), enforce stronger requirements
+                        if (_emailController.text !=
+                            'demo@miniaturepaintfinder.com') {
+                          if (value.length < 8) {
+                            return 'Password must be at least 8 characters';
+                          }
                         }
                         return null;
                       },
