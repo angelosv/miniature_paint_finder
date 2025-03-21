@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Space Marine Theme Colors
@@ -31,9 +32,34 @@ class AppTheme {
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
   static const Color darkTextSecondary = Color(0xFFAAAAAA);
 
+  // Default text styles with the same font
+  static final TextStyle headingStyle = GoogleFonts.poppins(
+    fontWeight: FontWeight.bold,
+    fontSize: 32,
+    height: 1.2,
+  );
+
+  static final TextStyle subheadingStyle = GoogleFonts.poppins(
+    fontWeight: FontWeight.w500,
+    fontSize: 20,
+    height: 1.3,
+  );
+
+  static final TextStyle bodyStyle = GoogleFonts.poppins(
+    fontWeight: FontWeight.normal,
+    fontSize: 16,
+    height: 1.5,
+  );
+
+  static final TextStyle buttonStyle = GoogleFonts.poppins(
+    fontWeight: FontWeight.w600,
+    fontSize: 16,
+  );
+
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: backgroundGrey,
+    fontFamily: GoogleFonts.poppins().fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: marineBlue,
       primary: marineBlue,
@@ -42,12 +68,12 @@ class AppTheme {
       background: backgroundGrey,
       brightness: Brightness.light,
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,
       backgroundColor: marineBlue,
       foregroundColor: Colors.white,
-      titleTextStyle: TextStyle(
+      titleTextStyle: GoogleFonts.poppins(
         color: Colors.white,
         fontWeight: FontWeight.bold,
         fontSize: 18,
@@ -65,7 +91,7 @@ class AppTheme {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: buttonStyle,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -73,13 +99,14 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         side: BorderSide(color: marineBlue.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        textStyle: buttonStyle,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         foregroundColor: marineBlue,
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: buttonStyle,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -90,50 +117,39 @@ class AppTheme {
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      hintStyle: const TextStyle(color: textGrey),
+      hintStyle: GoogleFonts.poppins(color: textGrey),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: marineBlue.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-      labelStyle: const TextStyle(
+      labelStyle: GoogleFonts.poppins(
         fontSize: 12,
         color: marineBlue,
         fontWeight: FontWeight.w500,
       ),
     ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
       selectedItemColor: marineBlue,
       unselectedItemColor: textGrey,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
     ),
-    textTheme: const TextTheme(
-      titleLarge: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: textDark,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: textDark,
-      ),
-      titleSmall: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-      ),
-      bodyLarge: TextStyle(fontSize: 16, color: textDark),
-      bodyMedium: TextStyle(fontSize: 14, color: textDark),
-      bodySmall: TextStyle(fontSize: 12, color: textGrey),
+    textTheme: TextTheme(
+      titleLarge: headingStyle.copyWith(fontSize: 22, color: textDark),
+      titleMedium: subheadingStyle.copyWith(fontSize: 18, color: textDark),
+      titleSmall: subheadingStyle.copyWith(fontSize: 16, color: textDark),
+      bodyLarge: bodyStyle.copyWith(color: textDark),
+      bodyMedium: bodyStyle.copyWith(fontSize: 14, color: textDark),
+      bodySmall: bodyStyle.copyWith(fontSize: 12, color: textGrey),
     ),
   );
 
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: darkBackground,
+    fontFamily: GoogleFonts.poppins().fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: marineBlue,
       primary: marineBlueLight,
@@ -144,12 +160,12 @@ class AppTheme {
       onSurface: darkTextPrimary,
       brightness: Brightness.dark,
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,
       backgroundColor: marineBlueDark,
       foregroundColor: darkTextPrimary,
-      titleTextStyle: TextStyle(
+      titleTextStyle: GoogleFonts.poppins(
         color: darkTextPrimary,
         fontWeight: FontWeight.bold,
         fontSize: 18,
@@ -167,7 +183,7 @@ class AppTheme {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: buttonStyle,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -175,13 +191,14 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         side: BorderSide(color: marineBlueLight.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        textStyle: buttonStyle,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         foregroundColor: marineBlueLight,
-        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        textStyle: buttonStyle,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -192,13 +209,13 @@ class AppTheme {
       filled: true,
       fillColor: darkSurface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      hintStyle: TextStyle(color: darkTextSecondary),
+      hintStyle: GoogleFonts.poppins(color: darkTextSecondary),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: marineBlueLight.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-      labelStyle: const TextStyle(
+      labelStyle: GoogleFonts.poppins(
         fontSize: 12,
         color: marineBlueLight,
         fontWeight: FontWeight.w500,
@@ -211,25 +228,19 @@ class AppTheme {
       type: BottomNavigationBarType.fixed,
       elevation: 0,
     ),
-    textTheme: const TextTheme(
-      titleLarge: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: darkTextPrimary,
-      ),
-      titleMedium: TextStyle(
+    textTheme: TextTheme(
+      titleLarge: headingStyle.copyWith(fontSize: 22, color: darkTextPrimary),
+      titleMedium: subheadingStyle.copyWith(
         fontSize: 18,
-        fontWeight: FontWeight.bold,
         color: darkTextPrimary,
       ),
-      titleSmall: TextStyle(
+      titleSmall: subheadingStyle.copyWith(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
         color: darkTextPrimary,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: darkTextPrimary),
-      bodyMedium: TextStyle(fontSize: 14, color: darkTextPrimary),
-      bodySmall: TextStyle(fontSize: 12, color: darkTextSecondary),
+      bodyLarge: bodyStyle.copyWith(color: darkTextPrimary),
+      bodyMedium: bodyStyle.copyWith(fontSize: 14, color: darkTextPrimary),
+      bodySmall: bodyStyle.copyWith(fontSize: 12, color: darkTextSecondary),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: marineOrange,
@@ -249,7 +260,7 @@ class AppTheme {
       case 3:
         return marineGold;
       case 4:
-        return marineBlueLight;
+        return greenColor;
       default:
         return marineBlue;
     }
