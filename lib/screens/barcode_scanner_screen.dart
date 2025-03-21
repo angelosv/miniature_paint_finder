@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/services/barcode_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
@@ -14,7 +15,11 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  final MobileScannerController _scannerController = MobileScannerController();
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
   final BarcodeService _barcodeService = BarcodeService();
 
   bool _isScanning = true;
@@ -22,6 +27,60 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   String? _lastScannedCode;
   Paint? _foundPaint;
   String? _errorMessage;
+  bool _hasPermission = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissionsAndInitialize();
+  }
+
+  Future<void> _checkPermissionsAndInitialize() async {
+    // Verificar el estado actual del permiso de cámara
+    PermissionStatus status = await Permission.camera.status;
+
+    // Si el permiso está denegado, solicitar permiso
+    if (status.isDenied) {
+      status = await Permission.camera.request();
+    }
+
+    // Actualizar estado según el permiso
+    setState(() {
+      _hasPermission = status.isGranted;
+
+      if (!_hasPermission) {
+        _errorMessage =
+            'Camera permission denied. Please enable it in settings.';
+      } else {
+        // Solo inicializar el scanner si tenemos permiso
+        _initializeScanner();
+      }
+    });
+  }
+
+  Future<void> _initializeScanner() async {
+    try {
+      // Dar un poco de tiempo al sistema para inicializar
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Iniciar el controlador
+      await _scannerController.start();
+
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error initializing scanner: $e';
+        _isInitialized = false;
+      });
+    }
+  }
+
+  Future<void> _openAppSettings() async {
+    await openAppSettings();
+  }
 
   @override
   void dispose() {
@@ -31,7 +90,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
   void _onBarcodeDetected(BarcodeCapture capture) async {
     // If already processing a barcode or not scanning, ignore
-    if (_isSearching || !_isScanning) return;
+    if (_isSearching || !_isScanning || !_hasPermission) return;
 
     // Get barcode data
     final List<Barcode> barcodes = capture.barcodes;
@@ -102,6 +161,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       _foundPaint = null;
       _errorMessage = null;
     });
+
+    // Restart scanner
+    if (_hasPermission) {
+      _scannerController.start();
+    }
   }
 
   @override
@@ -110,14 +174,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       appBar: AppBar(
         title: const Text('Barcode Scanner'),
         actions: [
-          IconButton(
-            icon: Icon(_isScanning ? Icons.flash_on : Icons.flash_off),
-            onPressed: () => _scannerController.toggleTorch(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.flip_camera_ios),
-            onPressed: () => _scannerController.switchCamera(),
-          ),
+          if (_hasPermission && _isInitialized)
+            IconButton(
+              icon: Icon(_isScanning ? Icons.flash_on : Icons.flash_off),
+              onPressed: () => _scannerController.toggleTorch(),
+            ),
+          if (_hasPermission && _isInitialized)
+            IconButton(
+              icon: const Icon(Icons.flip_camera_ios),
+              onPressed: () => _scannerController.switchCamera(),
+            ),
         ],
       ),
       body: Column(
@@ -126,11 +192,52 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             child: Stack(
               children: [
                 // Scanner view
-                if (_isScanning)
+                if (_isScanning && _hasPermission && _isInitialized)
                   MobileScanner(
                     controller: _scannerController,
                     onDetect: _onBarcodeDetected,
                   ),
+
+                // No permission view
+                if (!_hasPermission)
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.no_photography,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Camera permission required',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Please allow camera access in your device settings',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _openAppSettings,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Open Settings'),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Scanner not initialized but has permission
+                if (!_isInitialized && _hasPermission)
+                  const Center(child: CircularProgressIndicator()),
 
                 // Overlay when not scanning
                 if (!_isScanning && _foundPaint != null)
@@ -141,7 +248,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                   const Center(child: CircularProgressIndicator()),
 
                 // Scan guide overlay
-                if (_isScanning && !_isSearching) _buildScanGuideOverlay(),
+                if (_isScanning &&
+                    !_isSearching &&
+                    _hasPermission &&
+                    _isInitialized)
+                  _buildScanGuideOverlay(),
 
                 // Error message
                 if (_errorMessage != null)
@@ -208,12 +319,24 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                     ),
                   ),
 
-                if (_isScanning)
+                if (_isScanning && _hasPermission && _isInitialized)
                   Expanded(
                     child: Text(
                       'Scan a paint barcode',
                       style: Theme.of(context).textTheme.bodyLarge,
                       textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                if (!_hasPermission)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _checkPermissionsAndInitialize,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Request Camera Permission'),
                     ),
                   ),
               ],
