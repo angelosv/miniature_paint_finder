@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
+import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -25,7 +26,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
-      home: const HomeScreen(),
+      home: const AuthScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
