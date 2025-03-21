@@ -356,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       dense: true,
-      tileColor: isSelected ? AppTheme.lightBlue.withOpacity(0.3) : null,
+      tileColor: isSelected ? AppTheme.marineBlue.withOpacity(0.1) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }

@@ -456,7 +456,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       label: Text(
                         'Sort: ${_sortColumn.substring(0, 1).toUpperCase()}${_sortColumn.substring(1)} ${_isAscending ? '↑' : '↓'}',
                       ),
-                      backgroundColor: AppTheme.lightBlue,
+                      backgroundColor: AppTheme.marineBlue.withOpacity(0.1),
                     ),
                   ],
                 ),

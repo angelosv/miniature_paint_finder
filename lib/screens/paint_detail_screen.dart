@@ -83,9 +83,10 @@ class PaintDetailScreen extends StatelessWidget {
                     children: [
                       Chip(
                         label: Text(paint.category),
-                        backgroundColor: AppTheme.lightBlue,
-                        labelStyle: const TextStyle(
+                        backgroundColor: AppTheme.marineBlue.withOpacity(0.1),
+                        labelStyle: TextStyle(
                           color: AppTheme.primaryBlue,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       if (paint.isMetallic)

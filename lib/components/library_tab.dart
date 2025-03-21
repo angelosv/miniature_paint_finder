@@ -29,13 +29,23 @@ class LibraryTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.lightBlue,
+                      color: AppTheme.marineBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.collections_bookmark,
-                      color: AppTheme.primaryBlue,
-                      size: 28,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.import_contacts,
+                          size: 32,
+                          color: AppTheme.primaryBlue,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'My Library',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 16),

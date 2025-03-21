@@ -43,24 +43,22 @@ class PaletteCard extends StatelessWidget {
               child: Container(
                 height: 120,
                 width: double.infinity,
-                color: AppTheme.lightBlue, // Color de fondo como placeholder
+                color: AppTheme.marineBlue.withOpacity(
+                  0.1,
+                ), // Color de fondo como placeholder
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.image,
-                        size: 40,
-                        color: AppTheme.primaryBlue,
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 36,
+                        color: Colors.grey[400],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
-                        palette.name,
-                        style: const TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                        'No image available',
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
                   ),
