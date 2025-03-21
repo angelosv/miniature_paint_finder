@@ -147,17 +147,14 @@ class _PaintListTabState extends State<PaintListTab> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryBlue,
-                      AppTheme.primaryBlue.withBlue(180),
-                    ],
+                    colors: [AppTheme.marineBlue, AppTheme.marineBlueLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.3),
+                      color: AppTheme.marineBlue.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -220,14 +217,11 @@ class _PaintListTabState extends State<PaintListTab> {
                             'Start Searching',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryBlue,
+                              color: AppTheme.marineBlue,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: AppTheme.primaryBlue,
-                          ),
+                          Icon(Icons.arrow_forward, color: AppTheme.marineBlue),
                         ],
                       ),
                     ),
@@ -264,17 +258,14 @@ class _PaintListTabState extends State<PaintListTab> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      AppTheme.purpleColor,
-                      AppTheme.purpleColor.withBlue(180),
-                    ],
+                    colors: [AppTheme.marineOrange, AppTheme.marineGold],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.purpleColor.withOpacity(0.3),
+                      color: AppTheme.marineOrange.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -337,13 +328,13 @@ class _PaintListTabState extends State<PaintListTab> {
                             'Scan Barcode',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.purpleColor,
+                              color: AppTheme.marineOrange,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Icon(
                             Icons.arrow_forward,
-                            color: AppTheme.purpleColor,
+                            color: AppTheme.marineOrange,
                           ),
                         ],
                       ),
@@ -478,7 +469,7 @@ class _PaintListTabState extends State<PaintListTab> {
                   title: 'Choose your brands',
                   subtitle: 'Select brands where to search for matching colors',
                   icon: Icons.palette_outlined,
-                  color: AppTheme.primaryBlue,
+                  color: AppTheme.marineBlue,
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
@@ -490,7 +481,7 @@ class _PaintListTabState extends State<PaintListTab> {
                           icon: const Icon(Icons.add),
                           label: const Text('Select Paint Brands'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundColor: AppTheme.marineBlue,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -553,7 +544,7 @@ class _PaintListTabState extends State<PaintListTab> {
                   title: 'Choose your image',
                   subtitle: 'Select or take a photo to find matching colors',
                   icon: Icons.image_search,
-                  color: AppTheme.pinkColor,
+                  color: AppTheme.marineOrange,
                   content: ImageColorPicker(
                     imageFile: _imageFile,
                     onColorsSelected: _onColorsSelected,
@@ -696,85 +687,65 @@ class _PaintListTabState extends State<PaintListTab> {
     required Color color,
     required Widget content,
   }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.3), width: 1),
-      ),
       elevation: 0,
-      color:
-          isDarkMode ? Color.lerp(Colors.grey[900], Colors.black, 0.3) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Encabezado del paso
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color:
-                  isDarkMode ? color.withOpacity(0.2) : color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título del paso
+            Row(
               children: [
+                // Número de paso
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
-                      '$stepNumber',
+                      stepNumber.toString(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                // Título e icono
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: isDarkMode ? Colors.white : null,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
+                      Icon(icon, color: color),
                     ],
                   ),
                 ),
-                Icon(icon, color: color, size: 28),
               ],
             ),
-          ),
-
-          // Contenido del paso
-          Padding(padding: const EdgeInsets.all(16), child: content),
-        ],
+            const SizedBox(height: 16),
+            // Contenido del paso
+            content,
+          ],
+        ),
       ),
     );
   }
@@ -1090,7 +1061,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                     ); // Rebuild the modal after returning from paint selection
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryBlue,
+                                    backgroundColor: AppTheme.marineBlue,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -1812,7 +1783,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                   }
                                   : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundColor: AppTheme.marineBlue,
                             foregroundColor: Colors.white,
                             disabledBackgroundColor: Colors.grey.withOpacity(
                               0.3,
@@ -2093,6 +2064,12 @@ class _PaintListTabState extends State<PaintListTab> {
           _paintBrands.map((brand) => Map<String, dynamic>.from(brand)),
         );
 
+    // Asignar colores del tema Space Marine
+    tempBrands[0]['color'] = AppTheme.marineBlue;
+    tempBrands[1]['color'] = AppTheme.marineOrange;
+    tempBrands[2]['color'] = AppTheme.marineGold;
+    tempBrands[3]['color'] = AppTheme.marineBlueLight;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2251,7 +2228,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundColor: AppTheme.marineBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),

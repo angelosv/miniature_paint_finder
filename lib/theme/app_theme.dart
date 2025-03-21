@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Colores principales de la aplicación
-  static const Color primaryBlue = Color(0xFF3C62FF);
-  static const Color lightBlue = Color(0xFFEAEFFF);
-  static const Color backgroundGrey = Color(0xFFF7F8FA);
-  static const Color textDark = Color(0xFF222222);
-  static const Color textGrey = Color(0xFF777777);
+  // Space Marine Theme Colors
+  static const Color marineBlue = Color(
+    0xFF1F3B6C,
+  ); // Azul principal del Space Marine
+  static const Color marineBlueLight = Color(0xFF4A7ED3); // Azul claro/brillos
+  static const Color marineBlueDark = Color(
+    0xFF172A4D,
+  ); // Azul más oscuro (sombras)
+  static const Color marineOrange = Color(0xFFFF8A00); // Naranja del pincel
+  static const Color marineGold = Color(0xFFFFC857); // Dorado/Águila
+  static const Color marineBlueBg = Color(0xFF253248); // Azul de fondo
+
+  // Colores secundarios para la UI
+  static const Color textDark = Color(0xFF1A1C29); // Texto oscuro
+  static const Color textGrey = Color(0xFF777777); // Texto secundario
+  static const Color backgroundGrey = Color(0xFFF7F8FA); // Fondo claro
 
   // Colores para categorías
   static const Color pinkColor = Color(0xFFFF4D9D);
   static const Color purpleColor = Color(0xFF9747FF);
-  static const Color orangeColor = Color(0xFFFFA136);
   static const Color greenColor = Color(0xFF23C16B);
 
   // Dark theme colors
-  static const Color darkBackground = Color(0xFF121212);
-  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color darkBackground = Color(
+    0xFF121A2E,
+  ); // Fondo oscuro (Space Marine)
+  static const Color darkSurface = Color(0xFF1E2A40); // Superficie oscura
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
   static const Color darkTextSecondary = Color(0xFFAAAAAA);
 
@@ -24,19 +35,20 @@ class AppTheme {
     useMaterial3: true,
     scaffoldBackgroundColor: backgroundGrey,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryBlue,
-      primary: primaryBlue,
-      secondary: pinkColor,
+      seedColor: marineBlue,
+      primary: marineBlue,
+      secondary: marineOrange,
+      tertiary: marineGold,
       background: backgroundGrey,
       brightness: Brightness.light,
     ),
     appBarTheme: const AppBarTheme(
       centerTitle: false,
       elevation: 0,
-      backgroundColor: Colors.white,
-      foregroundColor: textDark,
+      backgroundColor: marineBlue,
+      foregroundColor: Colors.white,
       titleTextStyle: TextStyle(
-        color: textDark,
+        color: Colors.white,
         fontWeight: FontWeight.bold,
         fontSize: 18,
       ),
@@ -49,7 +61,7 @@ class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         elevation: 0,
-        backgroundColor: primaryBlue,
+        backgroundColor: marineBlue,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -59,14 +71,14 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: primaryBlue.withOpacity(0.5)),
+        side: BorderSide(color: marineBlue.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        foregroundColor: primaryBlue,
+        foregroundColor: marineBlue,
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
     ),
@@ -81,18 +93,18 @@ class AppTheme {
       hintStyle: const TextStyle(color: textGrey),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: lightBlue,
+      backgroundColor: marineBlue.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
       labelStyle: const TextStyle(
         fontSize: 12,
-        color: primaryBlue,
+        color: marineBlue,
         fontWeight: FontWeight.w500,
       ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
-      selectedItemColor: primaryBlue,
+      selectedItemColor: marineBlue,
       unselectedItemColor: textGrey,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
@@ -123,9 +135,10 @@ class AppTheme {
     useMaterial3: true,
     scaffoldBackgroundColor: darkBackground,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryBlue,
-      primary: primaryBlue,
-      secondary: pinkColor,
+      seedColor: marineBlue,
+      primary: marineBlueLight,
+      secondary: marineOrange,
+      tertiary: marineGold,
       background: darkBackground,
       surface: darkSurface,
       onSurface: darkTextPrimary,
@@ -134,7 +147,7 @@ class AppTheme {
     appBarTheme: const AppBarTheme(
       centerTitle: false,
       elevation: 0,
-      backgroundColor: darkSurface,
+      backgroundColor: marineBlueDark,
       foregroundColor: darkTextPrimary,
       titleTextStyle: TextStyle(
         color: darkTextPrimary,
@@ -150,7 +163,7 @@ class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         elevation: 0,
-        backgroundColor: primaryBlue,
+        backgroundColor: marineOrange,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -160,14 +173,14 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: primaryBlue.withOpacity(0.5)),
+        side: BorderSide(color: marineBlueLight.withOpacity(0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        foregroundColor: primaryBlue,
+        foregroundColor: marineBlueLight,
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
     ),
@@ -182,18 +195,18 @@ class AppTheme {
       hintStyle: TextStyle(color: darkTextSecondary),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: darkSurface,
+      backgroundColor: marineBlueLight.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
       labelStyle: const TextStyle(
         fontSize: 12,
-        color: primaryBlue,
+        color: marineBlueLight,
         fontWeight: FontWeight.w500,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: darkSurface,
-      selectedItemColor: primaryBlue,
+      backgroundColor: marineBlueDark,
+      selectedItemColor: marineOrange,
       unselectedItemColor: darkTextSecondary,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
@@ -218,21 +231,31 @@ class AppTheme {
       bodyMedium: TextStyle(fontSize: 14, color: darkTextPrimary),
       bodySmall: TextStyle(fontSize: 12, color: darkTextSecondary),
     ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: marineOrange,
+      foregroundColor: Colors.white,
+    ),
   );
 
   // Método para obtener colores de categoría basados en el índice
   static Color getCategoryColor(int index) {
-    switch (index % 4) {
+    switch (index % 5) {
       case 0:
-        return primaryBlue;
+        return marineBlue;
       case 1:
-        return pinkColor;
+        return marineOrange;
       case 2:
         return purpleColor;
       case 3:
-        return orangeColor;
+        return marineGold;
+      case 4:
+        return marineBlueLight;
       default:
-        return primaryBlue;
+        return marineBlue;
     }
   }
+
+  // Los siguientes getters son para mantener compatibilidad con el código existente
+  static Color get primaryBlue => marineBlue;
+  static Color get orangeColor => marineOrange;
 }
