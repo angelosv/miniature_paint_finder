@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize auth service
+  final authService = AuthService();
+  await authService.init();
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
