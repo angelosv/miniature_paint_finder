@@ -19,6 +19,8 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isShowingWelcome = true;
   bool _isShowingRegisterOptions = false;
   bool _isShowingEmailForm = false;
+  bool _isShowingLoginOptions = false;
+  bool _isShowingEmailLogin = false;
 
   // Auth service instance
   final AuthService _authService = AuthService();
@@ -115,11 +117,23 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
-  void _showLoginScreen() {
+  void _showLoginOptions() {
     setState(() {
       _isShowingWelcome = false;
       _isShowingRegisterOptions = false;
       _isShowingEmailForm = false;
+      _isShowingLoginOptions = true;
+      _isShowingEmailLogin = false;
+    });
+  }
+
+  void _showEmailLogin() {
+    setState(() {
+      _isShowingWelcome = false;
+      _isShowingRegisterOptions = false;
+      _isShowingEmailForm = false;
+      _isShowingLoginOptions = false;
+      _isShowingEmailLogin = true;
     });
   }
 
@@ -128,6 +142,8 @@ class _AuthScreenState extends State<AuthScreen>
       _isShowingWelcome = false;
       _isShowingRegisterOptions = true;
       _isShowingEmailForm = false;
+      _isShowingLoginOptions = false;
+      _isShowingEmailLogin = false;
     });
   }
 
@@ -136,6 +152,8 @@ class _AuthScreenState extends State<AuthScreen>
       _isShowingWelcome = false;
       _isShowingRegisterOptions = false;
       _isShowingEmailForm = true;
+      _isShowingLoginOptions = false;
+      _isShowingEmailLogin = false;
     });
   }
 
@@ -144,15 +162,37 @@ class _AuthScreenState extends State<AuthScreen>
       setState(() {
         _isShowingEmailForm = false;
         _isShowingRegisterOptions = true;
+        _isShowingLoginOptions = false;
+        _isShowingEmailLogin = false;
       });
     } else if (_isShowingRegisterOptions) {
       setState(() {
         _isShowingRegisterOptions = false;
         _isShowingWelcome = true;
+        _isShowingLoginOptions = false;
+        _isShowingEmailLogin = false;
+      });
+    } else if (_isShowingLoginOptions) {
+      setState(() {
+        _isShowingLoginOptions = false;
+        _isShowingWelcome = true;
+        _isShowingRegisterOptions = false;
+        _isShowingEmailLogin = false;
+      });
+    } else if (_isShowingEmailLogin) {
+      setState(() {
+        _isShowingEmailLogin = false;
+        _isShowingLoginOptions = true;
+        _isShowingRegisterOptions = false;
+        _isShowingEmailForm = false;
       });
     } else {
       setState(() {
         _isShowingWelcome = true;
+        _isShowingRegisterOptions = false;
+        _isShowingEmailForm = false;
+        _isShowingLoginOptions = false;
+        _isShowingEmailLogin = false;
       });
     }
   }
@@ -171,7 +211,9 @@ class _AuthScreenState extends State<AuthScreen>
                 ? _buildRegisterOptions(screenSize)
                 : _isShowingEmailForm
                 ? _buildEmailRegisterForm(screenSize)
-                : _buildAuthForm(screenSize),
+                : _isShowingLoginOptions
+                ? _buildLoginOptions(screenSize)
+                : _buildEmailLoginForm(screenSize),
       ),
       // Loading overlay
       bottomSheet:
@@ -261,7 +303,7 @@ class _AuthScreenState extends State<AuthScreen>
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _showLoginScreen, // Show login screen
+                      onPressed: _showLoginOptions, // Show login options
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         foregroundColor: Colors.white,
@@ -316,6 +358,140 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Widget _buildLoginOptions(Size screenSize) {
+    final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
+
+    return Stack(
+      children: [
+        Container(
+          color: AppTheme.darkBackground,
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: formMaxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Back button
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.1),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: _goBack,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Title
+                  Text(
+                    "Sign in to your account",
+                    style: AppTheme.headingStyle.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Choose how you want to sign in",
+                    style: AppTheme.subheadingStyle.copyWith(
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Login options
+                  _buildAuthButton(
+                    icon: Icons.email_outlined,
+                    label: 'Continue with Email',
+                    color: AppTheme.marineOrange,
+                    onPressed: _showEmailLogin,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _buildAuthButton(
+                    icon: Icons.g_mobiledata_rounded,
+                    label: 'Continue with Google',
+                    color: Colors.red.shade600,
+                    onPressed: _performDirectLogin,
+                  ),
+
+                  // Show Apple login on iOS and web
+                  const SizedBox(height: 16),
+                  _buildAuthButton(
+                    icon: Icons.apple,
+                    label: 'Continue with Apple',
+                    color: Colors.white,
+                    textColor: AppTheme.darkBackground,
+                    onPressed: _performDirectLogin,
+                  ),
+
+                  // Show Phone login for Android (and others)
+                  const SizedBox(height: 16),
+                  _buildAuthButton(
+                    icon: Icons.phone_android,
+                    label: 'Continue with Phone',
+                    color: Colors.green.shade600,
+                    onPressed: _performDirectLogin,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Don't have an account yet?
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account?",
+                        style: AppTheme.bodyStyle.copyWith(
+                          color: Colors.white70,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _showRegisterOptions,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.marineGold,
+                          padding: const EdgeInsets.only(left: 8),
+                        ),
+                        child: Text(
+                          'Register',
+                          style: AppTheme.buttonStyle.copyWith(
+                            color: AppTheme.marineGold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 3D floating cubes
+        Positioned(
+          bottom: 100,
+          right: 40,
+          child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+        ),
+
+        Positioned(
+          top: 120,
+          right: 80,
+          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+        ),
+
+        Positioned(
+          bottom: 200,
+          left: 60,
+          child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRegisterOptions(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
 
@@ -360,7 +536,7 @@ class _AuthScreenState extends State<AuthScreen>
                   const SizedBox(height: 48),
 
                   // Registration options
-                  _buildRegisterButton(
+                  _buildAuthButton(
                     icon: Icons.email_outlined,
                     label: 'Continue with Email',
                     color: AppTheme.marineOrange,
@@ -369,7 +545,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   const SizedBox(height: 16),
 
-                  _buildRegisterButton(
+                  _buildAuthButton(
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Continue with Google',
                     color: Colors.red.shade600,
@@ -378,7 +554,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   // Show Apple login on iOS and web
                   const SizedBox(height: 16),
-                  _buildRegisterButton(
+                  _buildAuthButton(
                     icon: Icons.apple,
                     label: 'Continue with Apple',
                     color: Colors.white,
@@ -388,7 +564,7 @@ class _AuthScreenState extends State<AuthScreen>
 
                   // Show Phone login for Android (and others)
                   const SizedBox(height: 16),
-                  _buildRegisterButton(
+                  _buildAuthButton(
                     icon: Icons.phone_android,
                     label: 'Continue with Phone',
                     color: Colors.green.shade600,
@@ -436,7 +612,7 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _buildRegisterButton({
+  Widget _buildAuthButton({
     required IconData icon,
     required String label,
     required Color color,
@@ -625,7 +801,7 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                         ),
                         TextButton(
-                          onPressed: _showLoginScreen,
+                          onPressed: _showLoginOptions,
                           style: TextButton.styleFrom(
                             foregroundColor: AppTheme.marineGold,
                             padding: const EdgeInsets.only(left: 8),
@@ -662,7 +838,7 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
-  Widget _buildAuthForm(Size screenSize) {
+  Widget _buildEmailLoginForm(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
 
     return Stack(
@@ -714,7 +890,7 @@ class _AuthScreenState extends State<AuthScreen>
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: _buildInputDecoration(
-                        hint: 'Phone, email or username',
+                        hint: 'Email address',
                         prefixIcon: const Icon(
                           Icons.email_outlined,
                           color: Colors.white70,
@@ -761,7 +937,28 @@ class _AuthScreenState extends State<AuthScreen>
                       },
                     ),
 
-                    const SizedBox(height: 48),
+                    // Forgot password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // Forgot password functionality
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.marineGold,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: Text(
+                          'Forgot Password?',
+                          style: AppTheme.bodyStyle.copyWith(
+                            color: AppTheme.marineGold,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
 
                     // Bottom section with Register
                     Column(
