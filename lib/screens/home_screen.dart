@@ -164,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
         data: Theme.of(context).copyWith(
           canvasColor:
               Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.darkSurface
+                  ? AppTheme.marineBlueDark
                   : Colors.white,
         ),
         child: Drawer(
@@ -173,18 +173,37 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SafeArea(
             child: Column(
               children: [
-                // Cabecera del Drawer
+                // Cabecera del Drawer con gradiente Space Marine
                 Container(
                   padding: const EdgeInsets.symmetric(
                     vertical: 24,
                     horizontal: 16,
                   ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? [AppTheme.marineBlueDark, AppTheme.marineBlue]
+                              : [AppTheme.marineBlue, AppTheme.marineBlueLight],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
                   child: Row(
                     children: [
-                      const CircleAvatar(
-                        radius: 28,
-                        backgroundImage: NetworkImage(
-                          'https://randomuser.me/api/portraits/men/1.jpg',
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.marineGold,
+                            width: 2,
+                          ),
+                        ),
+                        child: const CircleAvatar(
+                          radius: 28,
+                          backgroundImage: NetworkImage(
+                            'https://randomuser.me/api/portraits/men/1.jpg',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -193,25 +212,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             'Angelo',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white
-                                      : Colors.black87,
+                              color: Colors.white,
                             ),
                           ),
                           Text(
                             'Paint Collector',
                             style: TextStyle(
                               fontSize: 14,
-                              color:
-                                  Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white70
-                                      : Colors.black54,
+                              color: AppTheme.marineGold.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -293,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color:
               Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.darkSurface
+                  ? AppTheme.marineBlueDark
                   : Colors.white,
           boxShadow: [
             BoxShadow(
@@ -339,10 +351,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onTap,
     bool isSelected = false,
   }) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade600,
+        color:
+            isSelected
+                ? (isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue)
+                : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
         size: 24,
       ),
       title: Text(
@@ -350,13 +367,21 @@ class _HomeScreenState extends State<HomeScreen> {
         style: TextStyle(
           fontSize: 16,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          color: isSelected ? AppTheme.primaryBlue : null,
+          color:
+              isSelected
+                  ? (isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue)
+                  : null,
         ),
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       dense: true,
-      tileColor: isSelected ? AppTheme.marineBlue.withOpacity(0.1) : null,
+      tileColor:
+          isSelected
+              ? (isDarkMode
+                  ? AppTheme.marineOrange.withOpacity(0.15)
+                  : AppTheme.marineBlue.withOpacity(0.1))
+              : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }

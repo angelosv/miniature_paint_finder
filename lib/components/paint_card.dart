@@ -68,7 +68,7 @@ class PaintCard extends StatelessWidget {
                           ),
                           child: Text(
                             paint.category,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               color: AppTheme.primaryBlue,
                               fontWeight: FontWeight.w500,
