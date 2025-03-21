@@ -513,7 +513,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
-                                height: 70,
+                                height: 90,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: _pickedColors.length,
@@ -672,8 +672,7 @@ class _PaintListTabState extends State<PaintListTab> {
 
     return Container(
       width: 100,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color:
             isSelected
@@ -693,9 +692,9 @@ class _PaintListTabState extends State<PaintListTab> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            height: 50,
-            width: 50,
-            margin: const EdgeInsets.only(top: 4),
+            height: 40,
+            width: 40,
+            margin: const EdgeInsets.only(top: 2),
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
               shape: BoxShape.circle,
@@ -704,212 +703,26 @@ class _PaintListTabState extends State<PaintListTab> {
               child: Text(
                 name.substring(0, 1),
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             name,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w500,
+              fontSize: 12,
               color: isDarkMode ? Colors.white : null,
             ),
           ),
-          if (isSelected) Icon(Icons.check_circle, color: color, size: 18),
+          if (isSelected) Icon(Icons.check_circle, color: color, size: 14),
         ],
       ),
-    );
-  }
-
-  // Modal para seleccionar marcas de pintura
-  void _showBrandSelectionModal(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Crear una copia local de los datos para manipularlos en el modal
-    final List<Map<String, dynamic>> tempBrands =
-        List<Map<String, dynamic>>.from(
-          _paintBrands.map((brand) => Map<String, dynamic>.from(brand)),
-        );
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return DraggableScrollableSheet(
-              initialChildSize: 0.6,
-              maxChildSize: 0.9,
-              minChildSize: 0.5,
-              expand: false,
-              builder: (context, scrollController) {
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Select Paint Brands',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(
-                              color: isDarkMode ? Colors.white : null,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: isDarkMode ? Colors.white : null,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      Divider(color: isDarkMode ? Colors.grey[700] : null),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: GridView.builder(
-                          controller: scrollController,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 1.5,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
-                          itemCount: tempBrands.length,
-                          itemBuilder: (context, index) {
-                            final brand = tempBrands[index];
-                            return GestureDetector(
-                              onTap: () {
-                                setModalState(() {
-                                  // Toggle selection
-                                  brand['selected'] =
-                                      !(brand['selected'] as bool);
-                                });
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color:
-                                      (brand['selected'] as bool)
-                                          ? (brand['color'] as Color)
-                                              .withOpacity(
-                                                isDarkMode ? 0.3 : 0.1,
-                                              )
-                                          : (isDarkMode
-                                              ? Colors.grey[850]
-                                              : Colors.white),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color:
-                                        (brand['selected'] as bool)
-                                            ? (brand['color'] as Color)
-                                            : (isDarkMode
-                                                ? Colors.grey[700]!
-                                                : Colors.grey[300]!),
-                                    width: (brand['selected'] as bool) ? 2 : 1,
-                                  ),
-                                  // Removed box shadow
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      height: 40,
-                                      width: 40,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isDarkMode
-                                                ? Colors.grey[800]
-                                                : Colors.grey[200],
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          (brand['name'] as String).substring(
-                                            0,
-                                            1,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey[300]
-                                                    : Colors.grey[700],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Flexible(
-                                      child: Text(
-                                        brand['name'] as String,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              isDarkMode ? Colors.white : null,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (brand['selected'] as bool)
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: brand['color'] as Color,
-                                        size: 18,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Actualizar el estado global con las selecciones del modal
-                            setState(() {
-                              for (int i = 0; i < _paintBrands.length; i++) {
-                                _paintBrands[i]['selected'] =
-                                    tempBrands[i]['selected'];
-                              }
-                            });
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text('Apply'),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
     );
   }
 
@@ -921,6 +734,318 @@ class _PaintListTabState extends State<PaintListTab> {
     final now = DateTime.now();
     final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
     _paletteNameController.text = defaultName;
+
+    // Function to build the modal content - extracted to allow rebuilding
+    Widget buildModalContent(
+      BuildContext context,
+      ScrollController scrollController,
+      Function setState,
+    ) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Selected Colors',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isDarkMode ? Colors.white : null,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: isDarkMode ? Colors.white : null,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            Text(
+              'Find matching paints for your selected colors',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            Divider(color: isDarkMode ? Colors.grey[700] : null),
+
+            // Palette name field
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: TextField(
+                controller: _paletteNameController,
+                decoration: InputDecoration(
+                  labelText: 'Palette Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                  prefixIcon: const Icon(Icons.palette),
+                ),
+                style: TextStyle(color: isDarkMode ? Colors.white : null),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.only(bottom: 70),
+                    itemCount: _pickedColors.length,
+                    itemBuilder: (context, index) {
+                      final colorData = _pickedColors[index];
+                      final color = colorData['color'] as Color;
+                      final hexCode = colorData['hexCode'] as String;
+
+                      // Diseño común de las tarjetas siempre simple como en la imagen
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        color: isDarkMode ? Colors.grey[850] : Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Color swatch
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
+                              // Color info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Color Point ${index + 1}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      hexCode,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+
+                                    // Show selected paint info if available
+                                    if (colorData['paintName'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 8.0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 20,
+                                              height: 20,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.grey[800]
+                                                        : Colors.grey[200],
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  colorData['brandAvatar']
+                                                      as String,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        isDarkMode
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              "${colorData['paintName']}",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black,
+                                              ),
+                                            ),
+
+                                            // Add match percentage
+                                            if (colorData['matchPercentage'] !=
+                                                null)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  left: 8.0,
+                                                ),
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: _getMatchColor(
+                                                      colorData['matchPercentage']
+                                                          as int,
+                                                    ).withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    '${colorData['matchPercentage']}%',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: _getMatchColor(
+                                                        colorData['matchPercentage']
+                                                            as int,
+                                                      ),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+
+                              // Find button
+                              SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    // Key change: await the result and rebuild modal after returning
+                                    await _showMatchingPaintsModal(
+                                      context,
+                                      index,
+                                    );
+                                    setState(
+                                      () {},
+                                    ); // Rebuild the modal after returning from paint selection
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primaryBlue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.color_lens, size: 20),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Find',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Fixed position Save Palette button
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[900] : Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Palette "${_paletteNameController.text}" saved!',
+                                ),
+                              ),
+                            );
+                            _reset();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.purpleColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Save Palette'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     showModalBottomSheet(
       context: context,
@@ -938,450 +1063,10 @@ class _PaintListTabState extends State<PaintListTab> {
               minChildSize: 0.5,
               expand: false,
               builder: (context, scrollController) {
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Selected Colors',
-                              style: Theme.of(
-                                context,
-                              ).textTheme.titleLarge?.copyWith(
-                                color: isDarkMode ? Colors.white : null,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: isDarkMode ? Colors.white : null,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Find matching paints for your selected colors',
-                        style: TextStyle(
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      Divider(color: isDarkMode ? Colors.grey[700] : null),
-
-                      // Palette name field
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: TextField(
-                          controller: _paletteNameController,
-                          decoration: InputDecoration(
-                            labelText: 'Palette Name',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode
-                                    ? Colors.grey[800]
-                                    : Colors.grey[100],
-                            prefixIcon: const Icon(Icons.palette),
-                          ),
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white : null,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            ListView.builder(
-                              controller: scrollController,
-                              padding: const EdgeInsets.only(bottom: 70),
-                              itemCount: _pickedColors.length,
-                              itemBuilder: (context, index) {
-                                final colorData = _pickedColors[index];
-                                final color = colorData['color'] as Color;
-                                final hexCode = colorData['hexCode'] as String;
-                                final paintName = colorData['paintName'];
-                                final paintBrand = colorData['paintBrand'];
-                                final matchPercentage =
-                                    colorData['matchPercentage'];
-
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(
-                                      color:
-                                          isDarkMode
-                                              ? Colors.grey[700]!
-                                              : Colors.grey[300]!,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  color: isDarkMode ? Colors.grey[850] : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        // Left: Color swatch
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            color:
-                                                colorData['paintColor'] != null
-                                                    ? colorData['paintColor']
-                                                        as Color
-                                                    : color,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-
-                                        // Middle: Paint info
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Flexible(
-                                                    child: Text(
-                                                      'Color Point ${index + 1}',
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 15,
-                                                        color:
-                                                            isDarkMode
-                                                                ? Colors.white
-                                                                : null,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Flexible(
-                                                    child: Text(
-                                                      hexCode,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color:
-                                                            isDarkMode
-                                                                ? Colors
-                                                                    .grey[400]
-                                                                : Colors
-                                                                    .grey[600],
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-
-                                              if (paintName != null)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 4,
-                                                      ),
-                                                  child: Row(
-                                                    children: [
-                                                      if (colorData['brandAvatar'] !=
-                                                          null)
-                                                        Container(
-                                                          width: 20,
-                                                          height: 20,
-                                                          decoration: BoxDecoration(
-                                                            color:
-                                                                isDarkMode
-                                                                    ? Colors
-                                                                        .grey[700]
-                                                                    : Colors
-                                                                        .grey[200],
-                                                            shape:
-                                                                BoxShape.circle,
-                                                          ),
-                                                          child: Center(
-                                                            child: Text(
-                                                              colorData['brandAvatar']
-                                                                  as String,
-                                                              style: TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 10,
-                                                                color:
-                                                                    isDarkMode
-                                                                        ? Colors
-                                                                            .white
-                                                                        : Colors
-                                                                            .black,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      const SizedBox(width: 6),
-                                                      Flexible(
-                                                        child: Text(
-                                                          paintName,
-                                                          style: TextStyle(
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                            fontSize: 13,
-                                                            color:
-                                                                isDarkMode
-                                                                    ? Colors
-                                                                        .white
-                                                                    : null,
-                                                          ),
-                                                          overflow:
-                                                              TextOverflow
-                                                                  .ellipsis,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 6),
-                                                      if (matchPercentage !=
-                                                          null)
-                                                        Container(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 6,
-                                                                vertical: 2,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color:
-                                                                _getMatchColor(
-                                                                  matchPercentage
-                                                                      as int,
-                                                                ).withOpacity(
-                                                                  0.2,
-                                                                ),
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  10,
-                                                                ),
-                                                          ),
-                                                          child: Text(
-                                                            '$matchPercentage%',
-                                                            style: TextStyle(
-                                                              fontSize: 10,
-                                                              color: _getMatchColor(
-                                                                matchPercentage,
-                                                              ),
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-
-                                              if (colorData['colorCode'] !=
-                                                      null ||
-                                                  colorData['barcode'] != null)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 4,
-                                                      ),
-                                                  child: Row(
-                                                    children: [
-                                                      if (colorData['colorCode'] !=
-                                                          null)
-                                                        Flexible(
-                                                          child: Text(
-                                                            'Code: ${colorData['colorCode']}',
-                                                            style: TextStyle(
-                                                              fontSize: 11,
-                                                              color:
-                                                                  isDarkMode
-                                                                      ? Colors
-                                                                          .grey[400]
-                                                                      : Colors
-                                                                          .grey[600],
-                                                            ),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ),
-                                                      if (colorData['colorCode'] !=
-                                                              null &&
-                                                          colorData['barcode'] !=
-                                                              null)
-                                                        const SizedBox(
-                                                          width: 10,
-                                                        ),
-                                                      if (colorData['barcode'] !=
-                                                          null)
-                                                        Flexible(
-                                                          child: Row(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              Icon(
-                                                                Icons.qr_code,
-                                                                size: 10,
-                                                                color:
-                                                                    isDarkMode
-                                                                        ? Colors
-                                                                            .grey[400]
-                                                                        : Colors
-                                                                            .grey[600],
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 2,
-                                                              ),
-                                                              Flexible(
-                                                                child: Text(
-                                                                  '${colorData['barcode'].toString().substring(0, 5)}...',
-                                                                  style: TextStyle(
-                                                                    fontSize:
-                                                                        11,
-                                                                    color:
-                                                                        isDarkMode
-                                                                            ? Colors.grey[400]
-                                                                            : Colors.grey[600],
-                                                                  ),
-                                                                  overflow:
-                                                                      TextOverflow
-                                                                          .ellipsis,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // Right: Find/Change button
-                                        SizedBox(
-                                          width: 48,
-                                          child: ElevatedButton(
-                                            onPressed:
-                                                () => _showMatchingPaintsModal(
-                                                  context,
-                                                  index,
-                                                ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  AppTheme.primaryBlue,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                              minimumSize: const Size(40, 64),
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.color_lens,
-                                                  size: 18,
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  paintName != null
-                                                      ? 'Change'
-                                                      : 'Find',
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-
-                            // Fixed position Save Palette button
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[900]
-                                          : Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, -2),
-                                    ),
-                                  ],
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Palette "${_paletteNameController.text}" saved!',
-                                          ),
-                                        ),
-                                      );
-                                      _reset();
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.purpleColor,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                    child: const Text('Save Palette'),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                return buildModalContent(
+                  context,
+                  scrollController,
+                  setModalState,
                 );
               },
             );
@@ -1391,8 +1076,155 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
+  // Nuevo método para construir la tarjeta de pintura en el modal "Selected Colors"
+  Widget _buildPaintCardForSelectedColors(
+    Map<String, dynamic> colorData,
+    int index,
+  ) {
+    final paintName = colorData['paintName'] as String;
+    final paintBrand = colorData['paintBrand'] as String?;
+    final brandAvatar = colorData['brandAvatar'] as String;
+    final matchPercentage = colorData['matchPercentage'] as int?;
+    final colorCode = colorData['colorCode'] as String?;
+    final barcode = colorData['barcode'] as String?;
+    final paintColor = colorData['paintColor'] as Color?;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Avatar de marca (círculo con letra)
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              brandAvatar,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+
+        // Nombre, marca y detalles
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Nombre de la pintura
+              Text(
+                paintName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              // Marca de la pintura
+              Text(
+                paintBrand ?? '',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+
+              // Fila de código de color y barcode
+              if (colorCode != null || barcode != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      // Código de color con swatch
+                      if (colorCode != null && paintColor != null)
+                        Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: paintColor,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              colorCode,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      const SizedBox(width: 12),
+
+                      // Código de barras
+                      if (barcode != null)
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.qr_code,
+                                size: 11,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  barcode,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Porcentaje de coincidencia
+        if (matchPercentage != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getMatchColor(matchPercentage).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$matchPercentage% match',
+              style: TextStyle(
+                fontSize: 12,
+                color: _getMatchColor(matchPercentage),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // Modal para mostrar pinturas coincidentes (simulado)
-  void _showMatchingPaintsModal(BuildContext context, int colorIndex) {
+  Future<void> _showMatchingPaintsModal(BuildContext context, int colorIndex) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final colorData = _pickedColors[colorIndex];
     final color = colorData['color'] as Color;
@@ -1459,7 +1291,7 @@ class _PaintListTabState extends State<PaintListTab> {
       }
     }
 
-    showModalBottomSheet(
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -1626,7 +1458,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     color:
                                                         isDarkMode
                                                             ? Colors.white
-                                                            : null,
+                                                            : Colors.black,
                                                   ),
                                                 ),
                                                 Text(
@@ -1898,15 +1730,173 @@ class _PaintListTabState extends State<PaintListTab> {
   }
 
   // Update color display in the Selected Colors card
-  // Fix the code for color swatch display in the step 3 section
   Widget _buildColorSwatchItem(Map<String, dynamic> colorData, int index) {
     final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
     final paintName = colorData['paintName'];
+    final paintBrand = colorData['paintBrand'];
+    final matchPercentage = colorData['matchPercentage'];
+    final brandAvatar = colorData['brandAvatar'];
+    final colorCode = colorData['colorCode'];
+    final barcode = colorData['barcode'];
+    final paintColor = colorData['paintColor'];
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Si hay una pintura seleccionada, mostrar tarjeta como en la imagen
+    if (paintName != null) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Avatar de marca (círculo con letra)
+              Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    brandAvatar as String,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Nombre y marca
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      paintName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      paintBrand ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    // Código de color y barcode en una fila
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        // Color box y código
+                        if (colorCode != null)
+                          Row(
+                            children: [
+                              Container(
+                                width: 15,
+                                height: 15,
+                                decoration: BoxDecoration(
+                                  color: paintColor as Color,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                colorCode,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        const SizedBox(width: 16),
+
+                        // Barcode
+                        if (barcode != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.qr_code,
+                                size: 10,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                barcode,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Porcentaje de coincidencia
+              if (matchPercentage != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getMatchColor(
+                      matchPercentage as int,
+                    ).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$matchPercentage% match',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _getMatchColor(matchPercentage as int),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Si no hay pintura seleccionada, mostrar el diseño original
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1914,38 +1904,18 @@ class _PaintListTabState extends State<PaintListTab> {
             children: [
               // Paint color container
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color:
-                      colorData['paintColor'] != null
-                          ? colorData['paintColor'] as Color
-                          : color,
-                  borderRadius: BorderRadius.circular(8),
+                  color: color,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                // Show a check icon if paint has been selected
-                child:
-                    paintName != null
-                        ? Center(
-                          child: Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                            size: 16,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.5),
-                                blurRadius: 2,
-                              ),
-                            ],
-                          ),
-                        )
-                        : null,
               ),
 
               // Remove button
               Positioned(
-                right: -5,
-                top: -5,
+                right: -4,
+                top: -4,
                 child: GestureDetector(
                   onTap: () {
                     setState(() {
@@ -1953,7 +1923,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
                       color: isDarkMode ? Colors.grey[800] : Colors.white,
                       shape: BoxShape.circle,
@@ -1970,63 +1940,214 @@ class _PaintListTabState extends State<PaintListTab> {
                     ),
                     child: Icon(
                       Icons.close,
-                      size: 12,
+                      size: 10,
                       color: isDarkMode ? Colors.red[300] : Colors.red,
                     ),
                   ),
                 ),
               ),
-
-              // Brand badge (if paint has been selected)
-              if (paintName != null && colorData['brandAvatar'] != null)
-                Positioned(
-                  left: -5,
-                  bottom: -5,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey[800] : Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDarkMode ? Colors.grey[700]! : Colors.white,
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        colorData['brandAvatar'] as String,
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
 
           // Show hex code
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: 2),
             child: Text(
               hexCode,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[800],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Modal para seleccionar marcas de pintura
+  void _showBrandSelectionModal(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Crear una copia local de los datos para manipularlos en el modal
+    final List<Map<String, dynamic>> tempBrands =
+        List<Map<String, dynamic>>.from(
+          _paintBrands.map((brand) => Map<String, dynamic>.from(brand)),
+        );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              maxChildSize: 0.9,
+              minChildSize: 0.5,
+              expand: false,
+              builder: (context, scrollController) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Select Paint Brands',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              color: isDarkMode ? Colors.white : null,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: isDarkMode ? Colors.white : null,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      Divider(color: isDarkMode ? Colors.grey[700] : null),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: GridView.builder(
+                          controller: scrollController,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 1.5,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
+                          itemCount: tempBrands.length,
+                          itemBuilder: (context, index) {
+                            final brand = tempBrands[index];
+                            return GestureDetector(
+                              onTap: () {
+                                setModalState(() {
+                                  // Toggle selection
+                                  brand['selected'] =
+                                      !(brand['selected'] as bool);
+                                });
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color:
+                                      (brand['selected'] as bool)
+                                          ? (brand['color'] as Color)
+                                              .withOpacity(
+                                                isDarkMode ? 0.3 : 0.1,
+                                              )
+                                          : (isDarkMode
+                                              ? Colors.grey[850]
+                                              : Colors.white),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color:
+                                        (brand['selected'] as bool)
+                                            ? (brand['color'] as Color)
+                                            : (isDarkMode
+                                                ? Colors.grey[700]!
+                                                : Colors.grey[300]!),
+                                    width: (brand['selected'] as bool) ? 2 : 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      height: 40,
+                                      width: 40,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[800]
+                                                : Colors.grey[200],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          (brand['name'] as String).substring(
+                                            0,
+                                            1,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.grey[300]
+                                                    : Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Flexible(
+                                      child: Text(
+                                        brand['name'] as String,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              isDarkMode ? Colors.white : null,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (brand['selected'] as bool)
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: brand['color'] as Color,
+                                        size: 18,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Actualizar el estado global con las selecciones del modal
+                            setState(() {
+                              for (int i = 0; i < _paintBrands.length; i++) {
+                                _paintBrands[i]['selected'] =
+                                    tempBrands[i]['selected'];
+                              }
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Apply'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
