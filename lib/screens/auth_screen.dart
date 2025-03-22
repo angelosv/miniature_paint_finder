@@ -51,11 +51,11 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     try {
-      // Use the auth service for login - we'll just simulate success
+      // Use the auth service for login
       await _authService.signInWithEmailPassword(
         _emailController.text.isNotEmpty
             ? _emailController.text
-            : 'demo@example.com',
+            : 'demo@miniaturepaintfinder.com',
         _passwordController.text.isNotEmpty
             ? _passwordController.text
             : 'password123',
@@ -67,11 +67,45 @@ class _AuthScreenState extends State<AuthScreen>
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
+    } on AuthException catch (e) {
+      // Handle specific auth errors with user-friendly messages
+      String errorMessage;
+
+      switch (e.code) {
+        case AuthErrorCode.invalidEmail:
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case AuthErrorCode.wrongPassword:
+          errorMessage = 'Incorrect password, please try again';
+          break;
+        case AuthErrorCode.userNotFound:
+          errorMessage = 'No account found with this email';
+          break;
+        case AuthErrorCode.tooManyRequests:
+          errorMessage = 'Too many attempts. Please try again later';
+          break;
+        default:
+          errorMessage = e.message;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     } catch (e) {
-      // In a real app, handle errors
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.toString()}')));
+      // Handle other errors
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -97,16 +131,55 @@ class _AuthScreenState extends State<AuthScreen>
         );
 
         if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
           // Navigate to home screen after successful registration
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
+      } on AuthException catch (e) {
+        // Handle specific auth errors with user-friendly messages
+        String errorMessage;
+
+        switch (e.code) {
+          case AuthErrorCode.emailAlreadyInUse:
+            errorMessage = 'This email is already in use';
+            break;
+          case AuthErrorCode.invalidEmail:
+            errorMessage = 'Please enter a valid email address';
+            break;
+          case AuthErrorCode.weakPassword:
+            errorMessage = 'Password is too weak. Use at least 8 characters';
+            break;
+          default:
+            errorMessage = e.message;
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
       } catch (e) {
-        // In a real app, handle errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: ${e.toString()}')),
-        );
+        // Handle other errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration failed: ${e.toString()}'),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
       } finally {
         if (mounted) {
           setState(() {
