@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:miniature_paint_finder/components/library_tab.dart';
 import 'package:miniature_paint_finder/components/paint_list_tab.dart';
 import 'package:miniature_paint_finder/components/profile_tab.dart';
 import 'package:miniature_paint_finder/components/search_tab.dart';
@@ -35,17 +34,11 @@ class _HomeScreenState extends State<HomeScreen> {
       'index': -1,
       'screen': 'wishlist',
     },
-    {'icon': Icons.colorize_outlined, 'text': 'Paint Sets', 'index': -1},
     {
       'icon': Icons.auto_awesome_mosaic,
       'text': 'Library',
       'index': -2,
       'screen': 'library',
-    },
-    {
-      'icon': Icons.collections_bookmark_outlined,
-      'text': 'My Library',
-      'index': 1,
     },
     {'icon': Icons.palette_outlined, 'text': 'My Palettes', 'index': -1},
   ];
@@ -57,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<Widget> _screens = <Widget>[
     PaintListTab(),
-    LibraryTab(),
     SearchTab(),
     ProfileTab(),
   ];
@@ -250,148 +242,106 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemBuilder: (context, index) {
                       final item = _drawerItems[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        child: _buildDrawerItem(
-                          icon: item['icon'],
-                          text: item['text'],
-                          isSelected: _selectedIndex == item['index'],
-                          onTap: () {
-                            if (item['screen'] != null) {
-                              _navigateToScreen(item['screen']);
-                              return;
-                            }
+                      final bool isActive = _selectedIndex == item['index'];
 
-                            final targetIndex = item['index'];
-                            if (targetIndex >= 0) {
-                              setState(() {
-                                _selectedIndex = targetIndex;
-                              });
-                            }
+                      return ListTile(
+                        leading: Icon(item['icon']),
+                        title: Text(item['text']),
+                        onTap: () {
+                          if (item['index'] >= 0) {
+                            _onItemTapped(item['index']);
                             _closeDrawer();
-                          },
-                        ),
+                          } else if (item['screen'] != null) {
+                            _navigateToScreen(item['screen']);
+                          } else {
+                            _closeDrawer();
+                          }
+                        },
+                        selected: isActive,
+                        selectedTileColor: AppTheme.marineBlue.withOpacity(0.1),
+                        selectedColor: AppTheme.primaryBlue,
                       );
                     },
                   ),
                 ),
 
-                // Botones inferiores
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Divider(),
-                    ...List.generate(_bottomDrawerItems.length, (index) {
-                      final item = _bottomDrawerItems[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        child: _buildDrawerItem(
-                          icon: item['icon'],
-                          text: item['text'],
-                          isSelected: false,
-                          onTap: () {
-                            _closeDrawer();
-                          },
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                  ],
+                const Divider(),
+
+                // Elementos inferiores
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _bottomDrawerItems.length,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 0,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = _bottomDrawerItems[index];
+
+                    return ListTile(
+                      leading: Icon(item['icon']),
+                      title: Text(item['text']),
+                      onTap: () {
+                        _closeDrawer();
+                      },
+                      dense: true,
+                    );
+                  },
+                ),
+
+                // Versión de la app
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Version 1.0.0',
+                    style: TextStyle(
+                      color:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white70
+                              : Colors.black54,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ),
       ),
-      body: _screens.elementAt(_selectedIndex),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color:
-              Theme.of(context).brightness == Brightness.dark
-                  ? AppTheme.marineBlueDark
-                  : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.collections_bookmark_outlined),
-              activeIcon: Icon(Icons.collections_bookmark),
-              label: 'My Library',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search_outlined),
-              activeIcon: Icon(Icons.search),
-              label: 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        backgroundColor:
+            Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.marineBlueDark
+                : Colors.white,
+        selectedItemColor: AppTheme.marineOrange,
+        unselectedItemColor:
+            Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : Colors.black54,
+        elevation: 8,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            activeIcon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-    bool isSelected = false,
-  }) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return ListTile(
-      leading: Icon(
-        icon,
-        color:
-            isSelected
-                ? (isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue)
-                : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
-        size: 24,
-      ),
-      title: Text(
-        text,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          color:
-              isSelected
-                  ? (isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue)
-                  : null,
-        ),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      dense: true,
-      tileColor:
-          isSelected
-              ? (isDarkMode
-                  ? AppTheme.marineOrange.withOpacity(0.15)
-                  : AppTheme.marineBlue.withOpacity(0.1))
-              : null,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
     );
   }
 }
