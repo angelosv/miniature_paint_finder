@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
@@ -281,24 +282,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Brand avatar/logo circle
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _getBrandColor(paint.brand),
-                        child: Text(
-                          paint.brand.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
                       // Paint color
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 52,
+                        height: 52,
                         decoration: BoxDecoration(
                           color: Color(
                             int.parse(paint.colorHex.substring(1), radix: 16) +
@@ -405,6 +392,20 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ],
                         ),
                       ),
+
+                      // Brand avatar/logo circle (moved to the right)
+                      const SizedBox(width: 12),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getBrandColor(paint.brand),
+                        child: Text(
+                          paint.brand.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
@@ -439,37 +440,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children:
-                                    palettes.map((palette) {
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.purple.withOpacity(
-                                              0.3,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          palette.name,
-                                          style: TextStyle(
-                                            color: Colors.purple[700],
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                              ),
+                              _buildPaletteChips(palettes),
                             ],
                           ),
                         ),
@@ -488,6 +459,108 @@ class _WishlistScreenState extends State<WishlistScreen> {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  /// Build palette chips, limiting to 2 initially with a "View more" option
+  Widget _buildPaletteChips(List<Palette> palettes) {
+    // State for expanded view
+    bool isExpanded = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // Show all palettes if expanded, otherwise limit to 2
+        final displayPalettes =
+            isExpanded ? palettes : palettes.take(2).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                ...displayPalettes.map((palette) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      palette.name,
+                      style: TextStyle(color: Colors.purple[700], fontSize: 11),
+                    ),
+                  );
+                }),
+
+                // Show "View more" chip if there are more than 2 palettes and not expanded
+                if (palettes.length > 2 && !isExpanded)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isExpanded = true;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '+${palettes.length - 2} more',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 11,
+                            ),
+                          ),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 11,
+                            color: Colors.grey[700],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            // Show collapse option if expanded
+            if (isExpanded && palettes.length > 2)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isExpanded = false;
+                    });
+                  },
+                  child: Text(
+                    'Show less',
+                    style: TextStyle(
+                      color: Colors.purple[700],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -572,23 +645,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Paint info header with brand avatar
+                  // Paint info header with brand avatar on the right
                   Row(
                     children: [
-                      // Brand avatar
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _getBrandColor(paint.brand),
-                        child: Text(
-                          paint.brand.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
                       // Paint color
                       Container(
                         width: 40,
@@ -630,6 +689,20 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ],
                         ),
                       ),
+
+                      // Brand avatar (moved to the right)
+                      const SizedBox(width: 12),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getBrandColor(paint.brand),
+                        child: Text(
+                          paint.brand.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
 
@@ -664,7 +737,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   const SizedBox(height: 8),
                   _buildInfoRow(Icons.qr_code, 'Barcode', simulatedBarcode),
 
-                  // Palettes info
+                  // Palettes info (limit to 2 with View More)
                   if (palettes.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Row(
@@ -688,37 +761,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children:
-                                    palettes.map((palette) {
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.purple.withOpacity(
-                                              0.3,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          palette.name,
-                                          style: TextStyle(
-                                            color: Colors.purple[700],
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                              ),
+                              _buildPaletteChips(palettes),
                             ],
                           ),
                         ),
