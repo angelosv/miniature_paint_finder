@@ -252,21 +252,18 @@ class _WishlistScreenState extends State<WishlistScreen> {
         final addedAt = item['addedAt'] as DateTime;
 
         return Card(
-          elevation: 2,
+          elevation: 0,
           margin: const EdgeInsets.only(bottom: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side:
                 isPriority
                     ? BorderSide(color: AppTheme.marineOrange, width: 2)
-                    : BorderSide.none,
+                    : BorderSide(color: Colors.grey.withOpacity(0.2)),
           ),
           child: InkWell(
             onTap: () {
-              // TODO: Navigate to paint detail screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Viewing ${paint.name} details')),
-              );
+              _showActionSheet(paint, isPriority);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -397,67 +394,146 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     'Added on ${_formatDate(addedAt)}',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-                  const SizedBox(height: 16),
+  /// Shows a bottom sheet with actions for a paint
+  void _showActionSheet(Paint paint, bool isPriority) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                  // Action buttons
+                  // Paint info header
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Toggle priority
-                      OutlinedButton.icon(
-                        onPressed: () => _togglePriority(paint.id, isPriority),
-                        icon: Icon(
-                          isPriority ? Icons.star : Icons.star_border,
-                          size: 18,
-                        ),
-                        label: Text(isPriority ? 'Unmark' : 'Priority'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor:
-                              isPriority
-                                  ? Colors.amber
-                                  : Theme.of(context).colorScheme.secondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      // Paint color
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Color(
+                            int.parse(paint.colorHex.substring(1), radix: 16) +
+                                0xFF000000,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.3),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 16),
 
-                      const SizedBox(width: 8),
-
-                      // Remove
-                      OutlinedButton.icon(
-                        onPressed:
-                            () => _removeFromWishlist(paint.id, paint.name),
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text('Remove'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // Add to inventory button
-                      ElevatedButton.icon(
-                        onPressed: () => _addToInventory(paint),
-                        icon: const Icon(Icons.add_shopping_cart, size: 18),
-                        label: const Text('Got it!'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          backgroundColor: AppTheme.primaryBlue,
-                          foregroundColor: Colors.white,
+                      // Paint name and brand
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              paint.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              paint.brand,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Action buttons
+                  _buildActionButton(
+                    icon: isPriority ? Icons.star : Icons.star_border,
+                    text: isPriority ? 'Remove priority' : 'Mark as priority',
+                    color:
+                        isPriority
+                            ? Colors.amber
+                            : Theme.of(context).colorScheme.primary,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _togglePriority(paint.id, isPriority);
+                    },
+                  ),
+
+                  _buildActionButton(
+                    icon: Icons.add_shopping_cart,
+                    text: 'Add to inventory',
+                    color: AppTheme.primaryBlue,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _addToInventory(paint);
+                    },
+                  ),
+
+                  _buildActionButton(
+                    icon: Icons.delete_outline,
+                    text: 'Remove from wishlist',
+                    color: Colors.red,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _removeFromWishlist(paint.id, paint.name);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Cancel button with lighter color and rounded style
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
                   ),
                 ],
               ),
@@ -465,6 +541,44 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Helper to build action buttons for the bottom sheet
+  Widget _buildActionButton({
+    required IconData icon,
+    required String text,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 22),
+                const SizedBox(width: 16),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: color,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right, color: color.withOpacity(0.5)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
