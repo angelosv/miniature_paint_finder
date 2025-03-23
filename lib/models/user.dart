@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
 
+/// Model representing a user in the application
 class User {
+  /// Unique identifier for the user
   final String id;
+
+  /// User's display name
   final String name;
+
+  /// User's email address
   final String email;
+
+  /// URL to user's profile image (optional)
   final String? profileImage;
+
+  /// When the user account was created
   final DateTime createdAt;
+
+  /// When the user last logged in (optional)
   final DateTime? lastLoginAt;
+
+  /// User preferences stored as key-value pairs
   final Map<String, dynamic>? preferences;
+
+  /// Authentication provider (email, google, apple, etc.)
+  final String authProvider;
 
   User({
     required this.id,
@@ -17,6 +34,7 @@ class User {
     required this.createdAt,
     this.lastLoginAt,
     this.preferences,
+    required this.authProvider,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -31,6 +49,7 @@ class User {
               ? DateTime.parse(json['last_login_at'])
               : null,
       preferences: json['preferences'],
+      authProvider: json['auth_provider'] ?? 'email',
     );
   }
 
@@ -43,10 +62,11 @@ class User {
       'created_at': createdAt.toIso8601String(),
       'last_login_at': lastLoginAt?.toIso8601String(),
       'preferences': preferences,
+      'auth_provider': authProvider,
     };
   }
 
-  // Demo user for development and testing
+  /// Demo user for development and testing
   static User demoUser = User(
     id: 'demo-user-001',
     name: 'Demo Painter',
@@ -59,5 +79,6 @@ class User {
       'notifications_enabled': true,
       'favorite_brands': ['Citadel', 'Vallejo', 'Army Painter'],
     },
+    authProvider: 'email',
   );
 }

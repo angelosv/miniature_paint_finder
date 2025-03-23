@@ -179,6 +179,7 @@ class AuthService implements IAuthService {
         email: email,
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
+        authProvider: 'email',
       );
 
       _currentUser = newUser;
