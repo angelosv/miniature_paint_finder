@@ -393,32 +393,71 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         ),
                       ),
 
-                      // Brand avatar/logo circle (moved to the right)
-                      const SizedBox(width: 12),
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _getBrandColor(paint.brand),
-                        child: Text(
-                          paint.brand.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      // Brand avatar and info column on the right
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Brand avatar
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: _getBrandColor(paint.brand),
+                            child: Text(
+                              paint.brand.substring(0, 1).toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+
+                          // Color code and barcode in small format
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.color_lens,
+                                size: 12,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                paint.colorHex,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.qr_code,
+                                size: 12,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'EAN-13',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Additional information rows
-                  _buildInfoRow(Icons.color_lens, 'Color Code', paint.colorHex),
-                  const SizedBox(height: 8),
-                  _buildInfoRow(Icons.qr_code, 'Barcode', simulatedBarcode),
-
                   // Show palettes if any
                   if (palettes.isNotEmpty) ...[
-                    const SizedBox(height: 12),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -690,18 +729,63 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         ),
                       ),
 
-                      // Brand avatar (moved to the right)
-                      const SizedBox(width: 12),
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: _getBrandColor(paint.brand),
-                        child: Text(
-                          paint.brand.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      // Brand avatar with info below
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Brand avatar
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: _getBrandColor(paint.brand),
+                            child: Text(
+                              paint.brand.substring(0, 1).toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+
+                          // Color code and barcode in small format
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.color_lens,
+                                size: 12,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                paint.colorHex,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.qr_code,
+                                size: 12,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'EAN-13',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -710,32 +794,29 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   const Divider(),
                   const SizedBox(height: 8),
 
-                  // Additional information
+                  // Paint type information
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildInfoRow(
-                          Icons.color_lens,
-                          'Color',
-                          paint.colorHex,
-                        ),
+                      Icon(Icons.category, size: 18, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Type:',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildInfoRow(
-                          Icons.category,
-                          'Type',
-                          paint.isMetallic
-                              ? 'Metallic'
-                              : paint.isTransparent
-                              ? 'Transparent'
-                              : 'Standard',
+                      const SizedBox(width: 4),
+                      Text(
+                        paint.isMetallic
+                            ? 'Metallic'
+                            : paint.isTransparent
+                            ? 'Transparent'
+                            : 'Standard',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildInfoRow(Icons.qr_code, 'Barcode', simulatedBarcode),
 
                   // Palettes info (limit to 2 with View More)
                   if (palettes.isNotEmpty) ...[
