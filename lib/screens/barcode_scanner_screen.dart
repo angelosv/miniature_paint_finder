@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:miniature_paint_finder/components/scan_result_sheet.dart';
+import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/barcode_service.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -18,6 +22,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     with WidgetsBindingObserver {
   MobileScannerController? _scannerController;
   final BarcodeService _barcodeService = BarcodeService();
+  final PaintService _paintService = PaintService();
 
   bool _isScanning = true;
   bool _isSearching = false;
@@ -198,6 +203,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 _resetScanner();
               }
             });
+          } else {
+            // Show result sheet when paint is found
+            _showScanResultSheet(paint);
           }
         });
       }
@@ -215,6 +223,175 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         });
       }
     }
+  }
+
+  // Show the scan result bottom sheet
+  void _showScanResultSheet(Paint paint) {
+    // Obtenemos el estado real de la pintura usando el servicio
+    final bool isInInventory = _paintService.isInInventory(paint.id);
+    final int? inventoryQuantity = _paintService.getInventoryQuantity(paint.id);
+    final bool isInWishlist = _paintService.isInWishlist(paint.id);
+    final List<Palette> inPalettes = _paintService.getPalettesContainingPaint(
+      paint.id,
+    );
+    final List<Palette> userPalettes = _paintService.getUserPalettes();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: const BoxDecoration(color: Colors.transparent),
+          child: ScanResultSheet(
+            paint: paint,
+            isInInventory: isInInventory,
+            inventoryQuantity: inventoryQuantity,
+            isInWishlist: isInWishlist,
+            inPalettes: inPalettes.isEmpty ? null : inPalettes,
+            userPalettes: userPalettes,
+            onAddToInventory: (paint, quantity, note) async {
+              // Usar el servicio para agregar al inventario
+              await _paintService.addToInventory(paint, quantity, note: note);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Pintura añadida al inventario!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+
+              Navigator.pop(context);
+              Navigator.pop(context, paint);
+            },
+            onUpdateInventory: (paint, quantity, note) async {
+              // Usar el servicio para actualizar el inventario
+              await _paintService.updateInventory(paint, quantity, note: note);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Inventario actualizado!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+
+              Navigator.pop(context);
+              Navigator.pop(context, paint);
+            },
+            onAddToWishlist: (paint, isPriority) async {
+              // Usar el servicio para agregar a la wishlist
+              await _paintService.addToWishlist(paint, isPriority);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Pintura añadida a la wishlist!'),
+                    backgroundColor: Colors.amber,
+                  ),
+                );
+              }
+
+              Navigator.pop(context);
+              Navigator.pop(context, paint);
+            },
+            onAddToPalette: (paint, palette) async {
+              // Usar el servicio para agregar a la paleta
+              await _paintService.addToPalette(paint, palette);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '¡Pintura añadida a la paleta ${palette.name}!',
+                    ),
+                    backgroundColor: Colors.purple,
+                  ),
+                );
+              }
+
+              Navigator.pop(context);
+              Navigator.pop(context, paint);
+            },
+            onFindEquivalents: (paint) async {
+              // Cerrar el modal primero
+              Navigator.pop(context);
+
+              // Mostrar loading
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Buscando equivalencias...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+
+              // Usar el servicio para buscar equivalencias
+              try {
+                final equivalents = await _paintService.findEquivalents(paint);
+
+                if (mounted) {
+                  // Aquí normalmente navegaríamos a una pantalla de equivalencias
+                  // Para demo, solo mostramos un mensaje con la cantidad
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Se encontraron ${equivalents.length} pinturas equivalentes',
+                      ),
+                      action: SnackBarAction(
+                        label: 'Ver',
+                        onPressed: () {
+                          // Aquí navegaríamos a la pantalla de equivalencias
+                        },
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al buscar equivalencias: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+
+              Navigator.pop(context, paint);
+            },
+            onPurchase: (paint) {
+              // Aquí se implementaría la navegación a la pantalla de compra
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Buscando disponibilidad para ${paint.name}...',
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+
+              Navigator.pop(context);
+              Navigator.pop(context, paint);
+            },
+            onClose: () {
+              Navigator.pop(context);
+              _resetScanner();
+            },
+          ),
+        );
+      },
+    ).then((_) {
+      // When the bottom sheet is closed, reset the scanner if we're still on this screen
+      if (mounted && !_isScanning) {
+        _resetScanner();
+      }
+    });
   }
 
   void _resetScanner() {
@@ -392,10 +569,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                   ),
 
-                // Overlay when not scanning
-                if (!_isScanning && _foundPaint != null)
-                  _buildPaintDetailsView(),
-
                 // Loading indicator
                 if (_isSearching)
                   Container(
@@ -459,40 +632,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                if (!_isScanning && _foundPaint != null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _resetScanner,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(Icons.qr_code_scanner),
-                      label: const Text('Scan Another'),
-                    ),
-                  ),
-
-                if (!_isScanning && _foundPaint != null)
-                  const SizedBox(width: 16),
-
-                if (!_isScanning && _foundPaint != null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Add to inventory or navigate to paint details
-                        Navigator.of(context).pop(_foundPaint);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.purpleColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Use This Paint'),
-                    ),
-                  ),
-
                 if (_isInitialized && _hasPermission && _isScanning)
                   Expanded(
                     child: Text(
@@ -596,6 +735,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   Widget _buildPaintDetailsView() {
+    // This is being replaced by the ScanResultSheet
+    // We'll keep this for backward compatibility but it won't be used
     final paint = _foundPaint!;
     final Color paintColor = Color(
       int.parse(paint.colorHex.substring(1), radix: 16) + 0xFF000000,
