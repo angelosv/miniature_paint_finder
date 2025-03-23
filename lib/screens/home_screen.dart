@@ -24,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> _drawerItems = [
     {
       'icon': Icons.inventory_2_outlined,
-      'text': 'Inventory',
+      'text': 'My Inventory',
       'index': -1,
       'screen': 'inventory',
     },
