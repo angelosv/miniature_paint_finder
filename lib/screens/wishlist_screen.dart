@@ -251,6 +251,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
         final isPriority = item['isPriority'] as bool;
         final addedAt = item['addedAt'] as DateTime;
 
+        // Simulate paints in palettes - in a real app, this would come from the service
+        final palettes = _paintService.getPalettesContainingPaint(paint.id);
+
+        // Simulate a barcode - in a real app, this would come from a barcode service
+        final simulatedBarcode =
+            "EAN-13: ${paint.id.hashCode.abs() % 10000000000000}";
+
         return Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 16),
@@ -274,10 +281,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Brand avatar/logo circle
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getBrandColor(paint.brand),
+                        child: Text(
+                          paint.brand.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
                       // Paint color
                       Container(
-                        width: 60,
-                        height: 60,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: Color(
                             int.parse(paint.colorHex.substring(1), radix: 16) +
@@ -389,6 +410,75 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
                   const SizedBox(height: 16),
 
+                  // Additional information rows
+                  _buildInfoRow(Icons.color_lens, 'Color Code', paint.colorHex),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.qr_code, 'Barcode', simulatedBarcode),
+
+                  // Show palettes if any
+                  if (palettes.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.palette_outlined,
+                          size: 18,
+                          color: Colors.purple,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'In Palettes:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children:
+                                    palettes.map((palette) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.purple.withOpacity(
+                                              0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          palette.name,
+                                          style: TextStyle(
+                                            color: Colors.purple[700],
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 12),
+
                   // Date added
                   Text(
                     'Added on ${_formatDate(addedAt)}',
@@ -403,8 +493,53 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
+  /// Helper to build info rows for color code and barcode
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(
+          '$label:',
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Returns a brand-specific color for avatars
+  Color _getBrandColor(String brand) {
+    switch (brand.toLowerCase()) {
+      case 'citadel':
+        return Colors.blue[700]!;
+      case 'vallejo':
+        return Colors.green[700]!;
+      case 'army painter':
+        return Colors.red[700]!;
+      case 'scale75':
+        return Colors.purple[700]!;
+      default:
+        // Generate a color based on the brand name
+        return Color((brand.hashCode & 0xFFFFFF) | 0xFF000000);
+    }
+  }
+
   /// Shows a bottom sheet with actions for a paint
   void _showActionSheet(Paint paint, bool isPriority) {
+    // Get palettes containing this paint
+    final palettes = _paintService.getPalettesContainingPaint(paint.id);
+
+    // Simulate a barcode - in a real app, this would come from a barcode service
+    final simulatedBarcode =
+        "EAN-13: ${paint.id.hashCode.abs() % 10000000000000}";
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -437,13 +572,27 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Paint info header
+                  // Paint info header with brand avatar
                   Row(
                     children: [
+                      // Brand avatar
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getBrandColor(paint.brand),
+                        child: Text(
+                          paint.brand.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
                       // Paint color
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
                           color: Color(
                             int.parse(paint.colorHex.substring(1), radix: 16) +
@@ -483,7 +632,103 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  // Additional information
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoRow(
+                          Icons.color_lens,
+                          'Color',
+                          paint.colorHex,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildInfoRow(
+                          Icons.category,
+                          'Type',
+                          paint.isMetallic
+                              ? 'Metallic'
+                              : paint.isTransparent
+                              ? 'Transparent'
+                              : 'Standard',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.qr_code, 'Barcode', simulatedBarcode),
+
+                  // Palettes info
+                  if (palettes.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.palette_outlined,
+                          size: 18,
+                          color: Colors.purple,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'In Palettes:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children:
+                                    palettes.map((palette) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.purple.withOpacity(
+                                              0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          palette.name,
+                                          style: TextStyle(
+                                            color: Colors.purple[700],
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
 
                   // Action buttons
                   _buildActionButton(
