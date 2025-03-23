@@ -258,7 +258,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('¡Pintura añadida al inventario!'),
+                    content: Text('Paint added to inventory!'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -274,7 +274,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('¡Inventario actualizado!'),
+                    content: Text('Inventory updated!'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -290,7 +290,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('¡Pintura añadida a la wishlist!'),
+                    content: Text('Paint added to wishlist!'),
                     backgroundColor: Colors.amber,
                   ),
                 );
@@ -306,9 +306,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(
-                      '¡Pintura añadida a la paleta ${palette.name}!',
-                    ),
+                    content: Text('Paint added to palette ${palette.name}!'),
                     backgroundColor: Colors.purple,
                   ),
                 );
@@ -325,7 +323,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Buscando equivalencias...'),
+                    content: Text('Searching for equivalents...'),
                     duration: Duration(seconds: 1),
                   ),
                 );
@@ -341,10 +339,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Se encontraron ${equivalents.length} pinturas equivalentes',
+                        'Found ${equivalents.length} equivalent paints',
                       ),
                       action: SnackBarAction(
-                        label: 'Ver',
+                        label: 'View',
                         onPressed: () {
                           // Aquí navegaríamos a la pantalla de equivalencias
                         },
@@ -356,7 +354,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error al buscar equivalencias: $e'),
+                      content: Text('Error finding equivalents: $e'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -369,9 +367,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               // Aquí se implementaría la navegación a la pantalla de compra
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                    'Buscando disponibilidad para ${paint.name}...',
-                  ),
+                  content: Text('Checking availability for ${paint.name}...'),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -442,7 +438,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           // Botón de debug con menú para simular diferentes escenarios
           PopupMenuButton<String>(
             icon: const Icon(Icons.bug_report),
-            tooltip: 'Simular escaneo',
+            tooltip: 'Simulate scan',
             onSelected: (String scenario) {
               final paints = SampleData.getPaints();
               Paint selectedPaint;
@@ -457,6 +453,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   // Simular una pintura que ya está en inventario
                   selectedPaint = paints.firstWhere(
                     (p) => _paintService.isInInventory(p.id),
+                    orElse: () => paints.first,
+                  );
+                  break;
+                case 'not_in_inventory':
+                  // Simular una pintura que existe pero NO está en inventario ni wishlist
+                  selectedPaint = paints.firstWhere(
+                    (p) =>
+                        !_paintService.isInInventory(p.id) &&
+                        !_paintService.isInWishlist(p.id),
                     orElse: () => paints.first,
                   );
                   break;
@@ -496,7 +501,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
 
               print(
-                'Simulando escaneo de pintura: ${selectedPaint.name} (${selectedPaint.brand})',
+                'Simulating paint scan: ${selectedPaint.name} (${selectedPaint.brand})',
               );
               _showScanResultSheet(selectedPaint);
             },
@@ -504,27 +509,31 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 (BuildContext context) => <PopupMenuEntry<String>>[
                   const PopupMenuItem<String>(
                     value: 'random',
-                    child: Text('Pintura aleatoria'),
+                    child: Text('Random paint'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'in_inventory',
-                    child: Text('Pintura en inventario'),
+                    child: Text('Paint in inventory'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'not_in_inventory',
+                    child: Text('Paint not in inventory'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'in_wishlist',
-                    child: Text('Pintura en wishlist'),
+                    child: Text('Paint in wishlist'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'in_palette',
-                    child: Text('Pintura en paleta'),
+                    child: Text('Paint in palette'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'metallic',
-                    child: Text('Pintura metálica'),
+                    child: Text('Metallic paint'),
                   ),
                   const PopupMenuItem<String>(
                     value: 'transparent',
-                    child: Text('Pintura transparente'),
+                    child: Text('Transparent paint'),
                   ),
                 ],
           ),
