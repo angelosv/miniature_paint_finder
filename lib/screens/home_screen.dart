@@ -5,6 +5,7 @@ import 'package:miniature_paint_finder/components/search_tab.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
+import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -40,7 +41,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'index': -2,
       'screen': 'library',
     },
-    {'icon': Icons.palette_outlined, 'text': 'My Palettes', 'index': -1},
+    {
+      'icon': Icons.palette_outlined,
+      'text': 'My Palettes',
+      'index': -1,
+      'screen': 'palettes',
+    },
   ];
 
   final List<Map<String, dynamic>> _bottomDrawerItems = [
@@ -90,6 +96,13 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const WishlistScreen()),
+        );
+        break;
+
+      case 'palettes':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PaletteScreen()),
         );
         break;
     }
