@@ -3,30 +3,28 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class BarcodeScannerCard extends StatelessWidget {
-  const BarcodeScannerCard({Key? key}) : super(key: key);
+/// A card component that allows users to access the barcode scanner
+class BarcodeScannerCard extends StatefulWidget {
+  /// Optional callback for when a paint is found
+  final Function(Paint)? onPaintFound;
+
+  /// Creates a barcode scanner card
+  const BarcodeScannerCard({Key? key, this.onPaintFound}) : super(key: key);
+
+  @override
+  State<BarcodeScannerCard> createState() => _BarcodeScannerCardState();
+}
+
+class _BarcodeScannerCardState extends State<BarcodeScannerCard> {
+  bool _isCameraPermissionChecking = false;
+  DateTime? _lastScanAttempt;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () async {
-        final Paint? scannedPaint = await Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
-        );
-
-        if (scannedPaint != null) {
-          // Handle the scanned paint (e.g., show details or add to inventory)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Found paint: ${scannedPaint.name} (${scannedPaint.brand})',
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      },
+      onTap: _openBarcodeScanner,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(AppDimensions.paddingXL),
@@ -114,5 +112,63 @@ class BarcodeScannerCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openBarcodeScanner() async {
+    // Evitar múltiples toques
+    if (_isCameraPermissionChecking) return;
+
+    // Prevenir múltiples aperturas rápidas que podrían confundir a la cámara
+    final now = DateTime.now();
+    if (_lastScanAttempt != null &&
+        now.difference(_lastScanAttempt!).inSeconds < 2) {
+      return;
+    }
+
+    _lastScanAttempt = now;
+
+    setState(() {
+      _isCameraPermissionChecking = true;
+    });
+
+    try {
+      print('Opening scanner directly without permission checks');
+
+      // Skip directly to scanner screen - it will handle permissions internally
+      final Paint? scannedPaint = await Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+      );
+
+      if (scannedPaint != null && mounted) {
+        // Notificar al callback si existe
+        if (widget.onPaintFound != null) {
+          widget.onPaintFound!(scannedPaint);
+        }
+
+        // Mostrar notificación de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Found paint: ${scannedPaint.name} (${scannedPaint.brand})',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error in scanner opening process: $e');
+      // Manejar cualquier error inesperado
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCameraPermissionChecking = false;
+        });
+      }
+    }
   }
 }
