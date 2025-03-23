@@ -227,7 +227,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   // Show the scan result bottom sheet
   void _showScanResultSheet(Paint paint) {
-    // Obtenemos el estado real de la pintura usando el servicio
+    // Get the real paint status using the service
     final bool isInInventory = _paintService.isInInventory(paint.id);
     final int? inventoryQuantity = _paintService.getInventoryQuantity(paint.id);
     final bool isInWishlist = _paintService.isInWishlist(paint.id);
@@ -252,7 +252,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             inPalettes: inPalettes.isEmpty ? null : inPalettes,
             userPalettes: userPalettes,
             onAddToInventory: (paint, quantity, note) async {
-              // Usar el servicio para agregar al inventario
+              // Use the service to add to inventory
               await _paintService.addToInventory(paint, quantity, note: note);
 
               if (mounted) {
@@ -268,7 +268,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onUpdateInventory: (paint, quantity, note) async {
-              // Usar el servicio para actualizar el inventario
+              // Use the service to update inventory
               await _paintService.updateInventory(paint, quantity, note: note);
 
               if (mounted) {
@@ -284,7 +284,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onAddToWishlist: (paint, isPriority) async {
-              // Usar el servicio para agregar a la wishlist
+              // Use the service to add to wishlist
               await _paintService.addToWishlist(paint, isPriority);
 
               if (mounted) {
@@ -300,7 +300,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onAddToPalette: (paint, palette) async {
-              // Usar el servicio para agregar a la paleta
+              // Use the service to add to palette
               await _paintService.addToPalette(paint, palette);
 
               if (mounted) {
@@ -316,10 +316,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onFindEquivalents: (paint) async {
-              // Cerrar el modal primero
+              // Close the modal first
               Navigator.pop(context);
 
-              // Mostrar loading
+              // Show loading
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -329,13 +329,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 );
               }
 
-              // Usar el servicio para buscar equivalencias
+              // Use the service to search for equivalents
               try {
                 final equivalents = await _paintService.findEquivalents(paint);
 
                 if (mounted) {
-                  // Aquí normalmente navegaríamos a una pantalla de equivalencias
-                  // Para demo, solo mostramos un mensaje con la cantidad
+                  // Here we would normally navigate to an equivalents screen
+                  // For demo, just show a message with the count
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -344,7 +344,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       action: SnackBarAction(
                         label: 'View',
                         onPressed: () {
-                          // Aquí navegaríamos a la pantalla de equivalencias
+                          // Here we would navigate to the equivalents screen
                         },
                       ),
                     ),
@@ -364,7 +364,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onPurchase: (paint) {
-              // Aquí se implementaría la navegación a la pantalla de compra
+              // Here we would implement navigation to purchase screen
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Checking availability for ${paint.name}...'),
@@ -406,7 +406,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _restartScanner() {
-    // Reiniciar completamente el scanner
+    // Restart the scanner completely
     _forceInitializeCamera();
     setState(() {
       _isScanning = true;
@@ -450,14 +450,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   selectedPaint = paints[randomIndex];
                   break;
                 case 'in_inventory':
-                  // Simular una pintura que ya está en inventario
+                  // Simulate a paint that's already in inventory
                   selectedPaint = paints.firstWhere(
                     (p) => _paintService.isInInventory(p.id),
                     orElse: () => paints.first,
                   );
                   break;
                 case 'not_in_inventory':
-                  // Simular una pintura que existe pero NO está en inventario ni wishlist
+                  // Simulate a paint that exists but is NOT in inventory or wishlist
                   selectedPaint = paints.firstWhere(
                     (p) =>
                         !_paintService.isInInventory(p.id) &&
@@ -466,14 +466,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   );
                   break;
                 case 'in_wishlist':
-                  // Simular una pintura que ya está en wishlist
+                  // Simulate a paint that's already in wishlist
                   selectedPaint = paints.firstWhere(
                     (p) => _paintService.isInWishlist(p.id),
                     orElse: () => paints.first,
                   );
                   break;
                 case 'in_palette':
-                  // Simular una pintura que está en alguna paleta
+                  // Simulate a paint that's in some palette
                   selectedPaint = paints.firstWhere(
                     (p) =>
                         _paintService
@@ -483,14 +483,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   );
                   break;
                 case 'metallic':
-                  // Simular una pintura metálica
+                  // Simulate a metallic paint
                   selectedPaint = paints.firstWhere(
                     (p) => p.isMetallic,
                     orElse: () => paints.first,
                   );
                   break;
                 case 'transparent':
-                  // Simular una pintura transparente
+                  // Simulate a transparent paint
                   selectedPaint = paints.firstWhere(
                     (p) => p.isTransparent,
                     orElse: () => paints.first,
@@ -635,7 +635,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       children: [
                         const CircularProgressIndicator(),
                         const SizedBox(height: 16),
-                        const Text('Inicializando cámara...'),
+                        const Text('Initializing camera...'),
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 24),
                           Padding(
@@ -654,14 +654,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               foregroundColor: Colors.white,
                             ),
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Reintentar'),
+                            label: const Text('Retry'),
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton(
                             onPressed: () {
                               Navigator.pop(context);
                             },
-                            child: const Text('Volver'),
+                            child: const Text('Back'),
                           ),
                         ],
                       ],

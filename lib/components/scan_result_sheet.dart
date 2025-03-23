@@ -3,48 +3,48 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
-/// Resultado del escaneo de un código de barras con acciones rápidas
+/// Result of a barcode scan with quick actions
 class ScanResultSheet extends StatefulWidget {
-  /// Pintura encontrada después del escaneo
+  /// Paint found after scanning
   final Paint paint;
 
-  /// Si la pintura ya está en el inventario del usuario
+  /// Whether the paint is already in the user's inventory
   final bool isInInventory;
 
-  /// Cantidad en inventario, si aplica
+  /// Quantity in inventory, if applicable
   final int? inventoryQuantity;
 
-  /// Si la pintura está en la wishlist
+  /// Whether the paint is in the wishlist
   final bool isInWishlist;
 
-  /// Paletas que contienen esta pintura
+  /// Palettes containing this paint
   final List<Palette>? inPalettes;
 
-  /// Lista de paletas del usuario para elegir
+  /// List of user's palettes to choose from
   final List<Palette> userPalettes;
 
-  /// Callback cuando se agrega al inventario
+  /// Callback when adding to inventory
   final Function(Paint paint, int quantity, String? note) onAddToInventory;
 
-  /// Callback cuando se modifica el inventario
+  /// Callback when updating inventory
   final Function(Paint paint, int quantity, String? note) onUpdateInventory;
 
-  /// Callback cuando se agrega a la wishlist
+  /// Callback when adding to wishlist
   final Function(Paint paint, bool isPriority) onAddToWishlist;
 
-  /// Callback cuando se agrega a una paleta
+  /// Callback when adding to a palette
   final Function(Paint paint, Palette palette) onAddToPalette;
 
-  /// Callback para buscar equivalencias
+  /// Callback to find equivalents
   final Function(Paint paint) onFindEquivalents;
 
-  /// Callback para consultar disponibilidad/comprar
+  /// Callback to check availability/purchase
   final Function(Paint paint)? onPurchase;
 
-  /// Callback para cerrar el sheet
+  /// Callback to close the sheet
   final VoidCallback onClose;
 
-  /// Construye una nueva hoja de resultados de escaneo
+  /// Builds a new scan result sheet
   const ScanResultSheet({
     super.key,
     required this.paint,
@@ -108,7 +108,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     setState(() {
       _isAddingToInventory = false;
     });
-    _showSuccessSnackbar('Pintura añadida a tu inventario');
+    _showSuccessSnackbar('Paint added to your inventory');
   }
 
   void _updateInventory() {
@@ -116,7 +116,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     setState(() {
       _isAddingToInventory = false;
     });
-    _showSuccessSnackbar('Inventario actualizado');
+    _showSuccessSnackbar('Inventory updated');
   }
 
   void _addToPalette() {
@@ -125,9 +125,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       setState(() {
         _isAddingToPalette = false;
       });
-      _showSuccessSnackbar(
-        'Pintura añadida a paleta ${_selectedPalette!.name}',
-      );
+      _showSuccessSnackbar('Paint added to palette ${_selectedPalette!.name}');
     }
   }
 
@@ -136,12 +134,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     setState(() {
       _isAddingToWishlist = false;
     });
-    _showSuccessSnackbar('Pintura añadida a tu wishlist');
+    _showSuccessSnackbar('Paint added to your wishlist');
   }
 
   void _findEquivalents() {
     widget.onFindEquivalents(widget.paint);
-    _showSuccessSnackbar('Buscando equivalencias...');
+    _showSuccessSnackbar('Looking for equivalents...');
   }
 
   void _purchase() {
@@ -245,7 +243,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                 IconButton(
                                   icon: const Icon(Icons.close),
                                   onPressed: widget.onClose,
-                                  tooltip: 'Cerrar',
+                                  tooltip: 'Close',
                                 ),
                               ],
                             ),
@@ -340,12 +338,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Ya tienes esta pintura en tu inventario',
+                                  'You already have this paint in your inventory',
                                   style: Theme.of(context).textTheme.bodyLarge
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 Text(
-                                  'Cantidad: ${widget.inventoryQuantity}',
+                                  'Quantity: ${widget.inventoryQuantity}',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
@@ -353,7 +351,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                           ),
                           TextButton(
                             onPressed: _showAddToInventoryDialog,
-                            child: const Text('Editar'),
+                            child: const Text('Edit'),
                           ),
                         ],
                       ),
@@ -376,7 +374,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Esta pintura está en tu wishlist',
+                              'This paint is in your wishlist',
                               style: Theme.of(context).textTheme.bodyLarge
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
@@ -410,7 +408,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Esta pintura está en ${widget.inPalettes!.length} ${widget.inPalettes!.length == 1 ? 'paleta' : 'paletas'}',
+                                  'This paint is in ${widget.inPalettes!.length} ${widget.inPalettes!.length == 1 ? 'palette' : 'palettes'}',
                                   style: Theme.of(context).textTheme.bodyLarge
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
@@ -447,7 +445,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   const Divider(),
                   const SizedBox(height: 8),
                   Text(
-                    'Acciones rápidas',
+                    'Quick Actions',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -489,11 +487,9 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             color: Theme.of(context).colorScheme.primary,
           ),
           title: Text(
-            widget.isInInventory
-                ? 'Actualizar en inventario'
-                : 'Añadir al inventario',
+            widget.isInInventory ? 'Update in inventory' : 'Add to inventory',
           ),
-          subtitle: const Text('Registra esta pintura con cantidad'),
+          subtitle: const Text('Record this paint with quantity'),
           onTap: _showAddToInventoryDialog,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -511,8 +507,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               Icons.star_border_outlined,
               color: Theme.of(context).colorScheme.secondary,
             ),
-            title: const Text('Añadir a wishlist'),
-            subtitle: const Text('Guarda para comprar más tarde'),
+            title: const Text('Add to wishlist'),
+            subtitle: const Text('Save for later purchase'),
             onTap: _showAddToWishlistDialog,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -526,8 +522,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Palette action
         ListTile(
           leading: Icon(Icons.palette_outlined, color: Colors.purple),
-          title: const Text('Añadir a paleta'),
-          subtitle: const Text('Incluye esta pintura en una paleta'),
+          title: const Text('Add to palette'),
+          subtitle: const Text('Include this paint in a palette'),
           onTap: _showAddToPaletteDialog,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -539,8 +535,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Find equivalents
         ListTile(
           leading: Icon(Icons.compare_arrows, color: Colors.blue[700]),
-          title: const Text('Buscar equivalencias'),
-          subtitle: const Text('Encuentra colores similares de otras marcas'),
+          title: const Text('Find equivalents'),
+          subtitle: const Text('Find similar colors from other brands'),
           onTap: _findEquivalents,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
@@ -556,8 +552,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               Icons.shopping_cart_outlined,
               color: Colors.green[700],
             ),
-            title: const Text('Comprar'),
-            subtitle: const Text('Ver disponibilidad y precios'),
+            title: const Text('Purchase'),
+            subtitle: const Text('Check availability and prices'),
             onTap: _purchase,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -573,9 +569,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          widget.isInInventory
-              ? 'Actualizar en inventario'
-              : 'Añadir al inventario',
+          widget.isInInventory ? 'Update in inventory' : 'Add to inventory',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -585,7 +579,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Quantity selector
         Row(
           children: [
-            const Text('Cantidad:'),
+            const Text('Quantity:'),
             const SizedBox(width: 16),
             IconButton(
               icon: const Icon(Icons.remove_circle_outline),
@@ -626,8 +620,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Note field
         TextField(
           decoration: const InputDecoration(
-            labelText: 'Nota (opcional)',
-            hintText: 'Ej: Casi vacío, comprado en...',
+            labelText: 'Note (optional)',
+            hintText: 'E.g.: Almost empty, purchased at...',
             border: OutlineInputBorder(),
           ),
           maxLines: 2,
@@ -649,7 +643,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                     _isAddingToInventory = false;
                   });
                 },
-                child: const Text('Cancelar'),
+                child: const Text('Cancel'),
               ),
             ),
             const SizedBox(width: 16),
@@ -661,7 +655,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: Text(widget.isInInventory ? 'Actualizar' : 'Añadir'),
+                child: Text(widget.isInInventory ? 'Update' : 'Add'),
               ),
             ),
           ],
@@ -675,7 +669,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Añadir a paleta',
+          'Add to palette',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -685,14 +679,14 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Palette selector
         if (widget.userPalettes.isEmpty)
           const Text(
-            'No tienes paletas. Crea una nueva para añadir esta pintura.',
+            'You have no palettes. Create a new one to add this paint.',
           ),
 
         if (widget.userPalettes.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Seleccionar paleta:'),
+              const Text('Select palette:'),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -729,11 +723,11 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             // TODO: Logic to create a new palette
             // This would typically navigate to a palette creation screen
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Crear nueva paleta (pendiente)')),
+              const SnackBar(content: Text('Create new palette (pending)')),
             );
           },
           icon: const Icon(Icons.add),
-          label: const Text('Crear nueva paleta'),
+          label: const Text('Create new palette'),
         ),
         const SizedBox(height: 16),
 
@@ -747,7 +741,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                     _isAddingToPalette = false;
                   });
                 },
-                child: const Text('Cancelar'),
+                child: const Text('Cancel'),
               ),
             ),
             const SizedBox(width: 16),
@@ -758,7 +752,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Añadir'),
+                child: const Text('Add'),
               ),
             ),
           ],
@@ -772,7 +766,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Añadir a wishlist',
+          'Add to wishlist',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -791,7 +785,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               },
               activeColor: Theme.of(context).colorScheme.secondary,
             ),
-            const Text('Marcar como prioritario'),
+            const Text('Mark as priority'),
           ],
         ),
         const SizedBox(height: 24),
@@ -806,7 +800,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                     _isAddingToWishlist = false;
                   });
                 },
-                child: const Text('Cancelar'),
+                child: const Text('Cancel'),
               ),
             ),
             const SizedBox(width: 16),
@@ -817,7 +811,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   backgroundColor: Theme.of(context).colorScheme.secondary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Añadir'),
+                child: const Text('Add'),
               ),
             ),
           ],
