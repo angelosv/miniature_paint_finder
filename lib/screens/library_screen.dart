@@ -16,14 +16,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
   late List<Paint> _filteredPaints;
 
   // Paginación
-  final int _itemsPerPage = 20;
+  final List<int> _pageSizeOptions = [25, 50, 100];
+  int _currentPageSize = 25;
   int _currentPage = 1;
   late int _totalPages;
   late List<Paint> _paginatedPaints;
   final ScrollController _scrollController = ScrollController();
 
   // Lista de favoritos
-  final Set<String> _wishlist = {};
+  final Set<String> _wishlist = {
+    'cit-base-002', // Mephiston Red
+    'val-model-003', // Silver
+    'army-warpaints-001', // Matt Black
+  };
 
   // Filtros
   final TextEditingController _searchController = TextEditingController();
@@ -79,15 +84,40 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   void _updatePaginatedPaints() {
-    _totalPages = (_filteredPaints.length / _itemsPerPage).ceil();
+    _totalPages = (_filteredPaints.length / _currentPageSize).ceil();
 
-    final startIndex = 0;
-    final endIndex = _currentPage * _itemsPerPage;
+    final startIndex = (_currentPage - 1) * _currentPageSize;
+    final endIndex = _currentPage * _currentPageSize;
 
     _paginatedPaints = _filteredPaints.sublist(
-      startIndex,
+      startIndex < _filteredPaints.length ? startIndex : 0,
       endIndex < _filteredPaints.length ? endIndex : _filteredPaints.length,
     );
+  }
+
+  void _goToPage(int page) {
+    if (page < 1 || page > _totalPages) return;
+    setState(() {
+      _currentPage = page;
+      _updatePaginatedPaints();
+    });
+
+    // Volver al inicio de la lista
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _changePageSize(int pageSize) {
+    setState(() {
+      _currentPageSize = pageSize;
+      _currentPage = 1; // Volver a la primera página
+      _updatePaginatedPaints();
+    });
   }
 
   void _toggleWishlist(String paintId) {
@@ -205,75 +235,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // Mostrar wishlist
               showDialog(
                 context: context,
-                builder:
-                    (context) => AlertDialog(
-                      title: const Text('Your Wishlist'),
-                      content: SizedBox(
-                        width: double.maxFinite,
-                        child:
-                            _wishlist.isEmpty
-                                ? const Center(
-                                  child: Text('Your wishlist is empty'),
-                                )
-                                : ListView.builder(
-                                  shrinkWrap: true,
-                                  itemCount: _wishlist.length,
-                                  itemBuilder: (context, index) {
-                                    final paint = _allPaints.firstWhere(
-                                      (p) => p.id == _wishlist.elementAt(index),
-                                    );
-                                    return ListTile(
-                                      leading: Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Color(
-                                            int.parse(
-                                                  paint.colorHex.substring(
-                                                    1,
-                                                    7,
-                                                  ),
-                                                  radix: 16,
-                                                ) +
-                                                0xFF000000,
-                                          ),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      title: Text(paint.name),
-                                      subtitle: Text(paint.brand),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () {
-                                          setState(() {
-                                            _wishlist.remove(paint.id);
-                                          });
-                                          Navigator.pop(context);
-                                          // Mostrar el diálogo de nuevo para actualizar la lista
-                                          WidgetsBinding.instance
-                                              .addPostFrameCallback((_) {
-                                                showDialog(
-                                                  context: context,
-                                                  builder:
-                                                      (context) =>
-                                                          buildWishlistDialog(
-                                                            context,
-                                                          ),
-                                                );
-                                              });
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                      ),
-                      actions: [
-                        TextButton(
-                          child: const Text('Close'),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
+                builder: (context) => buildWishlistDialog(context),
               );
             },
           ),
@@ -517,19 +479,60 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text(
-                              '${_filteredPaints.length} paints found (showing ${_paginatedPaints.length})',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
+                          // Control de paginación y tamaño de página
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${_filteredPaints.length} paints found',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
+                              Row(
+                                children: [
+                                  const Text('Show: '),
+                                  ..._pageSizeOptions.map((size) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: ChoiceChip(
+                                        label: Text('$size'),
+                                        selected: _currentPageSize == size,
+                                        onSelected: (selected) {
+                                          if (selected) {
+                                            _changePageSize(size);
+                                          }
+                                        },
+                                        labelStyle: TextStyle(
+                                          fontSize: 12,
+                                          color:
+                                              _currentPageSize == size
+                                                  ? AppTheme.primaryBlue
+                                                  : null,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 0,
+                                        ),
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ],
+                              ),
+                            ],
                           ),
+
+                          const SizedBox(height: 8),
+
                           Expanded(
                             child: GridView.builder(
                               controller: _scrollController,
+                              padding: const EdgeInsets.all(8),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 2,
@@ -537,68 +540,75 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     crossAxisSpacing: 10,
                                     mainAxisSpacing: 10,
                                   ),
-                              itemCount:
-                                  _paginatedPaints.length +
-                                  (_currentPage < _totalPages ? 1 : 0),
+                              itemCount: _paginatedPaints.length,
                               itemBuilder: (context, index) {
-                                // Si estamos en el último elemento y hay más páginas, mostrar indicador de carga
-                                if (index == _paginatedPaints.length) {
-                                  return const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
-
                                 final paint = _paginatedPaints[index];
-                                final color = Color(
-                                  int.parse(
-                                        paint.colorHex.substring(1, 7),
-                                        radix: 16,
-                                      ) +
-                                      0xFF000000,
+                                final mainColor =
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Theme.of(context).primaryColor;
+                                final isInWishlist = _wishlist.contains(
+                                  paint.id,
                                 );
 
-                                return Stack(
-                                  children: [
-                                    PaintGridCard(paint: paint, color: color),
-                                    // Botón de favorito
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.8),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(
-                                            _wishlist.contains(paint.id)
-                                                ? Icons.favorite
-                                                : Icons.favorite_border,
-                                            color:
-                                                _wishlist.contains(paint.id)
-                                                    ? Colors.red
-                                                    : Colors.grey,
-                                            size: 20,
-                                          ),
-                                          onPressed:
-                                              () => _toggleWishlist(paint.id),
-                                          constraints: const BoxConstraints(
-                                            minWidth: 36,
-                                            minHeight: 36,
-                                          ),
-                                          padding: EdgeInsets.zero,
-                                          iconSize: 18,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                return PaintGridCard(
+                                  paint: paint,
+                                  color: mainColor,
+                                  onAddToWishlist: _toggleWishlist,
+                                  onAddToInventory: _addToInventory,
+                                  isInWishlist: isInWishlist,
                                 );
                               },
                             ),
                           ),
+
+                          // Controles de paginación
+                          if (_totalPages > 1)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.first_page),
+                                    onPressed:
+                                        _currentPage > 1
+                                            ? () => _goToPage(1)
+                                            : null,
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    onPressed:
+                                        _currentPage > 1
+                                            ? () => _goToPage(_currentPage - 1)
+                                            : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Page $_currentPage of $_totalPages',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    onPressed:
+                                        _currentPage < _totalPages
+                                            ? () => _goToPage(_currentPage + 1)
+                                            : null,
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.last_page),
+                                    onPressed:
+                                        _currentPage < _totalPages
+                                            ? () => _goToPage(_totalPages)
+                                            : null,
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -665,38 +675,43 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     final paint = _allPaints.firstWhere(
                       (p) => p.id == _wishlist.elementAt(index),
                     );
+                    final paintColor = Color(
+                      int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                          0xFF000000,
+                    );
+
                     return ListTile(
                       leading: Container(
-                        width: 24,
-                        height: 24,
+                        width: 30,
+                        height: 30,
                         decoration: BoxDecoration(
-                          color: Color(
-                            int.parse(
-                                  paint.colorHex.substring(1, 7),
-                                  radix: 16,
-                                ) +
-                                0xFF000000,
-                          ),
+                          color: paintColor,
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade300),
                         ),
                       ),
                       title: Text(paint.name),
-                      subtitle: Text(paint.brand),
+                      subtitle: Text('${paint.brand} - ${paint.category}'),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
                         onPressed: () {
                           setState(() {
                             _wishlist.remove(paint.id);
                           });
                           Navigator.pop(context);
                           // Mostrar el diálogo de nuevo para actualizar la lista
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            showDialog(
-                              context: context,
-                              builder:
-                                  (context) => buildWishlistDialog(context),
-                            );
-                          });
+                          if (_wishlist.isNotEmpty) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              showDialog(
+                                context: context,
+                                builder:
+                                    (context) => buildWishlistDialog(context),
+                              );
+                            });
+                          }
                         },
                       ),
                     );
@@ -709,6 +724,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ],
+    );
+  }
+
+  // Método para agregar pinturas al inventario
+  void _addToInventory(String paintId) {
+    // Aquí implementaríamos la lógica para agregar al inventario
+    // Por ahora, solo mostraremos una notificación
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Added to inventory'),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
