@@ -66,6 +66,33 @@ class SampleData {
         isMetallic: true,
         isTransparent: false,
       ),
+      Paint(
+        id: 'cit-base-006',
+        name: 'Bugmans Glow',
+        brand: 'Citadel',
+        colorHex: '#834F46',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-base-007',
+        name: 'Averland Sunset',
+        brand: 'Citadel',
+        colorHex: '#FBB81C',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-base-008',
+        name: 'Zandri Dust',
+        brand: 'Citadel',
+        colorHex: '#B7975F',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
 
       // Layer paints - Thinner paints for highlights and details
       Paint(
@@ -75,6 +102,42 @@ class SampleData {
         colorHex: '#D6D5C3',
         category: 'Layer',
         isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-layer-002',
+        name: 'Evil Sunz Scarlet',
+        brand: 'Citadel',
+        colorHex: '#BE0B0C',
+        category: 'Layer',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-layer-003',
+        name: 'Wild Rider Red',
+        brand: 'Citadel',
+        colorHex: '#FF4D28',
+        category: 'Layer',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-layer-004',
+        name: 'Lothern Blue',
+        brand: 'Citadel',
+        colorHex: '#31A2F2',
+        category: 'Layer',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'cit-layer-005',
+        name: 'Runefang Steel',
+        brand: 'Citadel',
+        colorHex: '#C0C5C9',
+        category: 'Layer',
+        isMetallic: true,
         isTransparent: false,
       ),
 
@@ -87,6 +150,62 @@ class SampleData {
         category: 'Shade',
         isMetallic: false,
         isTransparent: true,
+      ),
+      Paint(
+        id: 'cit-shade-002',
+        name: 'Agrax Earthshade',
+        brand: 'Citadel',
+        colorHex: '#63452A',
+        category: 'Shade',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'cit-shade-003',
+        name: 'Reikland Fleshshade',
+        brand: 'Citadel',
+        colorHex: '#914B28',
+        category: 'Shade',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'cit-shade-004',
+        name: 'Druchii Violet',
+        brand: 'Citadel',
+        colorHex: '#69385C',
+        category: 'Shade',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+
+      // Technical paints - Special effects
+      Paint(
+        id: 'cit-tech-001',
+        name: 'Blood for the Blood God',
+        brand: 'Citadel',
+        colorHex: '#9A0F0F',
+        category: 'Technical',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'cit-tech-002',
+        name: 'Nihilakh Oxide',
+        brand: 'Citadel',
+        colorHex: '#7ABAD4',
+        category: 'Technical',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'cit-tech-003',
+        name: 'Typhus Corrosion',
+        brand: 'Citadel',
+        colorHex: '#3B342E',
+        category: 'Technical',
+        isMetallic: false,
+        isTransparent: false,
       ),
 
       // ==================== VALLEJO PAINTS ====================
@@ -119,6 +238,91 @@ class SampleData {
         isMetallic: true,
         isTransparent: false,
       ),
+      Paint(
+        id: 'val-model-004',
+        name: 'Flat Blue',
+        brand: 'Vallejo',
+        colorHex: '#2F5C8E',
+        category: 'Model Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-model-005',
+        name: 'Flat Green',
+        brand: 'Vallejo',
+        colorHex: '#315A45',
+        category: 'Model Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-model-006',
+        name: 'Yellow Ochre',
+        brand: 'Vallejo',
+        colorHex: '#C88A3D',
+        category: 'Model Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // Game Color range - Brighter colors for fantasy miniatures
+      Paint(
+        id: 'val-game-001',
+        name: 'Bloody Red',
+        brand: 'Vallejo',
+        colorHex: '#B01E23',
+        category: 'Game Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-game-002',
+        name: 'Magic Blue',
+        brand: 'Vallejo',
+        colorHex: '#2561A4',
+        category: 'Game Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-game-003',
+        name: 'Scorpy Green',
+        brand: 'Vallejo',
+        colorHex: '#5F823A',
+        category: 'Game Color',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // Metal Color range - High-quality metallics
+      Paint(
+        id: 'val-metal-001',
+        name: 'Aluminum',
+        brand: 'Vallejo',
+        colorHex: '#D5D6D8',
+        category: 'Metal Color',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-metal-002',
+        name: 'Gold',
+        brand: 'Vallejo',
+        colorHex: '#D4AF37',
+        category: 'Metal Color',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'val-metal-003',
+        name: 'Copper',
+        brand: 'Vallejo',
+        colorHex: '#B87333',
+        category: 'Metal Color',
+        isMetallic: true,
+        isTransparent: false,
+      ),
 
       // ==================== ARMY PAINTER ====================
 
@@ -141,6 +345,82 @@ class SampleData {
         isMetallic: false,
         isTransparent: false,
       ),
+      Paint(
+        id: 'army-warpaints-003',
+        name: 'Wolf Grey',
+        brand: 'Army Painter',
+        colorHex: '#739CC5',
+        category: 'Warpaints',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'army-warpaints-004',
+        name: 'Goblin Green',
+        brand: 'Army Painter',
+        colorHex: '#3F6C39',
+        category: 'Warpaints',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'army-warpaints-005',
+        name: 'Skeleton Bone',
+        brand: 'Army Painter',
+        colorHex: '#D5C586',
+        category: 'Warpaints',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // Washes range
+      Paint(
+        id: 'army-wash-001',
+        name: 'Dark Tone',
+        brand: 'Army Painter',
+        colorHex: '#231F20',
+        category: 'Wash',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'army-wash-002',
+        name: 'Soft Tone',
+        brand: 'Army Painter',
+        colorHex: '#A98053',
+        category: 'Wash',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+      Paint(
+        id: 'army-wash-003',
+        name: 'Green Tone',
+        brand: 'Army Painter',
+        colorHex: '#31574A',
+        category: 'Wash',
+        isMetallic: false,
+        isTransparent: true,
+      ),
+
+      // Metallics range
+      Paint(
+        id: 'army-metal-001',
+        name: 'Shining Silver',
+        brand: 'Army Painter',
+        colorHex: '#C9CACB',
+        category: 'Metallics',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'army-metal-002',
+        name: 'Weapon Bronze',
+        brand: 'Army Painter',
+        colorHex: '#CD7F32',
+        category: 'Metallics',
+        isMetallic: true,
+        isTransparent: false,
+      ),
 
       // ==================== SCALE75 ====================
 
@@ -160,6 +440,180 @@ class SampleData {
         brand: 'Scale75',
         colorHex: '#B40F15',
         category: 'Fantasy & Games',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'scale75-fg-003',
+        name: 'Navy Blue',
+        brand: 'Scale75',
+        colorHex: '#0B2B66',
+        category: 'Fantasy & Games',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'scale75-fg-004',
+        name: 'Ardennes Green',
+        brand: 'Scale75',
+        colorHex: '#2B473B',
+        category: 'Fantasy & Games',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // Metal n Alchemy range
+      Paint(
+        id: 'scale75-metal-001',
+        name: 'Thrash Metal',
+        brand: 'Scale75',
+        colorHex: '#5F5F5F',
+        category: 'Metal n Alchemy',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'scale75-metal-002',
+        name: 'Dwarven Gold',
+        brand: 'Scale75',
+        colorHex: '#B5902B',
+        category: 'Metal n Alchemy',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+
+      // ==================== TAMIYA ====================
+
+      // Acrylic Paints
+      Paint(
+        id: 'tamiya-xf-001',
+        name: 'Flat Black',
+        brand: 'Tamiya',
+        colorHex: '#1E1E1E',
+        category: 'Acrylic',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'tamiya-xf-002',
+        name: 'Flat White',
+        brand: 'Tamiya',
+        colorHex: '#FFFFFF',
+        category: 'Acrylic',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'tamiya-xf-003',
+        name: 'Flat Red',
+        brand: 'Tamiya',
+        colorHex: '#B52A32',
+        category: 'Acrylic',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'tamiya-xf-004',
+        name: 'Flat Blue',
+        brand: 'Tamiya',
+        colorHex: '#0F3C7F',
+        category: 'Acrylic',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // Metallic colors
+      Paint(
+        id: 'tamiya-x-011',
+        name: 'Chrome Silver',
+        brand: 'Tamiya',
+        colorHex: '#C8C8CA',
+        category: 'Metallic',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'tamiya-x-012',
+        name: 'Gold Leaf',
+        brand: 'Tamiya',
+        colorHex: '#CEAA62',
+        category: 'Metallic',
+        isMetallic: true,
+        isTransparent: false,
+      ),
+
+      // ==================== P3 (PRIVATEER PRESS) ====================
+      Paint(
+        id: 'p3-001',
+        name: 'Coal Black',
+        brand: 'P3',
+        colorHex: '#062226',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'p3-002',
+        name: 'Khador Red Base',
+        brand: 'P3',
+        colorHex: '#A0250D',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'p3-003',
+        name: 'Cygnar Blue Base',
+        brand: 'P3',
+        colorHex: '#224F98',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'p3-004',
+        name: 'Thornwood Green',
+        brand: 'P3',
+        colorHex: '#354A37',
+        category: 'Base',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+
+      // ==================== AK INTERACTIVE ====================
+      Paint(
+        id: 'ak-001',
+        name: 'Dark Rust',
+        brand: 'AK Interactive',
+        colorHex: '#6E3A21',
+        category: 'Weathering',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'ak-002',
+        name: 'Track Rust',
+        brand: 'AK Interactive',
+        colorHex: '#7F4422',
+        category: 'Weathering',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'ak-003',
+        name: 'Panzer Gray',
+        brand: 'AK Interactive',
+        colorHex: '#414C52',
+        category: 'AFV',
+        isMetallic: false,
+        isTransparent: false,
+      ),
+      Paint(
+        id: 'ak-004',
+        name: 'Olive Green',
+        brand: 'AK Interactive',
+        colorHex: '#44553A',
+        category: 'AFV',
         isMetallic: false,
         isTransparent: false,
       ),
@@ -248,50 +702,29 @@ class SampleData {
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 18)),
       ),
+
+      // Historical themes
       Palette(
         id: 'palette-007',
-        name: 'Ork Goff Clan',
+        name: 'WWII German Panzer',
         imagePath: 'assets/images/placeholder7.jpg',
         colors: [
-          const Color(0xFF00401A), // Caliban Green
-          const Color(0xFF800000), // Hull Red
-          const Color(0xFF2A3439), // German Grey
-          const Color(0xFF1A1A1A), // Nuln Oil
+          const Color(0xFF414C52), // Panzer Gray
+          const Color(0xFF6E3A21), // Dark Rust
+          const Color(0xFF231F20), // Black
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 22)),
       ),
       Palette(
         id: 'palette-008',
-        name: 'Chaos Space Marines Word Bearers',
+        name: 'US Army Olive Drab',
         imagePath: 'assets/images/placeholder8.jpg',
         colors: [
-          const Color(0xFF9A1115), // Mephiston Red
-          const Color(0xFF231F20), // Abaddon Black
-          const Color(0xFF85714D), // Retributor Armour
+          const Color(0xFF44553A), // Olive Green
+          const Color(0xFFB7975F), // Zandri Dust
+          const Color(0xFF7F4422), // Track Rust
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 25)),
-      ),
-      Palette(
-        id: 'palette-009',
-        name: 'Death Guard Plague Marines',
-        imagePath: 'assets/images/placeholder9.jpg',
-        colors: [
-          const Color(0xFFD6D5C3), // Screaming Skull
-          const Color(0xFF00401A), // Caliban Green
-          const Color(0xFF1A1A1A), // Nuln Oil
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-      ),
-      Palette(
-        id: 'palette-010',
-        name: 'Adeptus Custodes',
-        imagePath: 'assets/images/placeholder10.jpg',
-        colors: [
-          const Color(0xFF85714D), // Retributor Armour
-          const Color(0xFF231F20), // Abaddon Black
-          const Color(0xFF9A1115), // Mephiston Red
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 35)),
       ),
     ];
   }
