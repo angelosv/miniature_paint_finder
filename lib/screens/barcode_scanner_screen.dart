@@ -439,6 +439,96 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               onPressed: () => _scannerController!.switchCamera(),
               tooltip: 'Switch camera',
             ),
+          // Botón de debug con menú para simular diferentes escenarios
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Simular escaneo',
+            onSelected: (String scenario) {
+              final paints = SampleData.getPaints();
+              Paint selectedPaint;
+
+              switch (scenario) {
+                case 'random':
+                  final randomIndex =
+                      DateTime.now().millisecondsSinceEpoch % paints.length;
+                  selectedPaint = paints[randomIndex];
+                  break;
+                case 'in_inventory':
+                  // Simular una pintura que ya está en inventario
+                  selectedPaint = paints.firstWhere(
+                    (p) => _paintService.isInInventory(p.id),
+                    orElse: () => paints.first,
+                  );
+                  break;
+                case 'in_wishlist':
+                  // Simular una pintura que ya está en wishlist
+                  selectedPaint = paints.firstWhere(
+                    (p) => _paintService.isInWishlist(p.id),
+                    orElse: () => paints.first,
+                  );
+                  break;
+                case 'in_palette':
+                  // Simular una pintura que está en alguna paleta
+                  selectedPaint = paints.firstWhere(
+                    (p) =>
+                        _paintService
+                            .getPalettesContainingPaint(p.id)
+                            .isNotEmpty,
+                    orElse: () => paints.first,
+                  );
+                  break;
+                case 'metallic':
+                  // Simular una pintura metálica
+                  selectedPaint = paints.firstWhere(
+                    (p) => p.isMetallic,
+                    orElse: () => paints.first,
+                  );
+                  break;
+                case 'transparent':
+                  // Simular una pintura transparente
+                  selectedPaint = paints.firstWhere(
+                    (p) => p.isTransparent,
+                    orElse: () => paints.first,
+                  );
+                  break;
+                default:
+                  selectedPaint = paints.first;
+              }
+
+              print(
+                'Simulando escaneo de pintura: ${selectedPaint.name} (${selectedPaint.brand})',
+              );
+              _showScanResultSheet(selectedPaint);
+            },
+            itemBuilder:
+                (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'random',
+                    child: Text('Pintura aleatoria'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'in_inventory',
+                    child: Text('Pintura en inventario'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'in_wishlist',
+                    child: Text('Pintura en wishlist'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'in_palette',
+                    child: Text('Pintura en paleta'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'metallic',
+                    child: Text('Pintura metálica'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'transparent',
+                    child: Text('Pintura transparente'),
+                  ),
+                ],
+          ),
+          // Add refresh button to forcibly restart camera permissions and initialization
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
