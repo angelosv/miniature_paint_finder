@@ -142,6 +142,66 @@ class PaintService {
     return true;
   }
 
+  /// Elimina una pintura de la wishlist
+  Future<bool> removeFromWishlist(String paintId) async {
+    // Simulamos una operación asíncrona
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!_wishlist.containsKey(paintId)) {
+      return false;
+    }
+
+    _wishlist.remove(paintId);
+    return true;
+  }
+
+  /// Actualiza la prioridad de una pintura en la wishlist
+  Future<bool> updateWishlistPriority(String paintId, bool isPriority) async {
+    // Simulamos una operación asíncrona
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!_wishlist.containsKey(paintId)) {
+      return false;
+    }
+
+    _wishlist[paintId]!['isPriority'] = isPriority;
+    return true;
+  }
+
+  /// Obtiene todas las pinturas de la wishlist
+  Future<List<Map<String, dynamic>>> getWishlistPaints() async {
+    // Simulamos una operación asíncrona
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final List<Map<String, dynamic>> result = [];
+    final allPaints = SampleData.getPaints();
+
+    for (final entry in _wishlist.entries) {
+      final paint = allPaints.firstWhere(
+        (p) => p.id == entry.key,
+        orElse: () => throw Exception('Paint not found: ${entry.key}'),
+      );
+
+      result.add({
+        'paint': paint,
+        'isPriority': entry.value['isPriority'] as bool,
+        'addedAt': entry.value['addedAt'] as DateTime,
+      });
+    }
+
+    // Sort: priority first, then most recently added
+    result.sort((a, b) {
+      if (a['isPriority'] != b['isPriority']) {
+        return a['isPriority'] ? -1 : 1; // Priority items first
+      }
+      return (b['addedAt'] as DateTime).compareTo(
+        a['addedAt'] as DateTime,
+      ); // Most recent first
+    });
+
+    return result;
+  }
+
   /// Agrega una pintura a una paleta
   Future<bool> addToPalette(Paint paint, Palette palette) async {
     // Simulamos una operación asíncrona

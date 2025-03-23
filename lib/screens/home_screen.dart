@@ -6,6 +6,7 @@ import 'package:miniature_paint_finder/components/search_tab.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -28,7 +29,12 @@ class _HomeScreenState extends State<HomeScreen> {
       'index': -1,
       'screen': 'inventory',
     },
-    {'icon': Icons.favorite_border, 'text': 'Wishlist', 'index': -1},
+    {
+      'icon': Icons.favorite_border,
+      'text': 'Wishlist',
+      'index': -1,
+      'screen': 'wishlist',
+    },
     {'icon': Icons.colorize_outlined, 'text': 'Paint Sets', 'index': -1},
     {
       'icon': Icons.auto_awesome_mosaic,
@@ -85,6 +91,13 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const InventoryScreen()),
+        );
+        break;
+
+      case 'wishlist':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const WishlistScreen()),
         );
         break;
     }
