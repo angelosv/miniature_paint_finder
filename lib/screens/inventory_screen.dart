@@ -225,6 +225,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final paintColor = Color(
       int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
     );
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
 
     // Controller para notas con el valor actual
     final notesController = TextEditingController(text: item.notes);
@@ -246,7 +248,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.5),
+              color:
+                  isDarkMode ? Colors.grey[600] : Colors.grey.withOpacity(0.5),
               borderRadius: BorderRadius.circular(2),
             ),
             margin: const EdgeInsets.only(bottom: 16),
@@ -261,7 +264,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 decoration: BoxDecoration(
                   color: paintColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
+                  border: Border.all(color: borderColor, width: 1),
                 ),
               ),
               const SizedBox(width: 12),
@@ -273,6 +276,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       paint.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: isDarkMode ? AppTheme.marineOrange : null,
                       ),
                     ),
                     Text(
@@ -290,7 +294,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
           // Stock control
           Text(
             'Current Stock: ${item.stock}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black87,
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -307,7 +314,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 style: ElevatedButton.styleFrom(
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(12),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.red[isDarkMode ? 400 : 600],
+                  disabledBackgroundColor:
+                      isDarkMode ? Colors.grey[800] : Colors.grey[300],
                 ),
                 child: const Icon(Icons.remove, color: Colors.white),
               ),
@@ -315,9 +324,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   '${item.stock}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -329,7 +339,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 style: ElevatedButton.styleFrom(
                   shape: const CircleBorder(),
                   padding: const EdgeInsets.all(12),
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.green[isDarkMode ? 400 : 600],
                 ),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
@@ -341,12 +351,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
           // Notes section
           TextField(
             controller: notesController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Notes',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
               hintText: 'Add notes about this paint...',
+              hintStyle: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
             ),
             maxLines: 3,
+            style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
           ),
 
           const SizedBox(height: 16),
@@ -359,6 +373,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 _updatePaintNotes(item, notesController.text);
                 Navigator.pop(context);
               },
+              style: OutlinedButton.styleFrom(
+                foregroundColor:
+                    isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+              ),
               child: const Text('Save Notes'),
             ),
           ),
@@ -373,7 +391,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 _updatePaintStock(item, 0);
                 Navigator.pop(context);
               },
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red[isDarkMode ? 400 : 600],
+              ),
               child: const Text('Set Stock to Zero'),
             ),
           ),
@@ -384,6 +404,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final headerColor =
+        isDarkMode
+            ? AppTheme.marineBlue.withOpacity(0.3)
+            : AppTheme.marineBlue.withOpacity(0.1);
+    final alternateRowColor = isDarkMode ? Colors.grey[800] : Colors.grey[50];
+    final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
+    final summaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Inventory'),
@@ -476,14 +505,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   '${_filteredInventory.length} paints in inventory',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
+                    color: summaryTextColor,
                   ),
                 ),
                 Text(
                   'Total in stock: ${_filteredInventory.fold<int>(0, (sum, item) => sum + item.stock)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
+                    color: summaryTextColor,
                   ),
                 ),
               ],
@@ -496,12 +525,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(
             child:
                 _paginatedInventory.isEmpty
-                    ? const Center(child: Text('No paints in inventory'))
+                    ? Center(
+                      child: Text(
+                        'No paints in inventory',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    )
                     : ListView(
                       children: [
                         // Encabezados de la tabla
                         Container(
-                          color: AppTheme.marineBlue.withOpacity(0.1),
+                          color: headerColor,
                           padding: const EdgeInsets.symmetric(
                             vertical: 12,
                             horizontal: 16,
@@ -631,14 +667,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Colors.grey[300]!,
+                                    color: borderColor,
                                     width: 1,
                                   ),
                                 ),
                                 color:
                                     index % 2 == 0
                                         ? Colors.transparent
-                                        : Colors.grey[50],
+                                        : alternateRowColor,
                               ),
                               padding: const EdgeInsets.symmetric(
                                 vertical: 12,
@@ -654,7 +690,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       color: paintColor,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: Colors.grey[300]!,
+                                        color: borderColor,
                                         width: 1,
                                       ),
                                     ),
@@ -668,7 +704,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       paint.name,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor,
+                                        color:
+                                            isDarkMode
+                                                ? AppTheme.marineOrange
+                                                : Theme.of(
+                                                  context,
+                                                ).primaryColor,
                                       ),
                                     ),
                                   ),
@@ -691,8 +732,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                         fontWeight: FontWeight.bold,
                                         color:
                                             item.stock > 0
-                                                ? Colors.green[600]
-                                                : Colors.red[600],
+                                                ? Colors.green[isDarkMode
+                                                    ? 400
+                                                    : 600]
+                                                : Colors.red[isDarkMode
+                                                    ? 400
+                                                    : 600],
                                       ),
                                     ),
                                   ),
@@ -732,6 +777,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showAddNewPaintDialog() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final buttonColor =
+        isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue;
+
     showDialog(
       context: context,
       builder: (context) {
@@ -747,6 +796,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     labelText: 'Paint Name',
                     hintText: 'Enter paint name',
                   ),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -755,6 +807,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     labelText: 'Brand',
                     hintText: 'Enter brand name',
                   ),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -762,6 +817,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Category',
                     hintText: 'Enter category',
+                  ),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -772,6 +830,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     hintText: 'Enter color hex (#RRGGBB)',
                     prefixText: '#',
                   ),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
                 ),
               ],
             ),
@@ -781,6 +842,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
               onPressed: () {
                 Navigator.pop(context);
               },
+              style: TextButton.styleFrom(
+                foregroundColor:
+                    isDarkMode ? Colors.grey[300] : Colors.grey[700],
+              ),
               child: const Text('Cancel'),
             ),
             TextButton(
@@ -825,6 +890,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   Navigator.pop(context);
                 }
               },
+              style: TextButton.styleFrom(foregroundColor: buttonColor),
               child: const Text('Add'),
             ),
           ],
