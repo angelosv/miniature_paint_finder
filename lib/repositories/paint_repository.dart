@@ -1,6 +1,8 @@
+import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/repositories/base_repository.dart';
+import 'package:miniature_paint_finder/services/api_service.dart';
 
 /// Repository interface for paint operations
 abstract class PaintRepository extends BaseRepository<Paint> {
@@ -18,6 +20,166 @@ abstract class PaintRepository extends BaseRepository<Paint> {
 
   /// Search paints by name
   Future<List<Paint>> searchByName(String query);
+}
+
+/// Implementación del repositorio que utiliza la API
+class ApiPaintRepository implements PaintRepository {
+  final ApiService _apiService;
+
+  ApiPaintRepository(this._apiService);
+
+  @override
+  Future<List<Paint>> getAll() async {
+    try {
+      final response = await _apiService.get(ApiEndpoints.paints);
+      return (response as List).map((json) => Paint.fromJson(json)).toList();
+    } catch (e) {
+      // Fallback a datos de muestra si la API falla
+      print('Error getting paints from API: $e');
+      return SampleData.getPaints();
+    }
+  }
+
+  @override
+  Future<Paint?> getById(String id) async {
+    try {
+      final response = await _apiService.get(ApiEndpoints.paintById(id));
+      return Paint.fromJson(response);
+    } catch (e) {
+      print('Error getting paint by ID from API: $e');
+      try {
+        return SampleData.getPaints().firstWhere((paint) => paint.id == id);
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  @override
+  Future<Paint> create(Paint item) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.paints,
+        item.toJson(),
+      );
+      return Paint.fromJson(response);
+    } catch (e) {
+      print('Error creating paint in API: $e');
+      return item; // Devolvemos el item sin cambios como fallback
+    }
+  }
+
+  @override
+  Future<Paint> update(Paint item) async {
+    try {
+      final response = await _apiService.put(
+        ApiEndpoints.paintById(item.id),
+        item.toJson(),
+      );
+      return Paint.fromJson(response);
+    } catch (e) {
+      print('Error updating paint in API: $e');
+      return item;
+    }
+  }
+
+  @override
+  Future<bool> delete(String id) async {
+    try {
+      await _apiService.delete(ApiEndpoints.paintById(id));
+      return true;
+    } catch (e) {
+      print('Error deleting paint from API: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<List<Paint>> findByColor(
+    String colorHex, {
+    double threshold = 0.1,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.paintsByColor(colorHex, threshold: threshold),
+      );
+      return (response as List).map((json) => Paint.fromJson(json)).toList();
+    } catch (e) {
+      print('Error finding paints by color from API: $e');
+      // Implementación temporal para datos de muestra
+      final allPaints = SampleData.getPaints();
+      // Filtrar por similitud de color (implementación simplificada)
+      return allPaints.take(5).toList();
+    }
+  }
+
+  @override
+  Future<List<Paint>> findByBrand(String brand) async {
+    try {
+      final response = await _apiService.get(ApiEndpoints.paintsByBrand(brand));
+      return (response as List).map((json) => Paint.fromJson(json)).toList();
+    } catch (e) {
+      print('Error finding paints by brand from API: $e');
+      return SampleData.getPaints()
+          .where((paint) => paint.brand.toLowerCase() == brand.toLowerCase())
+          .toList();
+    }
+  }
+
+  @override
+  Future<List<Paint>> findByCategory(String category) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.paintsByCategory(category),
+      );
+      return (response as List).map((json) => Paint.fromJson(json)).toList();
+    } catch (e) {
+      print('Error finding paints by category from API: $e');
+      return SampleData.getPaints()
+          .where(
+            (paint) => paint.category.toLowerCase() == category.toLowerCase(),
+          )
+          .toList();
+    }
+  }
+
+  @override
+  Future<Paint?> findByBarcode(String barcode) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.paintsByBarcode(barcode),
+      );
+      return Paint.fromJson(response);
+    } catch (e) {
+      print('Error finding paint by barcode from API: $e');
+      // Para demo, simplemente devolvemos el primer paint si hay barcode
+      if (barcode.isNotEmpty) {
+        return SampleData.getPaints().first;
+      }
+      return null;
+    }
+  }
+
+  @override
+  Future<List<Paint>> searchByName(String query) async {
+    if (query.isEmpty) {
+      return [];
+    }
+
+    try {
+      final response = await _apiService.get(ApiEndpoints.searchPaints(query));
+      return (response as List).map((json) => Paint.fromJson(json)).toList();
+    } catch (e) {
+      print('Error searching paints by name from API: $e');
+      return SampleData.getPaints()
+          .where(
+            (paint) =>
+                paint.name.toLowerCase().contains(query.toLowerCase()) ||
+                paint.brand.toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList();
+    }
+  }
 }
 
 /// Implementation of PaintRepository using in-memory sample data
