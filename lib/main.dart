@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
@@ -20,6 +21,12 @@ void main() async {
   // Initialize repositories
   final PaintRepository paintRepository = PaintRepositoryImpl();
   final PaletteRepository paletteRepository = PaletteRepositoryImpl();
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(
     MultiProvider(
@@ -49,6 +56,20 @@ class MyApp extends StatelessWidget {
       themeMode: themeProvider.themeMode,
       home: const AuthScreen(),
       debugShowCheckedModeBanner: false,
+      // Use builder to apply global responsive settings
+      builder: (context, child) {
+        // Get the media query data to adapt to various screen sizes
+        final MediaQueryData data = MediaQuery.of(context);
+        // Calculate the text scale factor to ensure consistent text size across devices
+        // iPhone 16 Pro Max has a textScaleFactor of 1.0
+        final scaleFactor = data.textScaleFactor.clamp(0.85, 1.2);
+
+        // Apply the textScaleFactor to ensure consistent appearance across devices
+        return MediaQuery(
+          data: data.copyWith(textScaleFactor: scaleFactor),
+          child: child!,
+        );
+      },
     );
   }
 }

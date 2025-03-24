@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/components/palette_paint_card.dart';
 import 'package:miniature_paint_finder/components/palette_action_sheet.dart';
+import 'package:miniature_paint_finder/theme/app_responsive.dart';
 
 /// Pantalla de detalles de una paleta específica
 class PaletteDetailScreen extends StatefulWidget {
@@ -358,6 +359,44 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
     final colorsInInventory = _getColorsInInventory();
     final totalColors = _palette.paintSelections?.length ?? 0;
 
+    // Use our responsive utilities instead of manual calculations
+    final horizontalPadding = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 16.0,
+      mobile: 12.0,
+    );
+
+    final verticalSpacing = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 16.0,
+      mobile: 12.0,
+    );
+
+    final titleFontSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      24.0,
+      minFontSize: 22.0,
+    );
+
+    final sectionTitleSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      18.0,
+      minFontSize: 16.0,
+    );
+
+    final colorGridHeight = MediaQuery.of(context).size.height * 0.08;
+    final colorGridColumns = AppResponsive.isSmallMobile(context) ? 4 : 5;
+    final statusTextSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      14.0,
+      minFontSize: 12.0,
+    );
+    final statusIconSize = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 18.0,
+      mobile: 16.0,
+    );
+
     return Scaffold(
       appBar: AppHeader(
         title: _isEditMode ? 'Edit Palette' : _palette.name,
@@ -385,7 +424,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
         children: [
           // Sección de información de la paleta
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(horizontalPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -403,18 +442,22 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                   Text(
                     'Created ${_formatDate(_palette.createdAt)}',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: statusTextSize,
                       color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  SizedBox(height: verticalSpacing * 0.75),
 
                   // Estado del inventario
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding * 0.75,
+                      vertical: AppResponsive.getAdaptiveValue(
+                        context: context,
+                        defaultValue: 8.0,
+                        mobile: 6.0,
+                      ),
                     ),
                     decoration: BoxDecoration(
                       color:
@@ -434,7 +477,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                               : colorsInInventory == totalColors
                               ? Icons.check_circle
                               : Icons.notification_important,
-                          size: 18,
+                          size: statusIconSize,
                           color:
                               totalColors == 0
                                   ? Colors.grey[600]
@@ -442,7 +485,13 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                                   ? Colors.green
                                   : AppTheme.marineOrange,
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: AppResponsive.getAdaptiveValue(
+                            context: context,
+                            defaultValue: 8.0,
+                            mobile: 6.0,
+                          ),
+                        ),
                         Text(
                           totalColors == 0
                               ? 'No paints selected'
@@ -457,6 +506,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                                     ? Colors.green
                                     : AppTheme.marineOrange,
                             fontWeight: FontWeight.w500,
+                            fontSize: statusTextSize,
                           ),
                         ),
                       ],
@@ -464,32 +514,42 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                SizedBox(height: verticalSpacing),
 
                 // Colores de la paleta
-                const Text(
+                Text(
                   'Colors',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: sectionTitleSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
-                const SizedBox(height: 8),
+                SizedBox(height: verticalSpacing * 0.5),
 
                 // Grid de colores
                 Container(
-                  height: 70,
-                  padding: const EdgeInsets.all(10),
+                  height: colorGridHeight,
+                  padding: EdgeInsets.all(
+                    AppResponsive.getAdaptiveValue(
+                      context: context,
+                      defaultValue: 10.0,
+                      mobile: 8.0,
+                    ),
+                  ),
                   decoration: BoxDecoration(
                     color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: GridView.count(
+                    crossAxisCount: colorGridColumns,
                     children: [
                       ..._palette.colors.map(
                         (color) => Padding(
-                          padding: const EdgeInsets.only(right: 10),
+                          padding: const EdgeInsets.all(4),
                           child: Container(
-                            width: 50,
-                            height: 50,
+                            width: colorGridHeight * 0.75,
+                            height: colorGridHeight * 0.75,
                             decoration: BoxDecoration(
                               color: color,
                               borderRadius: BorderRadius.circular(8),
@@ -503,8 +563,8 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                         InkWell(
                           onTap: _showAddColorModal,
                           child: Container(
-                            width: 50,
-                            height: 50,
+                            width: colorGridHeight * 0.75,
+                            height: colorGridHeight * 0.75,
                             decoration: BoxDecoration(
                               color:
                                   isDarkMode ? Colors.grey[700] : Colors.white,
@@ -519,7 +579,11 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                             ),
                             child: Icon(
                               Icons.add,
-                              size: 24,
+                              size: AppResponsive.getAdaptiveValue(
+                                context: context,
+                                defaultValue: 20.0,
+                                mobile: 24.0,
+                              ),
                               color:
                                   isDarkMode
                                       ? Colors.grey[400]
@@ -536,23 +600,55 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
 
           // Título de la sección de pinturas
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              0,
+              horizontalPadding,
+              horizontalPadding * 0.5,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Paint Selection',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: sectionTitleSize,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 if (!_isEditMode)
                   TextButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Paint'),
+                    icon: Icon(
+                      Icons.add,
+                      size: AppResponsive.getAdaptiveValue(
+                        context: context,
+                        defaultValue: 16.0,
+                        mobile: 18.0,
+                      ),
+                    ),
+                    label: Text(
+                      'Add Paint',
+                      style: TextStyle(
+                        fontSize: AppResponsive.getAdaptiveFontSize(
+                          context,
+                          14.0,
+                          minFontSize: 12.0,
+                        ),
+                      ),
+                    ),
                     onPressed: _showAddColorModal,
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppResponsive.getAdaptiveValue(
+                          context: context,
+                          defaultValue: 8.0,
+                          mobile: 12.0,
+                        ),
+                        vertical: AppResponsive.getAdaptiveValue(
+                          context: context,
+                          defaultValue: 6.0,
+                          mobile: 8.0,
+                        ),
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -574,17 +670,25 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                         children: [
                           Icon(
                             Icons.palette_outlined,
-                            size: 64,
+                            size: AppResponsive.getAdaptiveValue(
+                              context: context,
+                              defaultValue: 56.0,
+                              mobile: 64.0,
+                            ),
                             color:
                                 isDarkMode
                                     ? Colors.grey[700]
                                     : Colors.grey[300],
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: verticalSpacing),
                           Text(
                             'No paints selected yet',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: AppResponsive.getAdaptiveFontSize(
+                                context,
+                                16.0,
+                                minFontSize: 18.0,
+                              ),
                               fontWeight: FontWeight.w500,
                               color:
                                   isDarkMode
@@ -592,26 +696,60 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                                       : Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: AppResponsive.getAdaptiveValue(
+                              context: context,
+                              defaultValue: 6.0,
+                              mobile: 8.0,
+                            ),
+                          ),
                           Text(
                             'Tap on a color to find matching paints',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: AppResponsive.getAdaptiveFontSize(
+                                context,
+                                12.0,
+                                minFontSize: 14.0,
+                              ),
                               color:
                                   isDarkMode
                                       ? Colors.grey[600]
                                       : Colors.grey[500],
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: verticalSpacing * 1.5),
                           ElevatedButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add First Paint'),
+                            icon: Icon(
+                              Icons.add,
+                              size: AppResponsive.getAdaptiveValue(
+                                context: context,
+                                defaultValue: 16.0,
+                                mobile: 18.0,
+                              ),
+                            ),
+                            label: Text(
+                              'Add First Paint',
+                              style: TextStyle(
+                                fontSize: AppResponsive.getAdaptiveFontSize(
+                                  context,
+                                  12.0,
+                                  minFontSize: 14.0,
+                                ),
+                              ),
+                            ),
                             onPressed: _showAddColorModal,
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppResponsive.getAdaptiveValue(
+                                  context: context,
+                                  defaultValue: 16.0,
+                                  mobile: 20.0,
+                                ),
+                                vertical: AppResponsive.getAdaptiveValue(
+                                  context: context,
+                                  defaultValue: 10.0,
+                                  mobile: 12.0,
+                                ),
                               ),
                             ),
                           ),
@@ -619,7 +757,7 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                       ),
                     )
                     : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(horizontalPadding),
                       itemCount: _palette.paintSelections!.length,
                       itemBuilder: (context, index) {
                         final paint = _palette.paintSelections![index];
