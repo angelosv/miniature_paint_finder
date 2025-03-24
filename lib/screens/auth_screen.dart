@@ -265,29 +265,33 @@ class _AuthScreenState extends State<AuthScreen>
       backgroundColor: AppTheme.darkBackground,
       body: SafeArea(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
           transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.05, 0),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
+            return Stack(
+              children: [
+                SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(1.0, 0.0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
+                  child: FadeTransition(opacity: animation, child: child),
+                ),
+              ],
             );
           },
-          child:
-              _isShowingWelcome
-                  ? _buildWelcomeScreen()
-                  : _isShowingRegisterOptions
-                  ? _buildRegisterOptions(screenSize)
-                  : _isShowingEmailForm
-                  ? _buildEmailRegisterForm(screenSize)
-                  : _isShowingLoginOptions
-                  ? _buildLoginOptions(screenSize)
-                  : _buildEmailLoginForm(screenSize),
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              children: <Widget>[
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
+          child: _getCurrentScreen(screenSize),
         ),
       ),
       // Loading overlay
@@ -308,146 +312,136 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  Widget _getCurrentScreen(Size screenSize) {
+    return Container(
+      key: ValueKey<String>(_getCurrentScreenKey()),
+      child:
+          _isShowingWelcome
+              ? _buildWelcomeScreen()
+              : _isShowingRegisterOptions
+              ? _buildRegisterOptions(screenSize)
+              : _isShowingEmailForm
+              ? _buildEmailRegisterForm(screenSize)
+              : _isShowingLoginOptions
+              ? _buildLoginOptions(screenSize)
+              : _buildEmailLoginForm(screenSize),
+    );
+  }
+
+  String _getCurrentScreenKey() {
+    if (_isShowingWelcome) return 'welcome';
+    if (_isShowingRegisterOptions) return 'register_options';
+    if (_isShowingEmailForm) return 'email_form';
+    if (_isShowingLoginOptions) return 'login_options';
+    return 'email_login';
+  }
+
   Widget _buildWelcomeScreen() {
-    return Stack(
-      children: [
-        Container(
-          color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Space Marine Image
-                    Container(
-                      width: double.infinity,
-                      height: 400,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage('assets/images/space_marine.png'),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
+    return Container(
+      color: AppTheme.darkBackground,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Space Marine Image
+                Container(
+                  width: double.infinity,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/space_marine.png'),
+                      fit: BoxFit.contain,
                     ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Miniature Paint Finder',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 28,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Your ultimate companion for miniature painting',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white70,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Feature bullets
-                    _buildFeatureBullet(
-                      'Track your paint collection and never buy duplicates',
-                    ),
-                    _buildFeatureBullet(
-                      'Find matching colors with **AI-powered image recognition** - 100% Free',
-                    ),
-                    _buildFeatureBullet(
-                      'Create and share custom paint palettes',
-                    ),
-                    _buildFeatureBullet('Scan barcodes for quick paint lookup'),
-                  ],
-                ),
-              ),
-              // Bottom buttons section
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _showRegisterOptions,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: AppTheme.darkBackground,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                          ),
-                          child: Text(
-                            'Register',
-                            style: AppTheme.buttonStyle.copyWith(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _showLoginOptions,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                          ),
-                          child: Text(
-                            'Sign In',
-                            style: AppTheme.buttonStyle.copyWith(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Miniature Paint Finder',
+                  style: AppTheme.headingStyle.copyWith(
+                    color: Colors.white,
+                    fontSize: 28,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Your ultimate companion for miniature painting',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white70,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Feature bullets
+                _buildFeatureBullet(
+                  'Track your paint collection and never buy duplicates',
+                ),
+                _buildFeatureBullet(
+                  'Find matching colors with **AI-powered image recognition** - 100% Free',
+                ),
+                _buildFeatureBullet('Create and share custom paint palettes'),
+                _buildFeatureBullet('Scan barcodes for quick paint lookup'),
+              ],
+            ),
+          ),
+          // Bottom buttons section
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _showRegisterOptions,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.darkBackground,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                      ),
+                      child: Text(
+                        'Register',
+                        style: AppTheme.buttonStyle.copyWith(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _showLoginOptions,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                      ),
+                      child: Text(
+                        'Sign In',
+                        style: AppTheme.buttonStyle.copyWith(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
+              const SizedBox(height: 16),
             ],
           ),
-        ),
-
-        // 3D floating cubes
-        Positioned(
-          top: 50,
-          right: 40,
-          child: _buildCube(AppTheme.marineOrange, size: 30, angle: 0.5),
-        ),
-
-        Positioned(
-          bottom: 120,
-          left: 40,
-          child: _buildCube(AppTheme.marineBlueDark, size: 25, angle: 0.8),
-        ),
-
-        Positioned(
-          top: 150,
-          left: 80,
-          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.3),
-        ),
-
-        Positioned(
-          right: 120,
-          bottom: 200,
-          child: _buildCube(AppTheme.marineGold, size: 20, angle: 1.2),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
