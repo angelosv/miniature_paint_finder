@@ -243,80 +243,74 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Container(
-          width: double.infinity,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with palette name and close button
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.9,
+          minChildSize: 0.5,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with palette name and close button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
                         palette.name,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineMedium?.copyWith(
+                          color: isDarkMode ? Colors.white : Colors.black,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Creation date
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-                child: Text(
-                  'Created ${_formatDate(palette.createdAt)}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                ),
-              ),
-
-              // Colors section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Colors',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 10),
-
-              // Color grid - large squares in a single row
-              if (palette.colors.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    height: 75,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(16),
+                  // Creation date
+                  Text(
+                    'Created ${_formatDate(palette.createdAt)}',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 16,
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Colors section
+                  Text(
+                    'Colors',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Color grid
+                  Container(
+                    height: 75,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       children:
                           palette.colors.map((color) {
@@ -332,89 +326,284 @@ class _PaletteScreenState extends State<PaletteScreen> {
                           }).toList(),
                     ),
                   ),
-                ),
 
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              // Selected Paints section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Selected Paints',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Paint selections
-              if (palette.paintSelections != null &&
-                  palette.paintSelections!.isNotEmpty)
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: palette.paintSelections!.length,
-                    itemBuilder: (context, index) {
-                      final paint = palette.paintSelections![index];
-
-                      // Usar el componente PaintMatchCard
-                      return PaintMatchCard(
-                        name: paint.paintName,
-                        brand: paint.paintBrand,
-                        brandAvatar: paint.brandAvatar,
-                        colorCode: paint.paintId.split('-').last,
-                        barcode:
-                            '50119${paint.paintId.hashCode.abs() % 10000000}',
-                        paintColor:
-                            paint
-                                .paintColor, // Usar el getter paint.paintColor que convierte paintColorHex a Color
-                        matchPercentage: paint.matchPercentage,
-                        isDarkMode: isDarkMode,
-                        showMatchPercentage: true,
-                        onTap: () {
-                          // TODO: Navigate to paint detail
-                        },
-                      );
-                    },
-                  ),
-                )
-              else
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No paints selected yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Tap on a color to find matching paints',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
+                  // Selected Paints section
+                  Text(
+                    'Selected Paints',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isDarkMode ? Colors.white : Colors.black,
                     ),
                   ),
-                ),
-            ],
-          ),
+
+                  const SizedBox(height: 10),
+
+                  // Paint selections
+                  if (palette.paintSelections != null &&
+                      palette.paintSelections!.isNotEmpty)
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: palette.paintSelections!.length,
+                        itemBuilder: (context, index) {
+                          final paint = palette.paintSelections![index];
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[700]!
+                                        : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                // Paint info section
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      // Brand avatar
+                                      CircleAvatar(
+                                        radius: 25,
+                                        backgroundColor: Colors.grey[200],
+                                        child: Text(
+                                          paint.brandAvatar,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+
+                                      // Paint name and brand
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              paint.paintName,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              paint.paintBrand,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.grey[400]
+                                                        : Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // Match percentage
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getMatchColor(
+                                            paint.matchPercentage,
+                                          ).withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${paint.matchPercentage}% match',
+                                          style: TextStyle(
+                                            color: _getMatchColor(
+                                              paint.matchPercentage,
+                                            ),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Color code and barcode section
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[800]
+                                            : Colors.grey[200],
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Color code with sample
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: paint.paintColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Color code:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600],
+                                                ),
+                                              ),
+                                              Text(
+                                                paint.paintId.split('-').last,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+
+                                      const Spacer(),
+
+                                      // Barcode section
+                                      Row(
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Barcode:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600],
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.qr_code,
+                                                    size: 16,
+                                                    color:
+                                                        isDarkMode
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '50119${paint.paintId.hashCode.abs() % 10000000}',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color:
+                                                          isDarkMode
+                                                              ? Colors.white
+                                                              : Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.palette_outlined,
+                              size: 64,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[700]
+                                      : Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No paints selected yet',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap on a color to find matching paints',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[600]
+                                        : Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
