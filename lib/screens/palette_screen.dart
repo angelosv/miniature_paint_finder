@@ -632,27 +632,22 @@ class _PaletteScreenState extends State<PaletteScreen> {
     return paintId.length % 3 == 0; // Just a mock implementation
   }
 
+  void _navigateToPaletteDetail(Palette palette) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaletteDetailScreen(palette: palette),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppHeader(
-        title: 'My Palettes',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Palettes help you organize paint schemes'),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: const AppHeader(title: 'My Palettes', showBackButton: false),
       body: AnimatedBuilder(
         animation: _paletteController,
         builder: (context, _) {
@@ -763,20 +758,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget _buildPaletteCard(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () => _showPaletteDetails(palette),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      child: InkWell(
+        onTap: () => _navigateToPaletteDetail(palette),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
