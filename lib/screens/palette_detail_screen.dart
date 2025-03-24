@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
+import 'package:miniature_paint_finder/components/palette_paint_card.dart';
+import 'package:miniature_paint_finder/components/palette_action_sheet.dart';
 
 /// Pantalla de detalles de una paleta específica
 class PaletteDetailScreen extends StatefulWidget {
@@ -647,118 +649,21 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                             }
                             return false;
                           },
-                          child: Card(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[700]!
-                                        : Colors.grey[300]!,
-                                width: 1,
-                              ),
-                            ),
-                            child: InkWell(
-                              onTap:
-                                  _isEditMode
-                                      ? null
-                                      : () =>
-                                          _showColorOptionsMenu(context, paint),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    // Color de la pintura
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        color: paint.paintColor,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-
-                                    // Información de la pintura
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            paint.paintName,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '${paint.paintBrand} · ${paint.paintId.split('-').last}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  isDarkMode
-                                                      ? Colors.grey[400]
-                                                      : Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Iconos de estado
-                                    Row(
-                                      children: [
-                                        if (isInInventory)
-                                          Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green.withOpacity(
-                                                0.1,
-                                              ),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.inventory_2,
-                                              size: 16,
-                                              color: Colors.green,
-                                            ),
-                                          )
-                                        else if (isInWishlist)
-                                          Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.marineOrange
-                                                  .withOpacity(0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.favorite,
-                                              size: 16,
-                                              color: AppTheme.marineOrange,
-                                            ),
-                                          ),
-                                        const SizedBox(width: 8),
-                                        if (!_isEditMode)
-                                          Icon(
-                                            Icons.more_vert,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey[400]
-                                                    : Colors.grey[600],
-                                            size: 20,
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                          child: GestureDetector(
+                            onTap:
+                                _isEditMode
+                                    ? null
+                                    : () =>
+                                        _showColorOptionsMenu(context, paint),
+                            child: PalettePaintCard(
+                              paint: paint,
+                              isInInventory: isInInventory,
+                              isInWishlist: isInWishlist,
+                              isEditMode: _isEditMode,
+                              showMatchPercentage: false,
+                              onRemove: () {
+                                _showDemoSnackbar('Paint removed from palette');
+                              },
                             ),
                           ),
                         );

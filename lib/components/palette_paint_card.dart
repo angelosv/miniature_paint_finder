@@ -22,6 +22,9 @@ class PalettePaintCard extends StatelessWidget {
   /// Función para manejar la eliminación
   final VoidCallback? onRemove;
 
+  /// Indica si debe mostrar el porcentaje de coincidencia
+  final bool showMatchPercentage;
+
   /// Constructor del componente
   const PalettePaintCard({
     super.key,
@@ -31,7 +34,18 @@ class PalettePaintCard extends StatelessWidget {
     this.isEditMode = false,
     this.onTap,
     this.onRemove,
+    this.showMatchPercentage = false,
   });
+
+  Color _getMatchColor(int matchPercentage) {
+    if (matchPercentage >= 90) {
+      return Colors.green;
+    } else if (matchPercentage >= 75) {
+      return Colors.amber;
+    } else {
+      return Colors.orange;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,51 +81,77 @@ class PalettePaintCard extends StatelessWidget {
         child: InkWell(
           onTap: isEditMode ? null : onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Color de la pintura
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: paint.paintColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Información de la pintura
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        paint.paintName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${paint.paintBrand} · ${paint.paintId.split('-').last}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Iconos de estado
-                Row(
+          child: Column(
+            children: [
+              // Top part with paint info
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
                   children: [
+                    // Brand Avatar
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.grey[200],
+                      child: Text(
+                        paint.brandAvatar,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Paint name and brand
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            paint.paintName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.black,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            paint.paintBrand,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Match percentage badge (opcional)
+                    if (showMatchPercentage)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getMatchColor(
+                            paint.matchPercentage,
+                          ).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${paint.matchPercentage}% match',
+                          style: TextStyle(
+                            color: _getMatchColor(paint.matchPercentage),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                    // Status icons (inventory/wishlist)
                     if (isInInventory)
                       Container(
                         padding: const EdgeInsets.all(6),
@@ -138,17 +178,95 @@ class PalettePaintCard extends StatelessWidget {
                           color: AppTheme.marineOrange,
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    if (!isEditMode)
-                      Icon(
-                        Icons.more_vert,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        size: 20,
-                      ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              // Bottom part with color code and barcode
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // Color code with sample
+                    Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: paint.paintColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Color code:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              paint.paintId.split('-').last,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const Spacer(),
+
+                    // Barcode section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Barcode:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.qr_code,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '50119${paint.paintId.hashCode.abs() % 10000000}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
