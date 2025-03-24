@@ -195,12 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.palette,
-                            size: 32,
-                            color: AppTheme.marineOrange,
-                          ),
-                          const SizedBox(width: 12),
                           Text(
                             'MiniPaint',
                             style: Theme.of(
