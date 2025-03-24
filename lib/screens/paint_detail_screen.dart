@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
@@ -16,8 +17,8 @@ class PaintDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(paint.name),
+      appBar: AppHeader(
+        title: paint.name,
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite_border),

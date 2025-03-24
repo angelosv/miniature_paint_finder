@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/components/app_header.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
@@ -190,8 +191,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Wishlist'),
+      appBar: AppHeader(
+        title: 'Your Wishlist',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

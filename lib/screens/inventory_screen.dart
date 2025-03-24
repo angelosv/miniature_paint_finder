@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/components/pagination_controls.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/components/app_header.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -414,10 +415,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final summaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Inventory'),
+      appBar: AppHeader(
+        title: 'My Inventory',
         actions: [
-          // Botón para añadir una nueva pintura
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {

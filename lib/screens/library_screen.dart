@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/paint_grid_card.dart';
+import 'package:miniature_paint_finder/components/app_header.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -215,8 +216,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Paint Library'),
+      appBar: AppHeader(
+        title: 'Paint Library',
         actions: [
           IconButton(
             icon: Icon(

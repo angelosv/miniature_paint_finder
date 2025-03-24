@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 /// Screen that displays all user palettes
 class PaletteScreen extends StatefulWidget {
@@ -19,6 +22,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
   late PaletteController _paletteController;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final PaintService _paintService = PaintService();
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -30,6 +34,168 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   Future<void> _loadPalettes() async {
     await _paletteController.loadPalettes();
+  }
+
+  Future<void> _createPaletteFromImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        // Show dialog to get palette name
+        final name = await showDialog<String>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Name Your Palette'),
+                content: TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter palette name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('CANCEL'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final textField = context.findRenderObject() as RenderBox;
+                      final name = (textField as dynamic).controller.text;
+                      Navigator.pop(context, name);
+                    },
+                    child: const Text('CREATE'),
+                  ),
+                ],
+              ),
+        );
+
+        if (name != null && name.isNotEmpty) {
+          // TODO: Implement color extraction from image
+          // For now, we'll just create a palette with a placeholder image
+          final success = await _paletteController.createPalette(
+            name: name,
+            imagePath: image.path,
+            colors: [], // Colors will be extracted from image
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  success != null
+                      ? 'Palette "$name" created'
+                      : 'Failed to create palette',
+                ),
+                backgroundColor: success != null ? Colors.green : Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating palette: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _createPaletteFromBarcode() async {
+    // Navigate to barcode scanner screen
+    final result = await Navigator.pushNamed(context, '/barcode-scanner');
+
+    if (result != null && result is Map<String, dynamic>) {
+      final paint = result['paint'];
+      final name = result['name'] ?? 'New Palette';
+
+      // Create palette with the scanned paint
+      final success = await _paletteController.createPalette(
+        name: name,
+        imagePath: 'assets/images/placeholder_palette.png',
+        colors: [
+          Color(int.parse(paint.colorHex.substring(1), radix: 16) + 0xFF000000),
+        ],
+      );
+
+      if (success != null) {
+        // Add the paint to the palette
+        await _paletteController.addPaintToPalette(
+          success.id,
+          paint,
+          paint.colorHex,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success != null
+                  ? 'Palette "$name" created'
+                  : 'Failed to create palette',
+            ),
+            backgroundColor: success != null ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCreatePaletteOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.image),
+                  title: const Text('Create from Image'),
+                  subtitle: const Text('Extract colors from an image'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _createPaletteFromImage();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.qr_code_scanner),
+                  title: const Text('Create from Barcode'),
+                  subtitle: const Text('Scan paint barcodes'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _createPaletteFromBarcode();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.palette),
+                  title: const Text('Create Empty Palette'),
+                  subtitle: const Text('Start with a blank palette'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement empty palette creation
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Empty palette creation coming soon'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+    );
   }
 
   Future<void> _deletePalette(Palette palette) async {
@@ -538,25 +704,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text(
-          'My Palettes',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : AppTheme.marineBlue,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-        elevation: 0,
+      appBar: AppHeader(
+        title: 'My Palettes',
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: () {
-              // Show help info
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Palettes help you organize paint schemes'),
@@ -630,17 +783,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // This would usually go to a create screen
-                      // For now just show message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Create palette functionality coming soon',
-                          ),
-                        ),
-                      );
-                    },
+                    onPressed: _showCreatePaletteOptions,
                     icon: const Icon(Icons.add),
                     label: const Text('Create a Palette'),
                     style: ElevatedButton.styleFrom(
@@ -655,7 +798,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
             );
           }
 
-          // Display palette grid when we have palettes
           return RefreshIndicator(
             onRefresh: _loadPalettes,
             child: GridView.builder(
@@ -676,15 +818,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // This would usually go to a create screen
-          // For now just show message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Create palette functionality coming soon'),
-            ),
-          );
-        },
+        onPressed: _showCreatePaletteOptions,
         backgroundColor:
             isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
         child: const Icon(Icons.add),
