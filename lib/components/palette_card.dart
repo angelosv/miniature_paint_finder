@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 class PaletteCard extends StatelessWidget {
@@ -19,11 +21,11 @@ class PaletteCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: isHorizontal ? 200 : null,
-        margin: isHorizontal ? const EdgeInsets.only(right: 16) : null,
+        width: isHorizontal ? 200.w : null,
+        margin: isHorizontal ? EdgeInsets.only(right: 16.w) : null,
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(ResponsiveGuidelines.radiusL),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -37,28 +39,29 @@ class PaletteCard extends StatelessWidget {
           children: [
             // Imagen placeholder con bordes redondeados en la parte superior
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(ResponsiveGuidelines.radiusL),
               ),
               child: Container(
-                height: 120,
+                height: 120.h,
                 width: double.infinity,
-                color: AppTheme.marineBlue.withOpacity(
-                  0.1,
-                ), // Color de fondo como placeholder
+                color: AppTheme.marineBlue.withOpacity(0.1),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.image_not_supported_outlined,
-                        size: 36,
+                        size: 36.r,
                         color: Colors.grey[400],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
                       Text(
                         'No image available',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: ResponsiveGuidelines.bodySmall,
+                        ),
                       ),
                     ],
                   ),
@@ -68,7 +71,7 @@ class PaletteCard extends StatelessWidget {
 
             // Información de la paleta
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(ResponsiveGuidelines.spacingM),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,15 +80,15 @@ class PaletteCard extends StatelessWidget {
                     children: [
                       for (int i = 0; i < palette.colors.length && i < 5; i++)
                         Container(
-                          width: 20,
-                          height: 20,
-                          margin: const EdgeInsets.only(right: 4),
+                          width: 20.r,
+                          height: 20.r,
+                          margin: EdgeInsets.only(right: 4.w),
                           decoration: BoxDecoration(
                             color: palette.colors[i],
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Colors.grey.withOpacity(0.3),
-                              width: 1,
+                              width: 1.w,
                             ),
                           ),
                         ),
@@ -93,8 +96,8 @@ class PaletteCard extends StatelessWidget {
                       // Si hay más de 5 colores, mostrar contador
                       if (palette.colors.length > 5)
                         Container(
-                          width: 20,
-                          height: 20,
+                          width: 20.r,
+                          height: 20.r,
                           decoration: BoxDecoration(
                             color: Colors.grey.withOpacity(0.2),
                             shape: BoxShape.circle,
@@ -102,8 +105,8 @@ class PaletteCard extends StatelessWidget {
                           child: Center(
                             child: Text(
                               '+${palette.colors.length - 5}',
-                              style: const TextStyle(
-                                fontSize: 10,
+                              style: TextStyle(
+                                fontSize: 10.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -112,21 +115,21 @@ class PaletteCard extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
 
                   // Mostrar la cantidad de pinturas
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.palette,
-                        size: 14,
+                        size: ResponsiveGuidelines.iconXS,
                         color: AppTheme.textGrey,
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4.w),
                       Text(
                         '${palette.colors.length} colors',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: ResponsiveGuidelines.labelSmall,
                           color: AppTheme.textGrey,
                         ),
                       ),
