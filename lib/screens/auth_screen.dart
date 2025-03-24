@@ -231,43 +231,30 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   void _goBack() {
-    if (_isShowingEmailForm) {
-      setState(() {
+    setState(() {
+      if (_isShowingEmailForm) {
         _isShowingEmailForm = false;
         _isShowingRegisterOptions = true;
-        _isShowingLoginOptions = false;
-        _isShowingEmailLogin = false;
-      });
-    } else if (_isShowingRegisterOptions) {
-      setState(() {
+      } else if (_isShowingRegisterOptions) {
         _isShowingRegisterOptions = false;
         _isShowingWelcome = true;
-        _isShowingLoginOptions = false;
-        _isShowingEmailLogin = false;
-      });
-    } else if (_isShowingLoginOptions) {
-      setState(() {
+      } else if (_isShowingLoginOptions) {
         _isShowingLoginOptions = false;
         _isShowingWelcome = true;
-        _isShowingRegisterOptions = false;
-        _isShowingEmailLogin = false;
-      });
-    } else if (_isShowingEmailLogin) {
-      setState(() {
+      } else if (_isShowingEmailLogin) {
         _isShowingEmailLogin = false;
         _isShowingLoginOptions = true;
-        _isShowingRegisterOptions = false;
-        _isShowingEmailForm = false;
-      });
-    } else {
-      setState(() {
+      } else {
         _isShowingWelcome = true;
+      }
+
+      if (_isShowingWelcome) {
         _isShowingRegisterOptions = false;
         _isShowingEmailForm = false;
         _isShowingLoginOptions = false;
         _isShowingEmailLogin = false;
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -277,16 +264,31 @@ class _AuthScreenState extends State<AuthScreen>
     return Scaffold(
       backgroundColor: AppTheme.darkBackground,
       body: SafeArea(
-        child:
-            _isShowingWelcome
-                ? _buildWelcomeScreen()
-                : _isShowingRegisterOptions
-                ? _buildRegisterOptions(screenSize)
-                : _isShowingEmailForm
-                ? _buildEmailRegisterForm(screenSize)
-                : _isShowingLoginOptions
-                ? _buildLoginOptions(screenSize)
-                : _buildEmailLoginForm(screenSize),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.05, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child:
+              _isShowingWelcome
+                  ? _buildWelcomeScreen()
+                  : _isShowingRegisterOptions
+                  ? _buildRegisterOptions(screenSize)
+                  : _isShowingEmailForm
+                  ? _buildEmailRegisterForm(screenSize)
+                  : _isShowingLoginOptions
+                  ? _buildLoginOptions(screenSize)
+                  : _buildEmailLoginForm(screenSize),
+        ),
       ),
       // Loading overlay
       bottomSheet:
@@ -313,90 +315,108 @@ class _AuthScreenState extends State<AuthScreen>
           color: AppTheme.darkBackground,
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 3D Character or Avatar
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.color_lens,
-                        size: 120,
-                        color: AppTheme.marineOrange,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Space Marine Image
+                    Container(
+                      width: double.infinity,
+                      height: 400,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/space_marine.png'),
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Miniature Paint Finder",
-                        style: AppTheme.subheadingStyle.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Miniature Paint Finder',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Your ultimate companion for miniature painting',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white70,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Feature bullets
+                    _buildFeatureBullet(
+                      'Track your paint collection and never buy duplicates',
+                    ),
+                    _buildFeatureBullet(
+                      'Find matching colors with **AI-powered image recognition** - 100% Free',
+                    ),
+                    _buildFeatureBullet(
+                      'Create and share custom paint palettes',
+                    ),
+                    _buildFeatureBullet('Scan barcodes for quick paint lookup'),
+                  ],
+                ),
+              ),
+              // Bottom buttons section
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _showRegisterOptions,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppTheme.darkBackground,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                          ),
+                          child: Text(
+                            'Register',
+                            style: AppTheme.buttonStyle.copyWith(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _showLoginOptions,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                          ),
+                          child: Text(
+                            'Sign In',
+                            style: AppTheme.buttonStyle.copyWith(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              // Main title and description
-              Text(
-                "Track your miniature paint collection",
-                style: AppTheme.headingStyle.copyWith(color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-
-              Text(
-                "Keep track of your paints, find matching colors, and never buy duplicates again",
-                style: AppTheme.bodyStyle.copyWith(
-                  color: Colors.white.withOpacity(0.7),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Buttons row
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showRegisterOptions, // Show register options
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.darkBackground,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text('Register', style: AppTheme.buttonStyle),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showLoginOptions, // Show login options
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: AppTheme.buttonStyle.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ],
@@ -429,6 +449,55 @@ class _AuthScreenState extends State<AuthScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildFeatureBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: AppTheme.marineGold,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: _processTextWithBold(text)),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<TextSpan> _processTextWithBold(String text) {
+    final parts = text.split('**');
+    final List<TextSpan> spans = [];
+
+    for (var i = 0; i < parts.length; i++) {
+      spans.add(
+        TextSpan(
+          text: parts[i],
+          style:
+              i % 2 == 1
+                  ? const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  )
+                  : null,
+        ),
+      );
+    }
+
+    return spans;
   }
 
   Widget _buildLoginOptions(Size screenSize) {
