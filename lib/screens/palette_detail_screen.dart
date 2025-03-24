@@ -649,22 +649,20 @@ class _PaletteDetailScreenState extends State<PaletteDetailScreen> {
                             }
                             return false;
                           },
-                          child: GestureDetector(
+                          child: PalettePaintCard(
+                            paint: paint,
+                            isInInventory: isInInventory,
+                            isInWishlist: isInWishlist,
+                            isEditMode: _isEditMode,
+                            showMatchPercentage: false,
                             onTap:
                                 _isEditMode
                                     ? null
                                     : () =>
                                         _showColorOptionsMenu(context, paint),
-                            child: PalettePaintCard(
-                              paint: paint,
-                              isInInventory: isInInventory,
-                              isInWishlist: isInWishlist,
-                              isEditMode: _isEditMode,
-                              showMatchPercentage: false,
-                              onRemove: () {
-                                _showDemoSnackbar('Paint removed from palette');
-                              },
-                            ),
+                            onRemove: () {
+                              _showDemoSnackbar('Paint removed from palette');
+                            },
                           ),
                         );
                       },
