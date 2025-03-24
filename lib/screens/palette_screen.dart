@@ -238,247 +238,287 @@ class _PaletteScreenState extends State<PaletteScreen> {
     }
   }
 
-  void _showPaletteDetails(Palette palette) {
-    // We would normally navigate to a detail screen here
-    // For now we'll show a simple modal bottom sheet with palette info
+  Future<void> _showPaletteDetails(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    showModalBottomSheet(
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.9,
+          initialChildSize: 0.7,
+          maxChildSize: 0.9,
           minChildSize: 0.5,
-          maxChildSize: 0.95,
+          expand: false,
           builder: (context, scrollController) {
             return Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header with palette name and close button
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            palette.name,
-                            style: Theme.of(context).textTheme.titleLarge,
-                            overflow: TextOverflow.ellipsis,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          palette.name,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
 
                   // Creation date
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Created ${_formatDate(palette.createdAt)}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color:
-                            isDarkMode
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.textGrey,
-                      ),
-                    ),
+                  Text(
+                    'Created ${_formatDate(palette.createdAt)}',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
                   ),
 
-                  const Divider(height: 30),
+                  const SizedBox(height: 20),
 
-                  // Color chips - updated visualization
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Colors',
-                      style: Theme.of(context).textTheme.titleMedium,
+                  // Colors section
+                  const Text(
+                    'Colors',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
                     ),
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Updated color visualization
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      height: 160, // Increased height for the new design
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: palette.colors.length,
-                        itemBuilder: (context, index) {
-                          final color = palette.colors[index];
-                          final isInInventory = _isColorInInventory(color);
-                          final isInWishlist = _isColorInWishlist(color);
-
-                          // Get color name or hex code representation
-                          final colorHex =
-                              '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
-                          final luminance = color.computeLuminance();
-                          final textColor =
-                              luminance > 0.5 ? Colors.black : Colors.white;
-
-                          return Container(
-                            width: 110,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                  // Color grid - large squares in a single row
+                  if (palette.colors.isNotEmpty)
+                    Container(
+                      height: 75,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children:
+                            palette.colors.map((color) {
+                              return Container(
+                                width: 50,
+                                height: 50,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
+                              );
+                            }).toList(),
+                      ),
+                    ),
+
+                  const SizedBox(height: 20),
+
+                  // Selected Paints section
+                  const Text(
+                    'Selected Paints',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Paint selections
+                  if (palette.paintSelections != null &&
+                      palette.paintSelections!.isNotEmpty)
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        itemCount: palette.paintSelections!.length,
+                        itemBuilder: (context, index) {
+                          final paint = palette.paintSelections![index];
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
                             ),
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Status indicators
+                                // Top part with paint info
                                 Padding(
-                                  padding: const EdgeInsets.all(8.0),
+                                  padding: const EdgeInsets.all(16),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
-                                      if (isInInventory)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(
-                                              0.8,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'IN STOCK',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                      // Brand avatar (circle with letter)
+                                      CircleAvatar(
+                                        radius: 25,
+                                        backgroundColor: Colors.grey[200],
+                                        child: Text(
+                                          paint.brandAvatar,
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
                                           ),
                                         ),
-                                      if (isInWishlist && !isInInventory)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.marineOrange
-                                                .withOpacity(0.8),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
+                                      ),
+                                      const SizedBox(width: 16),
+
+                                      // Paint name and brand
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              paint.paintName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                                color: Colors.black,
+                                              ),
                                             ),
-                                          ),
-                                          child: const Text(
-                                            'WISHLIST',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.bold,
+                                            Text(
+                                              paint.paintBrand,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600],
+                                              ),
                                             ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // Match percentage badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getMatchColor(
+                                            paint.matchPercentage,
+                                          ).withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
                                           ),
                                         ),
+                                        child: Text(
+                                          '${paint.matchPercentage}% match',
+                                          style: TextStyle(
+                                            color: _getMatchColor(
+                                              paint.matchPercentage,
+                                            ),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
 
-                                // Color info at bottom
+                                // Bottom part with color code and barcode
                                 Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.grey[200],
                                     borderRadius: const BorderRadius.only(
                                       bottomLeft: Radius.circular(12),
                                       bottomRight: Radius.circular(12),
                                     ),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        colorHex,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      if (palette.paintSelections != null)
-                                        ...palette.paintSelections!
-                                            .where(
-                                              (p) =>
-                                                  p.colorHex.toUpperCase() ==
-                                                  colorHex,
-                                            )
-                                            .map(
-                                              (p) => Text(
-                                                p.paintName,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            )
-                                            .toList(),
-                                      // Add paint button
+                                      // Color code section
                                       Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
                                         children: [
-                                          GestureDetector(
-                                            onTap: () {
-                                              // Add paint selection functionality here
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Add paint selection coming soon',
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.marineBlue
-                                                    .withOpacity(0.8),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.add,
-                                                size: 16,
-                                                color: Colors.white,
-                                              ),
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: paint.paintColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Color code:',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                              Text(
+                                                paint.paintId.split('-').last,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+
+                                      const Spacer(),
+
+                                      // Barcode section
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Barcode:',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.qr_code,
+                                                size: 16,
+                                                color: Colors.black,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '50119${paint.paintId.hashCode.abs() % 10000000}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
@@ -490,130 +530,37 @@ class _PaletteScreenState extends State<PaletteScreen> {
                           );
                         },
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Paint selections
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Selected Paints',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // If no paints are selected yet
-                  if (palette.paintSelections == null ||
-                      palette.paintSelections!.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        'No paints have been selected for this palette yet.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              isDarkMode
-                                  ? AppTheme.darkTextSecondary
-                                  : AppTheme.textGrey,
-                        ),
-                      ),
-                    ),
-
-                  // Paint selections list
-                  if (palette.paintSelections != null &&
-                      palette.paintSelections!.isNotEmpty)
+                    )
+                  else
                     Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: palette.paintSelections!.length,
-                        itemBuilder: (context, index) {
-                          final paint = palette.paintSelections![index];
-                          final isInInventory = _isPaintInInventory(
-                            paint.paintId,
-                          );
-                          final isInWishlist = _isPaintInWishlist(
-                            paint.paintId,
-                          );
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 4,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.palette_outlined,
+                              size: 64,
+                              color: Colors.grey[300],
                             ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: paint.paintColor,
-                                child: Text(
-                                  paint.brandAvatar,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(child: Text(paint.paintName)),
-                                  if (isInInventory)
-                                    Icon(
-                                      Icons.inventory_2,
-                                      size: 16,
-                                      color: Colors.green,
-                                    ),
-                                  if (isInWishlist && !isInInventory)
-                                    Icon(
-                                      Icons.favorite,
-                                      size: 16,
-                                      color: AppTheme.marineOrange,
-                                    ),
-                                ],
-                              ),
-                              subtitle: Text(paint.paintBrand),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Match percentage
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getMatchColor(
-                                        paint.matchPercentage,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '${paint.matchPercentage}%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      _removePaintFromPalette(
-                                        palette.id,
-                                        paint.paintId,
-                                      );
-                                    },
-                                  ),
-                                ],
+                            const SizedBox(height: 16),
+                            Text(
+                              'No paints selected yet',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
                               ),
                             ),
-                          );
-                        },
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap on a color to find matching paints',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
