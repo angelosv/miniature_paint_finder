@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
+import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:provider/provider.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -26,49 +27,37 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final iconColor = isDarkMode ? Colors.white : AppTheme.marineBlue;
 
-    // Use responsive utilities to ensure consistent appearance across devices
-    final titleFontSize = AppResponsive.getAdaptiveFontSize(
-      context,
-      18,
-      minFontSize: 16,
-    );
-    final iconSize = AppResponsive.getAdaptiveValue(
-      context: context,
-      defaultValue: 24,
-      mobile: 22,
-    );
-    final horizontalPadding = AppResponsive.getAdaptiveValue(
-      context: context,
-      defaultValue: 8,
-    );
-
     return AppBar(
       title: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
           color: iconColor,
-          fontSize: titleFontSize,
+          fontSize: ResponsiveGuidelines.headlineSmall,
         ),
       ),
       centerTitle: centerTitle,
       leading:
           showBackButton
               ? IconButton(
-                icon: Icon(Icons.arrow_back, color: iconColor, size: iconSize),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: iconColor,
+                  size: ResponsiveGuidelines.iconM,
+                ),
                 onPressed: onBackPressed ?? () => Navigator.pop(context),
               )
               : null,
       backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
       elevation: 0,
-      titleSpacing: horizontalPadding,
+      titleSpacing: ResponsiveGuidelines.spacingS,
       actions: [
         // Theme toggle
         IconButton(
           icon: Icon(
             isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
             color: iconColor,
-            size: iconSize,
+            size: ResponsiveGuidelines.iconM,
           ),
           tooltip: 'Toggle theme',
           onPressed: () {
@@ -87,7 +76,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 icon: Icon(
                   (action.icon as Icon).icon,
                   color: iconColor,
-                  size: iconSize,
+                  size: ResponsiveGuidelines.iconM,
                 ),
                 onPressed: action.onPressed,
                 tooltip: action.tooltip,
@@ -95,11 +84,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             }
             return action;
           }),
-        SizedBox(width: horizontalPadding),
+        SizedBox(width: ResponsiveGuidelines.spacingS),
       ],
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(kToolbarHeight.h);
 }
