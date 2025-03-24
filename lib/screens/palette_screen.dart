@@ -239,8 +239,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
   }
 
   Future<void> _showPaletteDetails(Palette palette) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -249,110 +247,101 @@ class _PaletteScreenState extends State<PaletteScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          maxChildSize: 0.9,
-          minChildSize: 0.5,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with palette name and close button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          palette.name,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-
-                  // Creation date
-                  Text(
-                    'Created ${_formatDate(palette.createdAt)}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Colors section
-                  const Text(
-                    'Colors',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Color grid - large squares in a single row
-                  if (palette.colors.isNotEmpty)
-                    Container(
-                      height: 75,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children:
-                            palette.colors.map((color) {
-                              return Container(
-                                width: 50,
-                                height: 50,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
-
-                  // Selected Paints section
-                  const Text(
-                    'Selected Paints',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Paint selections
-                  if (palette.paintSelections != null &&
-                      palette.paintSelections!.isNotEmpty)
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with palette name and close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        itemCount: palette.paintSelections!.length,
-                        itemBuilder: (context, index) {
-                          final paint = palette.paintSelections![index];
+                      child: Text(
+                        palette.name,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
 
+                // Creation date
+                Text(
+                  'Created ${_formatDate(palette.createdAt)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Colors section
+                const Text(
+                  'Colors',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Color grid - large squares in a single row
+                if (palette.colors.isNotEmpty)
+                  Container(
+                    height: 80,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children:
+                          palette.colors.map((color) {
+                            return Container(
+                              width: 48,
+                              height: 48,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+
+                // Selected Paints section
+                const Text(
+                  'Selected Paints',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Paint selections
+                if (palette.paintSelections != null &&
+                    palette.paintSelections!.isNotEmpty)
+                  Column(
+                    children:
+                        palette.paintSelections!.map((paint) {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 16),
                             elevation: 0,
@@ -528,45 +517,43 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               ],
                             ),
                           );
-                        },
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.palette_outlined,
-                              size: 64,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No paints selected yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap on a color to find matching paints',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
+                        }).toList(),
+                  )
+                else
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 40),
+                        Icon(
+                          Icons.palette_outlined,
+                          size: 64,
+                          color: Colors.grey[300],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No paints selected yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap on a color to find matching paints',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
-                ],
-              ),
-            );
-          },
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
