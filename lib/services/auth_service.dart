@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/user.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -23,6 +25,7 @@ class AuthErrorCode {
   static const String networkError = 'network-error';
   static const String tooManyRequests = 'too-many-requests';
   static const String unknown = 'unknown';
+  static const String cancelled = 'cancelled';
 }
 
 /// Abstract interface for authentication service
@@ -51,6 +54,9 @@ abstract class IAuthService {
 
   /// Request password reset
   Future<void> resetPassword(String email);
+
+  /// Sign in with Google
+  Future<User> signInWithGoogle();
 
   /// Dispose resources
   void dispose();
@@ -247,6 +253,54 @@ class AuthService implements IAuthService {
         rethrow;
       }
       throw AuthException(AuthErrorCode.unknown, 'Password reset failed: $e');
+    }
+  }
+
+  /// Sign in with Google
+  @override
+  Future<User> signInWithGoogle() async {
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+      if (googleUser == null) {
+        throw AuthException(
+          AuthErrorCode.cancelled,
+          'Google sign in was cancelled',
+        );
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = firebase.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final firebase.UserCredential userCredential = 
+          await firebase.FirebaseAuth.instance.signInWithCredential(credential);
+      
+      // Convert Firebase user to our User model
+      _currentUser = User(
+        id: userCredential.user!.uid,
+        name: userCredential.user!.displayName ?? 'Google User',
+        email: userCredential.user!.email ?? '',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'google',
+      );
+      
+      _authStateController.add(_currentUser);
+
+      return _currentUser!;
+    } catch (e) {
+      if (e is AuthException) {
+        rethrow;
+      }
+      throw AuthException(AuthErrorCode.unknown, 'Google authentication failed: $e');
     }
   }
 

@@ -190,6 +190,60 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
+  // Perform Google sign in
+  void _performGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signInWithGoogle();
+
+      if (mounted) {
+        // Navigate to home screen after successful login
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on AuthException catch (e) {
+      // Handle specific auth errors with user-friendly messages
+      String errorMessage;
+
+      switch (e.code) {
+        case AuthErrorCode.cancelled:
+          errorMessage = 'Google sign in was cancelled';
+          break;
+        default:
+          errorMessage = e.message;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      // Handle other errors
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign in failed: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   void _showLoginOptions() {
     setState(() {
       _isShowingWelcome = false;
@@ -551,7 +605,7 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Continue with Google',
                     color: Colors.red.shade600,
-                    onPressed: _performDirectLogin,
+                    onPressed: _performGoogleSignIn,
                   ),
 
                   // Show Apple login on iOS and web
@@ -685,7 +739,7 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Continue with Google',
                     color: Colors.red.shade600,
-                    onPressed: _performDirectLogin,
+                    onPressed: _performGoogleSignIn,
                   ),
 
                   // Show Apple login on iOS and web

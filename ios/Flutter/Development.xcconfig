@@ -1,0 +1,4 @@
+#include "Generated.xcconfig"
+PRODUCT_BUNDLE_IDENTIFIER=com.alandev.miniaturePaintFinder
+PRODUCT_NAME=Miniature Paint Finder
+PRODUCT_TEAM_ID=U4R2B2U7E6 
