@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -273,6 +275,9 @@ class AuthService implements IAuthService {
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
+      print('Access Token: ${googleAuth.accessToken}');
+      print('ID Token: ${googleAuth.idToken}');
+
       // Create a new credential
       final credential = firebase.GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -282,6 +287,29 @@ class AuthService implements IAuthService {
       // Sign in to Firebase with the Google credential
       final firebase.UserCredential userCredential = 
           await firebase.FirebaseAuth.instance.signInWithCredential(credential);
+      
+      print('Firebase User ID: ${userCredential.user!.uid}');
+      print('Firebase User Email: ${userCredential.user!.email}');
+      print('Firebase User Display Name: ${userCredential.user!.displayName}');
+
+      // Hacer el POST al endpoint para crear usuario
+      try {
+        final response = await http.post(
+          Uri.parse('https://paints-api.reachu.io/auth/create-user'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'uid': userCredential.user!.uid,
+            'email': userCredential.user!.email,
+            'name': userCredential.user!.displayName,
+          }),
+        );
+
+        print('Respuesta del servidor create-user: ${response.body}');
+      } catch (e) {
+        print('Error al hacer POST al servidor create-user: $e');
+      }
       
       // Convert Firebase user to our User model
       _currentUser = User(
@@ -297,6 +325,7 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } catch (e) {
+      print('Error en Google Sign In: $e');
       if (e is AuthException) {
         rethrow;
       }
