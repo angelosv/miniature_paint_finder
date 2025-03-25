@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -311,6 +312,62 @@ class _AuthScreenState extends State<AuthScreen>
     });
   }
 
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const AuthScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+      await authService.signInWithGoogle();
+      // If we get here, executed was true
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        if (e is AuthException) {
+          _showErrorDialog(e.message);
+        } else {
+          _showErrorDialog('Authentication error');
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -605,7 +662,7 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Continue with Google',
                     color: Colors.red.shade600,
-                    onPressed: _performGoogleSignIn,
+                    onPressed: _handleGoogleSignIn,
                   ),
 
                   // Show Apple login on iOS and web
@@ -739,7 +796,7 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.g_mobiledata_rounded,
                     label: 'Continue with Google',
                     color: Colors.red.shade600,
-                    onPressed: _performGoogleSignIn,
+                    onPressed: _handleGoogleSignIn,
                   ),
 
                   // Show Apple login on iOS and web

@@ -206,10 +206,13 @@ class AuthService implements IAuthService {
   @override
   Future<void> signOut() async {
     try {
-      // Simulate network delay
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Sign out from Firebase
+      await firebase.FirebaseAuth.instance.signOut();
+      
+      // Sign out from Google
+      await GoogleSignIn().signOut();
 
-      // In real app, this would clear tokens, etc.
+      // Clear local user data
       _currentUser = null;
       _authStateController.add(_currentUser);
     } catch (e) {
@@ -306,9 +309,21 @@ class AuthService implements IAuthService {
           }),
         );
 
-        print('Respuesta del servidor create-user: ${response.body}');
+        final responseData = jsonDecode(response.body);
+        if (responseData['executed'] == false) {
+          throw AuthException(
+            AuthErrorCode.unknown,
+            responseData['message'] ?? 'Error creating user',
+          );
+        }
+
+        print('Server response create-user: ${response.body}');
       } catch (e) {
-        print('Error al hacer POST al servidor create-user: $e');
+        print('Error making POST request to create-user server: $e');
+        throw AuthException(
+          AuthErrorCode.unknown,
+          e is AuthException ? e.message : 'Error creating user on server',
+        );
       }
       
       // Convert Firebase user to our User model

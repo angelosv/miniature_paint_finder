@@ -2,13 +2,57 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/components/profile_menu_item.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/screens/auth_screen.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const AuthScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final authService = Provider.of<IAuthService>(context);
+
+    void _handleSignOut() async {
+      try {
+        await authService.signOut();
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AuthScreen()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          _showErrorDialog(context, 'Error signing out: $e');
+        }
+      }
+    }
 
     return SingleChildScrollView(
       child: Padding(
@@ -101,11 +145,9 @@ class ProfileTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
-              onPressed: () {
-                // Login functionality will be added later
-              },
-              icon: const Icon(Icons.login),
-              label: const Text('Sign In'),
+              onPressed: _handleSignOut,
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
               ),
