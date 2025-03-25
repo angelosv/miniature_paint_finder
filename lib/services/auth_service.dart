@@ -60,6 +60,9 @@ abstract class IAuthService {
   /// Sign in with Google
   Future<User> signInWithGoogle();
 
+  /// Sign in with custom token
+  Future<User> signInWithCustomToken(String token);
+
   /// Dispose resources
   void dispose();
 }
@@ -345,6 +348,34 @@ class AuthService implements IAuthService {
         rethrow;
       }
       throw AuthException(AuthErrorCode.unknown, 'Google authentication failed: $e');
+    }
+  }
+
+  /// Sign in with custom token
+  @override
+  Future<User> signInWithCustomToken(String token) async {
+    try {
+      final userCredential = await firebase.FirebaseAuth.instance.signInWithCustomToken(token);
+      
+      // Convert Firebase user to our User model
+      _currentUser = User(
+        id: userCredential.user!.uid,
+        name: userCredential.user!.displayName ?? 'User',
+        email: userCredential.user!.email ?? '',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'custom',
+      );
+      
+      _authStateController.add(_currentUser);
+
+      return _currentUser!;
+    } catch (e) {
+      print('Error signing in with custom token: $e');
+      throw AuthException(
+        AuthErrorCode.unknown,
+        'Failed to sign in with custom token: $e',
+      );
     }
   }
 

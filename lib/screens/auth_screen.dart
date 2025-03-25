@@ -4,6 +4,8 @@ import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -124,62 +126,54 @@ class _AuthScreenState extends State<AuthScreen>
       });
 
       try {
-        // Simulate registration
-        await _authService.signUpWithEmailPassword(
-          _emailController.text,
-          _passwordController.text,
-          _nameController.text,
+        print('Starting registration process...');
+        print('Email: ${_emailController.text}');
+        
+        // First, make the POST request to the registration endpoint
+        final response = await http.post(
+          Uri.parse('https://paints-api.reachu.io/auth/register'),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'username': _nameController.text,
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
         );
 
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        print('Backend response: ${response.body}');
+        final responseData = jsonDecode(response.body);
+        
+        if (responseData['executed'] == true) {
+          print('Backend registration successful');
+          
+          // Check if we got a custom token from the backend
+          if (responseData['data'] != null && responseData['data']['customToken'] != null) {
+            print('Custom token received, signing in with Firebase...');
+            // Sign in with the custom token
+            await _authService.signInWithCustomToken(responseData['data']['customToken']);
+            print('Firebase login successful');
 
-          // Navigate to home screen after successful registration
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } on AuthException catch (e) {
-        // Handle specific auth errors with user-friendly messages
-        String errorMessage;
-
-        switch (e.code) {
-          case AuthErrorCode.emailAlreadyInUse:
-            errorMessage = 'This email is already in use';
-            break;
-          case AuthErrorCode.invalidEmail:
-            errorMessage = 'Please enter a valid email address';
-            break;
-          case AuthErrorCode.weakPassword:
-            errorMessage = 'Password is too weak. Use at least 8 characters';
-            break;
-          default:
-            errorMessage = e.message;
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red.shade700,
-            ),
-          );
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            }
+          } else {
+            print('No custom token received in response');
+            throw Exception('No custom token received from server');
+          }
+        } else {
+          print('Backend registration failed: ${responseData['message']}');
+          if (mounted) {
+            _showErrorDialog(responseData['message'] ?? 'Registration failed');
+          }
         }
       } catch (e) {
-        // Handle other errors
+        print('Registration process error: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Registration failed: ${e.toString()}'),
-              backgroundColor: Colors.red.shade700,
-            ),
-          );
+          _showErrorDialog('Registration failed: ${e.toString()}');
         }
       } finally {
         if (mounted) {
