@@ -625,16 +625,18 @@ class SampleData {
   /// Each palette includes:
   /// - id: Unique identifier
   /// - name: User-given name for the palette
-  /// - imagePath: Path to an image that inspired the palette
+  /// - imagePath: Path to an image that inspired this palette
   /// - colors: List of Colors in the palette
   /// - createdAt: When the palette was created
   static List<Palette> getPalettes() {
+    const String defaultImagePath = 'assets/images/placeholder1.jpg';
+
     return [
       // Warhammer 40k themed palettes
       Palette(
         id: 'palette-001',
         name: 'Space Marine Ultramarines',
-        imagePath: 'assets/images/placeholder1.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF0D407F), // Macragge Blue
           const Color(0xFF231F20), // Abaddon Black
@@ -667,7 +669,7 @@ class SampleData {
       Palette(
         id: 'palette-002',
         name: 'Tyranid Leviathan Scheme',
-        imagePath: 'assets/images/placeholder2.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF9A1115), // Mephiston Red
           const Color(0xFF800000), // Hull Red
@@ -691,7 +693,7 @@ class SampleData {
       Palette(
         id: 'palette-003',
         name: 'Imperial Guard Cadian',
-        imagePath: 'assets/images/placeholder3.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF2A3439), // German Grey
           const Color(0xFF85714D), // Retributor Armour
@@ -705,7 +707,7 @@ class SampleData {
       Palette(
         id: 'palette-004',
         name: 'Necron Dynasty',
-        imagePath: 'assets/images/placeholder4.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFFC0C0C0), // Silver
           const Color(0xFF2A3439), // German Grey
@@ -738,7 +740,7 @@ class SampleData {
       Palette(
         id: 'palette-005',
         name: 'Eldar Craftworld Iyanden',
-        imagePath: 'assets/images/placeholder5.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFFFBB81C), // Averland Sunset
           const Color(0xFF0D407F), // Macragge Blue
@@ -751,7 +753,7 @@ class SampleData {
       Palette(
         id: 'palette-006',
         name: 'T\'au Sept',
-        imagePath: 'assets/images/placeholder6.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF2A3439), // German Grey
           const Color(0xFFC0C0C0), // Silver
@@ -766,7 +768,7 @@ class SampleData {
       Palette(
         id: 'palette-007',
         name: 'WWII German Panzer',
-        imagePath: 'assets/images/placeholder7.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF414C52), // Panzer Gray
           const Color(0xFF6E3A21), // Dark Rust
@@ -789,7 +791,7 @@ class SampleData {
       Palette(
         id: 'palette-008',
         name: 'US Army Olive Drab',
-        imagePath: 'assets/images/placeholder8.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF44553A), // Olive Green
           const Color(0xFFB7975F), // Zandri Dust
@@ -803,7 +805,7 @@ class SampleData {
       Palette(
         id: 'palette-009',
         name: 'Blood Angels Chapter',
-        imagePath: 'assets/images/placeholder9.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFFBE0B0C), // Evil Sunz Scarlet
           const Color(0xFF9A0F0F), // Blood for the Blood God
@@ -827,7 +829,7 @@ class SampleData {
       Palette(
         id: 'palette-010',
         name: 'Galaxy Nebula Effect',
-        imagePath: 'assets/images/placeholder10.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF0F3C7F), // Flat Blue
           const Color(0xFF062226), // Coal Black
@@ -840,7 +842,7 @@ class SampleData {
       Palette(
         id: 'palette-011',
         name: 'Autumn Forest',
-        imagePath: 'assets/images/placeholder11.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF3F6C39), // Goblin Green
           const Color(0xFF7F4422), // Track Rust
@@ -864,7 +866,7 @@ class SampleData {
       Palette(
         id: 'palette-012',
         name: 'Cyberpunk City',
-        imagePath: 'assets/images/placeholder12.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF231F20), // Abaddon Black
           const Color(0xFFFF4D28), // Wild Rider Red
@@ -877,7 +879,7 @@ class SampleData {
       Palette(
         id: 'palette-013',
         name: 'Desert Wasteland',
-        imagePath: 'assets/images/placeholder13.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFFD5C586), // Skeleton Bone
           const Color(0xFFB7975F), // Zandri Dust
@@ -890,7 +892,7 @@ class SampleData {
       Palette(
         id: 'palette-014',
         name: 'Zombie Horde',
-        imagePath: 'assets/images/placeholder14.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF354A37), // Thornwood Green
           const Color(0xFF834F46), // Bugmans Glow
@@ -903,7 +905,7 @@ class SampleData {
       Palette(
         id: 'palette-015',
         name: 'Ocean Depths',
-        imagePath: 'assets/images/placeholder15.jpg',
+        imagePath: defaultImagePath,
         colors: [
           const Color(0xFF0D407F), // Macragge Blue
           const Color(0xFF31A2F2), // Lothern Blue

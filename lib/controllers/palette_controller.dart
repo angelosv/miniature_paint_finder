@@ -29,17 +29,28 @@ class PaletteController extends ChangeNotifier {
 
   /// Load all palettes for the current user
   Future<void> loadPalettes() async {
+    print('🔄 Starting to load palettes');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      print('📦 Calling repository.getUserPalettes()');
       _palettes = await _repository.getUserPalettes();
+      print('✅ Loaded ${_palettes.length} palettes successfully');
+      for (var i = 0; i < _palettes.length; i++) {
+        print(
+          '  🎨 Palette ${i + 1}: ${_palettes[i].name} (${_palettes[i].colors.length} colors)',
+        );
+        print('  🖼️ Image path: ${_palettes[i].imagePath}');
+      }
     } catch (e) {
+      print('❌ Error loading palettes: $e');
       _error = 'Failed to load palettes: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
+      print('🏁 Finished loading palettes (success=${_error == null})');
     }
   }
 

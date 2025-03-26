@@ -188,6 +188,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget build(BuildContext context) {
     final palettes = _paletteController.palettes;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isLoading = _paletteController.isLoading;
+    final error = _paletteController.error;
+
+    print(
+      '🖥️ PaletteScreen.build - Palettes: ${palettes.length}, Loading: $isLoading, Error: $error',
+    );
 
     return Scaffold(
       key: _scaffoldKey,
@@ -209,6 +215,18 @@ class _PaletteScreenState extends State<PaletteScreen> {
         onRefresh: _loadPalettes,
         child: Column(
           children: [
+            // Debug information
+            if (error != null)
+              Container(
+                color: Colors.red[100],
+                padding: const EdgeInsets.all(8),
+                width: double.infinity,
+                child: Text(
+                  'Error: $error',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
@@ -238,10 +256,17 @@ class _PaletteScreenState extends State<PaletteScreen> {
             ),
             const SizedBox(height: 8),
 
+            // Loading indicator
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+
             // Palettes grid
             Expanded(
               child:
-                  palettes.isEmpty
+                  palettes.isEmpty && !isLoading
                       ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -329,6 +354,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final hasSelections =
         palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
 
+    print('🎨 Building palette card: ${palette.name} (${palette.id})');
+    print('   Image path: ${palette.imagePath}');
+    print('   Has swatch: $hasPaletteSwatch (${palette.colors.length} colors)');
+    print('   Has selections: $hasSelections');
+
     return Hero(
       tag: 'palette-${palette.id}',
       child: Material(
@@ -370,26 +400,21 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                         .map((color) => Container(color: color))
                                         .toList(),
                               )
-                              : Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Container(
+                              : Container(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
+                                child: Center(
+                                  child: Icon(
+                                    Icons.palette_outlined,
+                                    size: 40,
                                     color:
                                         isDarkMode
-                                            ? Colors.grey[800]
-                                            : Colors.grey[200],
+                                            ? Colors.grey[700]
+                                            : Colors.grey[400],
                                   ),
-                                  if (palette.imagePath.startsWith('assets'))
-                                    Image.asset(
-                                      palette.imagePath,
-                                      fit: BoxFit.cover,
-                                    )
-                                  else
-                                    Image.file(
-                                      File(palette.imagePath),
-                                      fit: BoxFit.cover,
-                                    ),
-                                ],
+                                ),
                               ),
                     ),
 

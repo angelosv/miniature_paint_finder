@@ -145,13 +145,23 @@ class ApiPaletteRepository implements PaletteRepository {
 /// Implementación del repositorio de paletas usando datos de muestra
 /// Esta implementación es para desarrollo y testing sin backend
 class PaletteRepositoryImpl implements PaletteRepository {
-  final List<Palette> _palettes = SampleData.getPalettes();
+  List<Palette>? _palettes;
 
   @override
   Future<List<Palette>> getAll() async {
+    print('📚 PaletteRepositoryImpl.getAll() called');
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 300));
-    return _palettes;
+
+    if (_palettes == null) {
+      print('📚 Initializing sample palettes from SampleData.getPalettes()');
+      _palettes = SampleData.getPalettes();
+      print('📚 Got ${_palettes!.length} sample palettes');
+    } else {
+      print('📚 Using cached palettes (${_palettes!.length})');
+    }
+
+    return _palettes!;
   }
 
   @override
@@ -159,7 +169,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 100));
     try {
-      return _palettes.firstWhere((palette) => palette.id == id);
+      return _palettes!.firstWhere((palette) => palette.id == id);
     } catch (e) {
       return null;
     }
@@ -172,7 +182,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
 
     // Crear una copia con un nuevo ID
     final newPalette = Palette(
-      id: 'palette-${_palettes.length + 1}',
+      id: 'palette-${_palettes!.length + 1}',
       name: item.name,
       imagePath: item.imagePath,
       colors: item.colors,
@@ -180,7 +190,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
       paintSelections: item.paintSelections,
     );
 
-    _palettes.add(newPalette);
+    _palettes!.add(newPalette);
     return newPalette;
   }
 
@@ -189,9 +199,9 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 200));
 
-    final index = _palettes.indexWhere((palette) => palette.id == item.id);
+    final index = _palettes!.indexWhere((palette) => palette.id == item.id);
     if (index != -1) {
-      _palettes[index] = item;
+      _palettes![index] = item;
     }
 
     return item;
@@ -202,9 +212,9 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 150));
 
-    final initialLength = _palettes.length;
-    _palettes.removeWhere((palette) => palette.id == id);
-    return _palettes.length < initialLength;
+    final initialLength = _palettes!.length;
+    _palettes!.removeWhere((palette) => palette.id == id);
+    return _palettes!.length < initialLength;
   }
 
   @override
@@ -222,7 +232,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 200));
 
-    final index = _palettes.indexWhere((palette) => palette.id == paletteId);
+    final index = _palettes!.indexWhere((palette) => palette.id == paletteId);
     if (index != -1) {
       // En una implementación real, aquí añadiríamos la pintura a la paleta
       return true;
@@ -235,7 +245,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 200));
 
-    final index = _palettes.indexWhere((palette) => palette.id == paletteId);
+    final index = _palettes!.indexWhere((palette) => palette.id == paletteId);
     if (index != -1) {
       // En una implementación real, aquí eliminaríamos la pintura de la paleta
       return true;
