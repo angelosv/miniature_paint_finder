@@ -187,65 +187,138 @@ class _PaletteScreenState extends State<PaletteScreen> {
   @override
   Widget build(BuildContext context) {
     final palettes = _paletteController.palettes;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: const AppHeader(title: 'My Palettes', showBackButton: false),
+      appBar: AppHeader(
+        title: 'My Palettes',
+        showBackButton: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Search coming soon')),
+              );
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _loadPalettes,
-        child:
-            palettes.isEmpty
-                ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.palette_outlined,
-                        size: 64,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No palettes yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[600],
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Text(
+                    'Your Color Collections',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    icon: const Icon(Icons.sort, size: 18),
+                    label: const Text('Sort', style: TextStyle(fontSize: 14)),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Sorting options coming soon'),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create your first palette',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create Palette'),
-                        onPressed: _showCreatePaletteOptions,
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                )
-                : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:
-                        MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: palettes.length,
-                  itemBuilder: (context, index) {
-                    final palette = palettes[index];
-                    return _buildPaletteCard(palette);
-                  },
-                ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Palettes grid
+            Expanded(
+              child:
+                  palettes.isEmpty
+                      ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.palette_outlined,
+                              size: 64,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[700]
+                                      : Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No palettes yet',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Create your first palette',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[500]
+                                        : Colors.grey[500],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.add),
+                              label: const Text('Create Palette'),
+                              onPressed: _showCreatePaletteOptions,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                          childAspectRatio: 0.8,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: palettes.length,
+                        itemBuilder: (context, index) {
+                          final palette = palettes[index];
+                          return _buildPaletteCard(palette);
+                        },
+                      ),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreatePaletteOptions,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('New Palette'),
+        elevation: 2,
       ),
     );
   }
@@ -253,130 +326,170 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget _buildPaletteCard(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final hasPaletteSwatch = palette.colors.isNotEmpty;
+    final hasSelections =
+        palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          // No navigation to detail screen anymore, just a simple toast
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Selected palette: ${palette.name}'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Palette image or color swatch
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+    return Hero(
+      tag: 'palette-${palette.id}',
+      child: Material(
+        borderRadius: BorderRadius.circular(16),
+        elevation: 2,
+        shadowColor: isDarkMode ? Colors.black54 : Colors.black26,
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Selected palette: ${palette.name}'),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Palette image or color swatch
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
-                child:
-                    hasPaletteSwatch
-                        ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: GridView.count(
-                            physics: const NeverScrollableScrollPhysics(),
-                            crossAxisCount: 3,
-                            children:
-                                palette.colors
-                                    .map((color) => Container(color: color))
-                                    .toList(),
-                          ),
-                        )
-                        : Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
+                child: Stack(
+                  children: [
+                    // Background image or color grid
+                    Container(
+                      height: 120,
+                      width: double.infinity,
+                      child:
+                          hasPaletteSwatch
+                              ? GridView.count(
+                                physics: const NeverScrollableScrollPhysics(),
+                                crossAxisCount: 3,
+                                children:
+                                    palette.colors
+                                        .map((color) => Container(color: color))
+                                        .toList(),
+                              )
+                              : Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Container(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[800]
+                                            : Colors.grey[200],
+                                  ),
+                                  if (palette.imagePath.startsWith('assets'))
+                                    Image.asset(
+                                      palette.imagePath,
+                                      fit: BoxFit.cover,
+                                    )
+                                  else
+                                    Image.file(
+                                      File(palette.imagePath),
+                                      fit: BoxFit.cover,
+                                    ),
+                                ],
                               ),
-                              child:
-                                  palette.imagePath.startsWith('assets')
-                                      ? Image.asset(
-                                        palette.imagePath,
-                                        fit: BoxFit.cover,
-                                      )
-                                      : Image.file(
-                                        File(palette.imagePath),
-                                        fit: BoxFit.cover,
-                                      ),
-                            ),
-                            if (!hasPaletteSwatch)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.7),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.color_lens,
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Processing',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                    ),
+
+                    // Badge overlays
+                    if (!hasPaletteSwatch)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.color_lens,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Processing',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
-              ),
-            ),
-
-            // Palette info
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    palette.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.palette,
-                        size: 14,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
-                      const SizedBox(width: 4),
+
+                    // Paint selections badge
+                    if (hasSelections)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.brush,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${palette.paintSelections!.length} Paints',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Palette info
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        '${palette.colors.length} colors',
+                        palette.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // Date created
+                      Text(
+                        _formatDate(palette.createdAt),
                         style: TextStyle(
                           fontSize: 12,
                           color:
@@ -384,26 +497,92 @@ class _PaletteScreenState extends State<PaletteScreen> {
                         ),
                       ),
                       const Spacer(),
-                      InkWell(
-                        onTap: () => _deletePalette(palette),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.delete_outline,
-                            size: 18,
-                            color: Colors.red[400],
+                      // Color count and delete button
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.palette,
+                                  size: 14,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${palette.colors.length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                          const Spacer(),
+                          InkWell(
+                            onTap: () => _deletePalette(palette),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color:
+                                    isDarkMode
+                                        ? Colors.red[300]
+                                        : Colors.red[400],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays < 1) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+    } else {
+      final months = (difference.inDays / 30).floor();
+      return '$months ${months == 1 ? 'month' : 'months'} ago';
+    }
   }
 }

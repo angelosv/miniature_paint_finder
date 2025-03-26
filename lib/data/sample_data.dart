@@ -639,8 +639,30 @@ class SampleData {
           const Color(0xFF0D407F), // Macragge Blue
           const Color(0xFF231F20), // Abaddon Black
           const Color(0xFFC0C0C0), // Silver
+          const Color(0xFFD5D6D8), // Aluminum
+          const Color(0xFFD6D5C3), // Screaming Skull
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#0D407F',
+            paintId: 'cit-base-003',
+            paintName: 'Macragge Blue',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 100,
+            paintColorHex: '#0D407F',
+          ),
+          PaintSelection(
+            colorHex: '#231F20',
+            paintId: 'cit-base-001',
+            paintName: 'Abaddon Black',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 98,
+            paintColorHex: '#231F20',
+          ),
+        ],
       ),
       Palette(
         id: 'palette-002',
@@ -651,8 +673,20 @@ class SampleData {
           const Color(0xFF800000), // Hull Red
           const Color(0xFF00401A), // Caliban Green
           const Color(0xFF231F20), // Abaddon Black
+          const Color(0xFFFBB81C), // Averland Sunset
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#9A1115',
+            paintId: 'cit-base-002',
+            paintName: 'Mephiston Red',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 95,
+            paintColorHex: '#9A1115',
+          ),
+        ],
       ),
       Palette(
         id: 'palette-003',
@@ -662,6 +696,7 @@ class SampleData {
           const Color(0xFF2A3439), // German Grey
           const Color(0xFF85714D), // Retributor Armour
           const Color(0xFF1A1A1A), // Nuln Oil
+          const Color(0xFF44553A), // Olive Green
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 7)),
       ),
@@ -676,17 +711,40 @@ class SampleData {
           const Color(0xFF2A3439), // German Grey
           const Color(0xFF1A1A1A), // Nuln Oil
           const Color(0xFF00401A), // Caliban Green
+          const Color(0xFF7ABAD4), // Nihilakh Oxide
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 10)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#C0C0C0',
+            paintId: 'val-model-003',
+            paintName: 'Silver',
+            paintBrand: 'Vallejo',
+            brandAvatar: 'V',
+            matchPercentage: 99,
+            paintColorHex: '#C0C0C0',
+          ),
+          PaintSelection(
+            colorHex: '#7ABAD4',
+            paintId: 'cit-tech-002',
+            paintName: 'Nihilakh Oxide',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 92,
+            paintColorHex: '#7ABAD4',
+          ),
+        ],
       ),
       Palette(
         id: 'palette-005',
         name: 'Eldar Craftworld Iyanden',
         imagePath: 'assets/images/placeholder5.jpg',
         colors: [
+          const Color(0xFFFBB81C), // Averland Sunset
           const Color(0xFF0D407F), // Macragge Blue
           const Color(0xFF9A1115), // Mephiston Red
           const Color(0xFFD6D5C3), // Screaming Skull
+          const Color(0xFFC0C0C0), // Silver
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 14)),
       ),
@@ -699,6 +757,7 @@ class SampleData {
           const Color(0xFFC0C0C0), // Silver
           const Color(0xFF00401A), // Caliban Green
           const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFF31A2F2), // Lothern Blue
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 18)),
       ),
@@ -712,8 +771,20 @@ class SampleData {
           const Color(0xFF414C52), // Panzer Gray
           const Color(0xFF6E3A21), // Dark Rust
           const Color(0xFF231F20), // Black
+          const Color(0xFFC8C8CA), // Chrome Silver
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 22)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#414C52',
+            paintId: 'ak-003',
+            paintName: 'Panzer Gray',
+            paintBrand: 'AK Interactive',
+            brandAvatar: 'A',
+            matchPercentage: 97,
+            paintColorHex: '#414C52',
+          ),
+        ],
       ),
       Palette(
         id: 'palette-008',
@@ -723,8 +794,135 @@ class SampleData {
           const Color(0xFF44553A), // Olive Green
           const Color(0xFFB7975F), // Zandri Dust
           const Color(0xFF7F4422), // Track Rust
+          const Color(0xFF85714D), // Retributor Armour
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 25)),
+      ),
+
+      // Nuevas paletas temáticas
+      Palette(
+        id: 'palette-009',
+        name: 'Blood Angels Chapter',
+        imagePath: 'assets/images/placeholder9.jpg',
+        colors: [
+          const Color(0xFFBE0B0C), // Evil Sunz Scarlet
+          const Color(0xFF9A0F0F), // Blood for the Blood God
+          const Color(0xFF63452A), // Agrax Earthshade
+          const Color(0xFFD4AF37), // Gold
+          const Color(0xFF231F20), // Abaddon Black
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#BE0B0C',
+            paintId: 'cit-layer-002',
+            paintName: 'Evil Sunz Scarlet',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 94,
+            paintColorHex: '#BE0B0C',
+          ),
+        ],
+      ),
+      Palette(
+        id: 'palette-010',
+        name: 'Galaxy Nebula Effect',
+        imagePath: 'assets/images/placeholder10.jpg',
+        colors: [
+          const Color(0xFF0F3C7F), // Flat Blue
+          const Color(0xFF062226), // Coal Black
+          const Color(0xFF69385C), // Druchii Violet
+          const Color(0xFFD5D6D8), // Aluminum
+          const Color(0xFF31A2F2), // Lothern Blue
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      Palette(
+        id: 'palette-011',
+        name: 'Autumn Forest',
+        imagePath: 'assets/images/placeholder11.jpg',
+        colors: [
+          const Color(0xFF3F6C39), // Goblin Green
+          const Color(0xFF7F4422), // Track Rust
+          const Color(0xFFB7975F), // Zandri Dust
+          const Color(0xFFA32431), // Dragon Red
+          const Color(0xFF63452A), // Agrax Earthshade
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 8)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#3F6C39',
+            paintId: 'army-warpaints-004',
+            paintName: 'Goblin Green',
+            paintBrand: 'Army Painter',
+            brandAvatar: 'A',
+            matchPercentage: 87,
+            paintColorHex: '#3F6C39',
+          ),
+        ],
+      ),
+      Palette(
+        id: 'palette-012',
+        name: 'Cyberpunk City',
+        imagePath: 'assets/images/placeholder12.jpg',
+        colors: [
+          const Color(0xFF231F20), // Abaddon Black
+          const Color(0xFFFF4D28), // Wild Rider Red
+          const Color(0xFF31A2F2), // Lothern Blue
+          const Color(0xFFFBB81C), // Averland Sunset
+          const Color(0xFF0D407F), // Macragge Blue
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 12)),
+      ),
+      Palette(
+        id: 'palette-013',
+        name: 'Desert Wasteland',
+        imagePath: 'assets/images/placeholder13.jpg',
+        colors: [
+          const Color(0xFFD5C586), // Skeleton Bone
+          const Color(0xFFB7975F), // Zandri Dust
+          const Color(0xFF834F46), // Bugmans Glow
+          const Color(0xFFA98053), // Soft Tone
+          const Color(0xFF6E3A21), // Dark Rust
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 16)),
+      ),
+      Palette(
+        id: 'palette-014',
+        name: 'Zombie Horde',
+        imagePath: 'assets/images/placeholder14.jpg',
+        colors: [
+          const Color(0xFF354A37), // Thornwood Green
+          const Color(0xFF834F46), // Bugmans Glow
+          const Color(0xFF63452A), // Agrax Earthshade
+          const Color(0xFF9A0F0F), // Blood for the Blood God
+          const Color(0xFF1A1A1A), // Nuln Oil
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 19)),
+      ),
+      Palette(
+        id: 'palette-015',
+        name: 'Ocean Depths',
+        imagePath: 'assets/images/placeholder15.jpg',
+        colors: [
+          const Color(0xFF0D407F), // Macragge Blue
+          const Color(0xFF31A2F2), // Lothern Blue
+          const Color(0xFF739CC5), // Wolf Grey
+          const Color(0xFF1A1A1A), // Nuln Oil
+          const Color(0xFF7ABAD4), // Nihilakh Oxide
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 4)),
+        paintSelections: [
+          PaintSelection(
+            colorHex: '#7ABAD4',
+            paintId: 'cit-tech-002',
+            paintName: 'Nihilakh Oxide',
+            paintBrand: 'Citadel',
+            brandAvatar: 'C',
+            matchPercentage: 90,
+            paintColorHex: '#7ABAD4',
+          ),
+        ],
       ),
     ];
   }
