@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
-import 'package:miniature_paint_finder/screens/paint_detail_screen.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
@@ -19,10 +18,10 @@ class PaintCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimensions.radiusL),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PaintDetailScreen(paint: paint),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Selected paint: ${paint.name}'),
+              duration: const Duration(seconds: 1),
             ),
           );
         },
