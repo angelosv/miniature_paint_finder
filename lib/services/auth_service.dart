@@ -112,18 +112,66 @@ class AuthService implements IAuthService {
   @override
   Future<void> init() async {
     try {
-      // Check for stored credentials
-      // In real app, this would check secure storage
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Check for existing Firebase Auth session
+      final firebaseUser = firebase.FirebaseAuth.instance.currentUser;
 
-      // For demo, we'll start with no user logged in
-      _currentUser = null;
+      if (firebaseUser != null) {
+        // User is already signed in
+        _currentUser = User(
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'User',
+          email: firebaseUser.email ?? '',
+          phoneNumber: firebaseUser.phoneNumber,
+          createdAt: DateTime.now(), // We don't have the actual creation date
+          lastLoginAt: DateTime.now(),
+          authProvider: _getAuthProvider(firebaseUser),
+        );
+      } else {
+        _currentUser = null;
+      }
+
+      // Listen to auth state changes
+      firebase.FirebaseAuth.instance.authStateChanges().listen((firebaseUser) {
+        if (firebaseUser != null) {
+          _currentUser = User(
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName ?? 'User',
+            email: firebaseUser.email ?? '',
+            phoneNumber: firebaseUser.phoneNumber,
+            createdAt: DateTime.now(),
+            lastLoginAt: DateTime.now(),
+            authProvider: _getAuthProvider(firebaseUser),
+          );
+        } else {
+          _currentUser = null;
+        }
+        _authStateController.add(_currentUser);
+      });
+
       _authStateController.add(_currentUser);
     } catch (e) {
+      print('Error initializing auth service: $e');
       throw AuthException(
         AuthErrorCode.unknown,
         'Failed to initialize auth service: $e',
       );
+    }
+  }
+
+  // Helper method to determine auth provider
+  String _getAuthProvider(firebase.User user) {
+    if (user.providerData.isEmpty) return 'unknown';
+
+    final provider = user.providerData[0].providerId;
+    switch (provider) {
+      case 'google.com':
+        return 'google';
+      case 'password':
+        return 'email';
+      case 'phone':
+        return 'phone';
+      default:
+        return provider;
     }
   }
 
@@ -132,16 +180,14 @@ class AuthService implements IAuthService {
   Future<User> signInWithEmailPassword(String email, String password) async {
     try {
       print('Attempting to sign in with email: $email');
-      
+
       // Validate email and password
       _validateCredentials(email, password);
 
       // Sign in with Firebase
-      final userCredential = await firebase.FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
+      final userCredential = await firebase.FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
       print('Firebase sign in successful');
       print('User ID: ${userCredential.user?.uid}');
       print('User Email: ${userCredential.user?.email}');
@@ -156,7 +202,7 @@ class AuthService implements IAuthService {
         lastLoginAt: DateTime.now(),
         authProvider: 'email',
       );
-      
+
       _authStateController.add(_currentUser);
 
       return _currentUser!;
@@ -165,7 +211,7 @@ class AuthService implements IAuthService {
       print('Code: ${e.code}');
       print('Message: ${e.message}');
       print('Stack trace: ${e.stackTrace}');
-      
+
       switch (e.code) {
         case 'user-not-found':
           throw AuthException(
@@ -259,7 +305,7 @@ class AuthService implements IAuthService {
     try {
       // Sign out from Firebase
       await firebase.FirebaseAuth.instance.signOut();
-      
+
       // Sign out from Google
       await GoogleSignIn().signOut();
 
@@ -327,7 +373,8 @@ class AuthService implements IAuthService {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       print('Access Token: ${googleAuth.accessToken}');
       print('ID Token: ${googleAuth.idToken}');
@@ -339,9 +386,11 @@ class AuthService implements IAuthService {
       );
 
       // Sign in to Firebase with the Google credential
-      final firebase.UserCredential userCredential = 
-          await firebase.FirebaseAuth.instance.signInWithCredential(credential);
-      
+      final firebase.UserCredential userCredential = await firebase
+          .FirebaseAuth
+          .instance
+          .signInWithCredential(credential);
+
       print('Firebase User ID: ${userCredential.user!.uid}');
       print('Firebase User Email: ${userCredential.user!.email}');
       print('Firebase User Display Name: ${userCredential.user!.displayName}');
@@ -350,9 +399,7 @@ class AuthService implements IAuthService {
       try {
         final response = await http.post(
           Uri.parse('https://paints-api.reachu.io/auth/create-user'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'uid': userCredential.user!.uid,
             'email': userCredential.user!.email,
@@ -376,7 +423,7 @@ class AuthService implements IAuthService {
           e is AuthException ? e.message : 'Error creating user on server',
         );
       }
-      
+
       // Convert Firebase user to our User model
       _currentUser = User(
         id: userCredential.user!.uid,
@@ -386,7 +433,7 @@ class AuthService implements IAuthService {
         lastLoginAt: DateTime.now(),
         authProvider: 'google',
       );
-      
+
       _authStateController.add(_currentUser);
 
       return _currentUser!;
@@ -395,7 +442,10 @@ class AuthService implements IAuthService {
       if (e is AuthException) {
         rethrow;
       }
-      throw AuthException(AuthErrorCode.unknown, 'Google authentication failed: $e');
+      throw AuthException(
+        AuthErrorCode.unknown,
+        'Google authentication failed: $e',
+      );
     }
   }
 
@@ -403,8 +453,9 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithCustomToken(String token) async {
     try {
-      final userCredential = await firebase.FirebaseAuth.instance.signInWithCustomToken(token);
-      
+      final userCredential = await firebase.FirebaseAuth.instance
+          .signInWithCustomToken(token);
+
       // Convert Firebase user to our User model
       _currentUser = User(
         id: userCredential.user!.uid,
@@ -414,7 +465,7 @@ class AuthService implements IAuthService {
         lastLoginAt: DateTime.now(),
         authProvider: 'custom',
       );
-      
+
       _authStateController.add(_currentUser);
 
       return _currentUser!;
@@ -433,20 +484,21 @@ class AuthService implements IAuthService {
     try {
       // Crear un nuevo PhoneAuthProvider
       final phoneAuthProvider = firebase.PhoneAuthProvider();
-      
+
       // Mostrar un diálogo para ingresar el número de teléfono
       // Nota: En una implementación real, esto debería ser manejado por la UI
       // y el número de teléfono debería ser pasado como parámetro
       final phoneNumber = '+1234567890'; // Este es un número de ejemplo
-      
+
       // Verificar el número de teléfono
       await firebase.FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         verificationCompleted: (firebase.PhoneAuthCredential credential) async {
           // Auto-verificación completada (Android)
           try {
-            final userCredential = await firebase.FirebaseAuth.instance.signInWithCredential(credential);
-            
+            final userCredential = await firebase.FirebaseAuth.instance
+                .signInWithCredential(credential);
+
             // Convertir el usuario de Firebase a nuestro modelo de Usuario
             _currentUser = User(
               id: userCredential.user!.uid,
@@ -457,7 +509,7 @@ class AuthService implements IAuthService {
               lastLoginAt: DateTime.now(),
               authProvider: 'phone',
             );
-            
+
             _authStateController.add(_currentUser);
           } catch (e) {
             print('Error en verificación automática: $e');
@@ -501,7 +553,7 @@ class AuthService implements IAuthService {
   }) async {
     try {
       print('Starting phone verification for: $phoneNumber');
-      
+
       // Validate phone number format
       if (!RegExp(r'^\+[0-9]{10,15}$').hasMatch(phoneNumber)) {
         throw AuthException(
@@ -539,12 +591,17 @@ class AuthService implements IAuthService {
         await firebase.FirebaseAuth.instance.verifyPhoneNumber(
           phoneNumber: phoneNumber,
           timeout: const Duration(seconds: 60),
-          verificationCompleted: (firebase.PhoneAuthCredential credential) async {
+          verificationCompleted: (
+            firebase.PhoneAuthCredential credential,
+          ) async {
             print('Auto verification completed');
             try {
-              final userCredential = await firebase.FirebaseAuth.instance.signInWithCredential(credential);
-              print('User authenticated successfully: ${userCredential.user?.uid}');
-              
+              final userCredential = await firebase.FirebaseAuth.instance
+                  .signInWithCredential(credential);
+              print(
+                'User authenticated successfully: ${userCredential.user?.uid}',
+              );
+
               _currentUser = User(
                 id: userCredential.user!.uid,
                 name: userCredential.user!.displayName ?? 'Phone User',
@@ -554,7 +611,7 @@ class AuthService implements IAuthService {
                 lastLoginAt: DateTime.now(),
                 authProvider: 'phone',
               );
-              
+
               _authStateController.add(_currentUser);
             } catch (e) {
               print('Error in auto verification: $e');
@@ -570,29 +627,29 @@ class AuthService implements IAuthService {
             print('Code: ${e.code}');
             print('Message: ${e.message}');
             print('Stack trace: ${e.stackTrace}');
-            
+
             String errorMessage;
             switch (e.code) {
               case 'invalid-phone-number':
                 errorMessage = 'Invalid phone number';
                 break;
               case 'too-many-requests':
-                errorMessage = 'Too many attempts. Please wait a few minutes before trying again.';
+                errorMessage =
+                    'Too many attempts. Please wait a few minutes before trying again.';
                 break;
               case 'operation-not-allowed':
-                errorMessage = 'Phone authentication is not enabled in Firebase';
+                errorMessage =
+                    'Phone authentication is not enabled in Firebase';
                 break;
               case 'internal-error':
-                errorMessage = 'Internal Firebase error. Please check Firebase configuration and ensure phone authentication is enabled.';
+                errorMessage =
+                    'Internal Firebase error. Please check Firebase configuration and ensure phone authentication is enabled.';
                 break;
               default:
                 errorMessage = e.message ?? 'Unknown verification error';
             }
-            
-            throw AuthException(
-              AuthErrorCode.unknown,
-              errorMessage,
-            );
+
+            throw AuthException(AuthErrorCode.unknown, errorMessage);
           },
           codeSent: (String verificationId, int? resendToken) {
             print('Verification code sent');
@@ -618,11 +675,11 @@ class AuthService implements IAuthService {
       print('General error in phone authentication:');
       print('Error: $e');
       print('Stack trace: ${StackTrace.current}');
-      
+
       if (e is AuthException) {
         rethrow;
       }
-      
+
       throw AuthException(
         AuthErrorCode.unknown,
         'Error in phone authentication: $e',
@@ -642,8 +699,9 @@ class AuthService implements IAuthService {
         smsCode: code,
       );
 
-      final userCredential = await firebase.FirebaseAuth.instance.signInWithCredential(credential);
-      
+      final userCredential = await firebase.FirebaseAuth.instance
+          .signInWithCredential(credential);
+
       _currentUser = User(
         id: userCredential.user!.uid,
         name: userCredential.user!.displayName ?? 'Phone User',
@@ -653,7 +711,7 @@ class AuthService implements IAuthService {
         lastLoginAt: DateTime.now(),
         authProvider: 'phone',
       );
-      
+
       _authStateController.add(_currentUser);
     } catch (e) {
       print('Error verificando código: $e');

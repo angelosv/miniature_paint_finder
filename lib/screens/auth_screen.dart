@@ -26,6 +26,20 @@ class _AuthScreenState extends State<AuthScreen>
   bool _isShowingLoginOptions = false;
   bool _isShowingEmailLogin = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Check if user is already logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+      if (authService.currentUser != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    });
+  }
+
   // Auth service instance
   final AuthService _authService = AuthService();
 
@@ -123,13 +137,11 @@ class _AuthScreenState extends State<AuthScreen>
       try {
         print('Starting registration process...');
         print('Email: ${_emailController.text}');
-        
+
         // First, make the POST request to the registration endpoint
         final response = await http.post(
           Uri.parse('https://paints-api.reachu.io/auth/register'),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'username': _nameController.text,
             'email': _emailController.text,
@@ -139,15 +151,18 @@ class _AuthScreenState extends State<AuthScreen>
 
         print('Backend response: ${response.body}');
         final responseData = jsonDecode(response.body);
-        
+
         if (responseData['executed'] == true) {
           print('Backend registration successful');
-          
+
           // Check if we got a custom token from the backend
-          if (responseData['data'] != null && responseData['data']['customToken'] != null) {
+          if (responseData['data'] != null &&
+              responseData['data']['customToken'] != null) {
             print('Custom token received, signing in with Firebase...');
             // Sign in with the custom token
-            await _authService.signInWithCustomToken(responseData['data']['customToken']);
+            await _authService.signInWithCustomToken(
+              responseData['data']['customToken'],
+            );
             print('Firebase login successful');
 
             if (mounted) {
@@ -242,7 +257,7 @@ class _AuthScreenState extends State<AuthScreen>
 
     try {
       await _authService.signInWithPhone();
-      
+
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -713,7 +728,9 @@ class _AuthScreenState extends State<AuthScreen>
                     color: Colors.green.shade600,
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const PhoneAuthScreen(),
+                        ),
                       );
                     },
                   ),
@@ -851,7 +868,9 @@ class _AuthScreenState extends State<AuthScreen>
                     color: Colors.green.shade600,
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const PhoneAuthScreen(),
+                        ),
                       );
                     },
                   ),
@@ -1027,7 +1046,9 @@ class _AuthScreenState extends State<AuthScreen>
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            _obscurePassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
                           onPressed: () {
                             setState(() {
@@ -1204,7 +1225,9 @@ class _AuthScreenState extends State<AuthScreen>
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            _obscurePassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
                           onPressed: () {
                             setState(() {

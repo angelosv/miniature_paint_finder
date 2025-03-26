@@ -17,14 +17,14 @@ class PalettePaintCard extends StatelessWidget {
   /// Indica si está en modo de edición
   final bool isEditMode;
 
+  /// Indica si debe mostrar el porcentaje de coincidencia
+  final bool showMatchPercentage;
+
   /// Función para manejar el toque
   final VoidCallback? onTap;
 
   /// Función para manejar la eliminación
   final VoidCallback? onRemove;
-
-  /// Indica si debe mostrar el porcentaje de coincidencia
-  final bool showMatchPercentage;
 
   /// Constructor del componente
   const PalettePaintCard({
@@ -33,19 +33,15 @@ class PalettePaintCard extends StatelessWidget {
     this.isInInventory = false,
     this.isInWishlist = false,
     this.isEditMode = false,
+    this.showMatchPercentage = true,
     this.onTap,
     this.onRemove,
-    this.showMatchPercentage = false,
   });
 
   Color _getMatchColor(int matchPercentage) {
-    if (matchPercentage >= 90) {
-      return Colors.green;
-    } else if (matchPercentage >= 75) {
-      return Colors.amber;
-    } else {
-      return Colors.orange;
-    }
+    if (matchPercentage >= 90) return Colors.green;
+    if (matchPercentage >= 75) return Colors.amber;
+    return Colors.orange;
   }
 
   @override
@@ -86,59 +82,50 @@ class PalettePaintCard extends StatelessWidget {
     final spacing = AppResponsive.getAdaptiveSpacing(context, 12.0);
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
-        ),
-      ),
       child: InkWell(
-        onTap: isEditMode ? null : onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          children: [
-            // Top part with paint info
-            Padding(
-              padding: padding,
-              child: Row(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  // Brand Avatar
+                  // Avatar con la primera letra de la marca
                   CircleAvatar(
-                    radius: avatarRadius,
+                    radius: 24,
                     backgroundColor: Colors.grey[200],
                     child: Text(
                       paint.brandAvatar,
-                      style: TextStyle(
-                        color: Colors.black,
+                      style: const TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        fontSize: avatarRadius * 0.9,
+                        color: Colors.black,
                       ),
                     ),
                   ),
-                  SizedBox(width: spacing),
+                  const SizedBox(width: 16),
 
-                  // Paint name and brand
+                  // Información de la pintura
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           paint.paintName,
-                          style: TextStyle(
+                          style: const TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            fontSize: titleFontSize,
                             color: Colors.black,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           paint.paintBrand,
                           style: TextStyle(
-                            fontSize: brandFontSize,
+                            fontSize: 16,
                             color: Colors.grey[600],
                           ),
                         ),
@@ -146,157 +133,112 @@ class PalettePaintCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Match percentage badge (opcional)
+                  // Porcentaje de coincidencia
                   if (showMatchPercentage)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: 12,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
                         color: _getMatchColor(
                           paint.matchPercentage,
-                        ).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         '${paint.matchPercentage}% match',
                         style: TextStyle(
                           color: _getMatchColor(paint.matchPercentage),
                           fontWeight: FontWeight.bold,
-                          fontSize: badgeFontSize,
+                          fontSize: 14,
                         ),
-                      ),
-                    ),
-
-                  // Status icons (inventory/wishlist)
-                  if (isInInventory)
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.inventory_2,
-                        size: avatarRadius,
-                        color: Colors.green,
-                      ),
-                    )
-                  else if (isInWishlist)
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.marineOrange.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.favorite,
-                        size: avatarRadius,
-                        color: AppTheme.marineOrange,
                       ),
                     ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
 
-            // Bottom part with color code and barcode
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: padding.horizontal,
-                vertical: padding.vertical,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+              // Sección inferior con código de color y código de barras
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              child: Row(
-                children: [
-                  // Color code with sample
-                  Expanded(
-                    flex: 2,
-                    child: Row(
+                child: Row(
+                  children: [
+                    // Sección de código de color
+                    Row(
                       children: [
                         Container(
-                          width: avatarRadius,
-                          height: avatarRadius,
+                          width: 24,
+                          height: 24,
                           decoration: BoxDecoration(
                             color: paint.paintColor,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
-                        SizedBox(width: spacing),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Color code:',
-                                style: TextStyle(
-                                  fontSize: avatarRadius * 0.8,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                paint.paintId.split('-').last,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontSize: avatarRadius * 0.9,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Barcode section
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Barcode:',
-                          style: TextStyle(
-                            fontSize: avatarRadius * 0.8,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        Row(
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.qr_code,
-                              size: avatarRadius,
-                              color: Colors.black,
+                            Text(
+                              'Color code:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '50119${paint.paintId.hashCode.abs() % 10000000}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontSize: avatarRadius * 0.9,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              paint.paintId.split('-').last,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black,
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const Spacer(),
+                    // Sección de código de barras
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Barcode:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.qr_code,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '50119${paint.paintId.hashCode.abs() % 10000000}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
