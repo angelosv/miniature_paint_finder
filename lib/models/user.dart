@@ -11,6 +11,9 @@ class User {
   /// User's email address
   final String email;
 
+  /// User's phone number (optional)
+  final String? phoneNumber;
+
   /// URL to user's profile image (optional)
   final String? profileImage;
 
@@ -30,6 +33,7 @@ class User {
     required this.id,
     required this.name,
     required this.email,
+    this.phoneNumber,
     this.profileImage,
     required this.createdAt,
     this.lastLoginAt,
@@ -42,6 +46,7 @@ class User {
       id: json['id'],
       name: json['name'],
       email: json['email'],
+      phoneNumber: json['phone_number'],
       profileImage: json['profile_image'],
       createdAt: DateTime.parse(json['created_at']),
       lastLoginAt:
@@ -58,6 +63,7 @@ class User {
       'id': id,
       'name': name,
       'email': email,
+      'phone_number': phoneNumber,
       'profile_image': profileImage,
       'created_at': createdAt.toIso8601String(),
       'last_login_at': lastLoginAt?.toIso8601String(),
@@ -71,6 +77,7 @@ class User {
     id: 'demo-user-001',
     name: 'Demo Painter',
     email: 'demo@miniaturepaintfinder.com',
+    phoneNumber: null,
     profileImage: null,
     createdAt: DateTime.now().subtract(const Duration(days: 30)),
     lastLoginAt: DateTime.now(),

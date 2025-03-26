@@ -6,6 +6,7 @@ import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:miniature_paint_finder/screens/phone_auth_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -220,6 +221,47 @@ class _AuthScreenState extends State<AuthScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Google sign in failed: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Perform phone sign in
+  void _performPhoneSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _authService.signInWithPhone();
+      
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Phone sign in failed: ${e.toString()}'),
             backgroundColor: Colors.red.shade700,
           ),
         );
@@ -669,7 +711,11 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.phone_android,
                     label: 'Continue with Phone',
                     color: Colors.green.shade600,
-                    onPressed: _performDirectLogin,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
@@ -803,7 +849,11 @@ class _AuthScreenState extends State<AuthScreen>
                     icon: Icons.phone_android,
                     label: 'Continue with Phone',
                     color: Colors.green.shade600,
-                    onPressed: _performDirectLogin,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
