@@ -29,15 +29,9 @@ class _AuthScreenState extends State<AuthScreen>
   final AuthService _authService = AuthService();
 
   // Controllers
-  final TextEditingController _emailController = TextEditingController(
-    text: 'demo@miniaturepaintfinder.com',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: 'password123',
-  );
-  final TextEditingController _nameController = TextEditingController(
-    text: 'Demo Painter',
-  );
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void dispose() {
@@ -930,19 +924,15 @@ class _AuthScreenState extends State<AuthScreen>
                     // Name field
                     TextFormField(
                       controller: _nameController,
-                      decoration: _buildInputDecoration(
-                        hint: 'Full Name',
-                        prefixIcon: const Icon(
-                          Icons.person_outline,
-                          color: Colors.white70,
+                      decoration: InputDecoration(
+                        labelText: 'Name',
+                        hintText: 'Enter your name',
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
+                      textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 16),
 
@@ -950,11 +940,12 @@ class _AuthScreenState extends State<AuthScreen>
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _buildInputDecoration(
-                        hint: 'Email Address',
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Colors.white70,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'Enter your email',
+                        prefixIcon: const Icon(Icons.email),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       validator: (value) {
@@ -980,19 +971,13 @@ class _AuthScreenState extends State<AuthScreen>
                     // Password field
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: _buildInputDecoration(
-                        hint: 'Password',
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Colors.white70,
-                        ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: Colors.white70,
+                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
                           ),
                           onPressed: () {
                             setState(() {
@@ -1000,35 +985,12 @@ class _AuthScreenState extends State<AuthScreen>
                             });
                           },
                         ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        // Allow demo password
-                        if (value == 'password123') {
-                          return null;
-                        }
-                        // Password requirements
-                        if (value.length < 8) {
-                          return 'Password must be at least 8 characters';
-                        }
-                        // Check for mixed case, numbers, and special characters
-                        final hasUppercase = value.contains(RegExp(r'[A-Z]'));
-                        final hasLowercase = value.contains(RegExp(r'[a-z]'));
-                        final hasNumbers = value.contains(RegExp(r'[0-9]'));
-                        final hasSpecialChars = value.contains(
-                          RegExp(r'[!@#$%^&*(),.?":{}|<>]'),
-                        );
-
-                        if (!hasUppercase ||
-                            !hasLowercase ||
-                            !hasNumbers ||
-                            !hasSpecialChars) {
-                          return 'Password must include uppercase, lowercase, \nnumbers and special characters';
-                        }
-                        return null;
-                      },
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
                     ),
                     const SizedBox(height: 40),
 
@@ -1155,11 +1117,12 @@ class _AuthScreenState extends State<AuthScreen>
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: _buildInputDecoration(
-                        hint: 'Email address',
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Colors.white70,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'Enter your email',
+                        prefixIcon: const Icon(Icons.email),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       validator: (value) {
@@ -1185,19 +1148,13 @@ class _AuthScreenState extends State<AuthScreen>
                     // Password field
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: _buildInputDecoration(
-                        hint: 'Password',
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Colors.white70,
-                        ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: Colors.white70,
+                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
                           ),
                           onPressed: () {
                             setState(() {
@@ -1205,24 +1162,12 @@ class _AuthScreenState extends State<AuthScreen>
                             });
                           },
                         ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        // Always allow the demo password
-                        if (value == 'password123') {
-                          return null;
-                        }
-                        // For real passwords (not demo), enforce stronger requirements
-                        if (_emailController.text !=
-                            'demo@miniaturepaintfinder.com') {
-                          if (value.length < 8) {
-                            return 'Password must be at least 8 characters';
-                          }
-                        }
-                        return null;
-                      },
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
                     ),
 
                     // Forgot password

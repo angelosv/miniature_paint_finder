@@ -115,35 +115,67 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithEmailPassword(String email, String password) async {
     try {
+      print('Attempting to sign in with email: $email');
+      
       // Validate email and password
       _validateCredentials(email, password);
 
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 1));
+      // Sign in with Firebase
+      final userCredential = await firebase.FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      print('Firebase sign in successful');
+      print('User ID: ${userCredential.user?.uid}');
+      print('User Email: ${userCredential.user?.email}');
+      print('User Display Name: ${userCredential.user?.displayName}');
 
-      // For demo, validate against demo account
-      if (email != User.demoUser.email &&
-          email != 'demo@miniaturepaintfinder.com') {
-        throw AuthException(
-          AuthErrorCode.userNotFound,
-          'No user found with this email address',
-        );
-      }
-
-      // Password check (would be done server-side in real app)
-      if (password != 'password123') {
-        throw AuthException(AuthErrorCode.wrongPassword, 'Incorrect password');
-      }
-
-      // In real app, this would make an API call
-      _currentUser = User.demoUser;
+      // Convert Firebase user to our User model
+      _currentUser = User(
+        id: userCredential.user!.uid,
+        name: userCredential.user!.displayName ?? 'User',
+        email: userCredential.user!.email ?? '',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'email',
+      );
+      
       _authStateController.add(_currentUser);
 
       return _currentUser!;
-    } catch (e) {
-      if (e is AuthException) {
-        rethrow;
+    } on firebase.FirebaseAuthException catch (e) {
+      print('Firebase Auth Error:');
+      print('Code: ${e.code}');
+      print('Message: ${e.message}');
+      print('Stack trace: ${e.stackTrace}');
+      
+      switch (e.code) {
+        case 'user-not-found':
+          throw AuthException(
+            AuthErrorCode.userNotFound,
+            'No user found with this email address',
+          );
+        case 'wrong-password':
+          throw AuthException(
+            AuthErrorCode.wrongPassword,
+            'Wrong password provided',
+          );
+        case 'invalid-email':
+          throw AuthException(
+            AuthErrorCode.invalidEmail,
+            'Invalid email address',
+          );
+        default:
+          throw AuthException(
+            AuthErrorCode.unknown,
+            'Firebase authentication failed: ${e.message}',
+          );
       }
+    } catch (e) {
+      print('General error during sign in:');
+      print('Error: $e');
+      print('Stack trace: ${StackTrace.current}');
       throw AuthException(AuthErrorCode.unknown, 'Authentication failed: $e');
     }
   }
