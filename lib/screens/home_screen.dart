@@ -208,280 +208,295 @@ class _HomeScreenState extends State<HomeScreen>
         child: Drawer(
           elevation: 10,
           width: MediaQuery.of(context).size.width * 0.75,
-          child: SafeArea(
-            child: Column(
-              children: [
-                // Cabecera del Drawer - limpia y moderna
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 32,
-                    horizontal: 24,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            isDarkMode
-                                ? Colors.black.withOpacity(0.2)
-                                : Colors.grey.withOpacity(0.1),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'MiniPaint',
-                        style: AppTheme.headingStyle.copyWith(
-                          fontSize: 28,
-                          color:
-                              isDarkMode ? Colors.white : AppTheme.marineBlue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            color: isDarkMode ? AppTheme.marineBlue : Colors.white,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Cabecera del Drawer - limpia y moderna
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 32,
+                      horizontal: 24,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+                      boxShadow: [
+                        BoxShadow(
                           color:
                               isDarkMode
-                                  ? Colors.white.withOpacity(0.1)
-                                  : AppTheme.marineBlue.withOpacity(0.05),
+                                  ? Colors.black.withOpacity(0.2)
+                                  : Colors.grey.withOpacity(0.1),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.color_lens_outlined,
-                              size: 18,
-                              color:
-                                  isDarkMode
-                                      ? AppTheme.marineGold
-                                      : AppTheme.marineBlue,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Find your perfect paint',
-                              style: AppTheme.buttonStyle.copyWith(
-                                fontSize: 14,
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'MiniPaint',
+                          style: AppTheme.headingStyle.copyWith(
+                            fontSize: 28,
+                            color:
+                                isDarkMode ? Colors.white : AppTheme.marineBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color:
+                                isDarkMode
+                                    ? Colors.white.withOpacity(0.1)
+                                    : AppTheme.marineBlue.withOpacity(0.05),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.color_lens_outlined,
+                                size: 18,
                                 color:
                                     isDarkMode
-                                        ? Colors.white.withOpacity(0.9)
+                                        ? AppTheme.marineGold
                                         : AppTheme.marineBlue,
-                                fontWeight: FontWeight.w500,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 10),
+                              Text(
+                                'Find your perfect paint',
+                                style: AppTheme.buttonStyle.copyWith(
+                                  fontSize: 14,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.white.withOpacity(0.9)
+                                          : AppTheme.marineBlue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Elementos del menú con mejor espaciado y diseño
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _drawerItems.length,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 12,
+                      ],
                     ),
-                    itemBuilder: (context, index) {
-                      final item = _drawerItems[index];
-                      final bool isActive = _selectedIndex == item['index'];
+                  ),
 
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return TweenAnimationBuilder(
-                            duration: const Duration(milliseconds: 200),
-                            tween: Tween<double>(begin: 1.0, end: 1.0),
-                            builder: (context, double value, child) {
-                              return Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      // Animate on tap
-                                      _drawerAnimController.forward().then((_) {
-                                        _drawerAnimController.reverse();
+                  const SizedBox(height: 8),
+
+                  // Elementos del menú con mejor espaciado y diseño
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _drawerItems.length,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 12,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = _drawerItems[index];
+                        final bool isActive = _selectedIndex == item['index'];
+
+                        return StatefulBuilder(
+                          builder: (context, setState) {
+                            return TweenAnimationBuilder(
+                              duration: const Duration(milliseconds: 200),
+                              tween: Tween<double>(begin: 1.0, end: 1.0),
+                              builder: (context, double value, child) {
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        // Animate on tap
+                                        _drawerAnimController.forward().then((
+                                          _,
+                                        ) {
+                                          _drawerAnimController.reverse();
+                                        });
                                       });
-                                    });
 
-                                    // Allow animation to complete before navigation
-                                    Future.delayed(
-                                      const Duration(milliseconds: 150),
-                                      () {
-                                        if (item['index'] >= 0) {
-                                          _onItemTapped(item['index']);
-                                          _closeDrawer();
-                                        } else if (item['screen'] != null) {
-                                          _navigateToScreen(item['screen']);
-                                        } else {
-                                          _closeDrawer();
-                                        }
-                                      },
-                                    );
-                                  },
-                                  splashColor: (isDarkMode
-                                          ? AppTheme.marineGold
-                                          : AppTheme.marineBlue)
-                                      .withOpacity(0.2),
-                                  highlightColor: (isDarkMode
-                                          ? AppTheme.marineGold
-                                          : AppTheme.marineBlue)
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isActive
-                                              ? isDarkMode
-                                                  ? AppTheme.marineGold
-                                                      .withOpacity(0.15)
-                                                  : AppTheme.marineBlue
-                                                      .withOpacity(0.1)
-                                              : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: ListTile(
-                                      leading: Icon(
-                                        item['icon'],
-                                        color:
-                                            isDarkMode
-                                                ? isActive
-                                                    ? AppTheme.marineGold
-                                                    : Colors.white.withOpacity(
-                                                      0.8,
-                                                    )
-                                                : isActive
-                                                ? AppTheme.marineBlue
-                                                : AppTheme.marineBlue
-                                                    .withOpacity(0.7),
-                                        size: 24,
+                                      // Allow animation to complete before navigation
+                                      Future.delayed(
+                                        const Duration(milliseconds: 150),
+                                        () {
+                                          if (item['index'] >= 0) {
+                                            _onItemTapped(item['index']);
+                                            _closeDrawer();
+                                          } else if (item['screen'] != null) {
+                                            _navigateToScreen(item['screen']);
+                                          } else {
+                                            _closeDrawer();
+                                          }
+                                        },
+                                      );
+                                    },
+                                    splashColor: (isDarkMode
+                                            ? AppTheme.marineGold
+                                            : AppTheme.marineBlue)
+                                        .withOpacity(0.2),
+                                    highlightColor: (isDarkMode
+                                            ? AppTheme.marineGold
+                                            : AppTheme.marineBlue)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
                                       ),
-                                      title: Text(
-                                        item['text'],
-                                        style: AppTheme.buttonStyle.copyWith(
-                                          fontSize: 16,
-                                          fontWeight:
-                                              isActive
-                                                  ? FontWeight.w600
-                                                  : FontWeight.normal,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isActive
+                                                ? isDarkMode
+                                                    ? AppTheme.marineGold
+                                                        .withOpacity(0.15)
+                                                    : AppTheme.marineBlue
+                                                        .withOpacity(0.1)
+                                                : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: ListTile(
+                                        leading: Icon(
+                                          item['icon'],
                                           color:
                                               isDarkMode
                                                   ? isActive
                                                       ? AppTheme.marineGold
                                                       : Colors.white
-                                                  : AppTheme.marineBlue,
+                                                          .withOpacity(0.8)
+                                                  : isActive
+                                                  ? AppTheme.marineBlue
+                                                  : AppTheme.marineBlue
+                                                      .withOpacity(0.7),
+                                          size: 24,
                                         ),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 24,
-                                            vertical: 8,
+                                        title: Text(
+                                          item['text'],
+                                          style: AppTheme.buttonStyle.copyWith(
+                                            fontSize: 16,
+                                            fontWeight:
+                                                isActive
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
+                                            color:
+                                                isDarkMode
+                                                    ? isActive
+                                                        ? AppTheme.marineGold
+                                                        : Colors.white
+                                                    : AppTheme.marineBlue,
                                           ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 24,
+                                              vertical: 8,
+                                            ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          );
-                        },
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  Divider(
+                    height: 1,
+                    color:
+                        isDarkMode
+                            ? Colors.white24
+                            : AppTheme.marineBlue.withOpacity(0.1),
+                  ),
+
+                  // Elementos inferiores
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _bottomDrawerItems.length,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _bottomDrawerItems[index];
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            _closeDrawer();
+                          },
+                          splashColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.2),
+                          highlightColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListTile(
+                            leading: Icon(
+                              item['icon'],
+                              color:
+                                  isDarkMode
+                                      ? Colors.white.withOpacity(0.8)
+                                      : AppTheme.marineBlue.withOpacity(0.7),
+                              size: 22,
+                            ),
+                            title: Text(
+                              item['text'],
+                              style: AppTheme.buttonStyle.copyWith(
+                                fontSize: 15,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white
+                                        : AppTheme.marineBlue,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       );
                     },
                   ),
-                ),
 
-                const Divider(height: 1, color: Colors.white24),
-
-                // Elementos inferiores
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _bottomDrawerItems.length,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = _bottomDrawerItems[index];
-
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          _closeDrawer();
-                        },
-                        splashColor: (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            .withOpacity(0.2),
-                        highlightColor: (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        child: ListTile(
-                          leading: Icon(
-                            item['icon'],
-                            color:
-                                isDarkMode
-                                    ? Colors.white.withOpacity(0.8)
-                                    : AppTheme.marineBlue.withOpacity(0.7),
-                            size: 22,
-                          ),
-                          title: Text(
-                            item['text'],
-                            style: AppTheme.buttonStyle.copyWith(
-                              fontSize: 15,
-                              color:
-                                  isDarkMode
-                                      ? Colors.white
-                                      : AppTheme.marineBlue,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 6,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
+                  // Versión de la app
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      'Version 1.0.0',
+                      style: AppTheme.bodyStyle.copyWith(
+                        fontSize: 12,
+                        color:
+                            isDarkMode
+                                ? Colors.white.withOpacity(0.6)
+                                : AppTheme.marineBlue.withOpacity(0.6),
                       ),
-                    );
-                  },
-                ),
-
-                // Versión de la app
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    'Version 1.0.0',
-                    style: AppTheme.bodyStyle.copyWith(
-                      fontSize: 12,
-                      color:
-                          isDarkMode
-                              ? Colors.white.withOpacity(0.6)
-                              : AppTheme.marineBlue.withOpacity(0.6),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
