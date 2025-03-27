@@ -203,19 +203,20 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       drawer: Theme(
         data: Theme.of(context).copyWith(
-          canvasColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+          canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
           drawerTheme: DrawerThemeData(
-            backgroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+            backgroundColor:
+                isDarkMode ? AppTheme.marineBlueDark : Colors.white,
             scrimColor: Colors.black54,
           ),
         ),
         child: Drawer(
           elevation: 10,
           width: MediaQuery.of(context).size.width * 0.75,
-          backgroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
           child: Container(
             decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.marineBlue : Colors.white,
+              color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
               boxShadow:
                   isDarkMode
                       ? [
