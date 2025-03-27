@@ -6,6 +6,7 @@ import 'package:miniature_paint_finder/components/category_card.dart';
 import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/components/paint_card.dart';
 import 'package:miniature_paint_finder/components/palette_card.dart';
+import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
@@ -283,10 +284,16 @@ class _PaintListTabState extends State<PaintListTab> {
                 scrollDirection: Axis.horizontal,
                 itemCount: SampleData.getPalettes().length,
                 itemBuilder: (context, index) {
+                  final palette = SampleData.getPalettes()[index];
                   return PaletteCard(
-                    palette: SampleData.getPalettes()[index],
+                    palette: palette,
                     onTap: () {
-                      // TODO: Implementar acción al tocar una paleta
+                      // Abrir el modal de paleta cuando se toca
+                      showPaletteModal(
+                        context,
+                        palette.name,
+                        palette.paintSelections ?? [],
+                      );
                     },
                   );
                 },

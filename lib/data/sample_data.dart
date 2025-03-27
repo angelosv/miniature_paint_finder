@@ -620,502 +620,205 @@ class SampleData {
     ];
   }
 
-  /// Returns a list of sample palettes that users might create
-  ///
-  /// Each palette includes:
-  /// - id: Unique identifier
-  /// - name: User-given name for the palette
-  /// - imagePath: Path to an image that inspired this palette
-  /// - colors: List of Colors in the palette
-  /// - createdAt: When the palette was created
+  /// Returns a list of palette samples
   static List<Palette> getPalettes() {
-    print('🎨 SampleData.getPalettes() called');
-    const String defaultImagePath = 'assets/images/placeholder1.jpg';
+    return [
+      Palette(
+        id: 'palette-001',
+        name: 'Space Marines',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF0D407F), // Macragge Blue
+          const Color(0xFFC0C5C9), // Runefang Steel
+          const Color(0xFF834F46), // Bugmans Glow
+          const Color(0xFF1A1A1A), // Nuln Oil
+          const Color(0xFF31A2F2), // Lothern Blue
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        paintSelections: getSamplePaintSelectionsForSpaceMarines(),
+      ),
+      Palette(
+        id: 'palette-002',
+        name: 'Orks Warband',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF00401A), // Caliban Green
+          const Color(0xFFFBB81C), // Averland Sunset
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFF63452A), // Agrax Earthshade
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        paintSelections: getSamplePaintSelectionsForOrks(),
+      ),
+      Palette(
+        id: 'palette-003',
+        name: 'Imperial Guard',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF2A3439), // German Grey (Vallejo)
+          const Color(0xFFB7975F), // Zandri Dust
+          const Color(0xFF9A0F0F), // Blood for the Blood God
+          const Color(0xFF85714D), // Retributor Armour
+          const Color(0xFF69385C), // Druchii Violet
+          const Color(0xFF800000), // Hull Red (Vallejo)
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 7)),
+        paintSelections: getSamplePaintSelectionsForImperialGuard(),
+      ),
+    ];
+  }
 
-    try {
-      final palettes = [
-        // Warhammer 40k themed palettes
-        Palette(
-          id: 'palette-001',
-          name: 'Space Marine Ultramarines',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF0D407F), // Macragge Blue
-            const Color(0xFF231F20), // Abaddon Black
-            const Color(0xFFC0C0C0), // Silver
-            const Color(0xFFD5D6D8), // Aluminum
-            const Color(0xFFD6D5C3), // Screaming Skull
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#0D407F',
-              paintId: 'cit-base-003',
-              paintName: 'Macragge Blue',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 100,
-              paintColorHex: '#0D407F',
-            ),
-            PaintSelection(
-              colorHex: '#231F20',
-              paintId: 'cit-base-001',
-              paintName: 'Abaddon Black',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 98,
-              paintColorHex: '#231F20',
-            ),
-            PaintSelection(
-              colorHex: '#C0C0C0',
-              paintId: 'val-model-003',
-              paintName: 'Silver',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 96,
-              paintColorHex: '#C0C0C0',
-            ),
-            PaintSelection(
-              colorHex: '#D6D5C3',
-              paintId: 'cit-layer-001',
-              paintName: 'Screaming Skull',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 94,
-              paintColorHex: '#D6D5C3',
-            ),
-          ],
-        ),
-        Palette(
-          id: 'palette-002',
-          name: 'Tyranid Leviathan Scheme',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF9A1115), // Mephiston Red
-            const Color(0xFF800000), // Hull Red
-            const Color(0xFF00401A), // Caliban Green
-            const Color(0xFF231F20), // Abaddon Black
-            const Color(0xFFFBB81C), // Averland Sunset
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 5)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#9A1115',
-              paintId: 'cit-base-002',
-              paintName: 'Mephiston Red',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 95,
-              paintColorHex: '#9A1115',
-            ),
-            PaintSelection(
-              colorHex: '#800000',
-              paintId: 'val-model-001',
-              paintName: 'Hull Red',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 93,
-              paintColorHex: '#800000',
-            ),
-            PaintSelection(
-              colorHex: '#00401A',
-              paintId: 'cit-base-004',
-              paintName: 'Caliban Green',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 97,
-              paintColorHex: '#00401A',
-            ),
-            PaintSelection(
-              colorHex: '#231F20',
-              paintId: 'cit-base-001',
-              paintName: 'Abaddon Black',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 98,
-              paintColorHex: '#231F20',
-            ),
-            PaintSelection(
-              colorHex: '#FBB81C',
-              paintId: 'cit-base-007',
-              paintName: 'Averland Sunset',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 92,
-              paintColorHex: '#FBB81C',
-            ),
-            PaintSelection(
-              colorHex: '#914B28',
-              paintId: 'cit-shade-003',
-              paintName: 'Reikland Fleshshade',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 88,
-              paintColorHex: '#914B28',
-            ),
-            PaintSelection(
-              colorHex: '#69385C',
-              paintId: 'cit-shade-004',
-              paintName: 'Druchii Violet',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 85,
-              paintColorHex: '#69385C',
-            ),
-            PaintSelection(
-              colorHex: '#9A0F0F',
-              paintId: 'cit-tech-001',
-              paintName: 'Blood for the Blood God',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 90,
-              paintColorHex: '#9A0F0F',
-            ),
-            PaintSelection(
-              colorHex: '#7ABAD4',
-              paintId: 'cit-tech-002',
-              paintName: 'Nihilakh Oxide',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 82,
-              paintColorHex: '#7ABAD4',
-            ),
-            PaintSelection(
-              colorHex: '#3B342E',
-              paintId: 'cit-tech-003',
-              paintName: 'Typhus Corrosion',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 80,
-              paintColorHex: '#3B342E',
-            ),
-          ],
-        ),
-        Palette(
-          id: 'palette-003',
-          name: 'Imperial Guard Cadian',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF2A3439), // German Grey
-            const Color(0xFF85714D), // Retributor Armour
-            const Color(0xFF1A1A1A), // Nuln Oil
-            const Color(0xFF44553A), // Olive Green
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 7)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#2A3439',
-              paintId: 'val-model-002',
-              paintName: 'German Grey',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 95,
-              paintColorHex: '#2A3439',
-            ),
-            PaintSelection(
-              colorHex: '#85714D',
-              paintId: 'cit-base-005',
-              paintName: 'Retributor Armour',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 93,
-              paintColorHex: '#85714D',
-            ),
-          ],
-        ),
+  /// Returns sample paint selections for Space Marines palette
+  static List<PaintSelection> getSamplePaintSelectionsForSpaceMarines() {
+    return [
+      PaintSelection(
+        colorHex: '#0D407F',
+        paintId: 'cit-base-003',
+        paintName: 'Macragge Blue',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 100,
+        paintColorHex: '#0D407F',
+      ),
+      PaintSelection(
+        colorHex: '#C0C5C9',
+        paintId: 'cit-layer-005',
+        paintName: 'Runefang Steel',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#C0C5C9',
+      ),
+      PaintSelection(
+        colorHex: '#834F46',
+        paintId: 'cit-base-006',
+        paintName: 'Bugmans Glow',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#834F46',
+      ),
+      PaintSelection(
+        colorHex: '#1A1A1A',
+        paintId: 'cit-shade-001',
+        paintName: 'Nuln Oil',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 100,
+        paintColorHex: '#1A1A1A',
+      ),
+      PaintSelection(
+        colorHex: '#31A2F2',
+        paintId: 'cit-layer-004',
+        paintName: 'Lothern Blue',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#31A2F2',
+      ),
+    ];
+  }
 
-        // More fantasy-themed palettes
-        Palette(
-          id: 'palette-004',
-          name: 'Necron Dynasty',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFFC0C0C0), // Silver
-            const Color(0xFF2A3439), // German Grey
-            const Color(0xFF1A1A1A), // Nuln Oil
-            const Color(0xFF00401A), // Caliban Green
-            const Color(0xFF7ABAD4), // Nihilakh Oxide
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 10)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#C0C0C0',
-              paintId: 'val-model-003',
-              paintName: 'Silver',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 99,
-              paintColorHex: '#C0C0C0',
-            ),
-            PaintSelection(
-              colorHex: '#7ABAD4',
-              paintId: 'cit-tech-002',
-              paintName: 'Nihilakh Oxide',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 92,
-              paintColorHex: '#7ABAD4',
-            ),
-            PaintSelection(
-              colorHex: '#1A1A1A',
-              paintId: 'cit-shade-001',
-              paintName: 'Nuln Oil',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 97,
-              paintColorHex: '#1A1A1A',
-            ),
-          ],
-        ),
-        Palette(
-          id: 'palette-005',
-          name: 'Eldar Craftworld Iyanden',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFFFBB81C), // Averland Sunset
-            const Color(0xFF0D407F), // Macragge Blue
-            const Color(0xFF9A1115), // Mephiston Red
-            const Color(0xFFD6D5C3), // Screaming Skull
-            const Color(0xFFC0C0C0), // Silver
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 14)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#FBB81C',
-              paintId: 'cit-base-007',
-              paintName: 'Averland Sunset',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 92,
-              paintColorHex: '#FBB81C',
-            ),
-            PaintSelection(
-              colorHex: '#0D407F',
-              paintId: 'cit-base-003',
-              paintName: 'Macragge Blue',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 98,
-              paintColorHex: '#0D407F',
-            ),
-            PaintSelection(
-              colorHex: '#9A1115',
-              paintId: 'cit-base-002',
-              paintName: 'Mephiston Red',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 95,
-              paintColorHex: '#9A1115',
-            ),
-            PaintSelection(
-              colorHex: '#D6D5C3',
-              paintId: 'cit-layer-001',
-              paintName: 'Screaming Skull',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 94,
-              paintColorHex: '#D6D5C3',
-            ),
-            PaintSelection(
-              colorHex: '#C0C0C0',
-              paintId: 'val-model-003',
-              paintName: 'Silver',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 96,
-              paintColorHex: '#C0C0C0',
-            ),
-            PaintSelection(
-              colorHex: '#63452A',
-              paintId: 'cit-shade-002',
-              paintName: 'Agrax Earthshade',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 89,
-              paintColorHex: '#63452A',
-            ),
-          ],
-        ),
-        Palette(
-          id: 'palette-006',
-          name: 'T\'au Sept',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF2A3439), // German Grey
-            const Color(0xFFC0C0C0), // Silver
-            const Color(0xFF00401A), // Caliban Green
-            const Color(0xFF9A1115), // Mephiston Red
-            const Color(0xFF31A2F2), // Lothern Blue
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 18)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#00401A',
-              paintId: 'cit-base-004',
-              paintName: 'Caliban Green',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 97,
-              paintColorHex: '#00401A',
-            ),
-          ],
-        ),
+  /// Returns sample paint selections for Orks palette
+  static List<PaintSelection> getSamplePaintSelectionsForOrks() {
+    return [
+      PaintSelection(
+        colorHex: '#00401A',
+        paintId: 'cit-base-004',
+        paintName: 'Caliban Green',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 100,
+        paintColorHex: '#00401A',
+      ),
+      PaintSelection(
+        colorHex: '#FBB81C',
+        paintId: 'cit-base-007',
+        paintName: 'Averland Sunset',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#FBB81C',
+      ),
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 99,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#63452A',
+        paintId: 'cit-shade-002',
+        paintName: 'Agrax Earthshade',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 100,
+        paintColorHex: '#63452A',
+      ),
+    ];
+  }
 
-        // Historical themes
-        Palette(
-          id: 'palette-007',
-          name: 'WWII German Panzer',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF414C52), // Panzer Gray
-            const Color(0xFF6E3A21), // Dark Rust
-            const Color(0xFF231F20), // Black
-            const Color(0xFFC8C8CA), // Chrome Silver
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 22)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#414C52',
-              paintId: 'ak-003',
-              paintName: 'Panzer Gray',
-              paintBrand: 'AK Interactive',
-              brandAvatar: 'A',
-              matchPercentage: 97,
-              paintColorHex: '#414C52',
-            ),
-            PaintSelection(
-              colorHex: '#6E3A21',
-              paintId: 'ap-005',
-              paintName: 'Dark Rust',
-              paintBrand: 'Army Painter',
-              brandAvatar: 'A',
-              matchPercentage: 94,
-              paintColorHex: '#6E3A21',
-            ),
-            PaintSelection(
-              colorHex: '#231F20',
-              paintId: 'cit-base-001',
-              paintName: 'Abaddon Black',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 98,
-              paintColorHex: '#231F20',
-            ),
-            PaintSelection(
-              colorHex: '#C8C8CA',
-              paintId: 'val-model-015',
-              paintName: 'Chrome',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 95,
-              paintColorHex: '#C8C8CA',
-            ),
-            PaintSelection(
-              colorHex: '#1A1A1A',
-              paintId: 'cit-shade-001',
-              paintName: 'Nuln Oil',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 93,
-              paintColorHex: '#1A1A1A',
-            ),
-            PaintSelection(
-              colorHex: '#63452A',
-              paintId: 'cit-shade-002',
-              paintName: 'Agrax Earthshade',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 91,
-              paintColorHex: '#63452A',
-            ),
-            PaintSelection(
-              colorHex: '#3B342E',
-              paintId: 'cit-tech-003',
-              paintName: 'Typhus Corrosion',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 88,
-              paintColorHex: '#3B342E',
-            ),
-            PaintSelection(
-              colorHex: '#BE0B0C',
-              paintId: 'cit-layer-002',
-              paintName: 'Evil Sunz Scarlet',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 82,
-              paintColorHex: '#BE0B0C',
-            ),
-          ],
-        ),
-        Palette(
-          id: 'palette-008',
-          name: 'US Army Olive Drab',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF44553A), // Olive Green
-            const Color(0xFFB7975F), // Zandri Dust
-            const Color(0xFF7F4422), // Track Rust
-            const Color(0xFF85714D), // Retributor Armour
-          ],
-          createdAt: DateTime.now().subtract(const Duration(days: 25)),
-          paintSelections: [
-            PaintSelection(
-              colorHex: '#44553A',
-              paintId: 'val-model-034',
-              paintName: 'Olive Green',
-              paintBrand: 'Vallejo',
-              brandAvatar: 'V',
-              matchPercentage: 96,
-              paintColorHex: '#44553A',
-            ),
-            PaintSelection(
-              colorHex: '#B7975F',
-              paintId: 'cit-base-008',
-              paintName: 'Zandri Dust',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 94,
-              paintColorHex: '#B7975F',
-            ),
-            PaintSelection(
-              colorHex: '#85714D',
-              paintId: 'cit-base-005',
-              paintName: 'Retributor Armour',
-              paintBrand: 'Citadel',
-              brandAvatar: 'C',
-              matchPercentage: 92,
-              paintColorHex: '#85714D',
-            ),
-          ],
-        ),
-      ];
-
-      print('🎨 Returning ${palettes.length} sample palettes');
-      for (var i = 0; i < palettes.length; i++) {
-        print(
-          '   ${i + 1}. ${palettes[i].name} (${palettes[i].colors.length} colors)',
-        );
-      }
-
-      return palettes;
-    } catch (e) {
-      print('❌ ERROR in SampleData.getPalettes(): $e');
-      // Return at least one palette in case of error
-      return [
-        Palette(
-          id: 'palette-emergency',
-          name: 'Emergency Sample Palette',
-          imagePath: defaultImagePath,
-          colors: [
-            const Color(0xFF0D407F), // Blue
-            const Color(0xFF9A1115), // Red
-            const Color(0xFF44553A), // Green
-          ],
-          createdAt: DateTime.now(),
-        ),
-      ];
-    }
+  /// Returns sample paint selections for Imperial Guard palette
+  static List<PaintSelection> getSamplePaintSelectionsForImperialGuard() {
+    return [
+      PaintSelection(
+        colorHex: '#2A3439',
+        paintId: 'val-model-002',
+        paintName: 'German Grey',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 97,
+        paintColorHex: '#2A3439',
+      ),
+      PaintSelection(
+        colorHex: '#B7975F',
+        paintId: 'cit-base-008',
+        paintName: 'Zandri Dust',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#B7975F',
+      ),
+      PaintSelection(
+        colorHex: '#9A0F0F',
+        paintId: 'cit-tech-001',
+        paintName: 'Blood for the Blood God',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 100,
+        paintColorHex: '#9A0F0F',
+      ),
+      PaintSelection(
+        colorHex: '#85714D',
+        paintId: 'cit-base-005',
+        paintName: 'Retributor Armour',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 93,
+        paintColorHex: '#85714D',
+      ),
+      PaintSelection(
+        colorHex: '#69385C',
+        paintId: 'cit-shade-004',
+        paintName: 'Druchii Violet',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 99,
+        paintColorHex: '#69385C',
+      ),
+      PaintSelection(
+        colorHex: '#800000',
+        paintId: 'val-model-001',
+        paintName: 'Hull Red',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 96,
+        paintColorHex: '#800000',
+      ),
+    ];
   }
 
   /// This method simulates a color matching functionality
