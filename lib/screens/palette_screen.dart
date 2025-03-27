@@ -12,6 +12,7 @@ import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
+import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 
 /// Screen that displays all user palettes
 class PaletteScreen extends StatefulWidget {
@@ -462,165 +463,169 @@ class _PaletteScreenState extends State<PaletteScreen> {
       '🖥️ PaletteScreen.build - Palettes: ${palettes.length}, Loading: $isLoading, Error: $error',
     );
 
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppHeader(
-        title: 'My Palettes',
-        showBackButton: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              print('🔄 Manual reload triggered');
-              _paletteController.loadPalettes();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Reloading palettes...')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search coming soon')),
-              );
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => _paletteController.loadPalettes(),
-        child: Column(
-          children: [
-            // Error indicator if there's an error
-            if (error != null)
-              Container(
-                color: Colors.red[100],
-                padding: const EdgeInsets.all(8),
-                width: double.infinity,
-                child: Text(
-                  'Error: $error',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
+    return AppScaffold(
+      scaffoldKey: _scaffoldKey,
+      selectedIndex: 1, // Esta es la página Palettes
+      title: 'My Palettes',
+      showBackButton: false,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () {
+            print('🔄 Manual reload triggered');
+            _paletteController.loadPalettes();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reloading palettes...')),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Search coming soon')));
+          },
+        ),
+      ],
+      body: _buildBody(context, palettes, isLoading, error, isDarkMode),
+    );
+  }
 
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  Text(
-                    'Your Color Collections',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    icon: const Icon(Icons.sort, size: 18),
-                    label: const Text('Sort', style: TextStyle(fontSize: 14)),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Sorting options coming soon'),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+  // Método para construir el body
+  Widget _buildBody(
+    BuildContext context,
+    List<Palette> palettes,
+    bool isLoading,
+    String? error,
+    bool isDarkMode,
+  ) {
+    return RefreshIndicator(
+      onRefresh: () => _paletteController.loadPalettes(),
+      child: Column(
+        children: [
+          // Error indicator if there's an error
+          if (error != null)
+            Container(
+              color: Colors.red[100],
+              padding: const EdgeInsets.all(8),
+              width: double.infinity,
+              child: Text(
+                'Error: $error',
+                style: const TextStyle(color: Colors.red),
               ),
             ),
-            const SizedBox(height: 8),
 
-            // Loading indicator
-            if (isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Center(child: CircularProgressIndicator()),
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Row(
+              children: [
+                Text(
+                  'Your Color Collections',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  icon: const Icon(Icons.sort, size: 18),
+                  label: const Text('Sort', style: TextStyle(fontSize: 14)),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Sorting options coming soon'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
 
-            // Palettes grid
-            Expanded(
-              child:
-                  palettes.isEmpty && !isLoading
-                      ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.palette_outlined,
-                              size: 64,
+          // Loading indicator
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+
+          // Palettes grid
+          Expanded(
+            child:
+                palettes.isEmpty && !isLoading
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.palette_outlined,
+                            size: 64,
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[700]
+                                    : Colors.grey[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No palettes yet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                               color:
                                   isDarkMode
-                                      ? Colors.grey[700]
-                                      : Colors.grey[300],
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No palettes yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Create your first palette',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[500]
+                                      : Colors.grey[500],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create Palette'),
+                            onPressed: _showCreatePaletteOptions,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Create your first palette',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[500]
-                                        : Colors.grey[500],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.add),
-                              label: const Text('Create Palette'),
-                              onPressed: _showCreatePaletteOptions,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                      : GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount:
-                              MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                          childAspectRatio: 0.8,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                        ),
-                        itemCount: palettes.length,
-                        itemBuilder: (context, index) {
-                          final palette = palettes[index];
-                          return _buildPaletteCard(palette);
-                        },
+                          ),
+                        ],
                       ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreatePaletteOptions,
-        icon: const Icon(Icons.add),
-        label: const Text('New Palette'),
-        elevation: 2,
+                    )
+                    : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount:
+                            MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: palettes.length,
+                      itemBuilder: (context, index) {
+                        final palette = palettes[index];
+                        return _buildPaletteCard(palette);
+                      },
+                    ),
+          ),
+        ],
       ),
     );
   }
