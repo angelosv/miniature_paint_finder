@@ -40,11 +40,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
   void _showCreatePaletteOptions() {
     // Controlador para el nombre de la paleta
     final TextEditingController nameController = TextEditingController();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF101823),
+      backgroundColor: isDarkMode ? const Color(0xFF101823) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -66,7 +67,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
+                      color:
+                          isDarkMode
+                              ? Colors.grey.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -74,17 +78,20 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 const SizedBox(height: 24),
 
                 // Title con color naranja y en negrita
-                const Text(
+                Text(
                   'Create New Palette',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.marineOrange,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.marineBlue,
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Palette Name Input con estilo similar al signup
+                // Palette Name Input con estilo según el tema
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -92,34 +99,59 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     hintText: 'Enter a name for your palette',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Colors.white30,
+                      borderSide: BorderSide(
+                        color:
+                            isDarkMode
+                                ? Colors.white30
+                                : Colors.grey.withOpacity(0.3),
                         width: 1,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Colors.white30,
+                      borderSide: BorderSide(
+                        color:
+                            isDarkMode
+                                ? Colors.white30
+                                : Colors.grey.withOpacity(0.3),
                         width: 1,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppTheme.marineOrange,
+                      borderSide: BorderSide(
+                        color:
+                            isDarkMode
+                                ? AppTheme.marineOrange
+                                : AppTheme.marineBlue,
                         width: 2,
                       ),
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-                    prefixIcon: const Icon(Icons.edit, color: Colors.white70),
+                    fillColor:
+                        isDarkMode
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.05),
+                    labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                    hintStyle: TextStyle(
+                      color:
+                          isDarkMode
+                              ? Colors.white.withOpacity(0.3)
+                              : Colors.black.withOpacity(0.3),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.edit,
+                      color: isDarkMode ? Colors.white70 : Colors.black54,
+                    ),
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black,
+                  ),
                   autofocus: true,
-                  cursorColor: AppTheme.marineOrange,
+                  cursorColor:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
                 ),
                 const SizedBox(height: 32),
 
@@ -128,7 +160,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   children: [
                     Expanded(
                       child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
+                        color:
+                            isDarkMode
+                                ? Colors.grey.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.3),
                         thickness: 1,
                       ),
                     ),
@@ -137,14 +172,18 @@ class _PaletteScreenState extends State<PaletteScreen> {
                       child: Text(
                         'Add Colors By',
                         style: TextStyle(
-                          color: Colors.grey,
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[700],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                     Expanded(
                       child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
+                        color:
+                            isDarkMode
+                                ? Colors.grey.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.3),
                         thickness: 1,
                       ),
                     ),
@@ -158,6 +197,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   context: context,
                   icon: Icons.image_search,
                   label: 'Find colors in image',
+                  isDarkMode: isDarkMode,
                   onPressed: () {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,6 +221,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   context: context,
                   icon: Icons.search,
                   label: 'Search the library',
+                  isDarkMode: isDarkMode,
                   onPressed: () {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -203,6 +244,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   context: context,
                   icon: Icons.qr_code_scanner,
                   label: 'Scan paint barcode',
+                  isDarkMode: isDarkMode,
                   onPressed: () {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -235,30 +277,38 @@ class _PaletteScreenState extends State<PaletteScreen> {
     required BuildContext context,
     required IconData icon,
     required String label,
+    required bool isDarkMode,
     required VoidCallback onPressed,
   }) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        foregroundColor: isDarkMode ? Colors.white : Colors.black87,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppTheme.marineOrange, width: 1.5),
+          side: BorderSide(
+            color: isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+            width: 1.5,
+          ),
         ),
         elevation: 0,
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.marineOrange, size: 24),
+          Icon(
+            icon,
+            color: isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+            size: 24,
+          ),
           const SizedBox(width: 16),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
         ],

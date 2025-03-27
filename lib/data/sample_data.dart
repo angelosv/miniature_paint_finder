@@ -665,6 +665,104 @@ class SampleData {
         createdAt: DateTime.now().subtract(const Duration(days: 7)),
         paintSelections: getSamplePaintSelectionsForImperialGuard(),
       ),
+      // Añadir más paletas de ejemplo
+      Palette(
+        id: 'palette-004',
+        name: 'Necron Dynasty',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFFC0C0C0), // Silver
+          const Color(0xFF2A3439), // German Grey
+          const Color(0xFF1A1A1A), // Nuln Oil
+          const Color(0xFF00401A), // Caliban Green
+          const Color(0xFF7ABAD4), // Nihilakh Oxide
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 10)),
+        paintSelections: getSamplePaintSelectionsForNecrons(),
+      ),
+      Palette(
+        id: 'palette-005',
+        name: 'Eldar Craftworld',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFFFBB81C), // Averland Sunset
+          const Color(0xFF0D407F), // Macragge Blue
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFFD6D5C3), // Screaming Skull
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 14)),
+        paintSelections: getSamplePaintSelectionsForEldar(),
+      ),
+      Palette(
+        id: 'palette-006',
+        name: 'T\'au Sept',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF2A3439), // German Grey
+          const Color(0xFFC0C0C0), // Silver
+          const Color(0xFF00401A), // Caliban Green
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFF31A2F2), // Lothern Blue
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 18)),
+        paintSelections: getSamplePaintSelectionsForTau(),
+      ),
+      Palette(
+        id: 'palette-007',
+        name: 'Blood Angels',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFF85714D), // Retributor Armour
+          const Color(0xFF231F20), // Abaddon Black
+          const Color(0xFF63452A), // Agrax Earthshade
+          const Color(0xFFBE0B0C), // Evil Sunz Scarlet
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 22)),
+        paintSelections: getSamplePaintSelectionsForBloodAngels(),
+      ),
+      Palette(
+        id: 'palette-008',
+        name: 'Death Guard',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFFB7975F), // Zandri Dust
+          const Color(0xFF3B342E), // Typhus Corrosion
+          const Color(0xFF63452A), // Agrax Earthshade
+          const Color(0xFF9A0F0F), // Blood for the Blood God
+          const Color(0xFF7ABAD4), // Nihilakh Oxide
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 25)),
+        paintSelections: getSamplePaintSelectionsForDeathGuard(),
+      ),
+      Palette(
+        id: 'palette-009',
+        name: 'Tyranid Hive',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFF69385C), // Druchii Violet
+          const Color(0xFF00401A), // Caliban Green
+          const Color(0xFFFBB81C), // Averland Sunset
+          const Color(0xFF231F20), // Abaddon Black
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 28)),
+        paintSelections: getSamplePaintSelectionsForTyranids(),
+      ),
+      Palette(
+        id: 'palette-010',
+        name: 'Adeptus Custodes',
+        imagePath: 'assets/images/placeholder.png',
+        colors: [
+          const Color(0xFF85714D), // Retributor Armour
+          const Color(0xFF914B28), // Reikland Fleshshade
+          const Color(0xFF231F20), // Abaddon Black
+          const Color(0xFF9A1115), // Mephiston Red
+          const Color(0xFFD6D5C3), // Screaming Skull
+        ],
+        createdAt: DateTime.now().subtract(const Duration(days: 32)),
+        paintSelections: getSamplePaintSelectionsForCustodes(),
+      ),
     ];
   }
 
@@ -817,6 +915,354 @@ class SampleData {
         brandAvatar: 'V',
         matchPercentage: 96,
         paintColorHex: '#800000',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Necron Dynasty palette
+  static List<PaintSelection> getSamplePaintSelectionsForNecrons() {
+    return [
+      PaintSelection(
+        colorHex: '#C0C0C0',
+        paintId: 'val-model-003',
+        paintName: 'Silver',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 99,
+        paintColorHex: '#C0C0C0',
+      ),
+      PaintSelection(
+        colorHex: '#2A3439',
+        paintId: 'val-model-002',
+        paintName: 'German Grey',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 95,
+        paintColorHex: '#2A3439',
+      ),
+      PaintSelection(
+        colorHex: '#1A1A1A',
+        paintId: 'cit-shade-001',
+        paintName: 'Nuln Oil',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#1A1A1A',
+      ),
+      PaintSelection(
+        colorHex: '#00401A',
+        paintId: 'cit-base-004',
+        paintName: 'Caliban Green',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 94,
+        paintColorHex: '#00401A',
+      ),
+      PaintSelection(
+        colorHex: '#7ABAD4',
+        paintId: 'cit-tech-002',
+        paintName: 'Nihilakh Oxide',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#7ABAD4',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Eldar Craftworld palette
+  static List<PaintSelection> getSamplePaintSelectionsForEldar() {
+    return [
+      PaintSelection(
+        colorHex: '#FBB81C',
+        paintId: 'cit-base-007',
+        paintName: 'Averland Sunset',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 96,
+        paintColorHex: '#FBB81C',
+      ),
+      PaintSelection(
+        colorHex: '#0D407F',
+        paintId: 'cit-base-003',
+        paintName: 'Macragge Blue',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#0D407F',
+      ),
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#D6D5C3',
+        paintId: 'cit-layer-001',
+        paintName: 'Screaming Skull',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 94,
+        paintColorHex: '#D6D5C3',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for T'au Sept palette
+  static List<PaintSelection> getSamplePaintSelectionsForTau() {
+    return [
+      PaintSelection(
+        colorHex: '#2A3439',
+        paintId: 'val-model-002',
+        paintName: 'German Grey',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 96,
+        paintColorHex: '#2A3439',
+      ),
+      PaintSelection(
+        colorHex: '#C0C0C0',
+        paintId: 'val-model-003',
+        paintName: 'Silver',
+        paintBrand: 'Vallejo',
+        brandAvatar: 'V',
+        matchPercentage: 95,
+        paintColorHex: '#C0C0C0',
+      ),
+      PaintSelection(
+        colorHex: '#00401A',
+        paintId: 'cit-base-004',
+        paintName: 'Caliban Green',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#00401A',
+      ),
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 94,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#31A2F2',
+        paintId: 'cit-layer-004',
+        paintName: 'Lothern Blue',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#31A2F2',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Blood Angels palette
+  static List<PaintSelection> getSamplePaintSelectionsForBloodAngels() {
+    return [
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 99,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#85714D',
+        paintId: 'cit-base-005',
+        paintName: 'Retributor Armour',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#85714D',
+      ),
+      PaintSelection(
+        colorHex: '#231F20',
+        paintId: 'cit-base-001',
+        paintName: 'Abaddon Black',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#231F20',
+      ),
+      PaintSelection(
+        colorHex: '#63452A',
+        paintId: 'cit-shade-002',
+        paintName: 'Agrax Earthshade',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#63452A',
+      ),
+      PaintSelection(
+        colorHex: '#BE0B0C',
+        paintId: 'cit-layer-002',
+        paintName: 'Evil Sunz Scarlet',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 96,
+        paintColorHex: '#BE0B0C',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Death Guard palette
+  static List<PaintSelection> getSamplePaintSelectionsForDeathGuard() {
+    return [
+      PaintSelection(
+        colorHex: '#B7975F',
+        paintId: 'cit-base-008',
+        paintName: 'Zandri Dust',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#B7975F',
+      ),
+      PaintSelection(
+        colorHex: '#3B342E',
+        paintId: 'cit-tech-003',
+        paintName: 'Typhus Corrosion',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 96,
+        paintColorHex: '#3B342E',
+      ),
+      PaintSelection(
+        colorHex: '#63452A',
+        paintId: 'cit-shade-002',
+        paintName: 'Agrax Earthshade',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#63452A',
+      ),
+      PaintSelection(
+        colorHex: '#9A0F0F',
+        paintId: 'cit-tech-001',
+        paintName: 'Blood for the Blood God',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#9A0F0F',
+      ),
+      PaintSelection(
+        colorHex: '#7ABAD4',
+        paintId: 'cit-tech-002',
+        paintName: 'Nihilakh Oxide',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 94,
+        paintColorHex: '#7ABAD4',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Tyranid Hive palette
+  static List<PaintSelection> getSamplePaintSelectionsForTyranids() {
+    return [
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 98,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#69385C',
+        paintId: 'cit-shade-004',
+        paintName: 'Druchii Violet',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#69385C',
+      ),
+      PaintSelection(
+        colorHex: '#00401A',
+        paintId: 'cit-base-004',
+        paintName: 'Caliban Green',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 96,
+        paintColorHex: '#00401A',
+      ),
+      PaintSelection(
+        colorHex: '#FBB81C',
+        paintId: 'cit-base-007',
+        paintName: 'Averland Sunset',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#FBB81C',
+      ),
+      PaintSelection(
+        colorHex: '#231F20',
+        paintId: 'cit-base-001',
+        paintName: 'Abaddon Black',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 99,
+        paintColorHex: '#231F20',
+      ),
+    ];
+  }
+
+  /// Returns sample paint selections for Adeptus Custodes palette
+  static List<PaintSelection> getSamplePaintSelectionsForCustodes() {
+    return [
+      PaintSelection(
+        colorHex: '#85714D',
+        paintId: 'cit-base-005',
+        paintName: 'Retributor Armour',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 99,
+        paintColorHex: '#85714D',
+      ),
+      PaintSelection(
+        colorHex: '#914B28',
+        paintId: 'cit-shade-003',
+        paintName: 'Reikland Fleshshade',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 96,
+        paintColorHex: '#914B28',
+      ),
+      PaintSelection(
+        colorHex: '#231F20',
+        paintId: 'cit-base-001',
+        paintName: 'Abaddon Black',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 97,
+        paintColorHex: '#231F20',
+      ),
+      PaintSelection(
+        colorHex: '#9A1115',
+        paintId: 'cit-base-002',
+        paintName: 'Mephiston Red',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 95,
+        paintColorHex: '#9A1115',
+      ),
+      PaintSelection(
+        colorHex: '#D6D5C3',
+        paintId: 'cit-layer-001',
+        paintName: 'Screaming Skull',
+        paintBrand: 'Citadel',
+        brandAvatar: 'C',
+        matchPercentage: 94,
+        paintColorHex: '#D6D5C3',
       ),
     ];
   }

@@ -2225,7 +2225,7 @@ class _PaintListTabState extends State<PaintListTab> {
         // Aquí puedes agregar alguna acción al tocar la promoción
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Warhammer 40,000 Paints + Tools Set promoción'),
+            content: Text('Warhammer 40,000 Paints + Tools Set promotion'),
             duration: Duration(seconds: 2),
           ),
         );
@@ -2277,7 +2277,7 @@ class _PaintListTabState extends State<PaintListTab> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  // Imagen de la promoción (espacio reservado para la imagen del conjunto de pinturas)
+                  // Imagen de la promoción con la imagen proporcionada
                   Container(
                     width: 140,
                     decoration: BoxDecoration(
@@ -2323,7 +2323,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
-                            'PROMOCIÓN',
+                            'SPECIAL OFFER',
                             style: TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
@@ -2394,7 +2394,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             mainAxisSize: MainAxisSize.min,
                             children: const [
                               Text(
-                                'Ver Oferta',
+                                'View Offer',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontWeight: FontWeight.bold,
