@@ -60,6 +60,34 @@ class _HomeScreenState extends State<HomeScreen> {
     ProfileTab(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+
+    // Verificar si hay argumentos de navegación
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkNavigationArguments();
+    });
+  }
+
+  void _checkNavigationArguments() {
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    if (arguments != null && arguments is Map<String, dynamic>) {
+      // Seleccionar pestaña específica si se solicita
+      if (arguments.containsKey('selectedIndex')) {
+        final index = arguments['selectedIndex'] as int;
+        if (index >= 0 && index < _screens.length) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        }
+      }
+
+      // Pasar los argumentos a la pestaña seleccionada si es necesario
+      // Los argumentos se pasarán automáticamente a las pestañas individuales
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;

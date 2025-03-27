@@ -268,38 +268,14 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   // Método para iniciar el flujo de búsqueda de colores en imagen
   void _startPaintSearchFlow(String paletteName) {
-    // En lugar de navegación directa, mostrar un diálogo informativo por ahora
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Navigation'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This would navigate to the Home Screen and activate the Paint Search flow for palette "$paletteName".',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'For now, we\'ll just simulate the flow',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Simular llamada al método existente
-                  _createPaletteFromImage(paletteName);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+    // Navegar a la pantalla Home y seleccionar el tab Paint Search
+    Navigator.pushNamed(
+      context,
+      '/home',
+      arguments: {
+        'selectedIndex': 0, // Tab de Paint Search
+        'paletteInfo': {'isCreatingPalette': true, 'paletteName': paletteName},
+      },
     );
   }
 

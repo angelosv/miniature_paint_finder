@@ -38,6 +38,10 @@ class _PaintListTabState extends State<PaintListTab> {
   // Text controller for palette name
   final TextEditingController _paletteNameController = TextEditingController();
 
+  // Parámetros para la creación de una paleta desde otra pantalla
+  String? _pendingPaletteName;
+  bool _isCreatingPaletteFromExternal = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +50,11 @@ class _PaintListTabState extends State<PaintListTab> {
     _paintBrands[1]['color'] = AppTheme.pinkColor;
     _paintBrands[2]['color'] = AppTheme.purpleColor;
     _paintBrands[3]['color'] = AppTheme.orangeColor;
+
+    // Verificar si hay argumentos para crear una paleta automáticamente
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForPaletteCreationArguments();
+    });
   }
 
   @override
@@ -139,8 +148,17 @@ class _PaintListTabState extends State<PaintListTab> {
             // Tarjeta de acción para búsqueda con un diseño más moderno
             GestureDetector(
               onTap: () {
+                // Si ya estamos creando una paleta desde otra pantalla, usamos ese nombre
+                // Si no, simplemente activamos el modo de búsqueda
                 setState(() {
                   _showColorPicker = true;
+
+                  // Si venimos de crear una paleta desde otra pantalla,
+                  // establecemos el nombre en el controlador
+                  if (_isCreatingPaletteFromExternal &&
+                      _pendingPaletteName != null) {
+                    _paletteNameController.text = _pendingPaletteName!;
+                  }
                 });
               },
               child: Container(
@@ -2136,5 +2154,28 @@ class _PaintListTabState extends State<PaintListTab> {
         );
       },
     );
+  }
+
+  // Método para verificar si se inició con argumentos para crear una paleta
+  void _checkForPaletteCreationArguments() {
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute != null && modalRoute.settings.arguments != null) {
+      final args = modalRoute.settings.arguments as Map<String, dynamic>?;
+
+      if (args != null && args.containsKey('paletteInfo')) {
+        final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
+        if (paletteInfo['isCreatingPalette'] == true &&
+            paletteInfo.containsKey('paletteName')) {
+          // Almacenar el nombre de la paleta pendiente
+          _pendingPaletteName = paletteInfo['paletteName'] as String;
+          _isCreatingPaletteFromExternal = true;
+
+          // Activar directamente el flujo de búsqueda de colores
+          setState(() {
+            _showColorPicker = true;
+          });
+        }
+      }
+    }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
@@ -43,6 +44,9 @@ void main() async {
         Provider<IAuthService>.value(value: authService),
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
+        ChangeNotifierProvider(
+          create: (context) => PaletteController(paletteRepository),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -72,7 +76,12 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          home: const AuthScreen(),
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const AuthScreen(),
+            '/home': (context) => const HomeScreen(),
+            '/palettes': (context) => const PaletteScreen(),
+          },
           debugShowCheckedModeBanner: false,
         );
       },
