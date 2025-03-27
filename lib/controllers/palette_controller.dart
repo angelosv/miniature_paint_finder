@@ -13,10 +13,7 @@ class PaletteController extends ChangeNotifier {
   String? _error;
 
   /// Constructor
-  PaletteController(this._repository) {
-    // Cargar paletas inmediatamente
-    loadPalettes();
-  }
+  PaletteController(this._repository);
 
   /// All palettes owned by the user
   List<Palette> get palettes => _palettes;

@@ -146,6 +146,27 @@ class ApiPaletteRepository implements PaletteRepository {
 /// Esta implementación es para desarrollo y testing sin backend
 class PaletteRepositoryImpl implements PaletteRepository {
   List<Palette>? _palettes;
+  bool _initialized = false;
+
+  PaletteRepositoryImpl() {
+    print('🏭 PaletteRepositoryImpl constructor called');
+    // Inicializar inmediatamente
+    _initializePalettes();
+  }
+
+  void _initializePalettes() {
+    print('🛠️ Forcing initialization of sample palettes');
+    _palettes = SampleData.getPalettes();
+    _initialized = _palettes != null && _palettes!.isNotEmpty;
+    print('🛠️ Initialized ${_palettes?.length ?? 0} sample palettes');
+
+    // Debug log the palettes
+    if (_palettes != null) {
+      for (var i = 0; i < _palettes!.length; i++) {
+        print('   📝 Palette ${i + 1}: ${_palettes![i].name}');
+      }
+    }
+  }
 
   @override
   Future<List<Palette>> getAll() async {
@@ -153,15 +174,24 @@ class PaletteRepositoryImpl implements PaletteRepository {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 300));
 
-    if (_palettes == null) {
-      print('📚 Initializing sample palettes from SampleData.getPalettes()');
-      _palettes = SampleData.getPalettes();
-      print('📚 Got ${_palettes!.length} sample palettes');
+    if (!_initialized || _palettes == null || _palettes!.isEmpty) {
+      print('📚 Palettes not properly initialized, reinitializing');
+      _initializePalettes();
     } else {
       print('📚 Using cached palettes (${_palettes!.length})');
     }
 
-    return _palettes!;
+    // Ensure we always return a valid list even if initialization failed
+    if (!_initialized || _palettes == null || _palettes!.isEmpty) {
+      print('⚠️ WARNING: Failed to initialize palettes, fetching directly');
+      final directPalettes = SampleData.getPalettes();
+      print('⚠️ Direct fetch result: ${directPalettes.length} palettes');
+      return directPalettes;
+    }
+
+    print('📚 Returning ${_palettes!.length} palettes from getAll()');
+    // Devolver una copia para evitar modificaciones accidentales
+    return List.from(_palettes!);
   }
 
   @override
@@ -219,8 +249,11 @@ class PaletteRepositoryImpl implements PaletteRepository {
 
   @override
   Future<List<Palette>> getUserPalettes() async {
+    print('👤 PaletteRepositoryImpl.getUserPalettes() called');
     // Para esta implementación de prueba, devolvemos todas las paletas
-    return getAll();
+    final palettes = await getAll();
+    print('👤 Returning ${palettes.length} palettes from getUserPalettes()');
+    return palettes;
   }
 
   @override
