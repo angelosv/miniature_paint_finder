@@ -13,9 +13,11 @@ class PaletteModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF101823),
+        color: isDarkMode ? const Color(0xFF101823) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -36,10 +38,10 @@ class PaletteModal extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Text(
               paletteName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDarkMode ? Colors.white : Colors.black87,
               ),
             ),
           ),
@@ -47,10 +49,12 @@ class PaletteModal extends StatelessWidget {
           Expanded(
             child:
                 paints.isEmpty
-                    ? const Center(
+                    ? Center(
                       child: Text(
                         'No paints in this palette',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey : Colors.grey[600],
+                        ),
                       ),
                     )
                     : ListView.builder(
@@ -68,7 +72,10 @@ class PaletteModal extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1a2530),
+                            color:
+                                isDarkMode
+                                    ? const Color(0xFF1a2530)
+                                    : Colors.grey[100],
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
@@ -105,18 +112,24 @@ class PaletteModal extends StatelessWidget {
                                       children: [
                                         Text(
                                           paint.paintName,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.black87,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           paint.paintBrand,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.grey,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.grey
+                                                    : Colors.grey[700],
                                           ),
                                         ),
                                       ],
@@ -132,7 +145,10 @@ class PaletteModal extends StatelessWidget {
                                       ),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Colors.grey.withOpacity(0.2),
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey.withOpacity(0.2)
+                                                : Colors.grey.withOpacity(0.3),
                                         width: 1,
                                       ),
                                     ),
@@ -141,8 +157,11 @@ class PaletteModal extends StatelessWidget {
                               ),
 
                               const SizedBox(height: 12),
-                              const Divider(
-                                color: Color(0xFF2a3540),
+                              Divider(
+                                color:
+                                    isDarkMode
+                                        ? const Color(0xFF2a3540)
+                                        : Colors.grey[300],
                                 height: 1,
                               ),
                               const SizedBox(height: 12),
@@ -155,11 +174,14 @@ class PaletteModal extends StatelessWidget {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         "Color code:",
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.grey
+                                                  : Colors.grey[700],
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -169,17 +191,23 @@ class PaletteModal extends StatelessWidget {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF0d151e),
+                                          color:
+                                              isDarkMode
+                                                  ? const Color(0xFF0d151e)
+                                                  : Colors.grey[200],
                                           borderRadius: BorderRadius.circular(
                                             4,
                                           ),
                                         ),
                                         child: Text(
                                           _generateColorCode(paint.paintName),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.black87,
                                             fontFamily: 'monospace',
                                           ),
                                         ),
@@ -193,27 +221,36 @@ class PaletteModal extends StatelessWidget {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text(
+                                      Text(
                                         "Barcode:",
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.grey
+                                                  : Colors.grey[700],
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.qr_code,
                                             size: 16,
-                                            color: Colors.white70,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.white70
+                                                    : Colors.black54,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             _generateBarcode(paint.paintId),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 14,
-                                              color: Colors.white70,
+                                              color:
+                                                  isDarkMode
+                                                      ? Colors.white70
+                                                      : Colors.black54,
                                               fontFamily: 'monospace',
                                             ),
                                           ),
@@ -237,16 +274,20 @@ class PaletteModal extends StatelessWidget {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.2),
+                                        color: Colors.green.withOpacity(
+                                          isDarkMode ? 0.2 : 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: Colors.green.withOpacity(0.3),
+                                          color: Colors.green.withOpacity(
+                                            isDarkMode ? 0.3 : 0.2,
+                                          ),
                                           width: 1,
                                         ),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                        children: const [
                                           Icon(
                                             Icons.inventory_2_outlined,
                                             size: 14,
@@ -273,16 +314,20 @@ class PaletteModal extends StatelessWidget {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.withOpacity(0.2),
+                                        color: Colors.amber.withOpacity(
+                                          isDarkMode ? 0.2 : 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: Colors.amber.withOpacity(0.3),
+                                          color: Colors.amber.withOpacity(
+                                            isDarkMode ? 0.3 : 0.2,
+                                          ),
                                           width: 1,
                                         ),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                        children: const [
                                           Icon(
                                             Icons.star_outline,
                                             size: 14,
@@ -308,16 +353,20 @@ class PaletteModal extends StatelessWidget {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.withOpacity(0.2),
+                                        color: Colors.grey.withOpacity(
+                                          isDarkMode ? 0.2 : 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: Colors.grey.withOpacity(0.3),
+                                          color: Colors.grey.withOpacity(
+                                            isDarkMode ? 0.3 : 0.2,
+                                          ),
                                           width: 1,
                                         ),
                                       ),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                        children: const [
                                           Icon(
                                             Icons.remove_circle_outline,
                                             size: 14,
