@@ -196,68 +196,75 @@ class _HomeScreenState extends State<HomeScreen> {
                   : Colors.white,
         ),
         child: Drawer(
-          elevation: 10,
+          elevation: 8,
           width: MediaQuery.of(context).size.width * 0.75,
           child: SafeArea(
             child: Column(
               children: [
-                // Cabecera del Drawer con gradiente Space Marine
+                // Cabecera del Drawer - limpia y moderna
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
+                    vertical: 32,
+                    horizontal: 24,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? [AppTheme.marineBlueDark, AppTheme.marineBlue]
-                              : [AppTheme.marineBlue, AppTheme.marineBlueLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: isDarkMode ? AppTheme.marineBlue : Colors.white,
+                    boxShadow: [
+                      if (isDarkMode)
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MiniPaint',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'MiniPaint',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineSmall?.copyWith(
+                          color:
+                              isDarkMode ? Colors.white : AppTheme.marineBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          color:
+                              isDarkMode
+                                  ? Colors.white.withOpacity(0.1)
+                                  : AppTheme.marineBlue.withOpacity(0.05),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.color_lens_outlined,
-                              size: 16,
-                              color: AppTheme.marineGold,
+                              size: 18,
+                              color:
+                                  isDarkMode
+                                      ? AppTheme.marineGold
+                                      : AppTheme.marineOrange,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Text(
                               'Find your perfect paint',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                                color:
+                                    isDarkMode
+                                        ? Colors.white.withOpacity(0.9)
+                                        : AppTheme.marineBlue,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -268,20 +275,53 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                const Divider(),
+                const SizedBox(height: 8),
 
-                // Elementos del menú
+                // Elementos del menú con mejor espaciado y diseño
                 Expanded(
                   child: ListView.builder(
                     itemCount: _drawerItems.length,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                     itemBuilder: (context, index) {
                       final item = _drawerItems[index];
                       final bool isActive = _selectedIndex == item['index'];
 
                       return ListTile(
-                        leading: Icon(item['icon']),
-                        title: Text(item['text']),
+                        leading: Icon(
+                          item['icon'],
+                          color:
+                              isActive
+                                  ? (isDarkMode
+                                      ? AppTheme.marineGold
+                                      : AppTheme.marineOrange)
+                                  : isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black87,
+                          size: 24,
+                        ),
+                        title: Text(
+                          item['text'],
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight:
+                                isActive ? FontWeight.w600 : FontWeight.normal,
+                            color:
+                                isActive
+                                    ? (isDarkMode
+                                        ? AppTheme.marineGold
+                                        : AppTheme.marineOrange)
+                                    : isDarkMode
+                                    ? Colors.white
+                                    : Colors.black87,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 8,
+                        ),
                         onTap: () {
                           if (item['index'] >= 0) {
                             _onItemTapped(item['index']);
@@ -293,14 +333,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           }
                         },
                         selected: isActive,
-                        selectedTileColor: AppTheme.marineBlue.withOpacity(0.1),
-                        selectedColor: AppTheme.primaryBlue,
+                        selectedTileColor:
+                            isDarkMode
+                                ? AppTheme.marineBlue.withOpacity(0.2)
+                                : AppTheme.marineOrange.withOpacity(0.05),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       );
                     },
                   ),
                 ),
 
-                const Divider(),
+                const Divider(height: 1),
 
                 // Elementos inferiores
                 ListView.builder(
@@ -309,32 +354,45 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: _bottomDrawerItems.length,
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
-                    horizontal: 0,
+                    horizontal: 12,
                   ),
                   itemBuilder: (context, index) {
                     final item = _bottomDrawerItems[index];
 
                     return ListTile(
-                      leading: Icon(item['icon']),
-                      title: Text(item['text']),
+                      leading: Icon(
+                        item['icon'],
+                        color: isDarkMode ? Colors.white70 : Colors.black54,
+                        size: 22,
+                      ),
+                      title: Text(
+                        item['text'],
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDarkMode ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 6,
+                      ),
                       onTap: () {
                         _closeDrawer();
                       },
-                      dense: true,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     );
                   },
                 ),
 
                 // Versión de la app
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(24.0),
                   child: Text(
                     'Version 1.0.0',
                     style: TextStyle(
-                      color:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white70
-                              : Colors.black54,
+                      color: isDarkMode ? Colors.white60 : Colors.black45,
                       fontSize: 12,
                     ),
                   ),

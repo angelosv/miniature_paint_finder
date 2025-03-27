@@ -264,7 +264,13 @@ class _PaintListTabState extends State<PaintListTab> {
                   'Recent Palettes',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                TextButton(onPressed: () {}, child: const Text('See all')),
+                TextButton(
+                  onPressed: () {
+                    // Navegar a la pantalla de paletas
+                    Navigator.pushNamed(context, '/palettes');
+                  },
+                  child: const Text('See all'),
+                ),
               ],
             ),
 
