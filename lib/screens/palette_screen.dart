@@ -44,10 +44,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-          Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF101823)
-              : Colors.white,
+      backgroundColor: const Color(0xFF101823),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -76,21 +73,18 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Title
-                Text(
+                // Title con color naranja y en negrita
+                const Text(
                   'Create New Palette',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
+                    color: AppTheme.marineOrange,
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Palette Name Input
+                // Palette Name Input con estilo similar al signup
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
@@ -98,12 +92,36 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     hintText: 'Enter a name for your palette',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.white30,
+                        width: 1,
+                      ),
                     ),
-                    prefixIcon: const Icon(Icons.edit),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.white30,
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppTheme.marineOrange,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                    prefixIcon: const Icon(Icons.edit, color: Colors.white70),
                   ),
+                  style: const TextStyle(color: Colors.white),
                   autofocus: true,
+                  cursorColor: AppTheme.marineOrange,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // Divider with label
                 Row(
@@ -134,109 +152,153 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Options
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Find color in an image
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a palette name'),
-                              ),
-                            );
-                            return;
-                          }
-                          Navigator.pop(context);
-                          // Usar el método existente pero pasando el nombre
-                          _createPaletteFromImage(nameController.text);
-
-                          // Alternativa: Navegar a la pantalla de búsqueda de pinturas
-                          // Navigator.pushNamed(context, '/paint_search');
-                        },
-                        icon: const Icon(Icons.image_search),
-                        label: const Text('Find colors\nin image'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 1,
-                          ),
+                // Options in vertical layout
+                // Find color in an image
+                _buildOptionButton(
+                  context: context,
+                  icon: Icons.image_search,
+                  label: 'Find colors in image',
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter a palette name'),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
 
-                    // Search the Library
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a palette name'),
-                              ),
-                            );
-                            return;
-                          }
-                          Navigator.pop(context);
-                          // Aquí implementaremos la búsqueda en la biblioteca
-                          _openPaintLibrarySearch(nameController.text);
-                        },
-                        icon: const Icon(Icons.search),
-                        label: const Text('Search the\nlibrary'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Scan a paint barcode
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          if (nameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a palette name'),
-                              ),
-                            );
-                            return;
-                          }
-                          Navigator.pop(context);
-                          // Navegar a la pantalla de escaneo existente
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => const BarcodeScannerScreen(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.qr_code_scanner),
-                        label: const Text('Scan paint\nbarcode'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    // Start the image color search flow from PaintListTab
+                    _startPaintSearchFlow(nameController.text);
+                  },
                 ),
+
+                const SizedBox(height: 16),
+
+                // Search the Library
+                _buildOptionButton(
+                  context: context,
+                  icon: Icons.search,
+                  label: 'Search the library',
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter a palette name'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    // Aquí implementaremos la búsqueda en la biblioteca
+                    _openPaintLibrarySearch(nameController.text);
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Scan a paint barcode
+                _buildOptionButton(
+                  context: context,
+                  icon: Icons.qr_code_scanner,
+                  label: 'Scan paint barcode',
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter a palette name'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context);
+                    // Navegar a la pantalla de escaneo existente
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BarcodeScannerScreen(),
+                      ),
+                    );
+                  },
+                ),
+
                 const SizedBox(height: 32),
               ],
             ),
+          ),
+    );
+  }
+
+  // Widget helper para crear botones de opciones con estilo consistente
+  Widget _buildOptionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppTheme.marineOrange, width: 1.5),
+        ),
+        elevation: 0,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.marineOrange, size: 24),
+          const SizedBox(width: 16),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Método para iniciar el flujo de búsqueda de colores en imagen
+  void _startPaintSearchFlow(String paletteName) {
+    // En lugar de navegación directa, mostrar un diálogo informativo por ahora
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Navigation'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This would navigate to the Home Screen and activate the Paint Search flow for palette "$paletteName".',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'For now, we\'ll just simulate the flow',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Simular llamada al método existente
+                  _createPaletteFromImage(paletteName);
+                },
+                child: const Text('OK'),
+              ),
+            ],
           ),
     );
   }
