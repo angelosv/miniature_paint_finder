@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
+import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 /// Screen that displays all user palettes
@@ -26,13 +29,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize controller
-    _paletteController = PaletteController(context.read<PaletteRepository>());
-    _loadPalettes();
-  }
-
-  Future<void> _loadPalettes() async {
-    await _paletteController.loadPalettes();
+    // Get controller from provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure we get a fresh load of palettes when screen initializes
+      context.read<PaletteController>().loadPalettes();
+    });
   }
 
   Future<void> _createPaletteFromImage() async {
@@ -186,6 +187,9 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Use the controller from provider
+    _paletteController = context.watch<PaletteController>();
+
     final palettes = _paletteController.palettes;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isLoading = _paletteController.isLoading;
@@ -202,6 +206,16 @@ class _PaletteScreenState extends State<PaletteScreen> {
         showBackButton: false,
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              print('🔄 Manual reload triggered');
+              _paletteController.loadPalettes();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Reloading palettes...')),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -212,10 +226,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadPalettes,
+        onRefresh: () => _paletteController.loadPalettes(),
         child: Column(
           children: [
-            // Debug information
+            // Error indicator if there's an error
             if (error != null)
               Container(
                 color: Colors.red[100],
@@ -228,7 +242,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
               ),
 
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(
                 children: [
                   Text(
@@ -367,11 +381,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
         shadowColor: isDarkMode ? Colors.black54 : Colors.black26,
         child: InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Selected palette: ${palette.name}'),
-                duration: const Duration(seconds: 1),
-              ),
+            showPaletteModal(
+              context,
+              palette.name,
+              palette.paintSelections ?? [],
             );
           },
           borderRadius: BorderRadius.circular(16),
