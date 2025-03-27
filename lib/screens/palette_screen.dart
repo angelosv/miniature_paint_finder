@@ -11,6 +11,7 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 
 /// Screen that displays all user palettes
 class PaletteScreen extends StatefulWidget {
@@ -36,7 +37,211 @@ class _PaletteScreenState extends State<PaletteScreen> {
     });
   }
 
-  Future<void> _createPaletteFromImage() async {
+  void _showCreatePaletteOptions() {
+    // Controlador para el nombre de la paleta
+    final TextEditingController nameController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF101823)
+              : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              top: 16,
+              left: 24,
+              right: 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle Bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Title
+                Text(
+                  'Create New Palette',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Palette Name Input
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Palette Name',
+                    hintText: 'Enter a name for your palette',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.edit),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 24),
+
+                // Divider with label
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.withOpacity(0.3),
+                        thickness: 1,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Add Colors By',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey.withOpacity(0.3),
+                        thickness: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Options
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Find color in an image
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          if (nameController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a palette name'),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.pop(context);
+                          // Usar el método existente pero pasando el nombre
+                          _createPaletteFromImage(nameController.text);
+
+                          // Alternativa: Navegar a la pantalla de búsqueda de pinturas
+                          // Navigator.pushNamed(context, '/paint_search');
+                        },
+                        icon: const Icon(Icons.image_search),
+                        label: const Text('Find colors\nin image'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: Theme.of(context).primaryColor,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Search the Library
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          if (nameController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a palette name'),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.pop(context);
+                          // Aquí implementaremos la búsqueda en la biblioteca
+                          _openPaintLibrarySearch(nameController.text);
+                        },
+                        icon: const Icon(Icons.search),
+                        label: const Text('Search the\nlibrary'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: Theme.of(context).primaryColor,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Scan a paint barcode
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          if (nameController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a palette name'),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.pop(context);
+                          // Navegar a la pantalla de escaneo existente
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const BarcodeScannerScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan paint\nbarcode'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: Theme.of(context).primaryColor,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _createPaletteFromImage([String? prefilledName]) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -46,35 +251,41 @@ class _PaletteScreenState extends State<PaletteScreen> {
       );
 
       if (image != null) {
-        // Show dialog to get palette name
-        final name = await showDialog<String>(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Name Your Palette'),
-                content: TextField(
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter palette name',
-                    border: OutlineInputBorder(),
+        // Si ya tenemos un nombre prefijado, no mostramos el diálogo
+        String? name = prefilledName;
+
+        // Si no hay nombre prefijado, mostramos el diálogo
+        if (name == null || name.isEmpty) {
+          name = await showDialog<String>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Name Your Palette'),
+                  content: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter palette name',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCEL'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final textField =
+                            context.findRenderObject() as RenderBox;
+                        final name = (textField as dynamic).controller.text;
+                        Navigator.pop(context, name);
+                      },
+                      child: const Text('CREATE'),
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('CANCEL'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      final textField = context.findRenderObject() as RenderBox;
-                      final name = (textField as dynamic).controller.text;
-                      Navigator.pop(context, name);
-                    },
-                    child: const Text('CREATE'),
-                  ),
-                ],
-              ),
-        );
+          );
+        }
 
         if (name != null && name.isNotEmpty) {
           final success = await _paletteController.createPalette(
@@ -107,42 +318,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
         );
       }
     }
-  }
-
-  void _showCreatePaletteOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder:
-          (context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.image),
-                  title: const Text('Create from Image'),
-                  subtitle: const Text('Extract colors from an image'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _createPaletteFromImage();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.palette),
-                  title: const Text('Create Empty Palette'),
-                  subtitle: const Text('Start with a blank palette'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Empty palette creation coming soon'),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-    );
   }
 
   Future<void> _deletePalette(Palette palette) async {
@@ -622,5 +797,37 @@ class _PaletteScreenState extends State<PaletteScreen> {
       final months = (difference.inDays / 30).floor();
       return '$months ${months == 1 ? 'month' : 'months'} ago';
     }
+  }
+
+  // Método para abrir la búsqueda en la biblioteca de pinturas
+  void _openPaintLibrarySearch(String paletteName) {
+    // Por ahora, mostramos un diálogo informativo de que esta función está en desarrollo
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Coming Soon'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This feature will allow you to search for paints in the library to add to your palette "$paletteName".',
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Available in the next update!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
   }
 }
