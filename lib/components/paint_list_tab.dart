@@ -11,6 +11,7 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/theme/app_responsive.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -2220,6 +2221,49 @@ class _PaintListTabState extends State<PaintListTab> {
   Widget _buildPromotionCard(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Valores responsivos utilizando AppResponsive
+    final cardHeight = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 180.0,
+      mobile: 150.0,
+    );
+
+    final imageWidth = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 140.0,
+      mobile: 120.0,
+    );
+
+    final contentPadding = AppResponsive.getAdaptiveValue(
+      context: context,
+      defaultValue: 16.0,
+      mobile: 12.0,
+    );
+
+    final titleFontSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      18.0,
+      minFontSize: 16.0,
+    );
+
+    final subtitleFontSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      16.0,
+      minFontSize: 14.0,
+    );
+
+    final priceFontSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      20.0,
+      minFontSize: 18.0,
+    );
+
+    final oldPriceFontSize = AppResponsive.getAdaptiveFontSize(
+      context,
+      14.0,
+      minFontSize: 12.0,
+    );
+
     return GestureDetector(
       onTap: () {
         // Aquí puedes agregar alguna acción al tocar la promoción
@@ -2232,7 +2276,7 @@ class _PaintListTabState extends State<PaintListTab> {
       },
       child: Container(
         width: double.infinity,
-        height: 180,
+        height: cardHeight,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -2274,12 +2318,12 @@ class _PaintListTabState extends State<PaintListTab> {
 
             // Contenido
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(contentPadding),
               child: Row(
                 children: [
                   // Imagen de la promoción con la imagen proporcionada
                   Container(
-                    width: 140,
+                    width: imageWidth,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2304,7 +2348,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     ),
                   ),
 
-                  const SizedBox(width: 16),
+                  SizedBox(width: contentPadding),
 
                   // Información del producto
                   Expanded(
@@ -2335,21 +2379,21 @@ class _PaintListTabState extends State<PaintListTab> {
                         const SizedBox(height: 8),
 
                         // Título
-                        const Text(
+                        Text(
                           'Warhammer 40,000',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontSize: titleFontSize,
                           ),
                         ),
 
-                        const Text(
+                        Text(
                           'Paints + Tools Set',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: subtitleFontSize,
                           ),
                         ),
 
@@ -2363,52 +2407,22 @@ class _PaintListTabState extends State<PaintListTab> {
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.7),
                                 decoration: TextDecoration.lineThrough,
-                                fontSize: 14,
+                                fontSize: oldPriceFontSize,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                            Text(
                               '\$59.99',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 20,
+                                fontSize: priceFontSize,
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: 10),
-
-                        // Botón de compra
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.marineGold,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'View Offer',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward,
-                                color: Colors.black,
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                        ),
+                        // El botón "View Offer" ha sido eliminado
                       ],
                     ),
                   ),

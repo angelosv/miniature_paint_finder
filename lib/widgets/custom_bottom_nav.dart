@@ -28,7 +28,8 @@ class CustomBottomNav extends StatelessWidget {
           ),
         ],
       ),
-      height: 70,
+      height: 80,
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
