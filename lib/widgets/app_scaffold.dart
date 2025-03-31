@@ -17,6 +17,7 @@ class AppScaffold extends StatefulWidget {
   final int? selectedIndex;
   final GlobalKey<ScaffoldState>? scaffoldKey;
   final Widget? drawer;
+  final bool Function(int)? onNavItemSelected;
 
   const AppScaffold({
     Key? key,
@@ -28,6 +29,7 @@ class AppScaffold extends StatefulWidget {
     this.selectedIndex = 0,
     this.scaffoldKey,
     this.drawer,
+    this.onNavItemSelected,
   }) : super(key: key);
 
   @override
@@ -45,6 +47,14 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   void _onItemSelected(int index) {
     if (_currentIndex == index) return;
+
+    // Give the parent widget a chance to handle the navigation
+    if (widget.onNavItemSelected != null && widget.onNavItemSelected!(index)) {
+      setState(() {
+        _currentIndex = index;
+      });
+      return;
+    }
 
     setState(() {
       _currentIndex = index;
@@ -65,7 +75,17 @@ class _AppScaffoldState extends State<AppScaffold> {
         );
         break;
       case 2:
-        // Implementar navegación al perfil cuando esté disponible
+        // Navigate to Home screen with Profile tab and ensure bottom nav shows the Profile tab as selected
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+            settings: const RouteSettings(arguments: {'selectedIndex': 1}),
+          ),
+          (Route<dynamic> route) => false,
+        );
+        setState(() {
+          _currentIndex = 2; // Keep the bottom navigation index as Profile
+        });
         break;
     }
   }

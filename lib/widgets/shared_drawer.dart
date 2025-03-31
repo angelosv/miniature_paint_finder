@@ -61,7 +61,11 @@ class _SharedDrawerState extends State<SharedDrawer>
 
     // Define colors based on theme mode
     final Color backgroundColor =
-        isDarkMode ? AppTheme.marineBlueDark : Colors.white;
+        isDarkMode
+            ? AppTheme.marineBlueDark.withOpacity(
+              0.97,
+            ) // Semitransparent background in dark mode
+            : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : AppTheme.marineBlue;
 
     // Use the orange accent color from the image for dark mode

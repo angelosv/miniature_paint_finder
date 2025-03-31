@@ -74,7 +74,7 @@ class CustomBottomNav extends StatelessWidget {
 
     // Colores según el tema y selección
     final Color activeColor =
-        isDarkMode ? AppTheme.marineGold : AppTheme.marineOrange;
+        isDarkMode ? AppTheme.drawerOrange : AppTheme.marineOrange;
     final Color inactiveColor = isDarkMode ? Colors.white70 : Colors.black54;
 
     return InkWell(
