@@ -35,6 +35,7 @@ migrate_working_dir/
 build/
 *.g.dart
 *.freezed.dart
+pubspec.lock
 
 # Symbolication related
 app.*.symbols
@@ -60,6 +61,7 @@ app.*.map.json
 **/ios/**/DerivedData/
 **/ios/**/Icon?
 **/ios/**/Pods/
+**/ios/**/Podfile.lock
 **/ios/**/.symlinks/
 **/ios/**/profile
 **/ios/**/xcuserdata
