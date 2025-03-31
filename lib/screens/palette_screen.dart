@@ -607,6 +607,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final hasPaletteSwatch = palette.colors.isNotEmpty;
     final hasSelections =
         palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
+    final bool hasImage =
+        palette.imagePath.isNotEmpty &&
+        palette.imagePath !=
+            'assets/images/placeholder.png'; // Detectar imágenes antiguas
 
     return Hero(
       tag: 'palette-${palette.id}',
@@ -639,14 +643,76 @@ class _PaletteScreenState extends State<PaletteScreen> {
                       height: 120,
                       width: double.infinity,
                       child:
-                          hasPaletteSwatch
-                              ? GridView.count(
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisCount: 3,
-                                children:
-                                    palette.colors
-                                        .map((color) => Container(color: color))
-                                        .toList(),
+                          hasImage
+                              ? Image.asset(
+                                palette.imagePath,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Si hay error al cargar, usar placeholder
+                                  return Image.asset(
+                                    'assets/images/placeholder.jpeg',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // Si también falla el placeholder, mostrar grid
+                                      return hasPaletteSwatch
+                                          ? GridView.count(
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            crossAxisCount: 3,
+                                            children:
+                                                palette.colors
+                                                    .map(
+                                                      (color) => Container(
+                                                        color: color,
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                          )
+                                          : Container(
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.grey[800]
+                                                    : Colors.grey[200],
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.palette_outlined,
+                                                size: 40,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.grey[700]
+                                                        : Colors.grey[400],
+                                              ),
+                                            ),
+                                          );
+                                    },
+                                  );
+                                },
+                              )
+                              : hasPaletteSwatch
+                              ? Stack(
+                                children: [
+                                  // Fondo con placeholder
+                                  Image.asset(
+                                    'assets/images/placeholder.jpeg',
+                                    fit: BoxFit.cover,
+                                    height: 120,
+                                    width: double.infinity,
+                                  ),
+                                  // Grid de colores con transparencia
+                                  GridView.count(
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    crossAxisCount: 3,
+                                    children:
+                                        palette.colors
+                                            .map(
+                                              (color) => Container(
+                                                color: color.withOpacity(0.6),
+                                              ),
+                                            )
+                                            .toList(),
+                                  ),
+                                ],
                               )
                               : Container(
                                 color:

@@ -626,7 +626,7 @@ class SampleData {
       Palette(
         id: 'palette-001',
         name: 'Space Marines',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF0D407F), // Macragge Blue
           const Color(0xFFC0C5C9), // Runefang Steel
@@ -640,7 +640,7 @@ class SampleData {
       Palette(
         id: 'palette-002',
         name: 'Orks Warband',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF00401A), // Caliban Green
           const Color(0xFFFBB81C), // Averland Sunset
@@ -653,7 +653,7 @@ class SampleData {
       Palette(
         id: 'palette-003',
         name: 'Imperial Guard',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF2A3439), // German Grey (Vallejo)
           const Color(0xFFB7975F), // Zandri Dust
@@ -669,7 +669,7 @@ class SampleData {
       Palette(
         id: 'palette-004',
         name: 'Necron Dynasty',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFFC0C0C0), // Silver
           const Color(0xFF2A3439), // German Grey
@@ -683,7 +683,7 @@ class SampleData {
       Palette(
         id: 'palette-005',
         name: 'Eldar Craftworld',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFFFBB81C), // Averland Sunset
           const Color(0xFF0D407F), // Macragge Blue
@@ -696,7 +696,7 @@ class SampleData {
       Palette(
         id: 'palette-006',
         name: 'T\'au Sept',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF2A3439), // German Grey
           const Color(0xFFC0C0C0), // Silver
@@ -710,7 +710,7 @@ class SampleData {
       Palette(
         id: 'palette-007',
         name: 'Blood Angels',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF9A1115), // Mephiston Red
           const Color(0xFF85714D), // Retributor Armour
@@ -724,7 +724,7 @@ class SampleData {
       Palette(
         id: 'palette-008',
         name: 'Death Guard',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFFB7975F), // Zandri Dust
           const Color(0xFF3B342E), // Typhus Corrosion
@@ -738,7 +738,7 @@ class SampleData {
       Palette(
         id: 'palette-009',
         name: 'Tyranid Hive',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF9A1115), // Mephiston Red
           const Color(0xFF69385C), // Druchii Violet
@@ -752,7 +752,7 @@ class SampleData {
       Palette(
         id: 'palette-010',
         name: 'Adeptus Custodes',
-        imagePath: 'assets/images/placeholder.png',
+        imagePath: 'assets/images/placeholder.jpeg',
         colors: [
           const Color(0xFF85714D), // Retributor Armour
           const Color(0xFF914B28), // Reikland Fleshshade
