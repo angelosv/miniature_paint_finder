@@ -4,6 +4,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:miniature_paint_finder/services/image_upload_service.dart';
+import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:image/image.dart' as img;
 
 // Modelo para representar una marca de pintura
 class PaintBrand {
@@ -22,29 +25,28 @@ class PaintBrand {
 
 class ImageColorPicker extends StatefulWidget {
   final File? imageFile;
-  final Function(List<Color> colors) onColorsSelected;
-  final Function(File)? onImageSelected;
+  final Function(List<Color>) onColorsSelected;
+  final Function(File) onImageSelected;
+  final Function(String)? onImageUploaded;
 
   const ImageColorPicker({
-    Key? key,
+    super.key,
     this.imageFile,
     required this.onColorsSelected,
-    this.onImageSelected,
-  }) : super(key: key);
+    required this.onImageSelected,
+    this.onImageUploaded,
+  });
 
   @override
   State<ImageColorPicker> createState() => _ImageColorPickerState();
 }
 
 class _ImageColorPickerState extends State<ImageColorPicker> {
-  ui.Image? _image;
-  ByteData? _imageBytes;
-  int _imageWidth = 0;
-  int _imageHeight = 0;
-  bool _isLoading = false;
-  List<_ColorPoint> _selectedColors = [];
-  File? _currentImageFile;
   final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+  final ImageUploadService _imageUploadService = ImageUploadService();
+  List<Color> _selectedColors = [];
+  final TransformationController _transformationController = TransformationController();
 
   // Lista de marcas de pinturas disponibles
   final List<PaintBrand> _availableBrands = [
@@ -74,26 +76,9 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     ),
   ];
 
-  // Para zoom
-  final TransformationController _transformationController =
-      TransformationController();
-
   @override
   void initState() {
     super.initState();
-    _currentImageFile = widget.imageFile;
-    if (_currentImageFile != null) {
-      _loadImage();
-    }
-  }
-
-  @override
-  void didUpdateWidget(ImageColorPicker oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.imageFile != oldWidget.imageFile && widget.imageFile != null) {
-      _currentImageFile = widget.imageFile;
-      _loadImage();
-    }
   }
 
   @override
@@ -102,252 +87,208 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     super.dispose();
   }
 
-  Future<void> _getImageFromGallery() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _selectedColors.clear();
-        _currentImageFile = File(image.path);
-      });
-
-      if (widget.onImageSelected != null) {
-        widget.onImageSelected!(File(image.path));
-      }
-
-      _loadImage();
-    }
-  }
-
-  Future<void> _getImageFromCamera() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      setState(() {
-        _selectedColors.clear();
-        _currentImageFile = File(image.path);
-      });
-
-      if (widget.onImageSelected != null) {
-        widget.onImageSelected!(File(image.path));
-      }
-
-      _loadImage();
-    }
-  }
-
-  Future<void> _loadImage() async {
-    if (_currentImageFile == null) return;
-
+  Future<void> _getImage(ImageSource source) async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      final XFile? pickedFile = await _picker.pickImage(source: source);
 
-      final bytes = await _currentImageFile!.readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frameInfo = await codec.getNextFrame();
-      final image = frameInfo.image;
+      if (pickedFile != null) {
+        final File imageFile = File(pickedFile.path);
+        widget.onImageSelected(imageFile);
+        
+        // Subir la imagen
+        setState(() {
+          _isUploading = true;
+          _selectedColors.clear();
+        });
 
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.rawRgba,
+        try {
+          final String imageUrl = await _imageUploadService.uploadImage(imageFile);
+          if (widget.onImageUploaded != null) {
+            widget.onImageUploaded!(imageUrl);
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error uploading image: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } finally {
+          setState(() {
+            _isUploading = false;
+          });
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting image: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      setState(() {
-        _image = image;
-        _imageBytes = byteData;
-        _imageWidth = image.width;
-        _imageHeight = image.height;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading image: $e');
-      setState(() {
-        _isLoading = false;
-      });
     }
-  }
-
-  Color? _getPixelColor(double relativeX, double relativeY) {
-    if (_image == null || _imageBytes == null) return null;
-
-    try {
-      // Calcular la posición del pixel en la imagen original
-      int pixelX = (relativeX * _imageWidth).round();
-      int pixelY = (relativeY * _imageHeight).round();
-
-      // Verificar límites
-      if (pixelX < 0 ||
-          pixelX >= _imageWidth ||
-          pixelY < 0 ||
-          pixelY >= _imageHeight) {
-        return null;
-      }
-
-      // Calcular la posición en bytes (4 bytes por pixel: RGBA)
-      int bytePosition = 4 * (pixelY * _imageWidth + pixelX);
-
-      // Verificar que no nos pasamos del tamaño
-      if (bytePosition < 0 || bytePosition + 3 >= _imageBytes!.lengthInBytes) {
-        return null;
-      }
-
-      // Leer los valores RGBA
-      int r = _imageBytes!.getUint8(bytePosition);
-      int g = _imageBytes!.getUint8(bytePosition + 1);
-      int b = _imageBytes!.getUint8(bytePosition + 2);
-      int a = _imageBytes!.getUint8(bytePosition + 3);
-
-      return Color.fromARGB(a, r, g, b);
-    } catch (e) {
-      print('Error getting pixel color: $e');
-      return null;
-    }
-  }
-
-  String _colorToHex(Color color) {
-    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
   }
 
   void _handleImageTap(TapDownDetails details) {
-    if (_image == null) return;
+    if (widget.imageFile == null) return;
 
     final RenderBox box = context.findRenderObject() as RenderBox;
     final Offset localPosition = box.globalToLocal(details.globalPosition);
+    final Size size = box.size;
+    
+    // Calcular la posición relativa en la imagen
+    final double x = localPosition.dx / size.width;
+    final double y = localPosition.dy / size.height;
 
-    // Obtener el tamaño del widget
-    final renderSize = box.size;
-
-    // Ajustar según el zoom actual
-    final Matrix4 transform = _transformationController.value;
-    final Matrix4 inverseTransform = Matrix4.inverted(transform);
-    final Offset adjustedPosition = MatrixUtils.transformPoint(
-      inverseTransform,
-      localPosition,
-    );
-
-    // Calcular la posición relativa
-    final double relativeX = adjustedPosition.dx / renderSize.width;
-    final double relativeY = adjustedPosition.dy / renderSize.height;
-
-    // Verificar que está dentro de los límites
-    if (relativeX < 0 || relativeX > 1 || relativeY < 0 || relativeY > 1) {
-      return;
-    }
-
-    // Obtener el color
-    final color = _getPixelColor(relativeX, relativeY);
-
-    if (color != null) {
-      setState(() {
-        _selectedColors.add(
-          _ColorPoint(
-            x: relativeX,
-            y: relativeY,
-            color: color,
-            hex: _colorToHex(color),
-          ),
+    // Obtener el color en la posición seleccionada
+    final image = img.decodeImage(widget.imageFile!.readAsBytesSync());
+    if (image != null) {
+      final pixelX = (x * image.width).round();
+      final pixelY = (y * image.height).round();
+      
+      if (pixelX >= 0 && pixelX < image.width && pixelY >= 0 && pixelY < image.height) {
+        final pixel = image.getPixel(pixelX, pixelY);
+        final color = Color.fromARGB(
+          255, // Alpha fijo a 255 (opaco)
+          pixel.r.toInt(), // Red
+          pixel.g.toInt(), // Green
+          pixel.b.toInt(), // Blue
         );
-      });
 
-      widget.onColorsSelected(_selectedColors.map((p) => p.color).toList());
-    }
-  }
-
-  void _removeColor(int index) {
-    setState(() {
-      _selectedColors.removeAt(index);
-    });
-    widget.onColorsSelected(_selectedColors.map((p) => p.color).toList());
-  }
-
-  void _clearColors() {
-    setState(() {
-      _selectedColors.clear();
-    });
-    widget.onColorsSelected([]);
-  }
-
-  void _toggleBrandSelection(String brandId) {
-    setState(() {
-      final index = _availableBrands.indexWhere((brand) => brand.id == brandId);
-      if (index != -1) {
-        _availableBrands[index].isSelected =
-            !_availableBrands[index].isSelected;
+        setState(() {
+          if (_selectedColors.length < 5) { // Limitar a 5 colores
+            _selectedColors.add(color);
+            widget.onColorsSelected(_selectedColors);
+          }
+        });
       }
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Mostrar imagen o selector de imagen
-        _currentImageFile == null
-            ? _buildImageSelector()
-            : _buildImageContent(),
-      ],
-    );
-  }
-
-  Widget _buildImageSelector() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      height: 400,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.image_search,
-            size: 80,
-            color: isDarkMode ? Colors.grey[500] : Colors.grey,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Select an image to find matching colors',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.grey[300] : null,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+    return Column(
+      children: [
+        if (widget.imageFile != null)
+          Stack(
             children: [
-              _buildOptionButton(
-                icon: Icons.photo_camera,
-                label: 'Camera',
-                onTap: _getImageFromCamera,
+              Container(
+                width: double.infinity,
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                    width: 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: GestureDetector(
+                    onTapDown: _handleImageTap,
+                    child: InteractiveViewer(
+                      transformationController: _transformationController,
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      child: Image.file(
+                        widget.imageFile!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(width: 40),
-              _buildOptionButton(
-                icon: Icons.photo_library,
-                label: 'Gallery',
-                onTap: _getImageFromGallery,
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    widget.onImageSelected(File(''));
+                    setState(() {
+                      _selectedColors.clear();
+                    });
+                  },
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.5),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ),
             ],
+          )
+        else
+          Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image,
+                  size: 48,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No image selected',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (widget.imageFile != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Tap on the image to select colors (max 5)',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
           ),
         ],
-      ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildOptionButton(
+              icon: Icons.photo_camera,
+              label: 'Camera',
+              onTap: _isUploading ? null : () => _getImage(ImageSource.camera),
+            ),
+            const SizedBox(width: 40),
+            _buildOptionButton(
+              icon: Icons.photo_library,
+              label: 'Gallery',
+              onTap: _isUploading ? null : () => _getImage(ImageSource.gallery),
+            ),
+          ],
+        ),
+        if (_isUploading)
+          const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: CircularProgressIndicator(),
+          ),
+      ],
     );
   }
 
   Widget _buildOptionButton({
     required IconData icon,
     required String label,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
   }) {
     return InkWell(
       onTap: onTap,
@@ -377,129 +318,6 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     );
   }
 
-  Widget _buildImageContent() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    if (_isLoading) {
-      return const SizedBox(
-        height: 400,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          color: isDarkMode ? Colors.grey[850] : null,
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.photo_camera,
-                  color: isDarkMode ? Colors.grey[300] : null,
-                ),
-                tooltip: 'Take photo',
-                onPressed: _getImageFromCamera,
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.photo_library,
-                  color: isDarkMode ? Colors.grey[300] : null,
-                ),
-                tooltip: 'Select from gallery',
-                onPressed: _getImageFromGallery,
-              ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(
-                  Icons.zoom_out_map,
-                  color: isDarkMode ? Colors.grey[300] : null,
-                ),
-                tooltip: 'Reset zoom',
-                onPressed: () {
-                  setState(() {
-                    _transformationController.value = Matrix4.identity();
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'Use two fingers to zoom • Tap to select a color',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-
-        Container(
-          height: 300,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            border: Border.all(
-              color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-            ),
-          ),
-          child: GestureDetector(
-            onTapDown: _handleImageTap,
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              minScale: 1.0,
-              maxScale: 4.0,
-              child: Stack(
-                children: [
-                  Center(
-                    child: Image.file(_currentImageFile!, fit: BoxFit.contain),
-                  ),
-
-                  for (int i = 0; i < _selectedColors.length; i++)
-                    Positioned(
-                      left:
-                          _selectedColors[i].x *
-                              MediaQuery.of(context).size.width -
-                          10,
-                      top: _selectedColors[i].y * 300 - 10,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _selectedColors[i].color,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${i + 1}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color:
-                                  _isLightColor(_selectedColors[i].color)
-                                      ? Colors.black
-                                      : Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   bool _isLightColor(Color color) {
     return (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) /
             255 >
@@ -521,7 +339,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                   title: const Text('Gallery'),
                   onTap: () {
                     Navigator.pop(context);
-                    _getImageFromGallery();
+                    _getImage(ImageSource.gallery);
                   },
                 ),
                 ListTile(
@@ -529,7 +347,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                   title: const Text('Camera'),
                   onTap: () {
                     Navigator.pop(context);
-                    _getImageFromCamera();
+                    _getImage(ImageSource.camera);
                   },
                 ),
               ],

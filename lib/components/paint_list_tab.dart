@@ -43,6 +43,7 @@ class PaintListTab extends StatefulWidget {
 
 class _PaintListTabState extends State<PaintListTab> {
   File? _imageFile;
+  String? _uploadedImageUrl;
   bool _showColorPicker = false;
   final ImagePicker _picker = ImagePicker();
   Color _selectedColor = Colors.white;
@@ -77,20 +78,16 @@ class _PaintListTabState extends State<PaintListTab> {
     super.dispose();
   }
 
-  Future<void> _getImage(ImageSource source) async {
-    final XFile? pickedFile = await _picker.pickImage(source: source);
-
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        _showColorPicker = true;
-      });
-    }
+  void _onImageSelected(File file) {
+    setState(() {
+      _imageFile = file;
+      _uploadedImageUrl = null;
+    });
   }
 
-  void _onColorPicked(Color color) {
+  void _onImageUploaded(String url) {
     setState(() {
-      _selectedColor = color;
+      _uploadedImageUrl = url;
     });
   }
 
@@ -102,8 +99,7 @@ class _PaintListTabState extends State<PaintListTab> {
         // Clear previous colors and add new ones in a structured format
         _pickedColors.clear();
         for (var color in colors) {
-          final hexCode =
-              '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
+          final hexCode = '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
           _pickedColors.add({
             'color': color,
             'hexCode': hexCode,
@@ -122,6 +118,7 @@ class _PaintListTabState extends State<PaintListTab> {
     setState(() {
       _showColorPicker = false;
       _imageFile = null;
+      _uploadedImageUrl = null;
       _pickedColors.clear();
     });
   }
@@ -498,11 +495,8 @@ class _PaintListTabState extends State<PaintListTab> {
                   content: ImageColorPicker(
                     imageFile: _imageFile,
                     onColorsSelected: _onColorsSelected,
-                    onImageSelected: (file) {
-                      setState(() {
-                        _imageFile = file;
-                      });
-                    },
+                    onImageSelected: _onImageSelected,
+                    onImageUploaded: _onImageUploaded,
                   ),
                 ),
 
