@@ -2,29 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
 class PaintCard extends StatelessWidget {
   final Paint paint;
   final int paletteCount;
+  final Function(Paint)? onTap;
 
-  const PaintCard({super.key, required this.paint, this.paletteCount = 0});
+  const PaintCard({
+    super.key,
+    required this.paint,
+    this.paletteCount = 0,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final isDarkMode = theme.brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppDimensions.marginS),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimensions.radiusL),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Selected paint: ${paint.name}'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
+          if (onTap != null) {
+            onTap!(paint);
+          } else {
+            // Si no hay onTap personalizado, abre el modal de inventario
+            _showPaintInventoryModal(context, paint);
+          }
         },
         child: Padding(
           padding: const EdgeInsets.all(AppDimensions.paddingM),
@@ -64,7 +72,10 @@ class PaintCard extends StatelessWidget {
                               vertical: AppDimensions.paddingXS,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              color:
+                                  isDarkMode
+                                      ? AppTheme.drawerOrange.withOpacity(0.2)
+                                      : AppTheme.primaryBlue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(
                                 AppDimensions.radiusS,
                               ),
@@ -72,7 +83,10 @@ class PaintCard extends StatelessWidget {
                             child: Text(
                               'Used in $paletteCount palettes',
                               style: textTheme.bodySmall?.copyWith(
-                                color: AppTheme.primaryBlue,
+                                color:
+                                    isDarkMode
+                                        ? AppTheme.drawerOrange
+                                        : AppTheme.primaryBlue,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -92,6 +106,240 @@ class PaintCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showPaintInventoryModal(BuildContext context, Paint paint) {
+    // Crear un objeto de inventario temporal para mostrar en el modal
+    final inventoryItem = PaintInventoryItem(
+      paint: paint,
+      stock: paint.id.hashCode % 5, // Stock simulado
+      notes: '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final paintColor = Color(
+          int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+        );
+
+        // Controller para notas
+        final notesController = TextEditingController();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Encabezado con detalles de la pintura
+              Row(
+                children: [
+                  // Color swatch
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: paintColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Detalles de la pintura
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          paint.name,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          paint.brand,
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Used in $paletteCount palettes',
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? AppTheme.drawerOrange
+                                    : AppTheme.primaryBlue,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Separador
+              Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300]),
+
+              const SizedBox(height: 16),
+
+              // Opciones de acción
+              Text(
+                'Quick Actions',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Inventario rápido y opciones de wishlist
+              Row(
+                children: [
+                  // Actualizar inventario
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // Mostrar confirmación
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Added ${paint.name} to inventory'),
+                            action: SnackBarAction(
+                              label: 'VIEW',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => const InventoryScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: const Text('Update Inventory'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor:
+                            isDarkMode
+                                ? AppTheme.drawerOrange
+                                : AppTheme.primaryBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // Añadir a wishlist
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // Mostrar confirmación
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Added ${paint.name} to wishlist'),
+                            action: SnackBarAction(
+                              label: 'VIEW',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) =>
+                                            const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.favorite_border),
+                      label: const Text('Add to Wishlist'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Botón para ir a My Inventory
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.inventory_2),
+                  label: const Text('View in My Inventory'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const InventoryScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isDarkMode
+                            ? AppTheme.drawerOrange
+                            : AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
