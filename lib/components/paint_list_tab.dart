@@ -12,6 +12,8 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
+import 'package:miniature_paint_finder/services/paint_brand_service.dart';
+import 'package:miniature_paint_finder/models/paint_brand.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -44,17 +46,13 @@ class _PaintListTabState extends State<PaintListTab> {
   bool _showColorPicker = false;
   final ImagePicker _picker = ImagePicker();
   Color _selectedColor = Colors.white;
+  final PaintBrandService _paintBrandService = PaintBrandService();
 
   // Track both colors and selected matching paints
   final List<Map<String, dynamic>> _pickedColors = [];
 
   // Lista de marcas de pintura y su estado de selección
-  final List<Map<String, dynamic>> _paintBrands = [
-    {'name': 'Citadel', 'color': null, 'selected': false, 'avatar': 'C'},
-    {'name': 'Vallejo', 'color': null, 'selected': false, 'avatar': 'V'},
-    {'name': 'Army Painter', 'color': null, 'selected': false, 'avatar': 'A'},
-    {'name': 'Scale75', 'color': null, 'selected': false, 'avatar': 'S'},
-  ];
+  List<Map<String, dynamic>> _paintBrands = [];
 
   // Text controller for palette name
   final TextEditingController _paletteNameController = TextEditingController();
@@ -66,12 +64,7 @@ class _PaintListTabState extends State<PaintListTab> {
   @override
   void initState() {
     super.initState();
-    // Inicializar colores para las marcas
-    _paintBrands[0]['color'] = AppTheme.primaryBlue;
-    _paintBrands[1]['color'] = AppTheme.pinkColor;
-    _paintBrands[2]['color'] = AppTheme.purpleColor;
-    _paintBrands[3]['color'] = AppTheme.orangeColor;
-
+    _loadPaintBrands();
     // Verificar si hay argumentos para crear una paleta automáticamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForPaletteCreationArguments();
@@ -483,6 +476,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                 color: brand['color'],
                                                 isSelected: true,
                                                 context: context,
+                                                logoUrl: brand['logoUrl'],
                                               ),
                                             ),
                                           )
@@ -714,6 +708,7 @@ class _PaintListTabState extends State<PaintListTab> {
     required Color color,
     required bool isSelected,
     required BuildContext context,
+    String? logoUrl,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -721,16 +716,14 @@ class _PaintListTabState extends State<PaintListTab> {
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color:
-            isSelected
-                ? (isDarkMode ? color.withOpacity(0.3) : color.withOpacity(0.1))
-                : (isDarkMode ? Colors.grey[850] : Colors.white),
+        color: isSelected
+            ? (isDarkMode ? color.withOpacity(0.3) : color.withOpacity(0.1))
+            : (isDarkMode ? Colors.grey[850] : Colors.white),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-              isSelected
-                  ? color
-                  : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+          color: isSelected
+              ? color
+              : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -738,25 +731,36 @@ class _PaintListTabState extends State<PaintListTab> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            height: 40,
-            width: 40,
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                name.substring(0, 1),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+          if (logoUrl != null)
+            Container(
+              height: 40,
+              width: 40,
+              margin: const EdgeInsets.only(top: 2),
+              child: Image.network(
+                logoUrl,
+                fit: BoxFit.contain,
+              ),
+            )
+          else
+            Container(
+              height: 40,
+              width: 40,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  name.substring(0, 1),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                  ),
                 ),
               ),
             ),
-          ),
           const SizedBox(height: 4),
           Text(
             name,
@@ -1776,7 +1780,7 @@ class _PaintListTabState extends State<PaintListTab> {
     }
   }
 
-  // Update color display in the Selected Colors card
+  // Actualizar el método _buildColorSwatchItem para usar los logos
   Widget _buildColorSwatchItem(Map<String, dynamic> colorData, int index) {
     final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
@@ -1873,8 +1877,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
-                                  color:
-                                      isDarkMode ? Colors.white : Colors.black,
+                                  color: isDarkMode ? Colors.white : Colors.black,
                                 ),
                               ),
                             ],
@@ -1889,20 +1892,14 @@ class _PaintListTabState extends State<PaintListTab> {
                               Icon(
                                 Icons.qr_code,
                                 size: 10,
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[400]
-                                        : Colors.grey[600],
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 barcode,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                                 ),
                               ),
                             ],
@@ -1921,9 +1918,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getMatchColor(
-                      matchPercentage as int,
-                    ).withOpacity(0.2),
+                    color: _getMatchColor(matchPercentage as int).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -2022,12 +2017,6 @@ class _PaintListTabState extends State<PaintListTab> {
           _paintBrands.map((brand) => Map<String, dynamic>.from(brand)),
         );
 
-    // Asignar colores del tema Space Marine
-    tempBrands[0]['color'] = AppTheme.marineBlue;
-    tempBrands[1]['color'] = AppTheme.marineOrange;
-    tempBrands[2]['color'] = AppTheme.marineGold;
-    tempBrands[3]['color'] = AppTheme.marineBlueLight;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2087,73 +2076,60 @@ class _PaintListTabState extends State<PaintListTab> {
                             return GestureDetector(
                               onTap: () {
                                 setModalState(() {
-                                  // Toggle selection
-                                  brand['selected'] =
-                                      !(brand['selected'] as bool);
+                                  brand['selected'] = !(brand['selected'] as bool);
                                 });
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color:
-                                      (brand['selected'] as bool)
-                                          ? (brand['color'] as Color)
-                                              .withOpacity(
-                                                isDarkMode ? 0.3 : 0.1,
-                                              )
-                                          : (isDarkMode
-                                              ? Colors.grey[850]
-                                              : Colors.white),
+                                  color: (brand['selected'] as bool)
+                                      ? (brand['color'] as Color).withOpacity(
+                                          isDarkMode ? 0.3 : 0.1,
+                                        )
+                                      : (isDarkMode
+                                          ? Colors.grey[850]
+                                          : Colors.white),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color:
-                                        (brand['selected'] as bool)
-                                            ? (brand['color'] as Color)
-                                            : (isDarkMode
-                                                ? Colors.grey[700]!
-                                                : Colors.grey[300]!),
+                                    color: (brand['selected'] as bool)
+                                        ? (brand['color'] as Color)
+                                        : (isDarkMode
+                                            ? Colors.grey[700]!
+                                            : Colors.grey[300]!),
                                     width: (brand['selected'] as bool) ? 2 : 1,
                                   ),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Container(
-                                      height: 40,
-                                      width: 40,
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isDarkMode
-                                                ? Colors.grey[800]
-                                                : Colors.grey[200],
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Center(
+                                    if (brand['logoUrl'] != null)
+                                      Container(
+                                        height: 40,
+                                        width: 40,
+                                        margin: const EdgeInsets.only(bottom: 8),
+                                        child: Image.network(
+                                          brand['logoUrl'],
+                                          fit: BoxFit.contain,
+                                        ),
+                                      )
+                                    else
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: brand['color'] as Color,
                                         child: Text(
-                                          (brand['name'] as String).substring(
-                                            0,
-                                            1,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 20,
+                                          (brand['name'] as String)[0],
+                                          style: const TextStyle(
+                                            color: Colors.white,
                                             fontWeight: FontWeight.bold,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey[300]
-                                                    : Colors.grey[700],
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
                                     Flexible(
                                       child: Text(
                                         brand['name'] as String,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w500,
-                                          color:
-                                              isDarkMode ? Colors.white : null,
+                                          color: isDarkMode ? Colors.white : null,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2176,7 +2152,6 @@ class _PaintListTabState extends State<PaintListTab> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            // Actualizar el estado global con las selecciones del modal
                             setState(() {
                               for (int i = 0; i < _paintBrands.length; i++) {
                                 _paintBrands[i]['selected'] =
@@ -2626,5 +2601,46 @@ class _PaintListTabState extends State<PaintListTab> {
         );
       },
     );
+  }
+
+  Future<void> _loadPaintBrands() async {
+    try {
+      final brands = await _paintBrandService.getPaintBrands();
+      setState(() {
+        _paintBrands = brands.map((brand) => {
+          'id': brand.id,
+          'name': brand.name,
+          'logoUrl': brand.logoUrl,
+          'selected': false,
+          'color': _getBrandColor(brand.name),
+        }).toList();
+      });
+    } catch (e) {
+      print('Error loading paint brands: $e');
+      // Fallback a marcas por defecto en caso de error
+      setState(() {
+        _paintBrands = [
+          {'name': 'Citadel', 'color': AppTheme.primaryBlue, 'selected': false, 'logoUrl': null},
+          {'name': 'Vallejo', 'color': AppTheme.pinkColor, 'selected': false, 'logoUrl': null},
+          {'name': 'Army Painter', 'color': AppTheme.purpleColor, 'selected': false, 'logoUrl': null},
+          {'name': 'Scale75', 'color': AppTheme.orangeColor, 'selected': false, 'logoUrl': null},
+        ];
+      });
+    }
+  }
+
+  Color _getBrandColor(String brandName) {
+    switch (brandName.toLowerCase()) {
+      case 'citadel':
+        return AppTheme.primaryBlue;
+      case 'vallejo':
+        return AppTheme.pinkColor;
+      case 'army painter':
+        return AppTheme.purpleColor;
+      case 'scale75':
+        return AppTheme.orangeColor;
+      default:
+        return AppTheme.marineBlue;
+    }
   }
 }
