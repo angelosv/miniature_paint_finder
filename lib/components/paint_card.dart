@@ -24,87 +24,342 @@ class PaintCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppDimensions.marginS),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusL),
-        onTap: () {
-          if (onTap != null) {
-            onTap!(paint);
-          } else {
-            // Si no hay onTap personalizado, abre el modal de inventario
-            _showPaintInventoryModal(context, paint);
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.paddingM),
-          child: Row(
-            children: [
-              Container(
-                width: AppDimensions.iconXXL,
-                height: AppDimensions.iconXXL,
-                decoration: BoxDecoration(
-                  color: Color(
-                    int.parse(paint.colorHex.substring(1, 7), radix: 16) +
-                        0xFF000000,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppDimensions.radiusL),
+              topRight: Radius.circular(AppDimensions.radiusL),
+            ),
+            onTap: () {
+              if (onTap != null) {
+                onTap!(paint);
+              } else {
+                // Si no hay onTap personalizado, abre el modal de inventario
+                _showPaintInventoryModal(context, paint);
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimensions.paddingM),
+              child: Row(
+                children: [
+                  Container(
+                    width: AppDimensions.iconXXL,
+                    height: AppDimensions.iconXXL,
+                    decoration: BoxDecoration(
+                      color: Color(
+                        int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                            0xFF000000,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusS,
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusS),
-                ),
-              ),
-              const SizedBox(width: AppDimensions.marginL),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(paint.name, style: textTheme.titleSmall),
-                    const SizedBox(height: AppDimensions.marginXS),
-                    Row(
+                  const SizedBox(width: AppDimensions.marginL),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          paint.brand,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.secondary,
-                          ),
-                        ),
-                        if (paletteCount > 0) ...[
-                          const SizedBox(width: AppDimensions.marginS),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppDimensions.paddingS,
-                              vertical: AppDimensions.paddingXS,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  isDarkMode
-                                      ? AppTheme.drawerOrange.withOpacity(0.2)
-                                      : AppTheme.primaryBlue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(
-                                AppDimensions.radiusS,
-                              ),
-                            ),
-                            child: Text(
-                              'Used in $paletteCount palettes',
+                        Text(paint.name, style: textTheme.titleSmall),
+                        const SizedBox(height: AppDimensions.marginXS),
+                        Row(
+                          children: [
+                            Text(
+                              paint.brand,
                               style: textTheme.bodySmall?.copyWith(
-                                color:
-                                    isDarkMode
-                                        ? AppTheme.drawerOrange
-                                        : AppTheme.primaryBlue,
-                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.secondary,
                               ),
                             ),
-                          ),
-                        ],
+                            if (paletteCount > 0) ...[
+                              const SizedBox(width: AppDimensions.marginS),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppDimensions.paddingS,
+                                  vertical: AppDimensions.paddingXS,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isDarkMode
+                                          ? AppTheme.drawerOrange.withOpacity(
+                                            0.2,
+                                          )
+                                          : AppTheme.primaryBlue.withOpacity(
+                                            0.1,
+                                          ),
+                                  borderRadius: BorderRadius.circular(
+                                    AppDimensions.radiusS,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Used in $paletteCount palettes',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color:
+                                        isDarkMode
+                                            ? AppTheme.drawerOrange
+                                            : AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppTheme.textGrey,
+                    size: AppDimensions.iconM,
+                  ),
+                ],
               ),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textGrey,
-                size: AppDimensions.iconM,
-              ),
-            ],
+            ),
           ),
-        ),
+          // Añadimos los botones de acción rápida
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.paddingM,
+              0,
+              AppDimensions.paddingM,
+              AppDimensions.paddingM,
+            ),
+            child: Row(
+              children: [
+                // Actualizar inventario
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // Mostrar un diálogo de confirmación con opciones
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          int quantity = 1;
+
+                          return AlertDialog(
+                            title: Text('Update Inventory'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${paint.name} will be added to your inventory.',
+                                ),
+                                SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('Quantity: '),
+                                    SizedBox(width: 8),
+                                    IconButton(
+                                      icon: Icon(Icons.remove_circle_outline),
+                                      onPressed: () {
+                                        if (quantity > 1) {
+                                          quantity--;
+                                          (context as Element).markNeedsBuild();
+                                        }
+                                      },
+                                    ),
+                                    Text(
+                                      '$quantity',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.add_circle_outline),
+                                      onPressed: () {
+                                        quantity++;
+                                        (context as Element).markNeedsBuild();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+
+                                  // Mostrar confirmación con SnackBar
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Added $quantity ${paint.name} to inventory',
+                                      ),
+                                      backgroundColor:
+                                          isDarkMode
+                                              ? AppTheme.drawerOrange
+                                              : AppTheme.primaryBlue,
+                                      action: SnackBarAction(
+                                        label: 'VIEW',
+                                        textColor: Colors.white,
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) =>
+                                                      const InventoryScreen(),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('Confirm'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                    label: const Text(
+                      'Update Inventory',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor:
+                          isDarkMode
+                              ? AppTheme.drawerOrange
+                              : AppTheme.primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      minimumSize: const Size(0, 32),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Añadir a wishlist
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // Mostrar un diálogo para añadir a wishlist
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          final notesController = TextEditingController();
+                          int priority = 2; // Prioridad media por defecto
+
+                          return AlertDialog(
+                            title: Text('Add to Wishlist'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${paint.name} will be added to your wishlist.',
+                                ),
+                                SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Text('Priority: '),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Slider(
+                                        value: priority.toDouble(),
+                                        min: 1,
+                                        max: 3,
+                                        divisions: 2,
+                                        label:
+                                            priority == 1
+                                                ? 'Low'
+                                                : priority == 2
+                                                ? 'Medium'
+                                                : 'High',
+                                        onChanged: (double value) {
+                                          priority = value.toInt();
+                                          (context as Element).markNeedsBuild();
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 16),
+                                TextField(
+                                  controller: notesController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Notes (optional)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+
+                                  // Mostrar confirmación con SnackBar
+                                  final priorityText =
+                                      priority == 1
+                                          ? 'Low'
+                                          : priority == 2
+                                          ? 'Medium'
+                                          : 'High';
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Added ${paint.name} to wishlist with $priorityText priority',
+                                      ),
+                                      backgroundColor: Colors.pink,
+                                      action: SnackBarAction(
+                                        label: 'VIEW',
+                                        textColor: Colors.white,
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) =>
+                                                      const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text('Confirm'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.pink,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.favorite_border, size: 16),
+                    label: const Text(
+                      'Add to Wishlist',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      minimumSize: const Size(0, 32),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -240,23 +495,95 @@ class PaintCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        // Mostrar confirmación
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Added ${paint.name} to inventory'),
-                            action: SnackBarAction(
-                              label: 'VIEW',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => const InventoryScreen(),
+
+                        // Mostrar un diálogo de confirmación con opciones
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            int quantity = 1;
+
+                            return AlertDialog(
+                              title: Text('Update Inventory'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${paint.name} will be added to your inventory.',
                                   ),
-                                );
-                              },
-                            ),
-                          ),
+                                  SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text('Quantity: '),
+                                      SizedBox(width: 8),
+                                      IconButton(
+                                        icon: Icon(Icons.remove_circle_outline),
+                                        onPressed: () {
+                                          if (quantity > 1) {
+                                            quantity--;
+                                            (context as Element)
+                                                .markNeedsBuild();
+                                          }
+                                        },
+                                      ),
+                                      Text(
+                                        '$quantity',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.add_circle_outline),
+                                        onPressed: () {
+                                          quantity++;
+                                          (context as Element).markNeedsBuild();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+
+                                    // Mostrar confirmación con SnackBar
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Added $quantity ${paint.name} to inventory',
+                                        ),
+                                        backgroundColor:
+                                            isDarkMode
+                                                ? AppTheme.drawerOrange
+                                                : AppTheme.primaryBlue,
+                                        action: SnackBarAction(
+                                          label: 'VIEW',
+                                          textColor: Colors.white,
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (context) =>
+                                                        const InventoryScreen(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Text('Confirm'),
+                                ),
+                              ],
+                            );
+                          },
                         );
                       },
                       icon: const Icon(Icons.inventory_2_outlined),
@@ -278,24 +605,107 @@ class PaintCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        // Mostrar confirmación
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Added ${paint.name} to wishlist'),
-                            action: SnackBarAction(
-                              label: 'VIEW',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) =>
-                                            const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+
+                        // Mostrar un diálogo para añadir a wishlist
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            final notesController = TextEditingController();
+                            int priority = 2; // Prioridad media por defecto
+
+                            return AlertDialog(
+                              title: Text('Add to Wishlist'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${paint.name} will be added to your wishlist.',
                                   ),
-                                );
-                              },
-                            ),
-                          ),
+                                  SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Text('Priority: '),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Slider(
+                                          value: priority.toDouble(),
+                                          min: 1,
+                                          max: 3,
+                                          divisions: 2,
+                                          label:
+                                              priority == 1
+                                                  ? 'Low'
+                                                  : priority == 2
+                                                  ? 'Medium'
+                                                  : 'High',
+                                          onChanged: (double value) {
+                                            priority = value.toInt();
+                                            (context as Element)
+                                                .markNeedsBuild();
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 16),
+                                  TextField(
+                                    controller: notesController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Notes (optional)',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+
+                                    // Mostrar confirmación con SnackBar
+                                    final priorityText =
+                                        priority == 1
+                                            ? 'Low'
+                                            : priority == 2
+                                            ? 'Medium'
+                                            : 'High';
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Added ${paint.name} to wishlist with $priorityText priority',
+                                        ),
+                                        backgroundColor: Colors.pink,
+                                        action: SnackBarAction(
+                                          label: 'VIEW',
+                                          textColor: Colors.white,
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (context) =>
+                                                        const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Text('Confirm'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.pink,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         );
                       },
                       icon: const Icon(Icons.favorite_border),
