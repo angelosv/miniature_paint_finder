@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
+import 'package:miniature_paint_finder/components/palette_faction_placeholder.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
@@ -608,6 +609,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final hasSelections =
         palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
 
+    // Check if an actual image exists or if we need to use a placeholder
+    final hasRealImage =
+        palette.imagePath != 'assets/images/placeholder.png' &&
+        palette.imagePath.isNotEmpty;
+
     return Hero(
       tag: 'palette-${palette.id}',
       child: Material(
@@ -640,14 +646,50 @@ class _PaletteScreenState extends State<PaletteScreen> {
                       width: double.infinity,
                       child:
                           hasPaletteSwatch
-                              ? GridView.count(
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisCount: 3,
-                                children:
-                                    palette.colors
-                                        .map((color) => Container(color: color))
-                                        .toList(),
-                              )
+                              ? hasRealImage
+                                  ? Image.asset(
+                                    palette.imagePath,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      // If image fails to load, fall back to the color grid
+                                      return GridView.count(
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        crossAxisCount: 3,
+                                        children:
+                                            palette.colors
+                                                .map(
+                                                  (color) =>
+                                                      Container(color: color),
+                                                )
+                                                .toList(),
+                                      );
+                                    },
+                                  )
+                                  : Stack(
+                                    children: [
+                                      // Show faction-specific placeholder
+                                      PaletteFactionPlaceholder(
+                                        paletteName: palette.name,
+                                      ),
+                                      // Show color grid overlay
+                                      GridView.count(
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        crossAxisCount: 3,
+                                        children:
+                                            palette.colors
+                                                .map(
+                                                  (color) => Container(
+                                                    color: color.withOpacity(
+                                                      0.7,
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                      ),
+                                    ],
+                                  )
                               : Container(
                                 color:
                                     isDarkMode
@@ -887,6 +929,28 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 child: const Text('OK'),
               ),
             ],
+          ),
+    );
+  }
+
+  /// Shows the palette modal with the paints in the palette
+  void showPaletteModal(
+    BuildContext context,
+    String paletteName,
+    List<PaintSelection> paints,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            builder:
+                (_, controller) =>
+                    PaletteModal(paletteName: paletteName, paints: paints),
           ),
     );
   }
