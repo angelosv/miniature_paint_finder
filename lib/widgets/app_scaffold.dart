@@ -50,18 +50,18 @@ class _AppScaffoldState extends State<AppScaffold> {
       _currentIndex = index;
     });
 
-    // Navegar a la pantalla correspondiente usando MaterialPageRoute
+    // Navegar a la pantalla correspondiente usando MaterialPageRoute y pushAndRemoveUntil
     switch (index) {
       case 0:
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 1:
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const PaletteScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 2:

@@ -329,39 +329,41 @@ class SharedDrawer extends StatelessWidget {
   }
 
   void _navigateToScreen(BuildContext context, String? screen) {
-    Navigator.pop(context); // Close drawer
+    // First close the drawer
+    Navigator.pop(context);
 
+    // Skip navigation if we're already on this screen
     if (screen == null || screen == currentScreen) return;
 
     switch (screen) {
       case 'home':
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 'inventory':
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const InventoryScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 'wishlist':
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const WishlistScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 'library':
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LibraryScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 'palettes':
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const PaletteScreen()),
+          (Route<dynamic> route) => false,
         );
         break;
       case 'settings':
