@@ -383,13 +383,11 @@ class _PaintListTabState extends State<PaintListTab> {
               itemCount: paints.length > 10 ? 10 : paints.length,
               itemBuilder: (context, index) {
                 final paint = paints[index];
-                return GestureDetector(
-                  onTap: () => _showPaintDetailsModal(context, paint),
-                  child: PaintCard(
-                    paint: paint,
-                    paletteCount:
-                        3, // Demo count, in real app this would come from the paint model
-                  ),
+                return PaintCard(
+                  paint: paint,
+                  paletteCount:
+                      3, // Demo count, in real app this would come from the paint model
+                  onTap: (paint) => _showPaintDetailsModal(context, paint),
                 );
               },
             ),
@@ -2452,177 +2450,198 @@ class _PaintListTabState extends State<PaintListTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.9,
-          minChildSize: 0.5,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Paint Details',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: isDarkMode ? Colors.white : null,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: isDarkMode ? Colors.white : null,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  Divider(color: isDarkMode ? Colors.grey[700] : null),
-                  const SizedBox(height: 16),
+        // Simular 3 paletas donde se usa esta pintura
+        const paletteCount = 3;
 
-                  // Paint name and brand
-                  Text(
-                    paint.name,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black,
+        return Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF1E2229) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header con título y botón de cierre
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Paint Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      ),
                     ),
-                  ),
-                  Text(
-                    paint.brand,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    IconButton(
+                      icon: Icon(
+                        Icons.close,
+                        color: isDarkMode ? Colors.white : Colors.black54,
+                      ),
+                      onPressed: () => Navigator.pop(context),
                     ),
-                  ),
+                  ],
+                ),
+              ),
 
-                  const SizedBox(height: 24),
+              // Separador
+              Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300]),
 
-                  // Color swatch and code
-                  Row(
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Color(
-                            int.parse(
-                                  paint.colorHex.substring(1, 7),
-                                  radix: 16,
-                                ) +
-                                0xFF000000,
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Nombre de la pintura y marca
+                        Text(
+                          paint.name,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black,
                           ),
-                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Color Code:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                            ),
+                        Text(
+                          paint.brand,
+                          style: TextStyle(
+                            fontSize: 20,
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                           ),
-                          Text(
-                            paint.colorHex,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
 
-                  const SizedBox(height: 24),
+                        const SizedBox(height: 32),
 
-                  // Usage in palettes
-                  Text(
-                    'Used in 3 palettes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // List of palettes using this paint
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: 3, // Demo count
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Color(
-                                int.parse(
-                                      paint.colorHex.substring(1, 7),
-                                      radix: 16,
-                                    ) +
-                                    0xFF000000,
-                              ).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.palette,
-                                color: Color(
-                                  int.parse(
-                                        paint.colorHex.substring(1, 7),
-                                        radix: 16,
-                                      ) +
-                                      0xFF000000,
-                                ),
-                                size: 20,
+                        // Código de color
+                        Row(
+                          children: [
+                            Text(
+                              'Color Code:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[700],
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Text(
+                              paint.colorHex,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDarkMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Título de uso en paletas
+                        Text(
+                          'Used in $paletteCount palettes',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
                           ),
-                          title: Text(
-                            'Palette ${index + 1}',
-                            style: TextStyle(
-                              color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Lista de paletas
+                        ...List.generate(
+                          paletteCount,
+                          (index) => Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              children: [
+                                // Icono de paleta con color de fondo
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Color(
+                                      int.parse(
+                                            paint.colorHex.substring(1, 7),
+                                            radix: 16,
+                                          ) +
+                                          0xFF000000,
+                                    ).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.palette,
+                                      color: Color(
+                                        int.parse(
+                                              paint.colorHex.substring(1, 7),
+                                              radix: 16,
+                                            ) +
+                                            0xFF000000,
+                                      ),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(width: 16),
+
+                                // Nombre y fecha de la paleta
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Palette ${index + 1}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Created on ${DateTime.now().subtract(Duration(days: index + 1)).year}-'
+                                        '${DateTime.now().subtract(Duration(days: index + 1)).month.toString().padLeft(2, '0')}-'
+                                        '${DateTime.now().subtract(Duration(days: index + 1)).day.toString().padLeft(2, '0')}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          subtitle: Text(
-                            'Created on ${DateTime.now().subtract(Duration(days: index)).toString().split(' ')[0]}',
-                            style: TextStyle(
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                            ),
-                          ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );
