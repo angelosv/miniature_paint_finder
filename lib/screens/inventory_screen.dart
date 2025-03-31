@@ -408,6 +408,274 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return AppScaffold(
+      scaffoldKey: _scaffoldKey,
+      selectedIndex: -1, // Not a bottom nav item
+      title: 'My Inventory',
+      body: _buildBody(context, isDarkMode),
+      drawer: _buildDrawer(isDarkMode),
+    );
+  }
+
+  Widget _buildDrawer(bool isDarkMode) {
+    // Create list of drawer items similar to HomeScreen
+    final List<Map<String, dynamic>> _drawerItems = [
+      {
+        'icon': Icons.home_outlined,
+        'text': 'Home',
+        'index': -1,
+        'screen': 'home',
+      },
+      {
+        'icon': Icons.inventory_2_outlined,
+        'text': 'My Inventory',
+        'index': -1,
+        'screen': 'inventory',
+      },
+      {
+        'icon': Icons.favorite_border,
+        'text': 'Wishlist',
+        'index': -1,
+        'screen': 'wishlist',
+      },
+      {
+        'icon': Icons.auto_awesome_mosaic,
+        'text': 'Library',
+        'index': -1,
+        'screen': 'library',
+      },
+      {
+        'icon': Icons.palette_outlined,
+        'text': 'My Palettes',
+        'index': -1,
+        'screen': 'palettes',
+      },
+    ];
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        drawerTheme: DrawerThemeData(
+          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+          scrimColor: Colors.black54,
+        ),
+      ),
+      child: Drawer(
+        elevation: 10,
+        width: MediaQuery.of(context).size.width * 0.75,
+        backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+            boxShadow:
+                isDarkMode
+                    ? [
+                      BoxShadow(
+                        color: Colors.black26,
+                        offset: const Offset(1, 0),
+                        blurRadius: 4,
+                        spreadRadius: 0,
+                      ),
+                    ]
+                    : [],
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Drawer header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 32,
+                    horizontal: 24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            isDarkMode
+                                ? Colors.black.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MiniPaint',
+                        style: AppTheme.headingStyle.copyWith(
+                          fontSize: 28,
+                          color:
+                              isDarkMode ? Colors.white : AppTheme.marineBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color:
+                              isDarkMode
+                                  ? Colors.white.withOpacity(0.1)
+                                  : AppTheme.marineBlue.withOpacity(0.05),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.color_lens_outlined,
+                              size: 18,
+                              color:
+                                  isDarkMode
+                                      ? AppTheme.marineGold
+                                      : AppTheme.marineBlue,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Find your perfect paint',
+                              style: AppTheme.buttonStyle.copyWith(
+                                fontSize: 14,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white.withOpacity(0.9)
+                                        : AppTheme.marineBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Menu items
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _drawerItems.length,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _drawerItems[index];
+                      final bool isActive = item['screen'] == 'inventory';
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _navigateToScreen(item['screen']),
+                          splashColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.2),
+                          highlightColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color:
+                                  isActive
+                                      ? isDarkMode
+                                          ? AppTheme.marineGold.withOpacity(
+                                            0.15,
+                                          )
+                                          : AppTheme.marineBlue.withOpacity(0.1)
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item['icon'],
+                                  size: 22,
+                                  color:
+                                      isActive
+                                          ? isDarkMode
+                                              ? AppTheme.marineGold
+                                              : AppTheme.marineBlue
+                                          : isDarkMode
+                                          ? Colors.white.withOpacity(0.9)
+                                          : Colors.black.withOpacity(0.75),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  item['text'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight:
+                                        isActive
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                    color:
+                                        isActive
+                                            ? isDarkMode
+                                                ? AppTheme.marineGold
+                                                : AppTheme.marineBlue
+                                            : isDarkMode
+                                            ? Colors.white
+                                            : Colors.black.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToScreen(String? screen) {
+    Navigator.pop(context); // Close drawer
+
+    if (screen == null) return;
+
+    switch (screen) {
+      case 'home':
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 'inventory':
+        // Already on inventory screen
+        break;
+      case 'wishlist':
+        Navigator.pushNamed(context, '/wishlist');
+        break;
+      case 'library':
+        Navigator.pushNamed(context, '/library');
+        break;
+      case 'palettes':
+        Navigator.pushNamed(context, '/palettes');
+        break;
+    }
+  }
+
+  Widget _buildBody(BuildContext context, bool isDarkMode) {
     final headerColor =
         isDarkMode
             ? AppTheme.marineBlue.withOpacity(0.3)
@@ -416,551 +684,344 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
     final summaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
 
-    return AppScaffold(
-      scaffoldKey: _scaffoldKey,
-      drawer: Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-          drawerTheme: DrawerThemeData(
-            backgroundColor:
-                isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-            scrimColor: Colors.black54,
-          ),
-        ),
-        child: Drawer(
-          elevation: 10,
-          width: MediaQuery.of(context).size.width * 0.75,
-          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-              boxShadow:
-                  isDarkMode
-                      ? [
-                        BoxShadow(
-                          color: Colors.black26,
-                          offset: const Offset(1, 0),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ]
-                      : [],
-            ),
-            child: SafeArea(
-              child: ListView(
-                padding: EdgeInsets.zero,
+    return Column(
+      children: [
+        // Barra de búsqueda y filtro
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search inventory...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  suffixIcon:
+                      _searchController.text.isNotEmpty
+                          ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                            },
+                          )
+                          : null,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  // Cabecera del Drawer
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 32,
-                      horizontal: 24,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              isDarkMode
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.grey.withOpacity(0.1),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MiniPaint Finder',
-                          style: TextStyle(
-                            color:
-                                isDarkMode ? Colors.white : AppTheme.marineBlue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Your painting companion',
-                          style: TextStyle(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Filtro para mostrar solo items en stock
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _onlyShowInStock,
+                        onChanged: (value) {
+                          _toggleStockFilter(value ?? false);
+                        },
+                        activeColor: AppTheme.primaryBlue,
+                      ),
+                      const Text('Only show in-stock items'),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // Opciones de navegación
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.home_outlined,
-                    title: 'Home',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.palette_outlined,
-                    title: 'Palettes',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, '/palettes');
-                    },
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Divider(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      thickness: 1,
-                    ),
-                  ),
-
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.format_paint_outlined,
-                    title: 'Library',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/library');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.inventory_2_outlined,
-                    title: 'My Inventory',
-                    isSelected: true,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.favorite_outline,
-                    title: 'Wishlist',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/wishlist');
-                    },
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Divider(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      thickness: 1,
-                    ),
-                  ),
-
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      // Navigate to settings
+                  const Spacer(),
+                  // Selector de tamaño de página
+                  DropdownButton<int>(
+                    value: _currentPageSize,
+                    items:
+                        _pageSizeOptions.map((size) {
+                          return DropdownMenuItem<int>(
+                            value: size,
+                            child: Text('Show $size'),
+                          );
+                        }).toList(),
+                    onChanged: (size) {
+                      if (size != null) {
+                        _changePageSize(size);
+                      }
                     },
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
-      ),
-      title: 'My Inventory',
-      selectedIndex: 2, // Profile tab since it's in profile section
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.filter_list),
-          onPressed: () {
-            setState(() {
-              _onlyShowInStock = !_onlyShowInStock;
-              _filterInventory();
-            });
-          },
-          tooltip: 'Filter in-stock items',
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: _showAddNewPaintDialog,
-          tooltip: 'Add new paint',
-        ),
-      ],
-      body: Column(
-        children: [
-          // Barra de búsqueda y filtro
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search inventory...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                              },
-                            )
-                            : null,
-                  ),
+
+        // Resumen del inventario
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_filteredInventory.length} paints in inventory',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: summaryTextColor,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    // Filtro para mostrar solo items en stock
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _onlyShowInStock,
-                          onChanged: (value) {
-                            _toggleStockFilter(value ?? false);
-                          },
-                          activeColor: AppTheme.primaryBlue,
-                        ),
-                        const Text('Only show in-stock items'),
-                      ],
-                    ),
-                    const Spacer(),
-                    // Selector de tamaño de página
-                    DropdownButton<int>(
-                      value: _currentPageSize,
-                      items:
-                          _pageSizeOptions.map((size) {
-                            return DropdownMenuItem<int>(
-                              value: size,
-                              child: Text('Show $size'),
-                            );
-                          }).toList(),
-                      onChanged: (size) {
-                        if (size != null) {
-                          _changePageSize(size);
-                        }
-                      },
-                    ),
-                  ],
+              ),
+              Text(
+                'Total in stock: ${_filteredInventory.fold<int>(0, (sum, item) => sum + item.stock)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: summaryTextColor,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
 
-          // Resumen del inventario
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${_filteredInventory.length} paints in inventory',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: summaryTextColor,
-                  ),
-                ),
-                Text(
-                  'Total in stock: ${_filteredInventory.fold<int>(0, (sum, item) => sum + item.stock)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: summaryTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        const SizedBox(height: 8),
 
-          const SizedBox(height: 8),
-
-          // Tabla de inventario
-          Expanded(
-            child:
-                _paginatedInventory.isEmpty
-                    ? Center(
-                      child: Text(
-                        'No paints in inventory',
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white70 : Colors.black54,
-                        ),
+        // Tabla de inventario
+        Expanded(
+          child:
+              _paginatedInventory.isEmpty
+                  ? Center(
+                    child: Text(
+                      'No paints in inventory',
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white70 : Colors.black54,
                       ),
-                    )
-                    : ListView(
-                      children: [
-                        // Encabezados de la tabla
-                        Container(
-                          color: headerColor,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16,
-                          ),
-                          child: Row(
-                            children: [
-                              // Color
-                              const SizedBox(width: 32),
-                              // Nombre
-                              Expanded(
-                                flex: 3,
-                                child: GestureDetector(
-                                  onTap: () => _changeSortColumn('name'),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        'Name',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (_sortColumn == 'name')
-                                        Icon(
-                                          _isAscending
-                                              ? Icons.arrow_upward
-                                              : Icons.arrow_downward,
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Marca
-                              Expanded(
-                                flex: 2,
-                                child: GestureDetector(
-                                  onTap: () => _changeSortColumn('brand'),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        'Brand',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (_sortColumn == 'brand')
-                                        Icon(
-                                          _isAscending
-                                              ? Icons.arrow_upward
-                                              : Icons.arrow_downward,
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Categoría
-                              Expanded(
-                                flex: 2,
-                                child: GestureDetector(
-                                  onTap: () => _changeSortColumn('category'),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        'Category',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (_sortColumn == 'category')
-                                        Icon(
-                                          _isAscending
-                                              ? Icons.arrow_upward
-                                              : Icons.arrow_downward,
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Stock
-                              SizedBox(
-                                width: 60,
-                                child: GestureDetector(
-                                  onTap: () => _changeSortColumn('stock'),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        'Stock',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (_sortColumn == 'stock')
-                                        Icon(
-                                          _isAscending
-                                              ? Icons.arrow_upward
-                                              : Icons.arrow_downward,
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Columna de acciones
-                              const SizedBox(width: 40),
-                            ],
-                          ),
+                    ),
+                  )
+                  : ListView(
+                    children: [
+                      // Encabezados de la tabla
+                      Container(
+                        color: headerColor,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
                         ),
-
-                        // Filas de la tabla
-                        ...List.generate(_paginatedInventory.length, (index) {
-                          final item = _paginatedInventory[index];
-                          final paint = item.paint;
-
-                          final paintColor = Color(
-                            int.parse(
-                                  paint.colorHex.substring(1, 7),
-                                  radix: 16,
-                                ) +
-                                0xFF000000,
-                          );
-
-                          return InkWell(
-                            onTap: () => _showInventoryItemOptions(item),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: borderColor,
-                                    width: 1,
-                                  ),
+                        child: Row(
+                          children: [
+                            // Color
+                            const SizedBox(width: 32),
+                            // Nombre
+                            Expanded(
+                              flex: 3,
+                              child: GestureDetector(
+                                onTap: () => _changeSortColumn('name'),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Name',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (_sortColumn == 'name')
+                                      Icon(
+                                        _isAscending
+                                            ? Icons.arrow_upward
+                                            : Icons.arrow_downward,
+                                        size: 16,
+                                      ),
+                                  ],
                                 ),
-                                color:
-                                    index % 2 == 0
-                                        ? Colors.transparent
-                                        : alternateRowColor,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Color swatch
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: paintColor,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: borderColor,
-                                        width: 1,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // Nombre
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      paint.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            isDarkMode
-                                                ? AppTheme.marineOrange
-                                                : Theme.of(
-                                                  context,
-                                                ).primaryColor,
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Marca
-                                  Expanded(flex: 2, child: Text(paint.brand)),
-
-                                  // Categoría
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(paint.category),
-                                  ),
-
-                                  // Stock
-                                  SizedBox(
-                                    width: 60,
-                                    child: Text(
-                                      '${item.stock}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            item.stock > 0
-                                                ? Colors.green[isDarkMode
-                                                    ? 400
-                                                    : 600]
-                                                : Colors.red[isDarkMode
-                                                    ? 400
-                                                    : 600],
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Acciones
-                                  SizedBox(
-                                    width: 40,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.more_vert),
-                                      onPressed:
-                                          () => _showInventoryItemOptions(item),
-                                      tooltip: 'Options',
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
-                          );
-                        }),
-                      ],
-                    ),
-          ),
+                            // Marca
+                            Expanded(
+                              flex: 2,
+                              child: GestureDetector(
+                                onTap: () => _changeSortColumn('brand'),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Brand',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (_sortColumn == 'brand')
+                                      Icon(
+                                        _isAscending
+                                            ? Icons.arrow_upward
+                                            : Icons.arrow_downward,
+                                        size: 16,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Categoría
+                            Expanded(
+                              flex: 2,
+                              child: GestureDetector(
+                                onTap: () => _changeSortColumn('category'),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Category',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (_sortColumn == 'category')
+                                      Icon(
+                                        _isAscending
+                                            ? Icons.arrow_upward
+                                            : Icons.arrow_downward,
+                                        size: 16,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Stock
+                            SizedBox(
+                              width: 60,
+                              child: GestureDetector(
+                                onTap: () => _changeSortColumn('stock'),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Stock',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (_sortColumn == 'stock')
+                                      Icon(
+                                        _isAscending
+                                            ? Icons.arrow_upward
+                                            : Icons.arrow_downward,
+                                        size: 16,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Columna de acciones
+                            const SizedBox(width: 40),
+                          ],
+                        ),
+                      ),
 
-          // Paginación
-          if (_totalPages > 1)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: PaginationControls(
-                currentPage: _currentPage,
-                totalPages: _totalPages,
-                onPageChanged: _goToPage,
-              ),
+                      // Filas de la tabla
+                      ...List.generate(_paginatedInventory.length, (index) {
+                        final item = _paginatedInventory[index];
+                        final paint = item.paint;
+
+                        final paintColor = Color(
+                          int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                              0xFF000000,
+                        );
+
+                        return InkWell(
+                          onTap: () => _showInventoryItemOptions(item),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: borderColor,
+                                  width: 1,
+                                ),
+                              ),
+                              color:
+                                  index % 2 == 0
+                                      ? Colors.transparent
+                                      : alternateRowColor,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
+                            child: Row(
+                              children: [
+                                // Color swatch
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: paintColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: borderColor,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+
+                                // Nombre
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    paint.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isDarkMode
+                                              ? AppTheme.marineOrange
+                                              : Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ),
+
+                                // Marca
+                                Expanded(flex: 2, child: Text(paint.brand)),
+
+                                // Categoría
+                                Expanded(flex: 2, child: Text(paint.category)),
+
+                                // Stock
+                                SizedBox(
+                                  width: 60,
+                                  child: Text(
+                                    '${item.stock}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          item.stock > 0
+                                              ? Colors.green[isDarkMode
+                                                  ? 400
+                                                  : 600]
+                                              : Colors.red[isDarkMode
+                                                  ? 400
+                                                  : 600],
+                                    ),
+                                  ),
+                                ),
+
+                                // Acciones
+                                SizedBox(
+                                  width: 40,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.more_vert),
+                                    onPressed:
+                                        () => _showInventoryItemOptions(item),
+                                    tooltip: 'Options',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+        ),
+
+        // Paginación
+        if (_totalPages > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: PaginationControls(
+              currentPage: _currentPage,
+              totalPages: _totalPages,
+              onPageChanged: _goToPage,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -1084,74 +1145,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         );
       },
-    );
-  }
-
-  // Construye un elemento del menú lateral con el estilo adecuado
-  Widget _buildDrawerItem({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    required bool isDarkMode,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: (isDarkMode ? AppTheme.marineGold : AppTheme.marineBlue)
-              .withOpacity(0.2),
-          highlightColor: (isDarkMode
-                  ? AppTheme.marineGold
-                  : AppTheme.marineBlue)
-              .withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? (isDarkMode
-                          ? AppTheme.marineGold.withOpacity(0.2)
-                          : AppTheme.marineBlue.withOpacity(0.1))
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 24,
-                  color:
-                      isSelected
-                          ? (isDarkMode
-                              ? AppTheme.marineGold
-                              : AppTheme.marineBlue)
-                          : (isDarkMode ? Colors.white70 : Colors.grey[700]),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                    color:
-                        isSelected
-                            ? (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            : (isDarkMode ? Colors.white : Colors.black87),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

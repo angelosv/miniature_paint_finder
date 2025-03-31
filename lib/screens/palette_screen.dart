@@ -6,6 +6,7 @@ import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
@@ -451,282 +452,242 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use the controller from provider
-    _paletteController = context.watch<PaletteController>();
-
-    final palettes = _paletteController.palettes;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final isLoading = _paletteController.isLoading;
-    final error = _paletteController.error;
-
-    print(
-      '🖥️ PaletteScreen.build - Palettes: ${palettes.length}, Loading: $isLoading, Error: $error',
-    );
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    _paletteController = Provider.of<PaletteController>(context);
 
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      drawer: Theme(
-        data: Theme.of(context).copyWith(
-          canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-          drawerTheme: DrawerThemeData(
-            backgroundColor:
-                isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-            scrimColor: Colors.black54,
-          ),
-        ),
-        child: Drawer(
-          elevation: 10,
-          width: MediaQuery.of(context).size.width * 0.75,
-          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-              boxShadow:
-                  isDarkMode
-                      ? [
-                        BoxShadow(
-                          color: Colors.black26,
-                          offset: const Offset(1, 0),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ]
-                      : [],
-            ),
-            child: SafeArea(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  // Cabecera del Drawer
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 32,
-                      horizontal: 24,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          isDarkMode ? AppTheme.marineBlueDark : Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              isDarkMode
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.grey.withOpacity(0.1),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MiniPaint Finder',
-                          style: TextStyle(
-                            color:
-                                isDarkMode ? Colors.white : AppTheme.marineBlue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Your painting companion',
-                          style: TextStyle(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Opciones de navegación
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.home_outlined,
-                    title: 'Home',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.palette_outlined,
-                    title: 'Palettes',
-                    isSelected: true,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Divider(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      thickness: 1,
-                    ),
-                  ),
-
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.format_paint_outlined,
-                    title: 'Library',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/library');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.inventory_2_outlined,
-                    title: 'My Inventory',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/inventory');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.favorite_outline,
-                    title: 'Wishlist',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/wishlist');
-                    },
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Divider(
-                      color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      thickness: 1,
-                    ),
-                  ),
-
-                  _buildDrawerItem(
-                    context: context,
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    isSelected: false,
-                    isDarkMode: isDarkMode,
-                    onTap: () {
-                      Navigator.pop(context);
-                      // Navigate to settings
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      selectedIndex: 1, // Esta es la página Palettes
       title: 'My Palettes',
-      showBackButton: false,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () {
-            print('🔄 Manual reload triggered');
-            _paletteController.loadPalettes();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Reloading palettes...')),
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Search coming soon')));
-          },
-        ),
-      ],
-      body: _buildBody(context, palettes, isLoading, error, isDarkMode),
+      selectedIndex: 1, // Palette tab
+      body: _buildBody(context, isDarkMode),
+      drawer: _buildDrawer(isDarkMode),
     );
   }
 
-  // Construye un elemento del menú lateral con el estilo adecuado
-  Widget _buildDrawerItem({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    required bool isDarkMode,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: (isDarkMode ? AppTheme.marineGold : AppTheme.marineBlue)
-              .withOpacity(0.2),
-          highlightColor: (isDarkMode
-                  ? AppTheme.marineGold
-                  : AppTheme.marineBlue)
-              .withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? (isDarkMode
-                          ? AppTheme.marineGold.withOpacity(0.2)
-                          : AppTheme.marineBlue.withOpacity(0.1))
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+  Widget _buildDrawer(bool isDarkMode) {
+    // Create list of drawer items similar to HomeScreen
+    final List<Map<String, dynamic>> _drawerItems = [
+      {
+        'icon': Icons.home_outlined,
+        'text': 'Home',
+        'index': -1,
+        'screen': 'home',
+      },
+      {
+        'icon': Icons.inventory_2_outlined,
+        'text': 'My Inventory',
+        'index': -1,
+        'screen': 'inventory',
+      },
+      {
+        'icon': Icons.favorite_border,
+        'text': 'Wishlist',
+        'index': -1,
+        'screen': 'wishlist',
+      },
+      {
+        'icon': Icons.auto_awesome_mosaic,
+        'text': 'Library',
+        'index': -1,
+        'screen': 'library',
+      },
+      {
+        'icon': Icons.palette_outlined,
+        'text': 'My Palettes',
+        'index': -1,
+        'screen': 'palettes',
+      },
+    ];
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        drawerTheme: DrawerThemeData(
+          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+          scrimColor: Colors.black54,
+        ),
+      ),
+      child: Drawer(
+        elevation: 10,
+        width: MediaQuery.of(context).size.width * 0.75,
+        backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+            boxShadow:
+                isDarkMode
+                    ? [
+                      BoxShadow(
+                        color: Colors.black26,
+                        offset: const Offset(1, 0),
+                        blurRadius: 4,
+                        spreadRadius: 0,
+                      ),
+                    ]
+                    : [],
+          ),
+          child: SafeArea(
+            child: Column(
               children: [
-                Icon(
-                  icon,
-                  size: 24,
-                  color:
-                      isSelected
-                          ? (isDarkMode
-                              ? AppTheme.marineGold
-                              : AppTheme.marineBlue)
-                          : (isDarkMode ? Colors.white70 : Colors.grey[700]),
+                // Drawer header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 32,
+                    horizontal: 24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            isDarkMode
+                                ? Colors.black.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MiniPaint',
+                        style: AppTheme.headingStyle.copyWith(
+                          fontSize: 28,
+                          color:
+                              isDarkMode ? Colors.white : AppTheme.marineBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color:
+                              isDarkMode
+                                  ? Colors.white.withOpacity(0.1)
+                                  : AppTheme.marineBlue.withOpacity(0.05),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.color_lens_outlined,
+                              size: 18,
+                              color:
+                                  isDarkMode
+                                      ? AppTheme.marineGold
+                                      : AppTheme.marineBlue,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Find your perfect paint',
+                              style: AppTheme.buttonStyle.copyWith(
+                                fontSize: 14,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white.withOpacity(0.9)
+                                        : AppTheme.marineBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                    color:
-                        isSelected
-                            ? (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            : (isDarkMode ? Colors.white : Colors.black87),
+
+                const SizedBox(height: 8),
+
+                // Menu items
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _drawerItems.length,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _drawerItems[index];
+                      final bool isActive = item['screen'] == 'palettes';
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _navigateToScreen(item['screen']),
+                          splashColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.2),
+                          highlightColor: (isDarkMode
+                                  ? AppTheme.marineGold
+                                  : AppTheme.marineBlue)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color:
+                                  isActive
+                                      ? isDarkMode
+                                          ? AppTheme.marineGold.withOpacity(
+                                            0.15,
+                                          )
+                                          : AppTheme.marineBlue.withOpacity(0.1)
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item['icon'],
+                                  size: 22,
+                                  color:
+                                      isActive
+                                          ? isDarkMode
+                                              ? AppTheme.marineGold
+                                              : AppTheme.marineBlue
+                                          : isDarkMode
+                                          ? Colors.white.withOpacity(0.9)
+                                          : Colors.black.withOpacity(0.75),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  item['text'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight:
+                                        isActive
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                    color:
+                                        isActive
+                                            ? isDarkMode
+                                                ? AppTheme.marineGold
+                                                : AppTheme.marineBlue
+                                            : isDarkMode
+                                            ? Colors.white
+                                            : Colors.black.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -737,14 +698,36 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
   }
 
-  // Método para construir el body
-  Widget _buildBody(
-    BuildContext context,
-    List<Palette> palettes,
-    bool isLoading,
-    String? error,
-    bool isDarkMode,
-  ) {
+  void _navigateToScreen(String? screen) {
+    Navigator.pop(context); // Close drawer
+
+    if (screen == null) return;
+
+    switch (screen) {
+      case 'home':
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 'inventory':
+        Navigator.pushNamed(context, '/inventory');
+        break;
+      case 'wishlist':
+        Navigator.pushNamed(context, '/wishlist');
+        break;
+      case 'library':
+        Navigator.pushNamed(context, '/library');
+        break;
+      case 'palettes':
+        // Already on palettes screen
+        break;
+    }
+  }
+
+  Widget _buildBody(BuildContext context, bool isDarkMode) {
+    // Use the controller from provider to get data
+    final palettes = _paletteController.palettes;
+    final isLoading = _paletteController.isLoading;
+    final error = _paletteController.error;
+
     return RefreshIndicator(
       onRefresh: () => _paletteController.loadPalettes(),
       child: Column(
@@ -876,265 +859,54 @@ class _PaletteScreenState extends State<PaletteScreen> {
   }
 
   Widget _buildPaletteCard(Palette palette) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final hasPaletteSwatch = palette.colors.isNotEmpty;
-    final hasSelections =
-        palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
-
-    print('🎨 Building palette card: ${palette.name} (${palette.id})');
-    print('   Image path: ${palette.imagePath}');
-    print('   Has swatch: $hasPaletteSwatch (${palette.colors.length} colors)');
-    print('   Has selections: $hasSelections');
-
-    return Hero(
-      tag: 'palette-${palette.id}',
-      child: Material(
-        borderRadius: BorderRadius.circular(16),
-        elevation: 2,
-        shadowColor: isDarkMode ? Colors.black54 : Colors.black26,
-        child: InkWell(
-          onTap: () {
-            showPaletteModal(
-              context,
-              palette.name,
-              palette.paintSelections ?? [],
-            );
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Palette image or color swatch
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                child: Stack(
-                  children: [
-                    // Background image or color grid
-                    Container(
-                      height: 120,
-                      width: double.infinity,
-                      child:
-                          hasPaletteSwatch
-                              ? GridView.count(
-                                physics: const NeverScrollableScrollPhysics(),
-                                crossAxisCount: 3,
-                                children:
-                                    palette.colors
-                                        .map((color) => Container(color: color))
-                                        .toList(),
-                              )
-                              : Container(
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                child: Center(
-                                  child: Icon(
-                                    Icons.palette_outlined,
-                                    size: 40,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[700]
-                                            : Colors.grey[400],
-                                  ),
-                                ),
-                              ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showPaletteDetails(palette),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              child: Image.network(
+                palette.imageUrl,
+                fit: BoxFit.cover,
+                height: 120,
+                width: double.infinity,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    palette.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-
-                    // Badge overlays
-                    if (!hasPaletteSwatch)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.color_lens,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Processing',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    // Paint selections badge
-                    if (hasSelections)
-                      Positioned(
-                        bottom: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).primaryColor.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.brush,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${palette.paintSelections!.length} Paints',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // Palette info
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        palette.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      // Date created
-                      Text(
-                        _formatDate(palette.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                      const Spacer(),
-                      // Color count and delete button
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[800]
-                                      : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.palette,
-                                  size: 14,
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${palette.colors.length}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          InkWell(
-                            onTap: () => _deletePalette(palette),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.delete_outline,
-                                size: 18,
-                                color:
-                                    isDarkMode
-                                        ? Colors.red[300]
-                                        : Colors.red[400],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${palette.colors.length} colors',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays < 1) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
-    } else {
-      final months = (difference.inDays / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'} ago';
-    }
+  void _showPaletteDetails(Palette palette) {
+    // Implement the logic to show palette details
   }
 
   // Método para abrir la búsqueda en la biblioteca de pinturas
