@@ -14,6 +14,9 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 import 'package:miniature_paint_finder/models/paint_brand.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -1061,23 +1064,76 @@ class _PaintListTabState extends State<PaintListTab> {
                       child: SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Palette "${_paletteNameController.text}" saved!',
+                          onPressed: () async {
+                            try {
+                              // Obtener el token de Firebase
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) {
+                                throw Exception('Usuario no autenticado');
+                              }
+                              final token = await user.getIdToken();
+
+                              // Primer POST para subir la imagen
+                              final uploadResponse = await http.post(
+                                Uri.parse('https://paints-api.reachu.io/api/image/upload'),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer $token',
+                                },
+                                body: jsonEncode({
+                                  'image_path': _uploadedImageUrl,
+                                }),
+                              );
+
+                              final uploadData = jsonDecode(uploadResponse.body);
+                              if (uploadData['executed'] != true) {
+                                throw Exception('Error al subir la imagen: ${uploadData['message']}');
+                              }
+
+                              // Segundo POST para crear la paleta
+                              final paletteResponse = await http.post(
+                                Uri.parse('https://paints-api.reachu.io/api/palettes'),
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': 'Bearer $token',
+                                },
+                                body: jsonEncode({
+                                  'name': _paletteNameController.text,
+                                }),
+                              );
+
+                              final paletteData = jsonDecode(paletteResponse.body);
+                              if (paletteData['executed'] != true) {
+                                throw Exception('Error al crear la paleta: ${paletteData['message']}');
+                              }
+
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Paleta "${_paletteNameController.text}" guardada!',
+                                  ),
                                 ),
-                              ),
-                            );
-                            _reset();
+                              );
+                              _reset();
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al guardar la paleta: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.purpleColor,
+                            backgroundColor: AppTheme.marineBlue,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          child: const Text('Save Palette'),
+                          child: const Text(
+                            'Save Palette',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                       ),
                     ),
