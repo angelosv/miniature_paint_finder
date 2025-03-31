@@ -8,12 +8,52 @@ import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 /// A shared drawer widget to be used across all screens for consistent navigation
-class SharedDrawer extends StatelessWidget {
+class SharedDrawer extends StatefulWidget {
   /// Current screen identifier to highlight the active item
   final String currentScreen;
 
   /// Constructs a SharedDrawer
   const SharedDrawer({Key? key, required this.currentScreen}) : super(key: key);
+
+  @override
+  State<SharedDrawer> createState() => _SharedDrawerState();
+}
+
+class _SharedDrawerState extends State<SharedDrawer>
+    with SingleTickerProviderStateMixin {
+  // Controller for tap animation
+  late AnimationController _animationController;
+  String? _tappedItem;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize animation controller for tap effect
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // Function to handle when a menu item is tapped
+  void _onItemTap(String screen) {
+    setState(() {
+      _tappedItem = screen;
+    });
+
+    // Play the animation
+    _animationController.forward().then((_) {
+      _animationController.reset();
+      // Navigate to the screen after the animation completes
+      _navigateToScreen(context, screen);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +217,9 @@ class SharedDrawer extends StatelessWidget {
                     ),
                     itemBuilder: (context, index) {
                       final item = drawerItems[index];
-                      final bool isActive = currentScreen == item['screen'];
+                      final String screen = item['screen'];
+                      final bool isActive = widget.currentScreen == screen;
+                      final bool isTapped = _tappedItem == screen;
 
                       // Calculate color for active and inactive states
                       final Color itemTextColor =
@@ -189,59 +231,83 @@ class SharedDrawer extends StatelessWidget {
                               ? Colors.white.withOpacity(0.9)
                               : AppTheme.marineBlue.withOpacity(0.85);
 
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: AppTheme.drawerItemSpacing,
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap:
-                                () =>
-                                    _navigateToScreen(context, item['screen']),
-                            splashColor: accentColor.withOpacity(0.2),
-                            highlightColor: accentColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.drawerBorderRadius,
+                      return AnimatedBuilder(
+                        animation: _animationController,
+                        builder: (context, child) {
+                          // Apply a scale effect when tapped
+                          final double scale =
+                              isTapped
+                                  ? 1.0 - (_animationController.value * 0.05)
+                                  : 1.0;
+
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: AppTheme.drawerItemSpacing,
                             ),
-                            child: Ink(
-                              decoration: BoxDecoration(
-                                color:
-                                    isActive
-                                        ? isDarkMode
-                                            ? accentColor.withOpacity(0.15)
-                                            : AppTheme.marineBlue.withOpacity(
-                                              0.1,
-                                            )
-                                        : Colors.transparent,
-                                borderRadius: BorderRadius.circular(
-                                  AppTheme.drawerBorderRadius,
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _onItemTap(screen),
+                                  splashColor: accentColor.withOpacity(0.3),
+                                  highlightColor: accentColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.drawerBorderRadius,
+                                  ),
+                                  child: Ink(
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isActive
+                                              ? isDarkMode
+                                                  ? accentColor.withOpacity(
+                                                    0.15,
+                                                  )
+                                                  : AppTheme.marineBlue
+                                                      .withOpacity(0.1)
+                                              : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(
+                                        AppTheme.drawerBorderRadius,
+                                      ),
+                                      boxShadow:
+                                          isTapped
+                                              ? [
+                                                BoxShadow(
+                                                  color: accentColor
+                                                      .withOpacity(0.2),
+                                                  blurRadius: 8,
+                                                  spreadRadius: 1,
+                                                ),
+                                              ]
+                                              : null,
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppTheme.drawerItemPadding,
+                                        vertical: AppTheme.drawerItemPadding,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            item['icon'],
+                                            size: AppTheme.drawerIconSize,
+                                            color: iconColor,
+                                          ),
+                                          SizedBox(width: 18.w),
+                                          Text(
+                                            item['text'],
+                                            style: AppTheme.drawerItemTextStyle
+                                                .copyWith(color: itemTextColor),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppTheme.drawerItemPadding,
-                                  vertical: AppTheme.drawerItemPadding,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      item['icon'],
-                                      size: AppTheme.drawerIconSize,
-                                      color: iconColor,
-                                    ),
-                                    SizedBox(width: 18.w),
-                                    Text(
-                                      item['text'],
-                                      style: AppTheme.drawerItemTextStyle
-                                          .copyWith(color: itemTextColor),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -267,56 +333,84 @@ class SharedDrawer extends StatelessWidget {
                   ),
                   itemBuilder: (context, index) {
                     final item = bottomDrawerItems[index];
+                    final String screen = item['screen'];
+                    final bool isTapped = _tappedItem == screen;
 
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: AppTheme.drawerItemSpacing,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap:
-                              () => _navigateToScreen(context, item['screen']),
-                          splashColor: accentColor.withOpacity(0.2),
-                          highlightColor: accentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.drawerBorderRadius,
+                    return AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        // Apply a scale effect when tapped
+                        final double scale =
+                            isTapped
+                                ? 1.0 - (_animationController.value * 0.05)
+                                : 1.0;
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: AppTheme.drawerItemSpacing,
                           ),
-                          child: Ink(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.drawerBorderRadius,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _onItemTap(screen),
+                                splashColor: accentColor.withOpacity(0.3),
+                                highlightColor: accentColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.drawerBorderRadius,
+                                ),
+                                child: Ink(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.drawerBorderRadius,
+                                    ),
+                                    boxShadow:
+                                        isTapped
+                                            ? [
+                                              BoxShadow(
+                                                color: accentColor.withOpacity(
+                                                  0.2,
+                                                ),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              ),
+                                            ]
+                                            : null,
+                                  ),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppTheme.drawerItemPadding,
+                                      vertical: AppTheme.drawerItemPadding,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          item['icon'],
+                                          size: AppTheme.drawerIconSize,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.white.withOpacity(
+                                                    0.85,
+                                                  )
+                                                  : AppTheme.marineBlue
+                                                      .withOpacity(0.85),
+                                        ),
+                                        SizedBox(width: 18.w),
+                                        Text(
+                                          item['text'],
+                                          style: AppTheme.drawerItemTextStyle
+                                              .copyWith(color: textColor),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppTheme.drawerItemPadding,
-                                vertical: AppTheme.drawerItemPadding,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    item['icon'],
-                                    size: AppTheme.drawerIconSize,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.white.withOpacity(0.85)
-                                            : AppTheme.marineBlue.withOpacity(
-                                              0.85,
-                                            ),
-                                  ),
-                                  SizedBox(width: 18.w),
-                                  Text(
-                                    item['text'],
-                                    style: AppTheme.drawerItemTextStyle
-                                        .copyWith(color: textColor),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -340,55 +434,109 @@ class SharedDrawer extends StatelessWidget {
   }
 
   void _navigateToScreen(BuildContext context, String? screen) {
-    // First close the drawer
+    // Skip navigation if we're already on this screen or if tap animation is still running
+    if (screen == null || screen == widget.currentScreen) {
+      Navigator.pop(context); // Just close the drawer
+      return;
+    }
+
+    // Close the drawer first
     Navigator.pop(context);
 
-    // Skip navigation if we're already on this screen
-    if (screen == null || screen == currentScreen) return;
+    // Add a slight delay before navigation for better user experience
+    Future.delayed(const Duration(milliseconds: 50), () {
+      switch (screen) {
+        case 'home':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const HomeScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'inventory':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const InventoryScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'wishlist':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const WishlistScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'library':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const LibraryScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'palettes':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const PaletteScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'settings':
+          // TODO: Implement settings screen
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Settings coming soon')));
+          break;
+        case 'help':
+          // TODO: Implement help screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Help & Feedback coming soon')),
+          );
+          break;
+      }
+    });
+  }
 
-    switch (screen) {
-      case 'home':
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 'inventory':
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const InventoryScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 'wishlist':
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const WishlistScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 'library':
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LibraryScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 'palettes':
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PaletteScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 'settings':
-        // TODO: Implement settings screen
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Settings coming soon')));
-        break;
-      case 'help':
-        // TODO: Implement help screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Help & Feedback coming soon')),
-        );
-        break;
-    }
+  // Custom transition animation for smoother navigation
+  Widget _buildTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    const begin = Offset(0.1, 0.0);
+    const end = Offset.zero;
+    final tween = Tween(begin: begin, end: end);
+    final offsetAnimation = animation.drive(tween);
+
+    return SlideTransition(
+      position: offsetAnimation,
+      child: FadeTransition(opacity: animation, child: child),
+    );
   }
 }
