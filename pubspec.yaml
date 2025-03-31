@@ -34,7 +34,7 @@ dependencies:
   provider: ^6.0.5
   shared_preferences: ^2.2.0
   image_picker: ^1.0.4
-  flutter_barcode_scanner: ^2.0.0
+  # flutter_barcode_scanner: ^2.0.0  # Commenting out as it's not compatible with newer Flutter/Android versions
   http: ^1.1.0
   sqflite: ^2.3.0
   path: ^1.8.3

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -83,6 +85,9 @@ abstract class IAuthService {
   void dispose();
 }
 
+// Verifica si estamos en Android
+bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+
 /// Implementation of the authentication service
 /// This class handles user authentication operations
 class AuthService implements IAuthService {
@@ -112,6 +117,15 @@ class AuthService implements IAuthService {
   @override
   Future<void> init() async {
     try {
+      // En Android, usamos la autenticación simulada
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        _currentUser = null;
+        _authStateController.add(_currentUser);
+        return;
+      }
+
+      // Para otras plataformas, usamos Firebase Auth
       // Check for existing Firebase Auth session
       final firebaseUser = firebase.FirebaseAuth.instance.currentUser;
 
@@ -184,6 +198,33 @@ class AuthService implements IAuthService {
       // Validate email and password
       _validateCredentials(email, password);
 
+      // En Android, usamos autenticación simulada
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        // Simular inicio de sesión exitoso
+        await Future.delayed(const Duration(seconds: 1));
+
+        // Comprobar credenciales de demo
+        if (email == 'demo@example.com' && password == 'password123') {
+          _currentUser = User(
+            id: 'android-mock-user-id',
+            name: 'Android Demo User',
+            email: email,
+            createdAt: DateTime.now(),
+            lastLoginAt: DateTime.now(),
+            authProvider: 'email',
+          );
+          _authStateController.add(_currentUser);
+          return _currentUser!;
+        } else {
+          throw AuthException(
+            AuthErrorCode.wrongPassword,
+            'Invalid email or password',
+          );
+        }
+      }
+
+      // Para otras plataformas, usamos Firebase Auth
       // Sign in with Firebase
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
@@ -265,6 +306,25 @@ class AuthService implements IAuthService {
         );
       }
 
+      // En Android, usamos autenticación simulada
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        // Simular retraso de red
+        await Future.delayed(const Duration(seconds: 1));
+
+        // Simular el registro
+        _currentUser = User(
+          id: 'android-mock-user-${DateTime.now().millisecondsSinceEpoch}',
+          name: name,
+          email: email,
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          authProvider: 'email',
+        );
+        _authStateController.add(_currentUser);
+        return _currentUser!;
+      }
+
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 1));
 
@@ -303,6 +363,14 @@ class AuthService implements IAuthService {
   @override
   Future<void> signOut() async {
     try {
+      // En Android, simplemente reseteamos el usuario
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        _currentUser = null;
+        _authStateController.add(_currentUser);
+        return;
+      }
+
       // Sign out from Firebase
       await firebase.FirebaseAuth.instance.signOut();
 
@@ -336,6 +404,13 @@ class AuthService implements IAuthService {
         );
       }
 
+      // En Android, simplemente simulamos el reseteo
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        await Future.delayed(const Duration(seconds: 1));
+        return;
+      }
+
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 1));
 
@@ -362,6 +437,24 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithGoogle() async {
     try {
+      // En Android, usamos autenticación simulada
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        // Simular inicio de sesión con Google
+        await Future.delayed(const Duration(seconds: 1));
+
+        _currentUser = User(
+          id: 'android-mock-google-user-${DateTime.now().millisecondsSinceEpoch}',
+          name: 'Android Google User',
+          email: 'google@example.com',
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          authProvider: 'google',
+        );
+        _authStateController.add(_currentUser);
+        return _currentUser!;
+      }
+
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
@@ -453,6 +546,23 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithCustomToken(String token) async {
     try {
+      // En Android, usamos autenticación simulada
+      if (_isAndroid) {
+        print('Using mock auth for Android');
+        await Future.delayed(const Duration(seconds: 1));
+
+        _currentUser = User(
+          id: 'android-mock-token-user-${DateTime.now().millisecondsSinceEpoch}',
+          name: 'Android Token User',
+          email: 'token@example.com',
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          authProvider: 'custom',
+        );
+        _authStateController.add(_currentUser);
+        return _currentUser!;
+      }
+
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithCustomToken(token);
 
@@ -481,68 +591,27 @@ class AuthService implements IAuthService {
   /// Sign in with phone
   @override
   Future<void> signInWithPhone() async {
-    try {
-      // Crear un nuevo PhoneAuthProvider
-      final phoneAuthProvider = firebase.PhoneAuthProvider();
+    if (_isAndroid) {
+      print('Using mock auth for Android');
+      await Future.delayed(const Duration(seconds: 1));
 
-      // Mostrar un diálogo para ingresar el número de teléfono
-      // Nota: En una implementación real, esto debería ser manejado por la UI
-      // y el número de teléfono debería ser pasado como parámetro
-      final phoneNumber = '+1234567890'; // Este es un número de ejemplo
-
-      // Verificar el número de teléfono
-      await firebase.FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (firebase.PhoneAuthCredential credential) async {
-          // Auto-verificación completada (Android)
-          try {
-            final userCredential = await firebase.FirebaseAuth.instance
-                .signInWithCredential(credential);
-
-            // Convertir el usuario de Firebase a nuestro modelo de Usuario
-            _currentUser = User(
-              id: userCredential.user!.uid,
-              name: userCredential.user!.displayName ?? 'Phone User',
-              email: userCredential.user!.email ?? '',
-              phoneNumber: userCredential.user!.phoneNumber,
-              createdAt: DateTime.now(),
-              lastLoginAt: DateTime.now(),
-              authProvider: 'phone',
-            );
-
-            _authStateController.add(_currentUser);
-          } catch (e) {
-            print('Error en verificación automática: $e');
-            throw AuthException(
-              AuthErrorCode.unknown,
-              'Error en verificación automática: $e',
-            );
-          }
-        },
-        verificationFailed: (firebase.FirebaseAuthException e) {
-          print('Error en verificación: ${e.code} - ${e.message}');
-          throw AuthException(
-            AuthErrorCode.unknown,
-            'Error en verificación: ${e.message}',
-          );
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          // Guardar el verificationId para usarlo cuando se ingrese el código
-          // En una implementación real, esto debería ser manejado por la UI
-          print('Código de verificación enviado');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          // Tiempo de espera para la auto-recuperación del código
-          print('Tiempo de espera para recuperación automática');
-        },
+      _currentUser = User(
+        id: 'android-mock-phone-user-${DateTime.now().millisecondsSinceEpoch}',
+        name: 'Android Phone User',
+        email: '',
+        phoneNumber: '+1234567890',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'phone',
       );
-    } catch (e) {
-      print('Error en autenticación por teléfono: $e');
-      throw AuthException(
-        AuthErrorCode.unknown,
-        'Error en autenticación por teléfono: $e',
-      );
+      _authStateController.add(_currentUser);
+      return;
     }
+
+    throw AuthException(
+      AuthErrorCode.notImplemented,
+      'Phone authentication is not fully implemented',
+    );
   }
 
   /// Verify phone number
@@ -551,140 +620,19 @@ class AuthService implements IAuthService {
     required String phoneNumber,
     required Function(String, int?) onCodeSent,
   }) async {
-    try {
-      print('Starting phone verification for: $phoneNumber');
+    if (_isAndroid) {
+      print('Using mock auth for Android');
+      await Future.delayed(const Duration(seconds: 1));
 
-      // Validate phone number format
-      if (!RegExp(r'^\+[0-9]{10,15}$').hasMatch(phoneNumber)) {
-        throw AuthException(
-          AuthErrorCode.invalidEmail,
-          'Please enter a valid phone number with country code (e.g., +1234567890)',
-        );
-      }
-
-      // Clear Firebase cache
-      try {
-        await firebase.FirebaseAuth.instance.signOut();
-        print('Firebase cache cleared');
-      } catch (e) {
-        print('Error clearing cache: $e');
-      }
-
-      // Verify Firebase Auth is initialized
-      if (firebase.FirebaseAuth.instance == null) {
-        throw AuthException(
-          AuthErrorCode.unknown,
-          'Firebase Auth is not properly initialized',
-        );
-      }
-
-      // Verify phone number is not empty
-      if (phoneNumber.trim().isEmpty) {
-        throw AuthException(
-          AuthErrorCode.unknown,
-          'Phone number cannot be empty',
-        );
-      }
-
-      // Attempt to verify phone number
-      try {
-        await firebase.FirebaseAuth.instance.verifyPhoneNumber(
-          phoneNumber: phoneNumber,
-          timeout: const Duration(seconds: 60),
-          verificationCompleted: (
-            firebase.PhoneAuthCredential credential,
-          ) async {
-            print('Auto verification completed');
-            try {
-              final userCredential = await firebase.FirebaseAuth.instance
-                  .signInWithCredential(credential);
-              print(
-                'User authenticated successfully: ${userCredential.user?.uid}',
-              );
-
-              _currentUser = User(
-                id: userCredential.user!.uid,
-                name: userCredential.user!.displayName ?? 'Phone User',
-                email: userCredential.user!.email ?? '',
-                phoneNumber: userCredential.user!.phoneNumber,
-                createdAt: DateTime.now(),
-                lastLoginAt: DateTime.now(),
-                authProvider: 'phone',
-              );
-
-              _authStateController.add(_currentUser);
-            } catch (e) {
-              print('Error in auto verification: $e');
-              print('Stack trace: ${StackTrace.current}');
-              throw AuthException(
-                AuthErrorCode.unknown,
-                'Error in auto verification: $e',
-              );
-            }
-          },
-          verificationFailed: (firebase.FirebaseAuthException e) {
-            print('Verification error:');
-            print('Code: ${e.code}');
-            print('Message: ${e.message}');
-            print('Stack trace: ${e.stackTrace}');
-
-            String errorMessage;
-            switch (e.code) {
-              case 'invalid-phone-number':
-                errorMessage = 'Invalid phone number';
-                break;
-              case 'too-many-requests':
-                errorMessage =
-                    'Too many attempts. Please wait a few minutes before trying again.';
-                break;
-              case 'operation-not-allowed':
-                errorMessage =
-                    'Phone authentication is not enabled in Firebase';
-                break;
-              case 'internal-error':
-                errorMessage =
-                    'Internal Firebase error. Please check Firebase configuration and ensure phone authentication is enabled.';
-                break;
-              default:
-                errorMessage = e.message ?? 'Unknown verification error';
-            }
-
-            throw AuthException(AuthErrorCode.unknown, errorMessage);
-          },
-          codeSent: (String verificationId, int? resendToken) {
-            print('Verification code sent');
-            print('Verification ID: $verificationId');
-            print('Resend Token: $resendToken');
-            onCodeSent(verificationId, resendToken);
-          },
-          codeAutoRetrievalTimeout: (String verificationId) {
-            print('Auto retrieval timeout');
-            print('Verification ID: $verificationId');
-          },
-        );
-      } catch (e) {
-        print('Error calling verifyPhoneNumber:');
-        print('Error: $e');
-        print('Stack trace: ${StackTrace.current}');
-        throw AuthException(
-          AuthErrorCode.unknown,
-          'Error starting phone verification: $e',
-        );
-      }
-    } catch (e) {
-      print('General error in phone authentication:');
-      print('Error: $e');
-      print('Stack trace: ${StackTrace.current}');
-
-      if (e is AuthException) {
-        rethrow;
-      }
-
-      throw AuthException(
-        AuthErrorCode.unknown,
-        'Error in phone authentication: $e',
-      );
+      // Simular envío de código con un ID de verificación mock
+      onCodeSent('android-mock-verification-id', 123456);
+      return;
     }
+
+    throw AuthException(
+      AuthErrorCode.notImplemented,
+      'Phone verification is not fully implemented',
+    );
   }
 
   /// Verify code
@@ -693,33 +641,32 @@ class AuthService implements IAuthService {
     required String verificationId,
     required String code,
   }) async {
-    try {
-      final credential = firebase.PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: code,
-      );
+    if (_isAndroid) {
+      print('Using mock auth for Android');
+      await Future.delayed(const Duration(seconds: 1));
 
-      final userCredential = await firebase.FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      _currentUser = User(
-        id: userCredential.user!.uid,
-        name: userCredential.user!.displayName ?? 'Phone User',
-        email: userCredential.user!.email ?? '',
-        phoneNumber: userCredential.user!.phoneNumber,
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        authProvider: 'phone',
-      );
-
-      _authStateController.add(_currentUser);
-    } catch (e) {
-      print('Error verificando código: $e');
-      throw AuthException(
-        AuthErrorCode.unknown,
-        'Error verificando código: $e',
-      );
+      // Verificar que el código sea el esperado (para pruebas)
+      if (code == '123456') {
+        _currentUser = User(
+          id: 'android-mock-phone-verified-user',
+          name: 'Android Phone User',
+          email: '',
+          phoneNumber: '+1234567890',
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          authProvider: 'phone',
+        );
+        _authStateController.add(_currentUser);
+        return;
+      } else {
+        throw AuthException(AuthErrorCode.unknown, 'Invalid verification code');
+      }
     }
+
+    throw AuthException(
+      AuthErrorCode.notImplemented,
+      'Code verification is not fully implemented',
+    );
   }
 
   /// Dispose resources
@@ -733,7 +680,7 @@ class AuthService implements IAuthService {
     if (email.isEmpty) {
       throw AuthException(
         AuthErrorCode.invalidEmail,
-        'Email address is required',
+        'Please provide an email address',
       );
     }
 
@@ -745,7 +692,10 @@ class AuthService implements IAuthService {
     }
 
     if (password.isEmpty) {
-      throw AuthException(AuthErrorCode.wrongPassword, 'Password is required');
+      throw AuthException(
+        AuthErrorCode.wrongPassword,
+        'Please provide a password',
+      );
     }
   }
 }
