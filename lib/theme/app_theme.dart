@@ -15,6 +15,11 @@ class AppTheme {
   static const Color marineGold = Color(0xFFFFC857); // Dorado/Águila
   static const Color marineBlueBg = Color(0xFF253248); // Azul de fondo
 
+  // New orange color for dark mode from image
+  static const Color drawerOrange = Color(
+    0xFFE67E22,
+  ); // Nuevo naranja para drawer en dark mode
+
   // Colores secundarios para la UI
   static const Color textDark = Color(0xFF1A1C29); // Texto oscuro
   static const Color textGrey = Color(0xFF777777); // Texto secundario
@@ -32,6 +37,36 @@ class AppTheme {
   static const Color darkSurface = Color(0xFF1E2A40); // Superficie oscura
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
   static const Color darkTextSecondary = Color(0xFFAAAAAA);
+
+  // Drawer specific styles
+  static TextStyle get drawerItemTextStyle => GoogleFonts.poppins(
+    fontSize: 17.sp,
+    fontWeight: FontWeight.bold,
+    height: 1.2,
+  );
+
+  static TextStyle get drawerHeaderTextStyle => GoogleFonts.poppins(
+    fontSize: 30.sp,
+    fontWeight: FontWeight.bold,
+    height: 1.2,
+  );
+
+  static TextStyle get drawerSubtitleTextStyle => GoogleFonts.poppins(
+    fontSize: 15.sp,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+  );
+
+  static TextStyle get drawerVersionTextStyle => GoogleFonts.poppins(
+    fontSize: 13.sp,
+    fontWeight: FontWeight.w400,
+    height: 1.2,
+  );
+
+  static double get drawerIconSize => 22.sp;
+  static double get drawerItemPadding => 16.sp;
+  static double get drawerItemSpacing => 14.sp;
+  static double get drawerBorderRadius => 14.r;
 
   // Default text styles with the same font - usando .sp para tamaños de fuente responsivos
   static TextStyle get headingStyle => GoogleFonts.poppins(

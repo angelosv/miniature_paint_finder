@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
@@ -23,23 +24,28 @@ class SharedDrawer extends StatelessWidget {
         isDarkMode ? AppTheme.marineBlueDark : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : AppTheme.marineBlue;
 
-    // Use a softer orange accent color for dark mode
+    // Use the orange accent color from the image for dark mode
     final Color accentColor =
         isDarkMode
-            ? const Color(0xFFF3A183) // Softer orange for dark mode
+            ? AppTheme
+                .drawerOrange // Orange from the image for dark mode
             : AppTheme.marineBlue; // Dark blue for light mode
 
-    // All navigation items
+    // All navigation items with consistent outlined icons
     final List<Map<String, dynamic>> drawerItems = [
       {'icon': Icons.home_outlined, 'text': 'Home', 'screen': 'home'},
       {
-        'icon': Icons.inventory_2_outlined,
+        'icon': Icons.inventory_outlined,
         'text': 'My Inventory',
         'screen': 'inventory',
       },
-      {'icon': Icons.favorite_border, 'text': 'Wishlist', 'screen': 'wishlist'},
       {
-        'icon': Icons.auto_awesome_mosaic,
+        'icon': Icons.favorite_outline,
+        'text': 'Wishlist',
+        'screen': 'wishlist',
+      },
+      {
+        'icon': Icons.grid_view_outlined,
         'text': 'Library',
         'screen': 'library',
       },
@@ -70,8 +76,7 @@ class SharedDrawer extends StatelessWidget {
       ),
       child: Drawer(
         elevation: 10,
-        width:
-            MediaQuery.of(context).size.width * 0.82, // Slightly wider drawer
+        width: MediaQuery.of(context).size.width * 0.82,
         backgroundColor: backgroundColor,
         child: Container(
           decoration: BoxDecoration(
@@ -94,9 +99,9 @@ class SharedDrawer extends StatelessWidget {
                 // Header with more prominence
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 40,
-                    horizontal: 24,
+                  padding: EdgeInsets.symmetric(
+                    vertical: 40.h,
+                    horizontal: 24.w,
                   ),
                   decoration: BoxDecoration(
                     color: backgroundColor,
@@ -116,23 +121,20 @@ class SharedDrawer extends StatelessWidget {
                     children: [
                       Text(
                         'MiniPaint',
-                        style: TextStyle(
-                          fontSize: 32, // Larger app name
+                        style: AppTheme.drawerHeaderTextStyle.copyWith(
                           color: textColor,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Roboto', // Ensure app font
                         ),
                       ),
-                      const SizedBox(height: 20), // More spacing
+                      SizedBox(height: 20.h),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 12,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 18.w,
+                          vertical: 12.h,
                         ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(
-                            14,
-                          ), // Slightly larger radius
+                            AppTheme.drawerBorderRadius,
+                          ),
                           color:
                               isDarkMode
                                   ? Colors.white.withOpacity(0.1)
@@ -143,20 +145,17 @@ class SharedDrawer extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.color_lens_outlined,
-                              size: 20, // Slightly larger icon
+                              size: AppTheme.drawerIconSize,
                               color: accentColor,
                             ),
-                            const SizedBox(width: 12), // More spacing
+                            SizedBox(width: 12.w),
                             Text(
                               'Find your perfect paint',
-                              style: TextStyle(
-                                fontSize: 16, // Larger text
+                              style: AppTheme.drawerSubtitleTextStyle.copyWith(
                                 color:
                                     isDarkMode
                                         ? Colors.white.withOpacity(0.95)
                                         : AppTheme.marineBlue,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Roboto', // Ensure app font
                               ),
                             ),
                           ],
@@ -166,14 +165,15 @@ class SharedDrawer extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 16), // More spacing after header
+                SizedBox(height: 16.h),
+
                 // Main navigation items with larger spacing
                 Expanded(
                   child: ListView.builder(
                     itemCount: drawerItems.length,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
+                    padding: EdgeInsets.symmetric(
+                      vertical: 12.h,
+                      horizontal: 16.w,
                     ),
                     itemBuilder: (context, index) {
                       final item = drawerItems[index];
@@ -190,9 +190,9 @@ class SharedDrawer extends StatelessWidget {
                               : AppTheme.marineBlue.withOpacity(0.85);
 
                       return Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 16,
-                        ), // More spacing between items
+                        padding: EdgeInsets.only(
+                          bottom: AppTheme.drawerItemSpacing,
+                        ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -202,10 +202,9 @@ class SharedDrawer extends StatelessWidget {
                             splashColor: accentColor.withOpacity(0.2),
                             highlightColor: accentColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(
-                              14,
-                            ), // Slightly larger radius
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
+                              AppTheme.drawerBorderRadius,
+                            ),
+                            child: Ink(
                               decoration: BoxDecoration(
                                 color:
                                     isActive
@@ -216,36 +215,29 @@ class SharedDrawer extends StatelessWidget {
                                             )
                                         : Colors.transparent,
                                 borderRadius: BorderRadius.circular(
-                                  14,
-                                ), // Slightly larger radius
+                                  AppTheme.drawerBorderRadius,
+                                ),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 18, // Taller items
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    item['icon'],
-                                    size: 26, // Larger icons
-                                    color: iconColor,
-                                  ),
-                                  const SizedBox(
-                                    width: 18,
-                                  ), // More spacing between icon and text
-                                  Text(
-                                    item['text'],
-                                    style: TextStyle(
-                                      fontSize: 18, // Larger font
-                                      fontWeight:
-                                          isActive
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                      color: itemTextColor,
-                                      fontFamily: 'Roboto', // Ensure app font
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppTheme.drawerItemPadding,
+                                  vertical: AppTheme.drawerItemPadding,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      item['icon'],
+                                      size: AppTheme.drawerIconSize,
+                                      color: iconColor,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 18.w),
+                                    Text(
+                                      item['text'],
+                                      style: AppTheme.drawerItemTextStyle
+                                          .copyWith(color: itemTextColor),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -257,10 +249,10 @@ class SharedDrawer extends StatelessWidget {
 
                 // Divider with more emphasis
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                   child: Divider(
                     color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    thickness: 1.5, // Slightly thicker divider
+                    thickness: 1.5,
                   ),
                 ),
 
@@ -269,17 +261,17 @@ class SharedDrawer extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: bottomDrawerItems.length,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16, // More padding
-                    horizontal: 16,
+                  padding: EdgeInsets.symmetric(
+                    vertical: 16.h,
+                    horizontal: 16.w,
                   ),
                   itemBuilder: (context, index) {
                     final item = bottomDrawerItems[index];
 
                     return Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: 16,
-                      ), // More spacing between items
+                      padding: EdgeInsets.only(
+                        bottom: AppTheme.drawerItemSpacing,
+                      ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
@@ -288,38 +280,39 @@ class SharedDrawer extends StatelessWidget {
                           splashColor: accentColor.withOpacity(0.2),
                           highlightColor: accentColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(
-                            14,
-                          ), // Slightly larger radius
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 16, // Taller items
+                            AppTheme.drawerBorderRadius,
+                          ),
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.drawerBorderRadius,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  item['icon'],
-                                  size: 24, // Larger icon
-                                  color:
-                                      isDarkMode
-                                          ? Colors.white.withOpacity(0.85)
-                                          : AppTheme.marineBlue.withOpacity(
-                                            0.85,
-                                          ),
-                                ),
-                                const SizedBox(
-                                  width: 18,
-                                ), // More spacing between icon and text
-                                Text(
-                                  item['text'],
-                                  style: TextStyle(
-                                    fontSize: 18, // Larger font
-                                    fontWeight: FontWeight.w500,
-                                    color: textColor,
-                                    fontFamily: 'Roboto', // Ensure app font
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppTheme.drawerItemPadding,
+                                vertical: AppTheme.drawerItemPadding,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    item['icon'],
+                                    size: AppTheme.drawerIconSize,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.white.withOpacity(0.85)
+                                            : AppTheme.marineBlue.withOpacity(
+                                              0.85,
+                                            ),
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: 18.w),
+                                  Text(
+                                    item['text'],
+                                    style: AppTheme.drawerItemTextStyle
+                                        .copyWith(color: textColor),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -330,13 +323,11 @@ class SharedDrawer extends StatelessWidget {
 
                 // Version number at bottom with more spacing
                 Padding(
-                  padding: const EdgeInsets.all(24.0), // More padding
+                  padding: EdgeInsets.all(24.sp),
                   child: Text(
                     'Version 1.0.0',
-                    style: TextStyle(
-                      fontSize: 14, // Slightly larger
+                    style: AppTheme.drawerVersionTextStyle.copyWith(
                       color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
-                      fontFamily: 'Roboto', // Ensure app font
                     ),
                   ),
                 ),
