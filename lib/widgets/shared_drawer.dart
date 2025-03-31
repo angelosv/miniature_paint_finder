@@ -18,6 +18,17 @@ class SharedDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Define colors based on theme mode
+    final Color backgroundColor =
+        isDarkMode ? AppTheme.marineBlueDark : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : AppTheme.marineBlue;
+
+    // Use a softer orange accent color for dark mode
+    final Color accentColor =
+        isDarkMode
+            ? const Color(0xFFF3A183) // Softer orange for dark mode
+            : AppTheme.marineBlue; // Dark blue for light mode
+
     // All navigation items
     final List<Map<String, dynamic>> drawerItems = [
       {'icon': Icons.home_outlined, 'text': 'Home', 'screen': 'home'},
@@ -51,19 +62,20 @@ class SharedDrawer extends StatelessWidget {
 
     return Theme(
       data: Theme.of(context).copyWith(
-        canvasColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        canvasColor: backgroundColor,
         drawerTheme: DrawerThemeData(
-          backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+          backgroundColor: backgroundColor,
           scrimColor: Colors.black54,
         ),
       ),
       child: Drawer(
         elevation: 10,
-        width: MediaQuery.of(context).size.width * 0.75,
-        backgroundColor: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+        width:
+            MediaQuery.of(context).size.width * 0.82, // Slightly wider drawer
+        backgroundColor: backgroundColor,
         child: Container(
           decoration: BoxDecoration(
-            color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+            color: backgroundColor,
             boxShadow:
                 isDarkMode
                     ? [
@@ -79,15 +91,15 @@ class SharedDrawer extends StatelessWidget {
           child: SafeArea(
             child: Column(
               children: [
-                // Header
+                // Header with more prominence
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    vertical: 32,
+                    vertical: 40,
                     horizontal: 24,
                   ),
                   decoration: BoxDecoration(
-                    color: isDarkMode ? AppTheme.marineBlueDark : Colors.white,
+                    color: backgroundColor,
                     boxShadow: [
                       BoxShadow(
                         color:
@@ -105,20 +117,22 @@ class SharedDrawer extends StatelessWidget {
                       Text(
                         'MiniPaint',
                         style: TextStyle(
-                          fontSize: 28,
-                          color:
-                              isDarkMode ? Colors.white : AppTheme.marineBlue,
+                          fontSize: 32, // Larger app name
+                          color: textColor,
                           fontWeight: FontWeight.bold,
+                          fontFamily: 'Roboto', // Ensure app font
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20), // More spacing
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                          horizontal: 18,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            14,
+                          ), // Slightly larger radius
                           color:
                               isDarkMode
                                   ? Colors.white.withOpacity(0.1)
@@ -129,22 +143,20 @@ class SharedDrawer extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.color_lens_outlined,
-                              size: 18,
-                              color:
-                                  isDarkMode
-                                      ? AppTheme.marineGold
-                                      : AppTheme.marineBlue,
+                              size: 20, // Slightly larger icon
+                              color: accentColor,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12), // More spacing
                             Text(
                               'Find your perfect paint',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 16, // Larger text
                                 color:
                                     isDarkMode
-                                        ? Colors.white.withOpacity(0.9)
+                                        ? Colors.white.withOpacity(0.95)
                                         : AppTheme.marineBlue,
                                 fontWeight: FontWeight.w500,
+                                fontFamily: 'Roboto', // Ensure app font
                               ),
                             ),
                           ],
@@ -154,85 +166,87 @@ class SharedDrawer extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 8),
-
-                // Main navigation items
+                const SizedBox(height: 16), // More spacing after header
+                // Main navigation items with larger spacing
                 Expanded(
                   child: ListView.builder(
                     itemCount: drawerItems.length,
                     padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 12,
+                      vertical: 12,
+                      horizontal: 16,
                     ),
                     itemBuilder: (context, index) {
                       final item = drawerItems[index];
                       final bool isActive = currentScreen == item['screen'];
 
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap:
-                              () => _navigateToScreen(context, item['screen']),
-                          splashColor: (isDarkMode
-                                  ? AppTheme.marineGold
-                                  : AppTheme.marineBlue)
-                              .withOpacity(0.2),
-                          highlightColor: (isDarkMode
-                                  ? AppTheme.marineGold
-                                  : AppTheme.marineBlue)
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color:
-                                  isActive
-                                      ? isDarkMode
-                                          ? AppTheme.marineGold.withOpacity(
-                                            0.15,
-                                          )
-                                          : AppTheme.marineBlue.withOpacity(0.1)
-                                      : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  item['icon'],
-                                  size: 22,
-                                  color:
-                                      isActive
-                                          ? isDarkMode
-                                              ? AppTheme.marineGold
-                                              : AppTheme.marineBlue
-                                          : isDarkMode
-                                          ? Colors.white.withOpacity(0.9)
-                                          : Colors.black.withOpacity(0.75),
-                                ),
-                                const SizedBox(width: 16),
-                                Text(
-                                  item['text'],
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight:
-                                        isActive
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
-                                    color:
-                                        isActive
-                                            ? isDarkMode
-                                                ? AppTheme.marineGold
-                                                : AppTheme.marineBlue
-                                            : isDarkMode
-                                            ? Colors.white
-                                            : Colors.black.withOpacity(0.8),
+                      // Calculate color for active and inactive states
+                      final Color itemTextColor =
+                          isActive ? accentColor : textColor;
+                      final Color iconColor =
+                          isActive
+                              ? accentColor
+                              : isDarkMode
+                              ? Colors.white.withOpacity(0.9)
+                              : AppTheme.marineBlue.withOpacity(0.85);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: 16,
+                        ), // More spacing between items
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap:
+                                () =>
+                                    _navigateToScreen(context, item['screen']),
+                            splashColor: accentColor.withOpacity(0.2),
+                            highlightColor: accentColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(
+                              14,
+                            ), // Slightly larger radius
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color:
+                                    isActive
+                                        ? isDarkMode
+                                            ? accentColor.withOpacity(0.15)
+                                            : AppTheme.marineBlue.withOpacity(
+                                              0.1,
+                                            )
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(
+                                  14,
+                                ), // Slightly larger radius
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 18, // Taller items
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    item['icon'],
+                                    size: 26, // Larger icons
+                                    color: iconColor,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(
+                                    width: 18,
+                                  ), // More spacing between icon and text
+                                  Text(
+                                    item['text'],
+                                    style: TextStyle(
+                                      fontSize: 18, // Larger font
+                                      fontWeight:
+                                          isActive
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                      color: itemTextColor,
+                                      fontFamily: 'Roboto', // Ensure app font
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -241,67 +255,72 @@ class SharedDrawer extends StatelessWidget {
                   ),
                 ),
 
-                // Divider before bottom items
+                // Divider with more emphasis
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Divider(
                     color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                    thickness: 1,
+                    thickness: 1.5, // Slightly thicker divider
                   ),
                 ),
 
-                // Bottom items (settings, help)
+                // Bottom items (settings, help) with more spacing
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: bottomDrawerItems.length,
                   padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
+                    vertical: 16, // More padding
+                    horizontal: 16,
                   ),
                   itemBuilder: (context, index) {
                     final item = bottomDrawerItems[index];
 
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _navigateToScreen(context, item['screen']),
-                        splashColor: (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            .withOpacity(0.2),
-                        highlightColor: (isDarkMode
-                                ? AppTheme.marineGold
-                                : AppTheme.marineBlue)
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                item['icon'],
-                                size: 22,
-                                color:
-                                    isDarkMode
-                                        ? Colors.white.withOpacity(0.9)
-                                        : Colors.black.withOpacity(0.75),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                item['text'],
-                                style: TextStyle(
-                                  fontSize: 16,
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: 16,
+                      ), // More spacing between items
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap:
+                              () => _navigateToScreen(context, item['screen']),
+                          splashColor: accentColor.withOpacity(0.2),
+                          highlightColor: accentColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(
+                            14,
+                          ), // Slightly larger radius
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 16, // Taller items
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item['icon'],
+                                  size: 24, // Larger icon
                                   color:
                                       isDarkMode
-                                          ? Colors.white
-                                          : Colors.black.withOpacity(0.8),
+                                          ? Colors.white.withOpacity(0.85)
+                                          : AppTheme.marineBlue.withOpacity(
+                                            0.85,
+                                          ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(
+                                  width: 18,
+                                ), // More spacing between icon and text
+                                Text(
+                                  item['text'],
+                                  style: TextStyle(
+                                    fontSize: 18, // Larger font
+                                    fontWeight: FontWeight.w500,
+                                    color: textColor,
+                                    fontFamily: 'Roboto', // Ensure app font
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -309,14 +328,15 @@ class SharedDrawer extends StatelessWidget {
                   },
                 ),
 
-                // Version number at bottom
+                // Version number at bottom with more spacing
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(24.0), // More padding
                   child: Text(
                     'Version 1.0.0',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14, // Slightly larger
                       color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                      fontFamily: 'Roboto', // Ensure app font
                     ),
                   ),
                 ),
