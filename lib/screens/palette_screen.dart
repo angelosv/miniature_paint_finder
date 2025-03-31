@@ -624,6 +624,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
               context,
               palette.name,
               palette.paintSelections ?? [],
+              imagePath: 'assets/images/placeholder.jpeg',
             );
           },
           borderRadius: BorderRadius.circular(16),

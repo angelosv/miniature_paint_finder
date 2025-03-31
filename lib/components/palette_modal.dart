@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/palette.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
 class PaletteModal extends StatelessWidget {
   final String paletteName;
   final List<PaintSelection> paints;
+  final String? imagePath;
 
   const PaletteModal({
     Key? key,
     required this.paletteName,
     required this.paints,
+    this.imagePath,
   }) : super(key: key);
 
   @override
@@ -33,18 +36,76 @@ class PaletteModal extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Text(
-              paletteName,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
+
+          // Imagen de encabezado
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Stack(
+              children: [
+                // Placeholder image
+                Image.asset(
+                  imagePath ?? 'assets/images/placeholder.jpeg',
+                  width: double.infinity,
+                  height: 150,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: double.infinity,
+                      height: 150,
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 50,
+                          color:
+                              isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Overlay con título
+                Container(
+                  width: double.infinity,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.1),
+                        Colors.black.withOpacity(0.6),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Título
+                Positioned(
+                  bottom: 16,
+                  left: 24,
+                  right: 24,
+                  child: Text(
+                    paletteName,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 3.0,
+                          color: Color.fromARGB(255, 0, 0, 0),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+
           // Paint list
           Expanded(
             child:
@@ -58,7 +119,10 @@ class PaletteModal extends StatelessWidget {
                       ),
                     )
                     : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       itemCount: paints.length,
                       itemBuilder: (context, index) {
                         final paint = paints[index];
@@ -82,78 +146,110 @@ class PaletteModal extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Main paint info row
-                              Row(
-                                children: [
-                                  // Brand avatar
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEDEDED),
-                                      shape: BoxShape.circle,
+                              InkWell(
+                                onTap:
+                                    () => _showPaintOptionsModal(
+                                      context,
+                                      paint,
+                                      isInInventory,
+                                      isInWishlist,
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        paint.brandAvatar,
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
                                   ),
-                                  const SizedBox(width: 16),
-                                  // Paint info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          paint.paintName,
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.white
-                                                    : Colors.black87,
+                                  child: Row(
+                                    children: [
+                                      // Brand avatar
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFEDEDED),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            paint.brandAvatar,
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          paint.paintBrand,
-                                          style: TextStyle(
-                                            fontSize: 14,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Paint info
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              paint.paintName,
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.white
+                                                        : Colors.black87,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              paint.paintBrand,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color:
+                                                    isDarkMode
+                                                        ? Colors.grey
+                                                        : Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Color preview
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: _getColorFromHex(
+                                            paint.paintColorHex,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
                                             color:
                                                 isDarkMode
-                                                    ? Colors.grey
-                                                    : Colors.grey[700],
+                                                    ? Colors.grey.withOpacity(
+                                                      0.2,
+                                                    )
+                                                    : Colors.grey.withOpacity(
+                                                      0.3,
+                                                    ),
+                                            width: 1,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Color preview
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: _getColorFromHex(
-                                        paint.paintColorHex,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
+
+                                      // Chevron icon to indicate tap options
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.chevron_right,
                                         color:
                                             isDarkMode
-                                                ? Colors.grey.withOpacity(0.2)
-                                                : Colors.grey.withOpacity(0.3),
-                                        width: 1,
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                        size: 24,
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
 
                               const SizedBox(height: 12),
@@ -396,6 +492,406 @@ class PaletteModal extends StatelessWidget {
     );
   }
 
+  // Mostrar modal de opciones para la pintura
+  void _showPaintOptionsModal(
+    BuildContext context,
+    PaintSelection paint,
+    bool isInInventory,
+    bool isInWishlist,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF101823) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Paint info header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Color preview
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: _getColorFromHex(paint.paintColorHex),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color:
+                            isDarkMode
+                                ? Colors.grey.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Paint details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          paint.paintName,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          paint.paintBrand,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: isDarkMode ? Colors.grey : Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(
+                                  isDarkMode ? 0.2 : 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                "${paint.matchPercentage}% Match",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Divider
+              Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300]),
+
+              const SizedBox(height: 16),
+
+              // Opciones rápidas
+              Text(
+                "Quick Actions",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Botones de acción
+              Row(
+                children: [
+                  // Actualizar inventario
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showInventoryUpdateDialog(context, paint);
+                      },
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: Text(
+                        isInInventory ? "Update Inventory" : "Add to Inventory",
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor:
+                            isDarkMode ? Colors.orange : Colors.blue,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // Añadir a wishlist
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showWishlistDialog(context, paint);
+                      },
+                      icon: const Icon(Icons.favorite_border),
+                      label: Text(
+                        isInWishlist ? "Update Wishlist" : "Add to Wishlist",
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.pink,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Ver en inventario
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const InventoryScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.inventory_2),
+                  label: const Text("View in Inventory"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? Colors.orange : Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Mostrar diálogo para actualizar inventario
+  void _showInventoryUpdateDialog(BuildContext context, PaintSelection paint) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    int quantity = 1;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Update Inventory'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${paint.paintName} will be added to your inventory.'),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Quantity: '),
+                      SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.remove_circle_outline),
+                        onPressed: () {
+                          if (quantity > 1) {
+                            setState(() {
+                              quantity--;
+                            });
+                          }
+                        },
+                      ),
+                      Text(
+                        '$quantity',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add_circle_outline),
+                        onPressed: () {
+                          setState(() {
+                            quantity++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    // Mostrar confirmación con SnackBar
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Added $quantity ${paint.paintName} to inventory',
+                        ),
+                        backgroundColor:
+                            isDarkMode ? Colors.orange : Colors.blue,
+                        action: SnackBarAction(
+                          label: 'VIEW',
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const InventoryScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('Confirm'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Mostrar diálogo para añadir a wishlist
+  void _showWishlistDialog(BuildContext context, PaintSelection paint) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    int priority = 2; // Prioridad media por defecto
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Add to Wishlist'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${paint.paintName} will be added to your wishlist.'),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text('Priority: '),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Slider(
+                          value: priority.toDouble(),
+                          min: 1,
+                          max: 3,
+                          divisions: 2,
+                          label:
+                              priority == 1
+                                  ? 'Low'
+                                  : priority == 2
+                                  ? 'Medium'
+                                  : 'High',
+                          onChanged: (double value) {
+                            setState(() {
+                              priority = value.toInt();
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    // Mostrar confirmación con SnackBar
+                    final priorityText =
+                        priority == 1
+                            ? 'Low'
+                            : priority == 2
+                            ? 'Medium'
+                            : 'High';
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Added ${paint.paintName} to wishlist with $priorityText priority',
+                        ),
+                        backgroundColor: Colors.pink,
+                        action: SnackBarAction(
+                          label: 'VIEW',
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('Confirm'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Color _getColorFromHex(String hexColor) {
     try {
       hexColor = hexColor.replaceAll('#', '');
@@ -436,8 +932,9 @@ class PaletteModal extends StatelessWidget {
 void showPaletteModal(
   BuildContext context,
   String paletteName,
-  List<PaintSelection> paints,
-) {
+  List<PaintSelection> paints, {
+  String? imagePath,
+}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -448,8 +945,11 @@ void showPaletteModal(
           minChildSize: 0.5,
           maxChildSize: 0.95,
           builder:
-              (_, controller) =>
-                  PaletteModal(paletteName: paletteName, paints: paints),
+              (_, controller) => PaletteModal(
+                paletteName: paletteName,
+                paints: paints,
+                imagePath: imagePath,
+              ),
         ),
   );
 }
