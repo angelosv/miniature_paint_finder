@@ -335,19 +335,34 @@ class SharedDrawer extends StatelessWidget {
 
     switch (screen) {
       case 'home':
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
         break;
       case 'inventory':
-        Navigator.pushReplacementNamed(context, '/inventory');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const InventoryScreen()),
+        );
         break;
       case 'wishlist':
-        Navigator.pushReplacementNamed(context, '/wishlist');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const WishlistScreen()),
+        );
         break;
       case 'library':
-        Navigator.pushReplacementNamed(context, '/library');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LibraryScreen()),
+        );
         break;
       case 'palettes':
-        Navigator.pushReplacementNamed(context, '/palettes');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const PaletteScreen()),
+        );
         break;
       case 'settings':
         // TODO: Implement settings screen

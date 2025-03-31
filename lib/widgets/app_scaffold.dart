@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
+import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/widgets/custom_bottom_nav.dart';
@@ -49,13 +50,19 @@ class _AppScaffoldState extends State<AppScaffold> {
       _currentIndex = index;
     });
 
-    // Navegar a la pantalla correspondiente
+    // Navegar a la pantalla correspondiente usando MaterialPageRoute
     switch (index) {
       case 0:
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
         break;
       case 1:
-        Navigator.pushReplacementNamed(context, '/palettes');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const PaletteScreen()),
+        );
         break;
       case 2:
         // Implementar navegación al perfil cuando esté disponible
