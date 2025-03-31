@@ -5,8 +5,9 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 class PaintCard extends StatelessWidget {
   final Paint paint;
+  final int paletteCount;
 
-  const PaintCard({super.key, required this.paint});
+  const PaintCard({super.key, required this.paint, this.paletteCount = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -49,10 +50,34 @@ class PaintCard extends StatelessWidget {
                     const SizedBox(height: AppDimensions.marginXS),
                     Row(
                       children: [
-                        Text(paint.brand, style: textTheme.bodySmall),
-                        const SizedBox(width: AppDimensions.marginS),
-                        _buildCategoryChip(context),
-                        if (paint.isMetallic) _buildMetallicChip(context),
+                        Text(
+                          paint.brand,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ),
+                        if (paletteCount > 0) ...[
+                          const SizedBox(width: AppDimensions.marginS),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppDimensions.paddingS,
+                              vertical: AppDimensions.paddingXS,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(
+                                AppDimensions.radiusS,
+                              ),
+                            ),
+                            child: Text(
+                              'Used in $paletteCount palettes',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
