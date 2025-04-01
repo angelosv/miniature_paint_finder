@@ -454,7 +454,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     final currentPoints =
         _selectedColorPoints
             .map(
-              (point) => _ColorPoint(
+              (point) => ColorPoint(
                 x: point.x,
                 y: point.y,
                 color: point.color,
@@ -532,17 +532,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                             Positioned.fill(
                               child: CustomPaint(
                                 painter: ColorPointsPainter(
-                                  points:
-                                      _selectedColorPoints
-                                          .map(
-                                            (point) => _ColorPoint(
-                                              x: point.x,
-                                              y: point.y,
-                                              color: point.color,
-                                              hex: point.hex,
-                                            ),
-                                          )
-                                          .toList(),
+                                  points: _selectedColorPoints,
                                 ),
                               ),
                             ),
@@ -809,8 +799,8 @@ class ColorPointsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     for (var point in points) {
       // Ajustar coordenadas al tamaño actual
-      final x = point.x / point.x * size.width;
-      final y = point.y / point.y * size.height;
+      final double x = point.x;
+      final double y = point.y;
 
       // Dibujar círculo de color en la posición
       final paint =
