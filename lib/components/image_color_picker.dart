@@ -52,10 +52,15 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
   double _currentScale = 1.0;
   Offset? _doubleTapPosition;
 
+  // Variables para arrastrar los puntos
+  int? _draggedPointIndex;
+
   // Tamaño del contenedor de la imagen
   Size _containerSize = Size.zero;
   // Tamaño de la imagen actual
   Size _imageSize = Size.zero;
+  // Rectángulo de la imagen
+  Rect _imageRect = Rect.zero;
   // Indicador de si se está cargando la imagen
   bool _isImageLoading = false;
 
@@ -87,10 +92,42 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     ),
   ];
 
+  // GlobalKey para obtener el tamaño y posición exactos del widget de imagen
+  final GlobalKey _imageKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     _loadImageDimensions();
+
+    // Añadir listener para el cambio de transformación (zoom)
+    _transformationController.addListener(_handleTransformChange);
+  }
+
+  void _handleTransformChange() {
+    setState(() {
+      _currentScale = _transformationController.value.getMaxScaleOnAxis();
+    });
+
+    // Obtener el rectángulo de la imagen después del zoom
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateImageRect();
+    });
+  }
+
+  // Actualizar el rectángulo de la imagen
+  void _updateImageRect() {
+    if (_imageKey.currentContext != null) {
+      final RenderBox box =
+          _imageKey.currentContext!.findRenderObject() as RenderBox;
+      final Offset position = box.localToGlobal(Offset.zero);
+      _imageRect = Rect.fromLTWH(
+        position.dx,
+        position.dy,
+        box.size.width,
+        box.size.height,
+      );
+    }
   }
 
   // Cargar las dimensiones de la imagen
@@ -114,6 +151,11 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
           _isImageLoading = false;
         });
       }
+
+      // Actualizar el rectángulo de la imagen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateImageRect();
+      });
     }
   }
 
@@ -133,6 +175,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
 
   @override
   void dispose() {
+    _transformationController.removeListener(_handleTransformChange);
     _transformationController.dispose();
     super.dispose();
   }
@@ -184,6 +227,111 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     }
   }
 
+  // Convertir las coordenadas visuales a coordenadas de la imagen real
+  Offset _getImageCoordinatesFromViewport(Offset viewportPosition) {
+    if (_imageKey.currentContext == null) return viewportPosition;
+
+    // Obtener el RenderBox del widget de imagen
+    final RenderBox box =
+        _imageKey.currentContext!.findRenderObject() as RenderBox;
+
+    // Convertir la posición global a local en el contexto del widget de imagen
+    final Offset localPosition = box.globalToLocal(viewportPosition);
+
+    // Calcular la posición relativa en función del tamaño real de la imagen y el estado actual del zoom
+    final Matrix4 transform = _transformationController.value;
+    final Matrix4 inverseTransform = Matrix4.inverted(transform);
+    final Vector3 untransformedPosition = inverseTransform.transform3(
+      Vector3(localPosition.dx, localPosition.dy, 0),
+    );
+
+    return Offset(untransformedPosition.x, untransformedPosition.y);
+  }
+
+  // Obtener color en la posición de la imagen
+  Color? _getColorAtPosition(Offset position) {
+    if (widget.imageFile == null ||
+        !widget.imageFile!.existsSync() ||
+        _isImageLoading)
+      return null;
+
+    try {
+      final image = img.decodeImage(widget.imageFile!.readAsBytesSync());
+      if (image == null) return null;
+
+      // Calcular la posición relativa en la imagen
+      final double x = position.dx / _containerSize.width;
+      final double y = position.dy / _containerSize.height;
+
+      // Convertir a coordenadas de píxel
+      final pixelX = (x * image.width).round();
+      final pixelY = (y * image.height).round();
+
+      // Verificar que esté dentro de los límites
+      if (pixelX >= 0 &&
+          pixelX < image.width &&
+          pixelY >= 0 &&
+          pixelY < image.height) {
+        final pixel = image.getPixel(pixelX, pixelY);
+        return Color.fromARGB(
+          255, // Alpha fijo
+          pixel.r.toInt(),
+          pixel.g.toInt(),
+          pixel.b.toInt(),
+        );
+      }
+    } catch (e) {
+      print('Error obteniendo color: $e');
+    }
+
+    return null;
+  }
+
+  void _handleImageTap(TapDownDetails details) {
+    if (widget.imageFile == null || _isImageLoading) return;
+    if (_draggedPointIndex != null)
+      return; // No seleccionar nuevo color si estamos arrastrando
+
+    // Obtener la posición en coordenadas locales del widget contenedor
+    final Offset tapPosition = details.localPosition;
+
+    // Convertir la posición del tap considerando el zoom y transformación
+    final Offset imagePosition = _transformPositionToImageCoordinates(
+      tapPosition,
+    );
+
+    // Asegurarse de que el punto está dentro de los límites del contenedor
+    if (imagePosition.dx < 0 ||
+        imagePosition.dx > _containerSize.width ||
+        imagePosition.dy < 0 ||
+        imagePosition.dy > _containerSize.height) {
+      return; // El tap está fuera de los límites
+    }
+
+    // Obtener el color en la posición seleccionada
+    final color = _getColorAtPosition(imagePosition);
+    if (color == null) return;
+
+    // Convertir el color a formato hexadecimal
+    final hexCode =
+        '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+    setState(() {
+      // Ya no hay límite de colores seleccionables
+      _selectedColorPoints.add(
+        _ColorPoint(
+          x: imagePosition.dx,
+          y: imagePosition.dy,
+          color: color,
+          hex: hexCode,
+        ),
+      );
+
+      // Notificar que los colores han cambiado
+      _notifyColorsChanged();
+    });
+  }
+
   // Convertir las coordenadas del tap en coordenadas de la imagen
   Offset _transformPositionToImageCoordinates(Offset position) {
     // Obtener la matriz de transformación actual
@@ -200,76 +348,59 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     return Offset(untransformedPosition.x, untransformedPosition.y);
   }
 
-  void _handleImageTap(TapDownDetails details) {
-    if (widget.imageFile == null || _isImageLoading) return;
+  // Comenzar arrastre del punto seleccionado
+  void _handleColorPointDragStart(int index) {
+    setState(() {
+      _draggedPointIndex = index;
+    });
+  }
 
-    final Offset localPosition = details.localPosition;
+  // Actualizar posición del punto durante el arrastre
+  void _handleColorPointDragUpdate(DragUpdateDetails details) {
+    if (_draggedPointIndex == null ||
+        _draggedPointIndex! >= _selectedColorPoints.length)
+      return;
 
-    // Calcular la posición del tap considerando el zoom actual
-    final Offset imagePosition = _transformPositionToImageCoordinates(
-      localPosition,
+    // Obtener la nueva posición en coordenadas de la imagen
+    final Offset newPosition = _transformPositionToImageCoordinates(
+      details.localPosition,
     );
 
-    // Asegurarse de que el punto está dentro de los límites del contenedor
-    if (imagePosition.dx < 0 ||
-        imagePosition.dx > _containerSize.width ||
-        imagePosition.dy < 0 ||
-        imagePosition.dy > _containerSize.height) {
-      return; // El tap está fuera de los límites
+    // Comprobar que la nueva posición está dentro de los límites
+    if (newPosition.dx < 0 ||
+        newPosition.dx > _containerSize.width ||
+        newPosition.dy < 0 ||
+        newPosition.dy > _containerSize.height) {
+      return;
     }
 
-    // Calcular la posición relativa en la imagen
-    final double x = imagePosition.dx / _containerSize.width;
-    final double y = imagePosition.dy / _containerSize.height;
+    // Obtener el color en la nueva posición
+    final color = _getColorAtPosition(newPosition);
+    if (color == null) return;
 
-    // Obtener el color en la posición seleccionada
-    final image = img.decodeImage(widget.imageFile!.readAsBytesSync());
-    if (image != null) {
-      final pixelX = (x * image.width).round();
-      final pixelY = (y * image.height).round();
+    // Convertir el color a formato hexadecimal
+    final hexCode =
+        '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
-      if (pixelX >= 0 &&
-          pixelX < image.width &&
-          pixelY >= 0 &&
-          pixelY < image.height) {
-        final pixel = image.getPixel(pixelX, pixelY);
-        final color = Color.fromARGB(
-          255, // Alpha fijo a 255 (opaco)
-          pixel.r.toInt(), // Red
-          pixel.g.toInt(), // Green
-          pixel.b.toInt(), // Blue
-        );
+    setState(() {
+      // Actualizar la posición y color del punto arrastrado
+      _selectedColorPoints[_draggedPointIndex!] = _ColorPoint(
+        x: newPosition.dx,
+        y: newPosition.dy,
+        color: color,
+        hex: hexCode,
+      );
 
-        // Convertir el color a formato hexadecimal
-        final hexCode =
-            '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+      // Notificar que los colores han cambiado
+      _notifyColorsChanged();
+    });
+  }
 
-        setState(() {
-          if (_selectedColorPoints.length < 5) {
-            // Limitar a 5 colores
-            _selectedColorPoints.add(
-              _ColorPoint(
-                x: imagePosition.dx,
-                y: imagePosition.dy,
-                color: color,
-                hex: hexCode,
-              ),
-            );
-
-            // Notificar que los colores han cambiado
-            _notifyColorsChanged();
-          } else {
-            // Mostrar un mensaje si ya se han seleccionado 5 colores
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Maximum 5 colors can be selected.'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        });
-      }
-    }
+  // Finalizar arrastre del punto
+  void _handleColorPointDragEnd(DragEndDetails details) {
+    setState(() {
+      _draggedPointIndex = null;
+    });
   }
 
   // Actualizar la lista de colores seleccionados en el formato que espera el padre
@@ -350,16 +481,20 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                           });
                         },
                         onDoubleTap: _handleDoubleTap,
+                        onPanUpdate:
+                            _draggedPointIndex != null
+                                ? _handleColorPointDragUpdate
+                                : null,
+                        onPanEnd:
+                            _draggedPointIndex != null
+                                ? _handleColorPointDragEnd
+                                : null,
                         child: InteractiveViewer(
                           transformationController: _transformationController,
                           minScale: 1.0,
-                          maxScale: 4.0,
-                          onInteractionUpdate: (details) {
-                            setState(() {
-                              _currentScale = details.scale;
-                            });
-                          },
+                          maxScale: 5.0,
                           child: Stack(
+                            key: _imageKey,
                             children: [
                               // Imagen de fondo
                               Image.file(
@@ -370,46 +505,100 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                               ),
 
                               // Puntos seleccionados
-                              ..._selectedColorPoints.map((point) {
+                              ..._selectedColorPoints.asMap().entries.map((
+                                entry,
+                              ) {
+                                final index = entry.key;
+                                final point = entry.value;
                                 // Determinar si el texto debe ser claro u oscuro según el color de fondo
                                 final bool isLight = _isLightColor(point.color);
+
+                                // Determinar si este punto está siendo arrastrado
+                                final bool isDragging =
+                                    _draggedPointIndex == index;
+
                                 return Positioned(
                                   left: point.x - 15, // Centrar el marcador
                                   top: point.y - 15, // Centrar el marcador
                                   child: GestureDetector(
-                                    onTap: () {
-                                      final index = _selectedColorPoints
-                                          .indexOf(point);
-                                      if (index != -1) {
-                                        _removeColorPoint(index);
-                                      }
-                                    },
+                                    onTapDown:
+                                        (_) =>
+                                            _handleColorPointDragStart(index),
                                     child: Container(
                                       width: 30,
                                       height: 30,
                                       decoration: BoxDecoration(
-                                        color: point.color.withOpacity(0.8),
+                                        color: point.color.withOpacity(
+                                          isDragging ? 0.9 : 0.8,
+                                        ),
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color:
                                               isLight
                                                   ? Colors.black
                                                   : Colors.white,
-                                          width: 1.5,
+                                          width: isDragging ? 2.5 : 1.5,
                                         ),
+                                        boxShadow:
+                                            isDragging
+                                                ? [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.3),
+                                                    blurRadius: 5,
+                                                    spreadRadius: 1,
+                                                  ),
+                                                ]
+                                                : null,
                                       ),
-                                      child: Center(
-                                        child: Text(
-                                          '${_selectedColorPoints.indexOf(point) + 1}',
-                                          style: TextStyle(
-                                            color:
-                                                isLight
-                                                    ? Colors.black
-                                                    : Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Número del punto
+                                          Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              color:
+                                                  isLight
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
                                           ),
-                                        ),
+
+                                          // Ícono de eliminar
+                                          Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: GestureDetector(
+                                              onTap:
+                                                  () =>
+                                                      _removeColorPoint(index),
+                                              child: Container(
+                                                width: 10,
+                                                height: 10,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      isLight
+                                                          ? Colors.black
+                                                              .withOpacity(0.7)
+                                                          : Colors.white
+                                                              .withOpacity(0.7),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.close,
+                                                  size: 7,
+                                                  color:
+                                                      isLight
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -480,7 +669,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
-                        'Tap: select color\nDouble tap: zoom',
+                        'Tap: add color\nDrag: move point\nDouble tap: zoom',
                         style: TextStyle(color: Colors.white, fontSize: 10),
                       ),
                     ),
@@ -522,7 +711,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         if (widget.imageFile != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Tap on the image to select colors (max 5)\nDouble tap to zoom in/out',
+            'Tap to add colors • Double tap to zoom • Drag to move points',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -536,7 +725,9 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children:
-                  _selectedColorPoints.map((point) {
+                  _selectedColorPoints.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final point = entry.value;
                     final isLight = _isLightColor(point.color);
                     return Container(
                       width: 60,
@@ -554,28 +745,39 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                       ),
                       child: Stack(
                         children: [
+                          // Número del color e información
                           Center(
-                            child: Text(
-                              point.hex,
-                              style: TextStyle(
-                                color: isLight ? Colors.black : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    color:
+                                        isLight ? Colors.black : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  point.hex,
+                                  style: TextStyle(
+                                    color:
+                                        isLight ? Colors.black : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+
+                          // Botón de eliminar
                           Positioned(
                             top: 2,
                             right: 2,
                             child: GestureDetector(
-                              onTap: () {
-                                final index = _selectedColorPoints.indexOf(
-                                  point,
-                                );
-                                if (index != -1) {
-                                  _removeColorPoint(index);
-                                }
-                              },
+                              onTap: () => _removeColorPoint(index),
                               child: Container(
                                 padding: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
