@@ -66,6 +66,16 @@ class ProfileTab extends StatelessWidget {
               'User Profile',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Text(
+              authService.currentUser?.email ?? 'No email available',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[400]
+                    : Colors.grey[600],
+              ),
+            ),
             const SizedBox(height: 32),
             ProfileMenuItem(
               icon: Icons.collections,

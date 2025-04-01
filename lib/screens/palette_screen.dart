@@ -15,6 +15,7 @@ import 'dart:io';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
+import 'package:miniature_paint_finder/services/image_upload_service.dart';
 
 /// Screen that displays all user palettes
 class PaletteScreen extends StatefulWidget {
@@ -349,39 +350,42 @@ class _PaletteScreenState extends State<PaletteScreen> {
         if (name == null || name.isEmpty) {
           name = await showDialog<String>(
             context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('Name Your Palette'),
-                  content: TextField(
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter palette name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('CANCEL'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        final textField =
-                            context.findRenderObject() as RenderBox;
-                        final name = (textField as dynamic).controller.text;
-                        Navigator.pop(context, name);
-                      },
-                      child: const Text('CREATE'),
-                    ),
-                  ],
+            builder: (context) => AlertDialog(
+              title: const Text('Name Your Palette'),
+              content: TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Enter palette name',
+                  border: OutlineInputBorder(),
                 ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('CANCEL'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final textField = context.findRenderObject() as RenderBox;
+                    final name = (textField as dynamic).controller.text;
+                    Navigator.pop(context, name);
+                  },
+                  child: const Text('CREATE'),
+                ),
+              ],
+            ),
           );
         }
 
         if (name != null && name.isNotEmpty) {
+          // Primero subimos la imagen
+          final imageUploadService = ImageUploadService();
+          final String imageUrl = await imageUploadService.uploadImage(File(image.path));
+
+          // Luego creamos la paleta con la URL de la imagen
           final success = await _paletteController.createPalette(
             name: name,
-            imagePath: image.path,
+            imagePath: imageUrl,
             colors: [], // Colors will be extracted from image
           );
 
