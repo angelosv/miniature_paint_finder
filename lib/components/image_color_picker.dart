@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/services/image_upload_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:image/image.dart' as img;
+import 'package:miniature_paint_finder/components/color_selection_modal.dart';
 
 // Modelo para representar una marca de pintura
 class PaintBrand {
@@ -445,6 +446,50 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     });
   }
 
+  // Método para abrir el modal de selección precisa
+  void _openPrecisionColorSelector(BuildContext context) {
+    if (widget.imageFile == null) return;
+
+    // Convertir los puntos actuales al formato esperado por el modal
+    final currentPoints =
+        _selectedColorPoints
+            .map(
+              (point) => _ColorPoint(
+                x: point.x,
+                y: point.y,
+                color: point.color,
+                hex: point.hex,
+              ),
+            )
+            .toList();
+
+    // Mostrar modal
+    ColorSelectionModal.show(
+      context: context,
+      imageFile: widget.imageFile!,
+      selectedPoints: currentPoints,
+      onPointsUpdated: (updatedPoints) {
+        setState(() {
+          // Convertir puntos de regreso al formato utilizado por este widget
+          _selectedColorPoints =
+              updatedPoints
+                  .map(
+                    (point) => _ColorPoint(
+                      x: point.x,
+                      y: point.y,
+                      color: point.color,
+                      hex: point.hex,
+                    ),
+                  )
+                  .toList();
+
+          // Notificar cambios
+          _notifyColorsChanged();
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -472,141 +517,56 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: GestureDetector(
-                        onTapDown: _handleImageTap,
-                        onDoubleTapDown: (details) {
-                          // Guardar la posición del doble tap
-                          setState(() {
-                            _doubleTapPosition = details.localPosition;
-                          });
-                        },
-                        onDoubleTap: _handleDoubleTap,
-                        onPanUpdate:
-                            _draggedPointIndex != null
-                                ? _handleColorPointDragUpdate
-                                : null,
-                        onPanEnd:
-                            _draggedPointIndex != null
-                                ? _handleColorPointDragEnd
-                                : null,
-                        child: InteractiveViewer(
-                          transformationController: _transformationController,
-                          minScale: 1.0,
-                          maxScale: 5.0,
-                          child: Stack(
-                            key: _imageKey,
-                            children: [
-                              // Imagen de fondo
-                              Image.file(
-                                widget.imageFile!,
-                                fit: BoxFit.contain,
-                                width: constraints.maxWidth,
-                                height: 250,
-                              ),
-
-                              // Puntos seleccionados
-                              ..._selectedColorPoints.asMap().entries.map((
-                                entry,
-                              ) {
-                                final index = entry.key;
-                                final point = entry.value;
-                                // Determinar si el texto debe ser claro u oscuro según el color de fondo
-                                final bool isLight = _isLightColor(point.color);
-
-                                // Determinar si este punto está siendo arrastrado
-                                final bool isDragging =
-                                    _draggedPointIndex == index;
-
-                                return Positioned(
-                                  left: point.x - 15, // Centrar el marcador
-                                  top: point.y - 15, // Centrar el marcador
-                                  child: GestureDetector(
-                                    onTapDown:
-                                        (_) =>
-                                            _handleColorPointDragStart(index),
-                                    child: Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: point.color.withOpacity(
-                                          isDragging ? 0.9 : 0.8,
-                                        ),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color:
-                                              isLight
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                          width: isDragging ? 2.5 : 1.5,
-                                        ),
-                                        boxShadow:
-                                            isDragging
-                                                ? [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withOpacity(0.3),
-                                                    blurRadius: 5,
-                                                    spreadRadius: 1,
-                                                  ),
-                                                ]
-                                                : null,
-                                      ),
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          // Número del punto
-                                          Text(
-                                            '${index + 1}',
-                                            style: TextStyle(
-                                              color:
-                                                  isLight
-                                                      ? Colors.black
-                                                      : Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-
-                                          // Ícono de eliminar
-                                          Positioned(
-                                            top: 0,
-                                            right: 0,
-                                            child: GestureDetector(
-                                              onTap:
-                                                  () =>
-                                                      _removeColorPoint(index),
-                                              child: Container(
-                                                width: 10,
-                                                height: 10,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      isLight
-                                                          ? Colors.black
-                                                              .withOpacity(0.7)
-                                                          : Colors.white
-                                                              .withOpacity(0.7),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.close,
-                                                  size: 7,
-                                                  color:
-                                                      isLight
-                                                          ? Colors.white
-                                                          : Colors.black,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ],
+                      child: Stack(
+                        children: [
+                          // Imagen con los puntos actuales
+                          Image.file(
+                            widget.imageFile!,
+                            fit: BoxFit.contain,
+                            width: constraints.maxWidth,
+                            height: 250,
                           ),
-                        ),
+
+                          // Superposición con puntos existentes
+                          if (_selectedColorPoints.isNotEmpty)
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: ColorPointsPainter(
+                                  points:
+                                      _selectedColorPoints
+                                          .map(
+                                            (point) => _ColorPoint(
+                                              x: point.x,
+                                              y: point.y,
+                                              color: point.color,
+                                              hex: point.hex,
+                                            ),
+                                          )
+                                          .toList(),
+                                ),
+                              ),
+                            ),
+
+                          // Botón de modo avanzado de selección
+                          Positioned(
+                            bottom: 16,
+                            right: 16,
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  () => _openPrecisionColorSelector(context),
+                              icon: const Icon(Icons.color_lens),
+                              label: const Text('Precision Mode'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.marineBlue,
+                                foregroundColor: Colors.white,
+                                elevation: 3,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -628,49 +588,6 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.black.withOpacity(0.5),
                         foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  // Indicador de zoom
-                  if (_currentScale > 1.0)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${_currentScale.toStringAsFixed(1)}x',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Instrucciones de ayuda
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Tap: add color\nDrag: move point\nDouble tap: zoom',
-                        style: TextStyle(color: Colors.white, fontSize: 10),
                       ),
                     ),
                   ),
@@ -711,7 +628,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         if (widget.imageFile != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Tap to add colors • Double tap to zoom • Drag to move points',
+            'Select an image then use Precision Mode for advanced color selection',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -880,4 +797,48 @@ class _ColorPoint {
     required this.color,
     required this.hex,
   });
+}
+
+// Clase para pintar los puntos de color en la imagen
+class ColorPointsPainter extends CustomPainter {
+  final List<_ColorPoint> points;
+
+  ColorPointsPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var point in points) {
+      // Ajustar coordenadas al tamaño actual
+      final x = point.x / point.x * size.width;
+      final y = point.y / point.y * size.height;
+
+      // Dibujar círculo de color en la posición
+      final paint =
+          Paint()
+            ..color = point.color.withOpacity(0.7)
+            ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(Offset(x, y), 8, paint);
+
+      // Borde del círculo
+      final borderPaint =
+          Paint()
+            ..color = _isLightColor(point.color) ? Colors.black : Colors.white
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5;
+
+      canvas.drawCircle(Offset(x, y), 8, borderPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(ColorPointsPainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
+
+  bool _isLightColor(Color color) {
+    return (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) /
+            255 >
+        0.5;
+  }
 }
