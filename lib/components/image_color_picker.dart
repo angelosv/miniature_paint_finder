@@ -506,120 +506,126 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                       borderRadius: BorderRadius.circular(12),
                       child: Builder(
                         builder:
-                            (builderContext) => GestureDetector(
-                              onTapDown: (details) {
-                                final RenderBox box =
-                                    builderContext.findRenderObject()
-                                        as RenderBox;
-                                final Offset localPosition = box.globalToLocal(
-                                  details.globalPosition,
-                                );
+                            (builderContext) => Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                // Imagen que ocupa todo el espacio disponible
+                                Image.file(
+                                  widget.imageFile!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
 
-                                if (widget.imageFile != null &&
-                                    _imageSize.width > 0 &&
-                                    _imageSize.height > 0) {
-                                  // Calcular coordenadas relativas
-                                  final relativeX =
-                                      localPosition.dx / box.size.width;
-                                  final relativeY =
-                                      localPosition.dy / box.size.height;
+                                // Capa transparente para gestos y dibujo de puntos
+                                GestureDetector(
+                                  onTapDown: (details) {
+                                    final RenderBox box =
+                                        builderContext.findRenderObject()
+                                            as RenderBox;
+                                    final Offset localPosition = box
+                                        .globalToLocal(details.globalPosition);
 
-                                  // Verificar límites
-                                  if (relativeX < 0 ||
-                                      relativeX > 1 ||
-                                      relativeY < 0 ||
-                                      relativeY > 1) {
-                                    return;
-                                  }
+                                    if (widget.imageFile != null) {
+                                      try {
+                                        // Decodificar la imagen solo cuando sea necesario
+                                        final bytes =
+                                            widget.imageFile!.readAsBytesSync();
+                                        final image = img.decodeImage(bytes);
 
-                                  // Coordenadas del pixel
-                                  final pixelX =
-                                      (relativeX * _imageSize.width).round();
-                                  final pixelY =
-                                      (relativeY * _imageSize.height).round();
+                                        if (image != null) {
+                                          // Calcular coordenadas relativas
+                                          final relativeX =
+                                              localPosition.dx / box.size.width;
+                                          final relativeY =
+                                              localPosition.dy /
+                                              box.size.height;
 
-                                  // Verificar límites en la imagen
-                                  if (pixelX >= 0 &&
-                                      pixelX < _imageSize.width &&
-                                      pixelY >= 0 &&
-                                      pixelY < _imageSize.height) {
-                                    final pixel = img
-                                        .decodeImage(
-                                          widget.imageFile!.readAsBytesSync(),
-                                        )!
-                                        .getPixel(pixelX, pixelY);
-                                    final color = Color.fromARGB(
-                                      255,
-                                      pixel.r.toInt(),
-                                      pixel.g.toInt(),
-                                      pixel.b.toInt(),
-                                    );
+                                          // Coordenadas en píxeles
+                                          final pixelX =
+                                              (relativeX * image.width).round();
+                                          final pixelY =
+                                              (relativeY * image.height)
+                                                  .round();
 
-                                    // Hex code
-                                    final hexCode =
-                                        '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+                                          // Verificar límites
+                                          if (pixelX >= 0 &&
+                                              pixelX < image.width &&
+                                              pixelY >= 0 &&
+                                              pixelY < image.height) {
+                                            final pixel = image.getPixel(
+                                              pixelX,
+                                              pixelY,
+                                            );
+                                            final color = Color.fromARGB(
+                                              255,
+                                              pixel.r.toInt(),
+                                              pixel.g.toInt(),
+                                              pixel.b.toInt(),
+                                            );
 
-                                    setState(() {
-                                      _selectedColorPoints.add(
-                                        _ColorPoint(
-                                          x: localPosition.dx,
-                                          y: localPosition.dy,
-                                          color: color,
-                                          hex: hexCode,
-                                        ),
-                                      );
-                                      _notifyColorsChanged();
-                                    });
-                                  }
-                                }
-                              },
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  // Imagen que ocupa todo el espacio disponible
-                                  Image.file(
-                                    widget.imageFile!,
-                                    fit:
-                                        BoxFit
-                                            .cover, // Asegura que llene todo el contenedor
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
+                                            // Hex code
+                                            final hexCode =
+                                                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
-                                  // Puntos seleccionados
-                                  if (_selectedColorPoints.isNotEmpty)
-                                    CustomPaint(
-                                      size: Size(constraints.maxWidth, 250),
-                                      painter: ColorPointsPainter(
-                                        points: _selectedColorPoints,
-                                      ),
-                                    ),
-
-                                  // Botón de modo avanzado
-                                  Positioned(
-                                    bottom: 16,
-                                    right: 16,
-                                    child: ElevatedButton.icon(
-                                      onPressed:
-                                          () => _openPrecisionColorSelector(
-                                            context,
-                                          ),
-                                      icon: const Icon(Icons.color_lens),
-                                      label: const Text('Precision Mode'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.marineBlue,
-                                        foregroundColor: Colors.white,
-                                        elevation: 3,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
+                                            setState(() {
+                                              _selectedColorPoints.add(
+                                                _ColorPoint(
+                                                  x: localPosition.dx,
+                                                  y: localPosition.dy,
+                                                  color: color,
+                                                  hex: hexCode,
+                                                ),
+                                              );
+                                              _notifyColorsChanged();
+                                              print(
+                                                'DEBUG: Color añadido - ${_selectedColorPoints.length} puntos total',
+                                              );
+                                            });
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print(
+                                          'DEBUG: Error al procesar la imagen: $e',
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: CustomPaint(
+                                    size: Size(constraints.maxWidth, 250),
+                                    painter: ColorPointsPainter(
+                                      points: _selectedColorPoints,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+
+                                // Botones de herramientas
+                                Positioned(
+                                  top: 16,
+                                  left: 16,
+                                  child: Column(
+                                    children: [
+                                      _buildToolButton(
+                                        icon: Icons.color_lens,
+                                        tooltip: 'Color Picker',
+                                        onTap: () {
+                                          // Ya estamos en este modo por defecto
+                                        },
+                                        isActive: true,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildToolButton(
+                                        icon: Icons.zoom_in,
+                                        tooltip: 'Precision Mode',
+                                        onTap:
+                                            () => _openPrecisionColorSelector(
+                                              context,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                       ),
                     ),
@@ -681,7 +687,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         if (widget.imageFile != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Select an image then use Precision Mode for advanced color selection',
+            'Tap on the image to select colors or use Precision Mode',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -795,6 +801,39 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
             child: CircularProgressIndicator(),
           ),
       ],
+    );
+  }
+
+  // Botón de herramienta para la barra de herramientas
+  Widget _buildToolButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    bool isActive = false,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color:
+                isActive ? AppTheme.marineBlue : Colors.black.withOpacity(0.5),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
     );
   }
 

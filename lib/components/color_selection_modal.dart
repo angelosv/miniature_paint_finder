@@ -5,6 +5,9 @@ import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
+// Modos de herramientas para el selector de colores
+enum ToolMode { picker, zoom, move }
+
 class ColorSelectionModal extends StatefulWidget {
   final File imageFile;
   final List<ColorPoint> selectedPoints;
@@ -27,6 +30,8 @@ class ColorSelectionModal extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
       builder:
           (_) => ColorSelectionModal(
             imageFile: imageFile,
@@ -64,6 +69,9 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   bool _magnifierMode = false;
   double _magnifierScale = 4.0;
   double _magnifierSize = 120.0;
+
+  // Modos de herramientas
+  ToolMode _currentMode = ToolMode.picker;
 
   // Estado de carga
   bool _isLoading = true;
@@ -378,43 +386,90 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       child: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Header con botones de herramientas
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  Text(
-                    'Precision Color Selector',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Botón para activar/desactivar la lupa
-                      IconButton(
-                        icon: Icon(
-                          Icons.zoom_in,
-                          color:
-                              _magnifierMode
-                                  ? Theme.of(context).primaryColor
-                                  : Theme.of(context).disabledColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _magnifierMode = !_magnifierMode;
-                            if (!_magnifierMode) {
-                              _magnifierPoint = null;
-                            }
-                          });
-                        },
-                        tooltip: 'Toggle magnifier',
+                      Text(
+                        'Precision Color Selector',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      IconButton(
+                      TextButton.icon(
                         icon: const Icon(Icons.close),
+                        label: const Text("Close"),
                         onPressed: () => Navigator.pop(context),
-                        tooltip: 'Close',
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              isDarkMode ? Colors.white : Colors.black87,
+                        ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Barra de herramientas
+                  Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildToolButton(
+                          icon: Icons.colorize,
+                          label: 'Color Picker',
+                          isActive: _currentMode == ToolMode.picker,
+                          onTap:
+                              () => setState(() {
+                                _currentMode = ToolMode.picker;
+                                _magnifierMode =
+                                    true; // Activar lupa en modo selector
+                              }),
+                        ),
+                        _buildToolButton(
+                          icon: Icons.zoom_in,
+                          label: 'Zoom',
+                          isActive: _currentMode == ToolMode.zoom,
+                          onTap:
+                              () => setState(() {
+                                _currentMode = ToolMode.zoom;
+                                _magnifierMode =
+                                    false; // Desactivar lupa en modo zoom
+                              }),
+                        ),
+                        _buildToolButton(
+                          icon: Icons.pan_tool,
+                          label: 'Move',
+                          isActive: _currentMode == ToolMode.move,
+                          onTap:
+                              () => setState(() {
+                                _currentMode = ToolMode.move;
+                                _magnifierMode =
+                                    false; // Desactivar lupa en modo movimiento
+                              }),
+                        ),
+                        _buildToolButton(
+                          icon: Icons.restart_alt,
+                          label: 'Reset',
+                          onTap: () {
+                            _resetZoom();
+                            setState(() {
+                              _currentMode = ToolMode.picker;
+                              _magnifierMode = true;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -428,16 +483,29 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : GestureDetector(
-                        onTapDown: _handleTap,
-                        onDoubleTapDown: _handleDoubleTap,
+                        onTapDown:
+                            _currentMode == ToolMode.picker ? _handleTap : null,
+                        onDoubleTapDown:
+                            _currentMode == ToolMode.zoom
+                                ? _handleDoubleTapDown
+                                : null,
                         onDoubleTap:
-                            () {}, // Necesario para que onDoubleTapDown funcione
+                            _currentMode == ToolMode.zoom
+                                ? _handleDoubleTap
+                                : null,
                         onPanUpdate: _handlePanUpdate,
                         onPanEnd: _handlePanEnd,
                         child: InteractiveViewer(
                           transformationController: _transformationController,
                           minScale: 0.5,
                           maxScale: 5.0,
+                          panEnabled:
+                              _currentMode ==
+                              ToolMode
+                                  .move, // Solo permitir pan en modo movimiento
+                          scaleEnabled:
+                              _currentMode ==
+                              ToolMode.zoom, // Solo permitir zoom en modo zoom
                           child: Stack(
                             key: _imageKey,
                             children: [
@@ -446,6 +514,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 child: Image.file(
                                   widget.imageFile,
                                   fit: BoxFit.contain,
+                                  width: double.infinity,
                                 ),
                               ),
 
@@ -630,7 +699,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       ),
                     ),
 
-                  // Instrucciones superpuestas
+                  // Instrucciones según el modo activo
                   Positioned(
                     left: 16,
                     bottom: 16,
@@ -640,19 +709,56 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            '• Tap/drag: Add/move color point',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                          Text(
-                            '• Double tap: Zoom in/out',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
+                          if (_currentMode == ToolMode.picker)
+                            const Text(
+                              '• Tap to add a color point',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (_currentMode == ToolMode.zoom)
+                            const Text(
+                              '• Double tap to zoom in/out',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          if (_currentMode == ToolMode.move)
+                            const Text(
+                              '• Drag to move the image',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
                         ],
+                      ),
+                    ),
+                  ),
+
+                  // Indicador de nivel de zoom
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${_transformationController.value.getMaxScaleOnAxis().toStringAsFixed(1)}x',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -691,6 +797,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       ),
                       ElevatedButton(
                         onPressed: () {
+                          widget.onPointsUpdated(_points);
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -812,6 +919,87 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         ),
       ),
     );
+  }
+
+  // Botón de herramienta para la barra de herramientas
+  Widget _buildToolButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isActive = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.marineBlue : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isActive ? Colors.white : Colors.grey, size: 18),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Métodos para manejar diferentes tipos de gestos según el modo
+  void _handleTap(TapDownDetails details) {
+    if (_isMovingPoint) return;
+
+    // Convertir tap a posición real en la imagen
+    final imagePosition = _getImagePositionFromViewport(details.globalPosition);
+
+    // Verificar si el tap fue en un punto existente (para seleccionar)
+    for (int i = 0; i < _points.length; i++) {
+      final point = _points[i];
+      final distance = (Offset(point.x, point.y) - imagePosition).distance;
+
+      if (distance < 20 / _transformationController.value.getMaxScaleOnAxis()) {
+        setState(() {
+          _selectedPointIndex = i;
+          _isMovingPoint = true;
+        });
+        return;
+      }
+    }
+
+    // Si no tocó un punto existente y hay un punto en la lupa, añadirlo
+    if (_magnifierPoint != null) {
+      setState(() {
+        _points.add(_magnifierPoint!);
+        widget.onPointsUpdated(_points);
+      });
+    }
+  }
+
+  void _handleDoubleTapDown(TapDownDetails details) {
+    setState(() {
+      _doubleTapPosition = details.localPosition;
+    });
+  }
+
+  void _handleDoubleTap() {
+    if (_doubleTapPosition == null) return;
+
+    if (_transformationController.value != Matrix4.identity()) {
+      _resetZoom();
+    } else {
+      _zoomIn(_doubleTapPosition!);
+    }
   }
 }
 
