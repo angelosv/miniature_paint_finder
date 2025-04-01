@@ -181,52 +181,59 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       x = screenSize.width - _magnifierSize / 2;
     }
 
-    setState(() {
-      _magnifierPosition = Offset(x, y);
+    // Obtenemos la posición exacta en la imagen (considerando el zoom)
+    final imagePosition = _getImagePositionFromViewport(position);
 
-      // Convertir posición a coordenadas relativas de la imagen
-      final imagePosition = _getImagePositionFromViewport(position);
-      if (_decodedImage != null) {
-        RenderBox? box =
-            _imageKey.currentContext?.findRenderObject() as RenderBox?;
-        if (box != null) {
-          // Obtener el tamaño actual visible de la imagen (considerando zoom)
-          final visibleImageSize = Size(box.size.width, box.size.height);
+    if (_decodedImage != null) {
+      RenderBox? box =
+          _imageKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null) {
+        // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
+        final visibleImageSize = _getVisibleImageSize(box);
 
-          // Calcular la proporción entre el tamaño de la imagen decodificada y el tamaño visible
-          final scaleX = _decodedImage!.width / visibleImageSize.width;
-          final scaleY = _decodedImage!.height / visibleImageSize.height;
+        // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
+        final adjustedX =
+            (imagePosition.dx / visibleImageSize.width) * _decodedImage!.width;
+        final adjustedY =
+            (imagePosition.dy / visibleImageSize.height) *
+            _decodedImage!.height;
 
-          // Calcular la posición del pixel en la imagen original
-          final pixelX = (imagePosition.dx * scaleX).round();
-          final pixelY = (imagePosition.dy * scaleY).round();
+        // Aseguramos que estamos dentro de los límites de la imagen
+        final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
+        final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
 
-          // Obtener color si está dentro de los límites
-          if (pixelX >= 0 &&
-              pixelX < _decodedImage!.width &&
-              pixelY >= 0 &&
-              pixelY < _decodedImage!.height) {
-            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-            final color = Color.fromARGB(
-              255,
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            );
+        // Obtener color desde la imagen original
+        final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+        final color = Color.fromARGB(
+          255,
+          pixel.r.toInt(),
+          pixel.g.toInt(),
+          pixel.b.toInt(),
+        );
 
-            final hexCode =
-                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+        final hexCode =
+            '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
-            _magnifierPoint = ColorPoint(
-              x: imagePosition.dx,
-              y: imagePosition.dy,
-              color: color,
-              hex: hexCode,
-            );
-          }
-        }
+        setState(() {
+          _magnifierPosition = Offset(x, y);
+          _magnifierPoint = ColorPoint(
+            x: imagePosition.dx,
+            y: imagePosition.dy,
+            color: color,
+            hex: hexCode,
+          );
+        });
       }
-    });
+    }
+  }
+
+  // Obtiene el tamaño visible actual de la imagen considerando zoom y posición
+  Size _getVisibleImageSize(RenderBox box) {
+    // Obtenemos el factor de escala actual
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+
+    // Calculamos el tamaño de la imagen visible considerando el zoom
+    return Size(box.size.width / scale, box.size.height / scale);
   }
 
   // Convertir coordenadas de la pantalla a coordenadas de la imagen considerando zoom
@@ -265,44 +272,43 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         RenderBox? box =
             _imageKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null) {
-          // Obtener el tamaño actual visible de la imagen (considerando zoom)
-          final visibleImageSize = Size(box.size.width, box.size.height);
+          // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
+          final visibleImageSize = _getVisibleImageSize(box);
 
-          // Calcular la proporción entre el tamaño de la imagen decodificada y el tamaño visible
-          final scaleX = _decodedImage!.width / visibleImageSize.width;
-          final scaleY = _decodedImage!.height / visibleImageSize.height;
+          // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
+          final adjustedX =
+              (imagePosition.dx / visibleImageSize.width) *
+              _decodedImage!.width;
+          final adjustedY =
+              (imagePosition.dy / visibleImageSize.height) *
+              _decodedImage!.height;
 
-          // Calcular la posición del pixel en la imagen original
-          final pixelX = (imagePosition.dx * scaleX).round();
-          final pixelY = (imagePosition.dy * scaleY).round();
+          // Aseguramos que estamos dentro de los límites de la imagen
+          final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
+          final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
 
-          if (pixelX >= 0 &&
-              pixelX < _decodedImage!.width &&
-              pixelY >= 0 &&
-              pixelY < _decodedImage!.height) {
-            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-            final color = Color.fromARGB(
-              255,
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            );
+          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+          final color = Color.fromARGB(
+            255,
+            pixel.r.toInt(),
+            pixel.g.toInt(),
+            pixel.b.toInt(),
+          );
 
-            final hexCode =
-                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+          final hexCode =
+              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
-            final newPoint = ColorPoint(
-              x: imagePosition.dx,
-              y: imagePosition.dy,
-              color: color,
-              hex: hexCode,
-            );
+          final newPoint = ColorPoint(
+            x: imagePosition.dx,
+            y: imagePosition.dy,
+            color: color,
+            hex: hexCode,
+          );
 
-            setState(() {
-              _points.add(newPoint);
-              widget.onPointsUpdated(_points);
-            });
-          }
+          setState(() {
+            _points.add(newPoint);
+            widget.onPointsUpdated(_points);
+          });
         }
       }
     }
@@ -319,41 +325,40 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         RenderBox? box =
             _imageKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null) {
-          // Obtener el tamaño actual visible de la imagen (considerando zoom)
-          final visibleImageSize = Size(box.size.width, box.size.height);
+          // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
+          final visibleImageSize = _getVisibleImageSize(box);
 
-          // Calcular la proporción entre el tamaño de la imagen decodificada y el tamaño visible
-          final scaleX = _decodedImage!.width / visibleImageSize.width;
-          final scaleY = _decodedImage!.height / visibleImageSize.height;
+          // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
+          final adjustedX =
+              (imagePosition.dx / visibleImageSize.width) *
+              _decodedImage!.width;
+          final adjustedY =
+              (imagePosition.dy / visibleImageSize.height) *
+              _decodedImage!.height;
 
-          // Calcular la posición del pixel en la imagen original
-          final pixelX = (imagePosition.dx * scaleX).round();
-          final pixelY = (imagePosition.dy * scaleY).round();
+          // Aseguramos que estamos dentro de los límites de la imagen
+          final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
+          final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
 
-          if (pixelX >= 0 &&
-              pixelX < _decodedImage!.width &&
-              pixelY >= 0 &&
-              pixelY < _decodedImage!.height) {
-            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-            final color = Color.fromARGB(
-              255,
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
+          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+          final color = Color.fromARGB(
+            255,
+            pixel.r.toInt(),
+            pixel.g.toInt(),
+            pixel.b.toInt(),
+          );
+
+          final hexCode =
+              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+          setState(() {
+            _points[_selectedPointIndex!] = ColorPoint(
+              x: imagePosition.dx,
+              y: imagePosition.dy,
+              color: color,
+              hex: hexCode,
             );
-
-            final hexCode =
-                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-            setState(() {
-              _points[_selectedPointIndex!] = ColorPoint(
-                x: imagePosition.dx,
-                y: imagePosition.dy,
-                color: color,
-                hex: hexCode,
-              );
-            });
-          }
+          });
         }
       }
     } else {
@@ -641,21 +646,18 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                   scale: _magnifierScale,
                                   alignment: Alignment(
                                     2 *
-                                        (((_magnifierPosition!.dx) /
-                                                MediaQuery.of(
-                                                  context,
-                                                ).size.width) -
+                                        (((_magnifierPoint!.x) /
+                                                _imageSize.width) -
                                             0.5),
                                     2 *
-                                        (((_magnifierPosition!.dy) /
-                                                MediaQuery.of(
-                                                  context,
-                                                ).size.height) -
+                                        (((_magnifierPoint!.y) /
+                                                _imageSize.height) -
                                             0.5),
                                   ),
                                   child: Image.file(
                                     widget.imageFile,
-                                    fit: BoxFit.cover,
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
                                   ),
                                 ),
 
