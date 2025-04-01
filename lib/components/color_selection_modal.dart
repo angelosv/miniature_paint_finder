@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'dart:async';
 
 // Modos de herramientas para el selector de colores
 enum ToolMode { picker, move }
@@ -57,6 +58,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   final GlobalKey _imageKey = GlobalKey();
   Size _imageSize = Size.zero;
   img.Image? _decodedImage;
+  ui.Image? _uiImage; // Para el magnificador
+  Completer<ui.Image>? _imageCompleter;
 
   // Estado de selección
   List<ColorPoint> _points = [];
@@ -97,6 +100,14 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       _decodedImage = img.decodeImage(bytes);
 
       if (_decodedImage != null) {
+        // Cargar la imagen UI para el magnificador
+        final imgBytes = await widget.imageFile.readAsBytes();
+        final completer = Completer<ui.Image>();
+        ui.decodeImageFromList(imgBytes, (image) {
+          completer.complete(image);
+        });
+        _uiImage = await completer.future;
+
         setState(() {
           _imageSize = Size(
             _decodedImage!.width.toDouble(),
@@ -611,7 +622,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                   // Lupa (magnificador)
                   if (_magnifierMode &&
                       _magnifierPosition != null &&
-                      _magnifierPoint != null)
+                      _magnifierPoint != null &&
+                      _uiImage != null)
                     Positioned(
                       left: _magnifierPosition!.dx - _magnifierSize / 2,
                       top: _magnifierPosition!.dy - _magnifierSize / 2,
@@ -641,23 +653,20 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           child: ClipOval(
                             child: Stack(
                               children: [
-                                // Imagen ampliada
-                                Transform.scale(
-                                  scale: _magnifierScale,
-                                  alignment: Alignment(
-                                    2 *
-                                        (((_magnifierPoint!.x) /
-                                                _imageSize.width) -
-                                            0.5),
-                                    2 *
-                                        (((_magnifierPoint!.y) /
-                                                _imageSize.height) -
-                                            0.5),
-                                  ),
-                                  child: Image.file(
-                                    widget.imageFile,
-                                    fit: BoxFit.contain,
-                                    width: double.infinity,
+                                // Imagen ampliada usando un CustomPainter
+                                CustomPaint(
+                                  size: Size(_magnifierSize, _magnifierSize),
+                                  painter: MagnifierPainter(
+                                    image: _uiImage!,
+                                    sourceRect: Rect.fromCenter(
+                                      center: Offset(
+                                        _magnifierPoint!.x,
+                                        _magnifierPoint!.y,
+                                      ),
+                                      width: _magnifierSize / _magnifierScale,
+                                      height: _magnifierSize / _magnifierScale,
+                                    ),
+                                    scale: _magnifierScale,
                                   ),
                                 ),
 
@@ -971,4 +980,44 @@ class ColorPoint {
     required this.color,
     required this.hex,
   });
+}
+
+class MagnifierPainter extends CustomPainter {
+  final ui.Image image;
+  final Rect sourceRect;
+  final double scale;
+
+  MagnifierPainter({
+    required this.image,
+    required this.sourceRect,
+    required this.scale,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final matrix =
+        Matrix4.identity()
+          ..translate(sourceRect.left, sourceRect.top)
+          ..scale(1 / scale, 1 / scale)
+          ..translate(-sourceRect.left, -sourceRect.top);
+
+    final paint =
+        Paint()
+          ..filterQuality = FilterQuality.high
+          ..shader = ui.ImageShader(
+            image,
+            TileMode.clamp,
+            TileMode.clamp,
+            matrix.storage,
+          );
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(MagnifierPainter oldDelegate) {
+    return oldDelegate.image != image ||
+        oldDelegate.sourceRect != sourceRect ||
+        oldDelegate.scale != scale;
+  }
 }
