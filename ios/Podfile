@@ -45,18 +45,31 @@ post_install do |installer|
       # Optimizations for camera performance
       config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '3'  # Highest optimization level
       
-      # Enable Metal API for better camera performance
-      config.build_settings['MTL_ENABLE_DEBUG_INFO'] = 'NO'
-      
       # Disable bitcode as it's deprecated and can cause issues
       config.build_settings['ENABLE_BITCODE'] = 'NO'
       
       # Solución para simuladores en Apple Silicon (M1/M2)
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
+      config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
       
-      # Habilitar arm64 específicamente para simuladores en Apple Silicon
-      if config.name == 'Debug-iphonesimulator' || config.name == 'Release-iphonesimulator' || config.name == 'Profile-iphonesimulator'
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+      # Permitir arm64 en simuladores para Apple Silicon
+      if config.build_settings['SDKROOT'] == 'iphonesimulator'
+        config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
+      end
+    end
+  end
+  
+  # Fix para MLImage.framework - tratar específicamente las dependencias problemáticas
+  installer.pods_project.targets.each do |target|
+    if ['MLImage', 'MLKitVision', 'GoogleMLKit', 'mobile_scanner'].include?(target.name)
+      source_build_dir = "#{Dir.pwd}/Pods/#{target.name}"
+      target.build_configurations.each do |config|
+        if config.name.include?('iphonesimulator')
+          # Configuración específica para simuladores
+          config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
+          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
+          config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+        end
       end
     end
   end

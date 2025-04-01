@@ -1,0 +1,5 @@
+framework module MLImage {
+  umbrella header "MLImage.h"
+  export *
+  module * { export * }
+}
