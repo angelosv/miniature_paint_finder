@@ -13,6 +13,9 @@ import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
+import 'package:miniature_paint_finder/services/paint_match_service.dart';
+import 'package:miniature_paint_finder/services/color_search_service.dart';
+
 import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -45,6 +48,12 @@ class PaintListTab extends StatefulWidget {
 }
 
 class _PaintListTabState extends State<PaintListTab> {
+  final Map<int, List<dynamic>> _matchingPaints = {};
+  final Map<int, int> _currentPages = {};
+  final Map<int, int> _totalPages = {};
+  final Map<int, bool> _isLoadingMore = {};
+  final Map<int, ScrollController> _scrollControllers = {};
+  bool _isSavingPalette = false;
   File? _imageFile;
   String? _uploadedImageUrl;
   bool _showColorPicker = false;
@@ -102,7 +111,8 @@ class _PaintListTabState extends State<PaintListTab> {
         // Clear previous colors and add new ones in a structured format
         _pickedColors.clear();
         for (var color in colors) {
-          final hexCode = '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
+          final hexCode =
+              '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
           _pickedColors.add({
             'color': color,
             'hexCode': hexCode,
@@ -711,14 +721,16 @@ class _PaintListTabState extends State<PaintListTab> {
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: isSelected
-            ? (isDarkMode ? color.withOpacity(0.3) : color.withOpacity(0.1))
-            : (isDarkMode ? Colors.grey[850] : Colors.white),
+        color:
+            isSelected
+                ? (isDarkMode ? color.withOpacity(0.3) : color.withOpacity(0.1))
+                : (isDarkMode ? Colors.grey[850] : Colors.white),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected
-              ? color
-              : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+          color:
+              isSelected
+                  ? color
+                  : (isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -731,10 +743,7 @@ class _PaintListTabState extends State<PaintListTab> {
               height: 40,
               width: 40,
               margin: const EdgeInsets.only(top: 2),
-              child: Image.network(
-                logoUrl,
-                fit: BoxFit.contain,
-              ),
+              child: Image.network(logoUrl, fit: BoxFit.contain),
             )
           else
             Container(
@@ -1064,76 +1073,99 @@ class _PaintListTabState extends State<PaintListTab> {
                       child: SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              // Obtener el token de Firebase
-                              final user = FirebaseAuth.instance.currentUser;
-                              if (user == null) {
-                                throw Exception('Usuario no autenticado');
-                              }
-                              final token = await user.getIdToken();
+                          onPressed:
+                              _isSavingPalette
+                                  ? null
+                                  : () async {
+                                    setState(() {
+                                      _isSavingPalette = true;
+                                    });
 
-                              // Primer POST para subir la imagen
-                              final uploadResponse = await http.post(
-                                Uri.parse('https://paints-api.reachu.io/api/image/upload'),
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': 'Bearer $token',
-                                },
-                                body: jsonEncode({
-                                  'image_path': _uploadedImageUrl,
-                                }),
-                              );
+                                    try {
+                                      final user =
+                                          FirebaseAuth.instance.currentUser;
+                                      if (user == null)
+                                        throw Exception(
+                                          'Usuario no autenticado',
+                                        );
+                                      final token = await user.getIdToken();
 
-                              final uploadData = jsonDecode(uploadResponse.body);
-                              if (uploadData['executed'] != true) {
-                                throw Exception('Error al subir la imagen: ${uploadData['message']}');
-                              }
+                                      final paintsToSend =
+                                          _pickedColors
+                                              .where(
+                                                (c) => c['paintName'] != null,
+                                              )
+                                              .map(
+                                                (c) =>
+                                                    {
+                                                          'hex': c['hexCode'],
+                                                          'name':
+                                                              c['paintName'],
+                                                          'brand':
+                                                              c['paintBrand'],
+                                                          'colorCode':
+                                                              c['colorCode'],
+                                                          'barcode':
+                                                              c['barcode'],
+                                                        }
+                                                        as Map<String, String>,
+                                              )
+                                              .toList();
 
-                              // Segundo POST para crear la paleta
-                              final paletteResponse = await http.post(
-                                Uri.parse('https://paints-api.reachu.io/api/palettes'),
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': 'Bearer $token',
-                                },
-                                body: jsonEncode({
-                                  'name': _paletteNameController.text,
-                                }),
-                              );
+                                      final _colorSearchService =
+                                          ColorSearchService();
 
-                              final paletteData = jsonDecode(paletteResponse.body);
-                              if (paletteData['executed'] != true) {
-                                throw Exception('Error al crear la paleta: ${paletteData['message']}');
-                              }
+                                      await _colorSearchService.saveColorSearch(
+                                        token: token as String,
+                                        name: _paletteNameController.text,
+                                        paints: paintsToSend,
+                                      );
 
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Paleta "${_paletteNameController.text}" guardada!',
-                                  ),
-                                ),
-                              );
-                              _reset();
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al guardar la paleta: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Color search "${_paletteNameController.text}" saved!',
+                                          ),
+                                        ),
+                                      );
+                                      _reset();
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error al guardar: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    } finally {
+                                      setState(() {
+                                        _isSavingPalette = false;
+                                      });
+                                    }
+                                  },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.marineBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          child: const Text(
-                            'Save Palette',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                          child:
+                              _isSavingPalette
+                                  ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Text(
+                                    'Save Palette',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
                         ),
                       ),
                     ),
@@ -1322,75 +1354,70 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
-  // Modal para mostrar pinturas coincidentes (simulado)
-  Future<void> _showMatchingPaintsModal(BuildContext context, int colorIndex) {
+  Future<void> _showMatchingPaintsModal(
+    BuildContext context,
+    int colorIndex,
+  ) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final colorData = _pickedColors[colorIndex];
     final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
 
-    // Simulated paint matches with color codes
-    final List<Map<String, dynamic>> matchingPaints = [
-      {
-        'name': 'Abaddon Black',
-        'brand': 'Citadel',
-        'color': const Color(0xFF231F20),
-        'match': 92,
-        'brandAvatar': 'C',
-        'colorCode': '49-33',
-        'barcode': '5011921026340',
-      },
-      {
-        'name': 'Evil Sunz Scarlet',
-        'brand': 'Citadel',
-        'color': const Color(0xFFD1262C),
-        'match': 88,
-        'brandAvatar': 'C',
-        'colorCode': '52-12',
-        'barcode': '5011921027132',
-      },
-      {
-        'name': 'Mephiston Red',
-        'brand': 'Citadel',
-        'color': const Color(0xFFA22127),
-        'match': 86,
-        'brandAvatar': 'C',
-        'colorCode': '22-7A',
-        'barcode': '5011921027163',
-      },
-      {
-        'name': 'Model Color Black',
-        'brand': 'Vallejo',
-        'color': Colors.black,
-        'match': 84,
-        'brandAvatar': 'V',
-        'colorCode': '70.950',
-        'barcode': '8429551708512',
-      },
-      {
-        'name': 'Game Color Heavy Red',
-        'brand': 'Vallejo',
-        'color': const Color(0xFFC43E3E),
-        'match': 82,
-        'brandAvatar': 'V',
-        'colorCode': '72.143',
-        'barcode': '8429551725052',
-      },
-    ];
+    final user = FirebaseAuth.instance.currentUser;
+    final token = await user?.getIdToken();
+    final brandIds =
+        _paintBrands
+            .where((b) => b['selected'] == true)
+            .map((b) => b['id'] as String)
+            .toList();
 
-    // Track selected paint for confirmation
-    int? selectedPaintIndex;
-    if (colorData['paintName'] != null) {
-      for (int i = 0; i < matchingPaints.length; i++) {
-        if (matchingPaints[i]['name'] == colorData['paintName'] &&
-            matchingPaints[i]['brand'] == colorData['paintBrand']) {
-          selectedPaintIndex = i;
-          break;
-        }
+    _matchingPaints[colorIndex] = [];
+    _currentPages[colorIndex] = 1;
+    _totalPages[colorIndex] = 1;
+    _isLoadingMore[colorIndex] = false;
+
+    final ScrollController controller = ScrollController();
+    _scrollControllers[colorIndex] = controller;
+
+    Future<void> loadMorePaints() async {
+      if (_isLoadingMore[colorIndex]! ||
+          _currentPages[colorIndex]! > _totalPages[colorIndex]!)
+        return;
+
+      _isLoadingMore[colorIndex] = true;
+
+      try {
+        final matchService = PaintMatchService();
+        final data = await matchService.fetchMatchingPaints(
+          token: token!,
+          hexColor: hexCode,
+          brandIds: brandIds,
+          page: _currentPages[colorIndex]!,
+        );
+
+        final newPaints = data['paints'] as List<dynamic>;
+        _matchingPaints[colorIndex]!.addAll(newPaints);
+        _totalPages[colorIndex] = data['totalPages'];
+        _currentPages[colorIndex] = _currentPages[colorIndex]! + 1;
+      } catch (e) {
+        debugPrint('❌ Error loading paints: $e');
       }
+
+      _isLoadingMore[colorIndex] = false;
     }
 
-    return showModalBottomSheet(
+    controller.addListener(() {
+      if (controller.position.pixels >=
+          controller.position.maxScrollExtent - 100) {
+        loadMorePaints();
+      }
+    });
+
+    await loadMorePaints();
+
+    int? selectedIndex;
+
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -1399,415 +1426,105 @@ class _PaintListTabState extends State<PaintListTab> {
       backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (context, setState) {
+            final paints = _matchingPaints[colorIndex]!;
+
             return DraggableScrollableSheet(
-              initialChildSize: 0.6,
+              initialChildSize: 0.7,
               maxChildSize: 0.9,
-              minChildSize: 0.5,
               expand: false,
-              builder: (context, scrollController) {
-                return Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              builder: (_, __) {
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Matching Paints',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleLarge?.copyWith(
-                              color: isDarkMode ? Colors.white : null,
-                            ),
+                            "Matching Paints",
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
                           IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: isDarkMode ? Colors.white : null,
-                            ),
+                            icon: const Icon(Icons.close),
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
-                      Row(
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'For color: $hexCode',
-                            style: TextStyle(
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Divider(color: isDarkMode ? Colors.grey[700] : null),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Select a paint to match with this color:',
-                        style: TextStyle(
-                          color:
-                              isDarkMode ? Colors.grey[300] : Colors.grey[800],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: matchingPaints.length,
-                          itemBuilder: (context, index) {
-                            final paint = matchingPaints[index];
-                            final isSelected = selectedPaintIndex == index;
-
-                            return GestureDetector(
-                              onTap: () {
-                                // Update selected paint index
-                                setModalState(() {
-                                  selectedPaintIndex =
-                                      isSelected ? null : index;
-                                });
-                              },
-                              child: Card(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(
-                                    color:
-                                        isSelected
-                                            ? Colors.blue
-                                            : isDarkMode
-                                            ? Colors.grey[700]!
-                                            : Colors.grey[300]!,
-                                    width: isSelected ? 2 : 1,
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: controller,
+                        itemCount: paints.length + 1,
+                        itemBuilder: (_, index) {
+                          if (index == paints.length) {
+                            return _isLoadingMore[colorIndex]!
+                                ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
                                   ),
-                                ),
-                                color:
-                                    isSelected
-                                        ? (isDarkMode
-                                            ? Colors.blue.withOpacity(0.1)
-                                            : Colors.blue.withOpacity(0.05))
-                                        : (isDarkMode
-                                            ? Colors.grey[850]
-                                            : null),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          // Brand avatar instead of color swatch
-                                          Container(
-                                            width: 50,
-                                            height: 50,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  isDarkMode
-                                                      ? Colors.grey[800]
-                                                      : Colors.grey[200],
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                paint['brandAvatar'] as String,
-                                                style: TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      isDarkMode
-                                                          ? Colors.white
-                                                          : Colors.black,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
+                                )
+                                : const SizedBox.shrink();
+                          }
 
-                                          // Paint info
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  paint['name'] as String,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                    color:
-                                                        isDarkMode
-                                                            ? Colors.white
-                                                            : Colors.black,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  paint['brand'] as String,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color:
-                                                        isDarkMode
-                                                            ? Colors.grey[400]
-                                                            : Colors.grey[600],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
+                          final paint = paints[index];
+                          final isSelected = selectedIndex == index;
 
-                                          // Match percentage
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _getMatchColor(
-                                                paint['match'] as int,
-                                              ).withOpacity(0.2),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              '${paint['match']}% match',
-                                              style: TextStyle(
-                                                color: _getMatchColor(
-                                                  paint['match'] as int,
-                                                ),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-
-                                          // Selection tick on the right
-                                          if (isSelected)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                left: 8,
-                                              ),
-                                              child: Icon(
-                                                Icons.check_circle,
-                                                color: Colors.blue,
-                                                size: 22,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-
-                                      // Color info and barcode section
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.grey[800]
-                                                  : Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            // Color swatch and code
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  width: 24,
-                                                  height: 24,
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        paint['color'] as Color,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      'Color code:',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color:
-                                                            isDarkMode
-                                                                ? Colors
-                                                                    .grey[400]
-                                                                : Colors
-                                                                    .grey[600],
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      paint['colorCode']
-                                                          as String,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontFamily: 'monospace',
-                                                        color:
-                                                            isDarkMode
-                                                                ? Colors.white
-                                                                : Colors.black,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-
-                                            // Barcode
-                                            Flexible(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                    'Barcode:',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color:
-                                                          isDarkMode
-                                                              ? Colors.grey[400]
-                                                              : Colors
-                                                                  .grey[600],
-                                                    ),
-                                                  ),
-                                                  Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.qr_code,
-                                                        size: 14,
-                                                        color:
-                                                            isDarkMode
-                                                                ? Colors
-                                                                    .grey[400]
-                                                                : Colors
-                                                                    .grey[600],
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Flexible(
-                                                        child: Text(
-                                                          paint['barcode']
-                                                              as String,
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontFamily:
-                                                                'monospace',
-                                                            color:
-                                                                isDarkMode
-                                                                    ? Colors
-                                                                        .white
-                                                                    : Colors
-                                                                        .black,
-                                                          ),
-                                                          overflow:
-                                                              TextOverflow
-                                                                  .ellipsis,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                          return ListTile(
+                            title: Text(paint['name']),
+                            subtitle: Text(paint['brand']['name']),
+                            leading: CircleAvatar(
+                              backgroundColor: Color(
+                                int.parse('0xFF${paint['hex']}'),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      // Confirm button
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed:
-                              selectedPaintIndex != null
-                                  ? () {
-                                    // Save selected paint
-                                    final paint =
-                                        matchingPaints[selectedPaintIndex!];
-                                    setState(() {
-                                      _pickedColors[colorIndex] = {
-                                        ..._pickedColors[colorIndex],
-                                        'paintName': paint['name'],
-                                        'paintBrand': paint['brand'],
-                                        'paintColor': paint['color'],
-                                        'brandAvatar': paint['brandAvatar'],
-                                        'matchPercentage': paint['match'],
-                                        'colorCode': paint['colorCode'],
-                                        'barcode': paint['barcode'],
-                                      };
-                                    });
-
-                                    // Show confirmation and close modal
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${paint['name']} selected for Color Point ${colorIndex + 1}',
-                                        ),
-                                        duration: const Duration(
-                                          milliseconds: 1500,
-                                        ),
-                                      ),
-                                    );
-                                    Navigator.pop(context);
-                                  }
-                                  : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.marineBlue,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: Colors.grey.withOpacity(
-                              0.3,
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            'Confirm Selection',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
+                            trailing:
+                                isSelected
+                                    ? const Icon(Icons.check_circle)
+                                    : null,
+                            onTap:
+                                () => setState(
+                                  () =>
+                                      selectedIndex = isSelected ? null : index,
+                                ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ElevatedButton(
+                        onPressed:
+                            selectedIndex != null
+                                ? () {
+                                  final paint =
+                                      _matchingPaints[colorIndex]![selectedIndex!];
+                                  setState(() {
+                                    _pickedColors[colorIndex] = {
+                                      ..._pickedColors[colorIndex],
+                                      'paintName': paint['name'],
+                                      'paintBrand': paint['brand']['name'],
+                                      'paintColor': Color(
+                                        int.parse('0xFF${paint['hex']}'),
+                                      ),
+                                      'brandAvatar':
+                                          (paint['brand']['name'] as String)[0],
+                                      'matchPercentage': paint['match'],
+                                      'colorCode': paint['code'],
+                                      'barcode': paint['barcode'],
+                                      'paintId': paint['id'],
+                                      'brandId': paint['brand']['id'],
+                                    };
+                                  });
+
+                                  Navigator.pop(context);
+                                }
+                                : null,
+                        child: const Text('Confirm Selection'),
+                      ),
+                    ),
+                  ],
                 );
               },
             );
@@ -1925,7 +1642,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
-                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.black,
                                 ),
                               ),
                             ],
@@ -1940,14 +1658,20 @@ class _PaintListTabState extends State<PaintListTab> {
                               Icon(
                                 Icons.qr_code,
                                 size: 10,
-                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 barcode,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
                                 ),
                               ),
                             ],
@@ -1966,7 +1690,9 @@ class _PaintListTabState extends State<PaintListTab> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getMatchColor(matchPercentage as int).withOpacity(0.2),
+                    color: _getMatchColor(
+                      matchPercentage as int,
+                    ).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -2124,25 +1850,29 @@ class _PaintListTabState extends State<PaintListTab> {
                             return GestureDetector(
                               onTap: () {
                                 setModalState(() {
-                                  brand['selected'] = !(brand['selected'] as bool);
+                                  brand['selected'] =
+                                      !(brand['selected'] as bool);
                                 });
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: (brand['selected'] as bool)
-                                      ? (brand['color'] as Color).withOpacity(
-                                          isDarkMode ? 0.3 : 0.1,
-                                        )
-                                      : (isDarkMode
-                                          ? Colors.grey[850]
-                                          : Colors.white),
+                                  color:
+                                      (brand['selected'] as bool)
+                                          ? (brand['color'] as Color)
+                                              .withOpacity(
+                                                isDarkMode ? 0.3 : 0.1,
+                                              )
+                                          : (isDarkMode
+                                              ? Colors.grey[850]
+                                              : Colors.white),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: (brand['selected'] as bool)
-                                        ? (brand['color'] as Color)
-                                        : (isDarkMode
-                                            ? Colors.grey[700]!
-                                            : Colors.grey[300]!),
+                                    color:
+                                        (brand['selected'] as bool)
+                                            ? (brand['color'] as Color)
+                                            : (isDarkMode
+                                                ? Colors.grey[700]!
+                                                : Colors.grey[300]!),
                                     width: (brand['selected'] as bool) ? 2 : 1,
                                   ),
                                 ),
@@ -2153,7 +1883,9 @@ class _PaintListTabState extends State<PaintListTab> {
                                       Container(
                                         height: 40,
                                         width: 40,
-                                        margin: const EdgeInsets.only(bottom: 8),
+                                        margin: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
                                         child: Image.network(
                                           brand['logoUrl'],
                                           fit: BoxFit.contain,
@@ -2162,7 +1894,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                     else
                                       CircleAvatar(
                                         radius: 20,
-                                        backgroundColor: brand['color'] as Color,
+                                        backgroundColor:
+                                            brand['color'] as Color,
                                         child: Text(
                                           (brand['name'] as String)[0],
                                           style: const TextStyle(
@@ -2177,7 +1910,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w500,
-                                          color: isDarkMode ? Colors.white : null,
+                                          color:
+                                              isDarkMode ? Colors.white : null,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2676,23 +2410,48 @@ class _PaintListTabState extends State<PaintListTab> {
     try {
       final brands = await _paintBrandService.getPaintBrands();
       setState(() {
-        _paintBrands = brands.map((brand) => {
-          'id': brand.id,
-          'name': brand.name,
-          'logoUrl': brand.logoUrl,
-          'selected': false,
-          'color': _getBrandColor(brand.name),
-        }).toList();
+        _paintBrands =
+            brands
+                .map(
+                  (brand) => {
+                    'id': brand.id,
+                    'name': brand.name,
+                    'logoUrl': brand.logoUrl,
+                    'selected': false,
+                    'color': _getBrandColor(brand.name),
+                  },
+                )
+                .toList();
       });
     } catch (e) {
       print('Error loading paint brands: $e');
       // Fallback a marcas por defecto en caso de error
       setState(() {
         _paintBrands = [
-          {'name': 'Citadel', 'color': AppTheme.primaryBlue, 'selected': false, 'logoUrl': null},
-          {'name': 'Vallejo', 'color': AppTheme.pinkColor, 'selected': false, 'logoUrl': null},
-          {'name': 'Army Painter', 'color': AppTheme.purpleColor, 'selected': false, 'logoUrl': null},
-          {'name': 'Scale75', 'color': AppTheme.orangeColor, 'selected': false, 'logoUrl': null},
+          {
+            'name': 'Citadel',
+            'color': AppTheme.primaryBlue,
+            'selected': false,
+            'logoUrl': null,
+          },
+          {
+            'name': 'Vallejo',
+            'color': AppTheme.pinkColor,
+            'selected': false,
+            'logoUrl': null,
+          },
+          {
+            'name': 'Army Painter',
+            'color': AppTheme.purpleColor,
+            'selected': false,
+            'logoUrl': null,
+          },
+          {
+            'name': 'Scale75',
+            'color': AppTheme.orangeColor,
+            'selected': false,
+            'logoUrl': null,
+          },
         ];
       });
     }
