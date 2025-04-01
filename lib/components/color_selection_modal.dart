@@ -6,7 +6,7 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 // Modos de herramientas para el selector de colores
-enum ToolMode { picker, zoom, move }
+enum ToolMode { picker, move }
 
 class ColorSelectionModal extends StatefulWidget {
   final File imageFile;
@@ -118,16 +118,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     super.dispose();
   }
 
-  void _handleDoubleTap(Offset position) {
-    if (_transformationController.value != Matrix4.identity()) {
-      // Si ya está haciendo zoom, volver al tamaño normal
-      _resetZoom();
-    } else {
-      // Hacer zoom en la posición del doble tap
-      _zoomIn(position);
-    }
-  }
-
   void _resetZoom() {
     _animation = Matrix4Tween(
       begin: _transformationController.value,
@@ -142,31 +132,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         _magnifierPoint = null;
       });
     });
-
-    _animationController.addListener(() {
-      if (_animation != null) {
-        _transformationController.value = _animation!.value;
-      }
-    });
-  }
-
-  void _zoomIn(Offset position) {
-    final Matrix4 endMatrix =
-        Matrix4.identity()
-          ..translate(
-            -position.dx * 2 + MediaQuery.of(context).size.width / 2,
-            -position.dy * 2 + MediaQuery.of(context).size.height / 2,
-          )
-          ..scale(3.0);
-
-    _animation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: endMatrix,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-
-    _animationController.forward(from: 0.0);
 
     _animationController.addListener(() {
       if (_animation != null) {
@@ -377,7 +342,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
           }
         }
       }
-    } else if (_currentMode == ToolMode.picker) {
+    } else {
       // Actualizar posición de la lupa
       _activateMagnifier(details.localPosition);
     }
@@ -472,17 +437,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                               }),
                         ),
                         _buildToolButton(
-                          icon: Icons.zoom_in,
-                          label: 'Zoom',
-                          isActive: _currentMode == ToolMode.zoom,
-                          onTap:
-                              () => setState(() {
-                                _currentMode = ToolMode.zoom;
-                                _magnifierMode =
-                                    false; // Desactivar lupa en modo zoom
-                              }),
-                        ),
-                        _buildToolButton(
                           icon: Icons.pan_tool,
                           label: 'Move',
                           isActive: _currentMode == ToolMode.move,
@@ -521,18 +475,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       : GestureDetector(
                         onTapDown:
                             _currentMode == ToolMode.picker ? _handleTap : null,
-                        onDoubleTapDown:
-                            _currentMode == ToolMode.zoom
-                                ? _handleDoubleTapDown
-                                : null,
-                        onDoubleTap:
-                            _currentMode == ToolMode.zoom
-                                ? () {
-                                  if (_doubleTapPosition != null) {
-                                    _handleDoubleTap(_doubleTapPosition!);
-                                  }
-                                }
-                                : null,
                         onPanUpdate: _handlePanUpdate,
                         onPanEnd: _handlePanEnd,
                         child: InteractiveViewer(
@@ -544,8 +486,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                               ToolMode
                                   .move, // Solo permitir pan en modo movimiento
                           scaleEnabled:
-                              _currentMode ==
-                              ToolMode.zoom, // Solo permitir zoom en modo zoom
+                              true, // Permitir zoom en todos los modos
                           child: Stack(
                             key: _imageKey,
                             children: [
@@ -770,14 +711,10 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 fontSize: 12,
                               ),
                             ),
-                          if (_currentMode == ToolMode.zoom)
-                            const Text(
-                              '• Double tap to zoom in/out',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
+                          const Text(
+                            '• Pinch to zoom in/out',
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
                           if (_currentMode == ToolMode.move)
                             const Text(
                               '• Drag to move the image',
@@ -1003,12 +940,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         ),
       ),
     );
-  }
-
-  void _handleDoubleTapDown(TapDownDetails details) {
-    setState(() {
-      _doubleTapPosition = details.localPosition;
-    });
   }
 }
 
