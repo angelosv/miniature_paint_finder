@@ -1034,9 +1034,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                       context,
                                       index,
                                     );
-                                    setState(
-                                      () {},
-                                    ); // Rebuild the modal after returning from paint selection
+                                    // Actualizar inmediatamente el estado del modal
+                                    setState(() {});
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.marineBlue,
@@ -1219,153 +1218,6 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
-  // Nuevo método para construir la tarjeta de pintura en el modal "Selected Colors"
-  Widget _buildPaintCardForSelectedColors(
-    Map<String, dynamic> colorData,
-    int index,
-  ) {
-    final paintName = colorData['paintName'] as String;
-    final paintBrand = colorData['paintBrand'] as String?;
-    final brandAvatar = colorData['brandAvatar'] as String;
-    final matchPercentage = colorData['matchPercentage'] as int?;
-    final colorCode = colorData['colorCode'] as String?;
-    final barcode = colorData['barcode'] as String?;
-    final paintColor = colorData['paintColor'] as Color?;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Avatar de marca (círculo con letra)
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              brandAvatar,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-
-        // Nombre, marca y detalles
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Nombre de la pintura
-              Text(
-                paintName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              // Marca de la pintura
-              Text(
-                paintBrand ?? '',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-
-              // Fila de código de color y barcode
-              if (colorCode != null || barcode != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    children: [
-                      // Código de color con swatch
-                      if (colorCode != null && paintColor != null)
-                        Row(
-                          children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: paintColor,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              colorCode,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'monospace',
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                      const SizedBox(width: 12),
-
-                      // Código de barras
-                      if (barcode != null)
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.qr_code,
-                                size: 11,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  barcode,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        // Porcentaje de coincidencia
-        if (matchPercentage != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getMatchColor(matchPercentage).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$matchPercentage% match',
-              style: TextStyle(
-                fontSize: 12,
-                color: _getMatchColor(matchPercentage),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
   Future<void> _showMatchingPaintsModal(
     BuildContext context,
     int colorIndex,
@@ -1442,8 +1294,9 @@ class _PaintListTabState extends State<PaintListTab> {
     await loadMorePaints();
 
     int? selectedIndex;
+    bool resultUpdated = false;
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -1576,7 +1429,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                         Colors.red; // Color de fallback
                                   }
 
-                                  setState(() {
+                                  // Actualizar el estado global
+                                  this.setState(() {
                                     _pickedColors[colorIndex] = {
                                       ..._pickedColors[colorIndex],
                                       'paintName': paint['name'],
@@ -1588,17 +1442,12 @@ class _PaintListTabState extends State<PaintListTab> {
                                       'colorCode': paint['code'],
                                       'barcode': paint['barcode'],
                                       'paintId': paint['id'],
-                                      'brandId':
-                                          paint['brand']['id'], // Usar la clave correcta según la API
+                                      'brandId': paint['brand']['id'],
                                     };
-                                  });
-
-                                  // Actualiza el estado del componente principal para reflejar los cambios
-                                  this.setState(() {
-                                    // Notificar que los datos han sido actualizados
                                     _pickedColors = List.from(_pickedColors);
                                   });
 
+                                  resultUpdated = true;
                                   Navigator.pop(context);
                                 }
                                 : null,
@@ -1613,6 +1462,9 @@ class _PaintListTabState extends State<PaintListTab> {
         );
       },
     );
+
+    // Importante: devolver un indicador de si se actualizó algo
+    return Future.value(resultUpdated);
   }
 
   // Helper method to get color based on match percentage
@@ -1722,9 +1574,9 @@ class _PaintListTabState extends State<PaintListTab> {
                                 colorCode,
                                 style: TextStyle(
                                   fontSize: 10,
+                                  fontFamily: 'monospace',
                                   fontWeight: FontWeight.w500,
-                                  color:
-                                      isDarkMode ? Colors.white : Colors.black,
+                                  color: Colors.black,
                                 ),
                               ),
                             ],
