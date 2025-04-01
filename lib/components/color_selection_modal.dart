@@ -64,6 +64,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   Offset? _magnifierPosition;
   int? _selectedPointIndex;
   bool _isMovingPoint = false;
+  Offset? _doubleTapPosition;
 
   // Modo de lupa activo
   bool _magnifierMode = false;
@@ -117,13 +118,13 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     super.dispose();
   }
 
-  void _handleDoubleTap(TapDownDetails details) {
+  void _handleDoubleTap(Offset position) {
     if (_transformationController.value != Matrix4.identity()) {
       // Si ya está haciendo zoom, volver al tamaño normal
       _resetZoom();
     } else {
       // Hacer zoom en la posición del doble tap
-      _zoomIn(details.localPosition);
+      _zoomIn(position);
     }
   }
 
@@ -269,8 +270,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   }
 
   void _handleTap(TapDownDetails details) {
-    if (_isMovingPoint) return;
-
     // Convertir tap a posición real en la imagen
     final imagePosition = _getImagePositionFromViewport(details.localPosition);
 
@@ -288,12 +287,49 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       }
     }
 
-    // Si no tocó un punto existente y hay un punto en la lupa, añadirlo
-    if (_magnifierPoint != null) {
-      setState(() {
-        _points.add(_magnifierPoint!);
-        widget.onPointsUpdated(_points);
-      });
+    // Solo añadir un nuevo punto si no estamos moviendo uno existente
+    if (!_isMovingPoint) {
+      // Si no tocó un punto existente, crear un nuevo punto
+      if (_decodedImage != null) {
+        RenderBox? box =
+            _imageKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box != null) {
+          final pixelX =
+              (imagePosition.dx / box.size.width * _decodedImage!.width)
+                  .round();
+          final pixelY =
+              (imagePosition.dy / box.size.height * _decodedImage!.height)
+                  .round();
+
+          if (pixelX >= 0 &&
+              pixelX < _decodedImage!.width &&
+              pixelY >= 0 &&
+              pixelY < _decodedImage!.height) {
+            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+            final color = Color.fromARGB(
+              255,
+              pixel.r.toInt(),
+              pixel.g.toInt(),
+              pixel.b.toInt(),
+            );
+
+            final hexCode =
+                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+            final newPoint = ColorPoint(
+              x: imagePosition.dx,
+              y: imagePosition.dy,
+              color: color,
+              hex: hexCode,
+            );
+
+            setState(() {
+              _points.add(newPoint);
+              widget.onPointsUpdated(_points);
+            });
+          }
+        }
+      }
     }
   }
 
@@ -341,7 +377,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
           }
         }
       }
-    } else {
+    } else if (_currentMode == ToolMode.picker) {
       // Actualizar posición de la lupa
       _activateMagnifier(details.localPosition);
     }
@@ -491,7 +527,11 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 : null,
                         onDoubleTap:
                             _currentMode == ToolMode.zoom
-                                ? _handleDoubleTap
+                                ? () {
+                                  if (_doubleTapPosition != null) {
+                                    _handleDoubleTap(_doubleTapPosition!);
+                                  }
+                                }
                                 : null,
                         onPanUpdate: _handlePanUpdate,
                         onPanEnd: _handlePanEnd,
@@ -615,85 +655,94 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                     Positioned(
                       left: _magnifierPosition!.dx - _magnifierSize / 2,
                       top: _magnifierPosition!.dy - _magnifierSize / 2,
-                      child: Container(
-                        width: _magnifierSize,
-                        height: _magnifierSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Stack(
-                            children: [
-                              // Imagen ampliada
-                              Transform.scale(
-                                scale: _magnifierScale,
-                                alignment: Alignment(
-                                  2 *
-                                      (((_magnifierPosition!.dx) /
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width) -
-                                          0.5),
-                                  2 *
-                                      (((_magnifierPosition!.dy) /
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.height) -
-                                          0.5),
-                                ),
-                                child: Image.file(
-                                  widget.imageFile,
-                                  fit: BoxFit.cover,
-                                ),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Añadir el color actual al tocar la lupa
+                          setState(() {
+                            _points.add(_magnifierPoint!);
+                            widget.onPointsUpdated(_points);
+                          });
+                        },
+                        child: Container(
+                          width: _magnifierSize,
+                          height: _magnifierSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                spreadRadius: 1,
                               ),
-
-                              // Crosshair en el centro de la lupa
-                              Center(
-                                child: Container(
-                                  width: 2,
-                                  height: 10,
-                                  color: Colors.red,
-                                ),
-                              ),
-                              Center(
-                                child: Container(
-                                  width: 10,
-                                  height: 2,
-                                  color: Colors.red,
-                                ),
-                              ),
-
-                              // Información del color
-                              Positioned(
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                child: Container(
-                                  color: Colors.black.withOpacity(0.7),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 2,
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Stack(
+                              children: [
+                                // Imagen ampliada
+                                Transform.scale(
+                                  scale: _magnifierScale,
+                                  alignment: Alignment(
+                                    2 *
+                                        (((_magnifierPosition!.dx) /
+                                                MediaQuery.of(
+                                                  context,
+                                                ).size.width) -
+                                            0.5),
+                                    2 *
+                                        (((_magnifierPosition!.dy) /
+                                                MediaQuery.of(
+                                                  context,
+                                                ).size.height) -
+                                            0.5),
                                   ),
-                                  child: Text(
-                                    _magnifierPoint!.hex,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                  child: Image.file(
+                                    widget.imageFile,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+
+                                // Crosshair en el centro de la lupa
+                                Center(
+                                  child: Container(
+                                    width: 2,
+                                    height: 10,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                Center(
+                                  child: Container(
+                                    width: 10,
+                                    height: 2,
+                                    color: Colors.red,
+                                  ),
+                                ),
+
+                                // Información del color
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    color: Colors.black.withOpacity(0.7),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2,
+                                    ),
+                                    child: Text(
+                                      _magnifierPoint!.hex,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -956,50 +1005,10 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     );
   }
 
-  // Métodos para manejar diferentes tipos de gestos según el modo
-  void _handleTap(TapDownDetails details) {
-    if (_isMovingPoint) return;
-
-    // Convertir tap a posición real en la imagen
-    final imagePosition = _getImagePositionFromViewport(details.globalPosition);
-
-    // Verificar si el tap fue en un punto existente (para seleccionar)
-    for (int i = 0; i < _points.length; i++) {
-      final point = _points[i];
-      final distance = (Offset(point.x, point.y) - imagePosition).distance;
-
-      if (distance < 20 / _transformationController.value.getMaxScaleOnAxis()) {
-        setState(() {
-          _selectedPointIndex = i;
-          _isMovingPoint = true;
-        });
-        return;
-      }
-    }
-
-    // Si no tocó un punto existente y hay un punto en la lupa, añadirlo
-    if (_magnifierPoint != null) {
-      setState(() {
-        _points.add(_magnifierPoint!);
-        widget.onPointsUpdated(_points);
-      });
-    }
-  }
-
   void _handleDoubleTapDown(TapDownDetails details) {
     setState(() {
       _doubleTapPosition = details.localPosition;
     });
-  }
-
-  void _handleDoubleTap() {
-    if (_doubleTapPosition == null) return;
-
-    if (_transformationController.value != Matrix4.identity()) {
-      _resetZoom();
-    } else {
-      _zoomIn(_doubleTapPosition!);
-    }
   }
 }
 
