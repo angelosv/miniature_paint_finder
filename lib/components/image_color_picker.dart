@@ -522,7 +522,11 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                               icon: const Icon(Icons.color_lens),
                               label: const Text('Pick Colors'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.marineBlue,
+                                backgroundColor:
+                                    Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? AppTheme.marineOrange
+                                        : AppTheme.marineBlue,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -632,7 +636,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         width: 120,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppTheme.marineBlue,
+          color: isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

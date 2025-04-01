@@ -555,8 +555,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                   color:
                                       Theme.of(context).brightness ==
                                               Brightness.dark
-                                          ? Colors.lightBlue[300]
-                                          : null,
+                                          ? AppTheme.marineBlueLight
+                                          : AppTheme.marineBlue,
                                 ),
                               ),
                             ),
@@ -617,7 +617,10 @@ class _PaintListTabState extends State<PaintListTab> {
                                           ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
-                                                AppTheme.purpleColor,
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? AppTheme.marineOrange
+                                                    : AppTheme.purpleColor,
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 12,
