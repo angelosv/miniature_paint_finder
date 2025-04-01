@@ -1541,6 +1541,14 @@ class _PaintListTabState extends State<PaintListTab> {
                                   final paint =
                                       _matchingPaints[colorIndex]![selectedIndex!];
 
+                                  // Debuggear la estructura del objeto
+                                  print(
+                                    'DEBUG: Paint seleccionado completo: $paint',
+                                  );
+                                  print(
+                                    'DEBUG: Brand completo: ${paint['brand']}',
+                                  );
+
                                   // Procesar el hex color correctamente
                                   String paintHex = paint['hex'] as String;
                                   if (paintHex.startsWith('#')) {
@@ -1577,8 +1585,15 @@ class _PaintListTabState extends State<PaintListTab> {
                                       'colorCode': paint['code'],
                                       'barcode': paint['barcode'],
                                       'paintId': paint['id'],
-                                      'brandId': paint['brand']['id'],
+                                      'brandId':
+                                          paint['brand']['id'], // Usar la clave correcta según la API
                                     };
+                                  });
+
+                                  // Actualiza el estado del componente principal para reflejar los cambios
+                                  this.setState(() {
+                                    // Notificar que los datos han sido actualizados
+                                    _pickedColors = List.from(_pickedColors);
                                   });
 
                                   Navigator.pop(context);
