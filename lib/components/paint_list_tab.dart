@@ -111,8 +111,14 @@ class _PaintListTabState extends State<PaintListTab> {
         // Clear previous colors and add new ones in a structured format
         _pickedColors.clear();
         for (var color in colors) {
+          // Asegurarse de que el formato hexadecimal es correcto
+          final hexString = color.value.toRadixString(16).toUpperCase();
+          // Remover el alfa y asegurar que tiene 6 caracteres
           final hexCode =
-              '#${color.value.toRadixString(16).toUpperCase().substring(2)}';
+              '#${hexString.length > 6 ? hexString.substring(hexString.length - 6) : hexString.padLeft(6, '0')}';
+
+          print('DEBUG: Color seleccionado: $color, valor hex: $hexCode');
+
           _pickedColors.add({
             'color': color,
             'hexCode': hexCode,
@@ -1363,6 +1369,10 @@ class _PaintListTabState extends State<PaintListTab> {
     final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
 
+    print(
+      'DEBUG: Mostrando coincidencias para color: $color, hexCode: $hexCode',
+    );
+
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
     final brandIds =
@@ -1370,6 +1380,8 @@ class _PaintListTabState extends State<PaintListTab> {
             .where((b) => b['selected'] == true)
             .map((b) => b['id'] as String)
             .toList();
+
+    print('DEBUG: Brands seleccionadas: $brandIds');
 
     _matchingPaints[colorIndex] = [];
     _currentPages[colorIndex] = 1;
@@ -1388,18 +1400,26 @@ class _PaintListTabState extends State<PaintListTab> {
 
       try {
         final matchService = PaintMatchService();
+        // Asegurar que el hexCode no tiene # al enviarlo a la API
+        final cleanHexCode =
+            hexCode.startsWith('#') ? hexCode.substring(1) : hexCode;
+        print('DEBUG: Buscando pinturas para hexCode (limpio): $cleanHexCode');
+
         final data = await matchService.fetchMatchingPaints(
           token: token!,
-          hexColor: hexCode,
+          hexColor: cleanHexCode,
           brandIds: brandIds,
           page: _currentPages[colorIndex]!,
         );
 
         final newPaints = data['paints'] as List<dynamic>;
+        print('DEBUG: Pinturas encontradas: ${newPaints.length}');
+
         _matchingPaints[colorIndex]!.addAll(newPaints);
         _totalPages[colorIndex] = data['totalPages'];
         _currentPages[colorIndex] = _currentPages[colorIndex]! + 1;
       } catch (e) {
+        print('DEBUG: Error cargando pinturas: $e');
         debugPrint('❌ Error loading paints: $e');
       }
 
@@ -1471,14 +1491,31 @@ class _PaintListTabState extends State<PaintListTab> {
                           final paint = paints[index];
                           final isSelected = selectedIndex == index;
 
+                          String paintHex = paint['hex'] as String;
+                          // Asegurar que el hex no tiene # y tiene longitud de 6
+                          if (paintHex.startsWith('#')) {
+                            paintHex = paintHex.substring(1);
+                          }
+                          paintHex = paintHex.padLeft(6, '0');
+
+                          print('DEBUG: Mostrando pintura con hex: $paintHex');
+
+                          Color paintColor;
+                          try {
+                            paintColor = Color(
+                              int.parse(paintHex, radix: 16) | 0xFF000000,
+                            );
+                          } catch (e) {
+                            print(
+                              'DEBUG: Error convirtiendo hex a color: $e, hex: $paintHex',
+                            );
+                            paintColor = Colors.red; // Color de fallback
+                          }
+
                           return ListTile(
                             title: Text(paint['name']),
                             subtitle: Text(paint['brand']['name']),
-                            leading: CircleAvatar(
-                              backgroundColor: Color(
-                                int.parse('0xFF${paint['hex']}'),
-                              ),
-                            ),
+                            leading: CircleAvatar(backgroundColor: paintColor),
                             trailing:
                                 isSelected
                                     ? const Icon(Icons.check_circle)
@@ -1500,14 +1537,37 @@ class _PaintListTabState extends State<PaintListTab> {
                                 ? () {
                                   final paint =
                                       _matchingPaints[colorIndex]![selectedIndex!];
+
+                                  // Procesar el hex color correctamente
+                                  String paintHex = paint['hex'] as String;
+                                  if (paintHex.startsWith('#')) {
+                                    paintHex = paintHex.substring(1);
+                                  }
+                                  paintHex = paintHex.padLeft(6, '0');
+
+                                  Color paintColor;
+                                  try {
+                                    paintColor = Color(
+                                      int.parse(paintHex, radix: 16) |
+                                          0xFF000000,
+                                    );
+                                    print(
+                                      'DEBUG: Color seleccionado: $paintColor, hex: $paintHex',
+                                    );
+                                  } catch (e) {
+                                    print(
+                                      'DEBUG: Error convirtiendo hex a color (al seleccionar): $e, hex: $paintHex',
+                                    );
+                                    paintColor =
+                                        Colors.red; // Color de fallback
+                                  }
+
                                   setState(() {
                                     _pickedColors[colorIndex] = {
                                       ..._pickedColors[colorIndex],
                                       'paintName': paint['name'],
                                       'paintBrand': paint['brand']['name'],
-                                      'paintColor': Color(
-                                        int.parse('0xFF${paint['hex']}'),
-                                      ),
+                                      'paintColor': paintColor,
                                       'brandAvatar':
                                           (paint['brand']['name'] as String)[0],
                                       'matchPercentage': paint['match'],
