@@ -565,8 +565,23 @@ class _PaintListTabState extends State<PaintListTab> {
 
                       // Lista de colores seleccionados
                       _pickedColors.isEmpty
-                          ? const Text(
-                            'No colors selected yet. Add colors from the image above.',
+                          ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16.0,
+                              ),
+                              child: Text(
+                                'No colors selected yet. Use the "Pick Colors" button to select colors from your image.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                ),
+                              ),
+                            ),
                           )
                           : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1601,9 +1616,9 @@ class _PaintListTabState extends State<PaintListTab> {
     final paintBrand = colorData['paintBrand'];
     final matchPercentage = colorData['matchPercentage'];
     final brandAvatar = colorData['brandAvatar'];
-    final colorCode = colorData['colorCode'];
-    final barcode = colorData['barcode'];
-    final paintColor = colorData['paintColor'];
+    final colorCode = colorData['colorCode'] as String?;
+    final barcode = colorData['barcode'] as String?;
+    final paintColor = colorData['paintColor'] as Color?;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Si hay una pintura seleccionada, mostrar tarjeta como en la imagen

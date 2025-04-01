@@ -504,129 +504,34 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Builder(
-                        builder:
-                            (builderContext) => Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // Imagen que ocupa todo el espacio disponible
-                                Image.file(
-                                  widget.imageFile!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
+                      child: Stack(
+                        children: [
+                          // Imagen que ocupa todo el espacio disponible
+                          Image.file(
+                            widget.imageFile!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+
+                          // Botón de selección de colores centrado
+                          Center(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  () => _openPrecisionColorSelector(context),
+                              icon: const Icon(Icons.color_lens),
+                              label: const Text('Pick Colors'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.marineBlue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
-
-                                // Capa transparente para gestos y dibujo de puntos
-                                GestureDetector(
-                                  onTapDown: (details) {
-                                    final RenderBox box =
-                                        builderContext.findRenderObject()
-                                            as RenderBox;
-                                    final Offset localPosition = box
-                                        .globalToLocal(details.globalPosition);
-
-                                    if (widget.imageFile != null) {
-                                      try {
-                                        // Decodificar la imagen solo cuando sea necesario
-                                        final bytes =
-                                            widget.imageFile!.readAsBytesSync();
-                                        final image = img.decodeImage(bytes);
-
-                                        if (image != null) {
-                                          // Calcular coordenadas relativas
-                                          final relativeX =
-                                              localPosition.dx / box.size.width;
-                                          final relativeY =
-                                              localPosition.dy /
-                                              box.size.height;
-
-                                          // Coordenadas en píxeles
-                                          final pixelX =
-                                              (relativeX * image.width).round();
-                                          final pixelY =
-                                              (relativeY * image.height)
-                                                  .round();
-
-                                          // Verificar límites
-                                          if (pixelX >= 0 &&
-                                              pixelX < image.width &&
-                                              pixelY >= 0 &&
-                                              pixelY < image.height) {
-                                            final pixel = image.getPixel(
-                                              pixelX,
-                                              pixelY,
-                                            );
-                                            final color = Color.fromARGB(
-                                              255,
-                                              pixel.r.toInt(),
-                                              pixel.g.toInt(),
-                                              pixel.b.toInt(),
-                                            );
-
-                                            // Hex code
-                                            final hexCode =
-                                                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-                                            setState(() {
-                                              _selectedColorPoints.add(
-                                                _ColorPoint(
-                                                  x: localPosition.dx,
-                                                  y: localPosition.dy,
-                                                  color: color,
-                                                  hex: hexCode,
-                                                ),
-                                              );
-                                              _notifyColorsChanged();
-                                              print(
-                                                'DEBUG: Color añadido - ${_selectedColorPoints.length} puntos total',
-                                              );
-                                            });
-                                          }
-                                        }
-                                      } catch (e) {
-                                        print(
-                                          'DEBUG: Error al procesar la imagen: $e',
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: CustomPaint(
-                                    size: Size(constraints.maxWidth, 250),
-                                    painter: ColorPointsPainter(
-                                      points: _selectedColorPoints,
-                                    ),
-                                  ),
-                                ),
-
-                                // Botones de herramientas
-                                Positioned(
-                                  top: 16,
-                                  left: 16,
-                                  child: Column(
-                                    children: [
-                                      _buildToolButton(
-                                        icon: Icons.color_lens,
-                                        tooltip: 'Color Picker',
-                                        onTap: () {
-                                          // Ya estamos en este modo por defecto
-                                        },
-                                        isActive: true,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      _buildToolButton(
-                                        icon: Icons.zoom_in,
-                                        tooltip: 'Precision Mode',
-                                        onTap:
-                                            () => _openPrecisionColorSelector(
-                                              context,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -657,7 +562,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         else
           Container(
             width: double.infinity,
-            height: 200,
+            height: 250,
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
@@ -669,199 +574,77 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Mensaje para seleccionar imagen
                 Icon(
                   Icons.image,
                   size: 48,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Text(
-                  'No image selected',
+                  'Select an image to find matching paints',
                   style: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    fontSize: 16,
                   ),
+                ),
+                const SizedBox(height: 24),
+
+                // Botones centrados de cámara y galería
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildImageSourceButton(
+                      context,
+                      icon: Icons.camera_alt,
+                      label: 'Camera',
+                      onTap: () => _getImage(ImageSource.camera),
+                    ),
+                    const SizedBox(width: 20),
+                    _buildImageSourceButton(
+                      context,
+                      icon: Icons.photo_library,
+                      label: 'Gallery',
+                      onTap: () => _getImage(ImageSource.gallery),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-        if (widget.imageFile != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Tap on the image to select colors or use Precision Mode',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-          if (_selectedColorPoints.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children:
-                  _selectedColorPoints.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final point = entry.value;
-                    final isLight = _isLightColor(point.color);
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: point.color,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color:
-                              isDarkMode
-                                  ? Colors.grey[700]!
-                                  : Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Número del color e información
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    color:
-                                        isLight ? Colors.black : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  point.hex,
-                                  style: TextStyle(
-                                    color:
-                                        isLight ? Colors.black : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Botón de eliminar
-                          Positioned(
-                            top: 2,
-                            right: 2,
-                            child: GestureDetector(
-                              onTap: () => _removeColorPoint(index),
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isLight
-                                          ? Colors.black.withOpacity(0.5)
-                                          : Colors.white.withOpacity(0.5),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close,
-                                  size: 10,
-                                  color: isLight ? Colors.white : Colors.black,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-            ),
-          ],
-        ],
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildOptionButton(
-              icon: Icons.photo_camera,
-              label: 'Camera',
-              onTap: _isUploading ? null : () => _getImage(ImageSource.camera),
-            ),
-            const SizedBox(width: 40),
-            _buildOptionButton(
-              icon: Icons.photo_library,
-              label: 'Gallery',
-              onTap: _isUploading ? null : () => _getImage(ImageSource.gallery),
-            ),
-          ],
-        ),
-        if (_isUploading)
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: CircularProgressIndicator(),
           ),
       ],
     );
   }
 
-  // Botón de herramienta para la barra de herramientas
-  Widget _buildToolButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    bool isActive = false,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color:
-                isActive ? AppTheme.marineBlue : Colors.black.withOpacity(0.5),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOptionButton({
+  // Botón estilizado para fuentes de imágenes
+  Widget _buildImageSourceButton(
+    BuildContext context, {
     required IconData icon,
     required String label,
-    required VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        width: 120,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor,
+          color: AppTheme.marineBlue,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const SizedBox(height: 4),
+            Icon(icon, color: Colors.white, size: 32),
+            const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
               ),
             ),
           ],
