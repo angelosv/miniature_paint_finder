@@ -134,12 +134,9 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
   // Cargar las dimensiones de la imagen
   Future<void> _loadImageDimensions() async {
     if (widget.imageFile != null && widget.imageFile!.existsSync()) {
-      setState(() {
-        _isImageLoading = true;
-      });
-
       try {
-        final image = img.decodeImage(widget.imageFile!.readAsBytesSync());
+        final bytes = await widget.imageFile!.readAsBytes();
+        final image = img.decodeImage(bytes);
         if (image != null) {
           setState(() {
             _imageSize = Size(image.width.toDouble(), image.height.toDouble());
@@ -147,16 +144,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
         }
       } catch (e) {
         print('Error loading image dimensions: $e');
-      } finally {
-        setState(() {
-          _isImageLoading = false;
-        });
       }
-
-      // Actualizar el rectángulo de la imagen
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _updateImageRect();
-      });
     }
   }
 
@@ -165,11 +153,9 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageFile?.path != widget.imageFile?.path) {
       _loadImageDimensions();
-      // Limpiar los colores seleccionados al cambiar la imagen
       setState(() {
         _selectedColorPoints = [];
       });
-      // Notificar que los colores han cambiado
       _notifyColorsChanged();
     }
   }
@@ -504,6 +490,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
 
               return Stack(
                 children: [
+                  // Contenedor principal
                   Container(
                     width: constraints.maxWidth,
                     height: 250,
@@ -517,49 +504,127 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        children: [
-                          // Imagen con los puntos actuales
-                          Image.file(
-                            widget.imageFile!,
-                            fit: BoxFit.contain,
-                            width: constraints.maxWidth,
-                            height: 250,
-                          ),
+                      child: Builder(
+                        builder:
+                            (builderContext) => GestureDetector(
+                              onTapDown: (details) {
+                                final RenderBox box =
+                                    builderContext.findRenderObject()
+                                        as RenderBox;
+                                final Offset localPosition = box.globalToLocal(
+                                  details.globalPosition,
+                                );
 
-                          // Superposición con puntos existentes
-                          if (_selectedColorPoints.isNotEmpty)
-                            Positioned.fill(
-                              child: CustomPaint(
-                                painter: ColorPointsPainter(
-                                  points: _selectedColorPoints,
-                                ),
+                                if (widget.imageFile != null &&
+                                    _imageSize.width > 0 &&
+                                    _imageSize.height > 0) {
+                                  // Calcular coordenadas relativas
+                                  final relativeX =
+                                      localPosition.dx / box.size.width;
+                                  final relativeY =
+                                      localPosition.dy / box.size.height;
+
+                                  // Verificar límites
+                                  if (relativeX < 0 ||
+                                      relativeX > 1 ||
+                                      relativeY < 0 ||
+                                      relativeY > 1) {
+                                    return;
+                                  }
+
+                                  // Coordenadas del pixel
+                                  final pixelX =
+                                      (relativeX * _imageSize.width).round();
+                                  final pixelY =
+                                      (relativeY * _imageSize.height).round();
+
+                                  // Verificar límites en la imagen
+                                  if (pixelX >= 0 &&
+                                      pixelX < _imageSize.width &&
+                                      pixelY >= 0 &&
+                                      pixelY < _imageSize.height) {
+                                    final pixel = img
+                                        .decodeImage(
+                                          widget.imageFile!.readAsBytesSync(),
+                                        )!
+                                        .getPixel(pixelX, pixelY);
+                                    final color = Color.fromARGB(
+                                      255,
+                                      pixel.r.toInt(),
+                                      pixel.g.toInt(),
+                                      pixel.b.toInt(),
+                                    );
+
+                                    // Hex code
+                                    final hexCode =
+                                        '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+                                    setState(() {
+                                      _selectedColorPoints.add(
+                                        _ColorPoint(
+                                          x: localPosition.dx,
+                                          y: localPosition.dy,
+                                          color: color,
+                                          hex: hexCode,
+                                        ),
+                                      );
+                                      _notifyColorsChanged();
+                                    });
+                                  }
+                                }
+                              },
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // Imagen que ocupa todo el espacio disponible
+                                  Image.file(
+                                    widget.imageFile!,
+                                    fit:
+                                        BoxFit
+                                            .cover, // Asegura que llene todo el contenedor
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+
+                                  // Puntos seleccionados
+                                  if (_selectedColorPoints.isNotEmpty)
+                                    CustomPaint(
+                                      size: Size(constraints.maxWidth, 250),
+                                      painter: ColorPointsPainter(
+                                        points: _selectedColorPoints,
+                                      ),
+                                    ),
+
+                                  // Botón de modo avanzado
+                                  Positioned(
+                                    bottom: 16,
+                                    right: 16,
+                                    child: ElevatedButton.icon(
+                                      onPressed:
+                                          () => _openPrecisionColorSelector(
+                                            context,
+                                          ),
+                                      icon: const Icon(Icons.color_lens),
+                                      label: const Text('Precision Mode'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.marineBlue,
+                                        foregroundColor: Colors.white,
+                                        elevation: 3,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-
-                          // Botón de modo avanzado de selección
-                          Positioned(
-                            bottom: 16,
-                            right: 16,
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  () => _openPrecisionColorSelector(context),
-                              icon: const Icon(Icons.color_lens),
-                              label: const Text('Precision Mode'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.marineBlue,
-                                foregroundColor: Colors.white,
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
+
                   // Botón de cerrar
                   Positioned(
                     top: 8,
@@ -571,8 +636,6 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                         setState(() {
                           _selectedColorPoints = [];
                           _notifyColorsChanged();
-                          _transformationController.value = Matrix4.identity();
-                          _currentScale = 1.0;
                         });
                       },
                       style: IconButton.styleFrom(
