@@ -62,7 +62,7 @@ class _PaintListTabState extends State<PaintListTab> {
   final PaintBrandService _paintBrandService = PaintBrandService();
 
   // Track both colors and selected matching paints
-  final List<Map<String, dynamic>> _pickedColors = [];
+  List<Map<String, dynamic>> _pickedColors = [];
 
   // Lista de marcas de pintura y su estado de selección
   List<Map<String, dynamic>> _paintBrands = [];
@@ -90,46 +90,34 @@ class _PaintListTabState extends State<PaintListTab> {
     super.dispose();
   }
 
-  void _onImageSelected(File file) {
+  // Callback cuando se seleccionan colores de la imagen
+  void _onColorsSelected(List<Map<String, dynamic>> colors) {
     setState(() {
-      _imageFile = file;
-      _uploadedImageUrl = null;
+      _pickedColors =
+          colors.map((colorData) {
+            final Color color = colorData['color'] as Color;
+            final String hexCode = colorData['hexCode'] as String;
+
+            return {'color': color, 'hexCode': hexCode};
+          }).toList();
+    });
+  }
+
+  // Callback cuando se selecciona una imagen
+  void _onImageSelected(File imageFile) {
+    setState(() {
+      if (imageFile.path.isEmpty) {
+        _imageFile = null;
+        _pickedColors.clear();
+      } else {
+        _imageFile = imageFile;
+      }
     });
   }
 
   void _onImageUploaded(String url) {
     setState(() {
       _uploadedImageUrl = url;
-    });
-  }
-
-  void _onColorsSelected(List<Color> colors) {
-    setState(() {
-      if (colors.isNotEmpty) {
-        _selectedColor = colors.last;
-
-        // Clear previous colors and add new ones in a structured format
-        _pickedColors.clear();
-        for (var color in colors) {
-          // Asegurarse de que el formato hexadecimal es correcto
-          final hexString = color.value.toRadixString(16).toUpperCase();
-          // Remover el alfa y asegurar que tiene 6 caracteres
-          final hexCode =
-              '#${hexString.length > 6 ? hexString.substring(hexString.length - 6) : hexString.padLeft(6, '0')}';
-
-          print('DEBUG: Color seleccionado: $color, valor hex: $hexCode');
-
-          _pickedColors.add({
-            'color': color,
-            'hexCode': hexCode,
-            'paintName': null,
-            'paintBrand': null,
-            'paintColor': null,
-            'brandAvatar': null,
-            'matchPercentage': null,
-          });
-        }
-      }
     });
   }
 
