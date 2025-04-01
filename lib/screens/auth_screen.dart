@@ -493,108 +493,124 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Widget _buildWelcomeScreen() {
+    // Obtenemos el tamaño de la pantalla para hacer la UI responsive
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+
     return Container(
       color: AppTheme.darkBackground,
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Space Marine Image
-                Container(
-                  width: double.infinity,
-                  height: 400,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/space_marine.png'),
-                      fit: BoxFit.contain,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Space Marine Image - ajustamos tamaño para pantallas pequeñas
+                  Container(
+                    width: double.infinity,
+                    height: isSmallScreen ? 280 : 400,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/space_marine.png'),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Miniature Paint Finder',
-                  style: AppTheme.headingStyle.copyWith(
-                    color: Colors.white,
-                    fontSize: 28,
+                  SizedBox(height: isSmallScreen ? 16 : 32),
+                  Text(
+                    'Miniature Paint Finder',
+                    style: AppTheme.headingStyle.copyWith(
+                      color: Colors.white,
+                      fontSize: isSmallScreen ? 24 : 28,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Your ultimate companion for miniature painting',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white70,
-                    fontSize: 18,
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  Text(
+                    'Your ultimate companion for miniature painting',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white70,
+                      fontSize: isSmallScreen ? 16 : 18,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                // Feature bullets
-                _buildFeatureBullet(
-                  'Track your paint collection and never buy duplicates',
-                ),
-                _buildFeatureBullet(
-                  'Find matching colors with **AI-powered image recognition** - 100% Free',
-                ),
-                _buildFeatureBullet('Create and share custom paint palettes'),
-                _buildFeatureBullet('Scan barcodes for quick paint lookup'),
-              ],
+                  SizedBox(height: isSmallScreen ? 16 : 24),
+                  // Feature bullets
+                  _buildFeatureBullet(
+                    'Track your paint collection and never buy duplicates',
+                  ),
+                  _buildFeatureBullet(
+                    'Find matching colors with **AI-powered image recognition** - 100% Free',
+                  ),
+                  _buildFeatureBullet('Create and share custom paint palettes'),
+                  _buildFeatureBullet('Scan barcodes for quick paint lookup'),
+                  // Añadimos espacio adicional al final para asegurar que no haya solapamiento
+                  SizedBox(height: isSmallScreen ? 20 : 0),
+                ],
+              ),
             ),
           ),
           // Bottom buttons section
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showRegisterOptions,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.darkBackground,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                      ),
-                      child: Text(
-                        'Register',
-                        style: AppTheme.buttonStyle.copyWith(fontSize: 16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showLoginOptions,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
+          SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _showRegisterOptions,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppTheme.darkBackground,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 16 : 20,
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: AppTheme.buttonStyle.copyWith(
-                          color: Colors.white,
-                          fontSize: 16,
+                        child: Text(
+                          'Register',
+                          style: AppTheme.buttonStyle.copyWith(
+                            fontSize: isSmallScreen ? 14 : 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _showLoginOptions,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 16 : 20,
+                          ),
+                        ),
+                        child: Text(
+                          'Sign In',
+                          style: AppTheme.buttonStyle.copyWith(
+                            color: Colors.white,
+                            fontSize: isSmallScreen ? 14 : 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ],
       ),
@@ -652,6 +668,7 @@ class _AuthScreenState extends State<AuthScreen>
 
   Widget _buildLoginOptions(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
+    final isSmallScreen = screenSize.height < 700;
 
     return Stack(
       children: [
@@ -659,300 +676,7 @@ class _AuthScreenState extends State<AuthScreen>
           color: AppTheme.darkBackground,
           padding: const EdgeInsets.all(24),
           child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: formMaxWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Back button
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: _goBack,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Title
-                  Text(
-                    "Sign in to your account",
-                    style: AppTheme.headingStyle.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Choose how you want to sign in",
-                    style: AppTheme.subheadingStyle.copyWith(
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Login options
-                  _buildAuthButton(
-                    icon: Icons.email_outlined,
-                    label: 'Continue with Email',
-                    color: AppTheme.marineOrange,
-                    onPressed: _showEmailLogin,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _buildAuthButton(
-                    icon: Icons.g_mobiledata_rounded,
-                    label: 'Continue with Google',
-                    color: Colors.red.shade600,
-                    onPressed: _handleGoogleSignIn,
-                  ),
-
-                  // Show Apple login on iOS and web
-                  const SizedBox(height: 16),
-                  _buildAuthButton(
-                    icon: Icons.apple,
-                    label: 'Continue with Apple',
-                    color: Colors.white,
-                    textColor: AppTheme.darkBackground,
-                    onPressed: _performDirectLogin,
-                  ),
-
-                  // Show Phone login for Android (and others)
-                  const SizedBox(height: 16),
-                  _buildAuthButton(
-                    icon: Icons.phone_android,
-                    label: 'Continue with Phone',
-                    color: Colors.green.shade600,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const PhoneAuthScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Don't have an account yet?
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account?",
-                        style: AppTheme.bodyStyle.copyWith(
-                          color: Colors.white70,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _showRegisterOptions,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.marineGold,
-                          padding: const EdgeInsets.only(left: 8),
-                        ),
-                        child: Text(
-                          'Register',
-                          style: AppTheme.buttonStyle.copyWith(
-                            color: AppTheme.marineGold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // 3D floating cubes
-        Positioned(
-          bottom: 100,
-          right: 40,
-          child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
-        ),
-
-        Positioned(
-          top: 120,
-          right: 80,
-          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
-        ),
-
-        Positioned(
-          bottom: 200,
-          left: 60,
-          child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRegisterOptions(Size screenSize) {
-    final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
-
-    return Stack(
-      children: [
-        Container(
-          color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: formMaxWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Back button
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: _goBack,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Title
-                  Text(
-                    "Create an account",
-                    style: AppTheme.headingStyle.copyWith(color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Choose how you want to register",
-                    style: AppTheme.subheadingStyle.copyWith(
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Registration options
-                  _buildAuthButton(
-                    icon: Icons.email_outlined,
-                    label: 'Continue with Email',
-                    color: AppTheme.marineOrange,
-                    onPressed: _showEmailRegisterForm,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _buildAuthButton(
-                    icon: Icons.g_mobiledata_rounded,
-                    label: 'Continue with Google',
-                    color: Colors.red.shade600,
-                    onPressed: _handleGoogleSignIn,
-                  ),
-
-                  // Show Apple login on iOS and web
-                  const SizedBox(height: 16),
-                  _buildAuthButton(
-                    icon: Icons.apple,
-                    label: 'Continue with Apple',
-                    color: Colors.white,
-                    textColor: AppTheme.darkBackground,
-                    onPressed: _performDirectLogin,
-                  ),
-
-                  // Show Phone login for Android (and others)
-                  const SizedBox(height: 16),
-                  _buildAuthButton(
-                    icon: Icons.phone_android,
-                    label: 'Continue with Phone',
-                    color: Colors.green.shade600,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const PhoneAuthScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Terms and conditions
-                  Center(
-                    child: Text(
-                      "By signing up, you agree to our Terms of Service and Privacy Policy",
-                      textAlign: TextAlign.center,
-                      style: AppTheme.bodyStyle.copyWith(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // 3D floating cubes
-        Positioned(
-          bottom: 100,
-          right: 40,
-          child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
-        ),
-
-        Positioned(
-          top: 120,
-          right: 80,
-          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
-        ),
-
-        Positioned(
-          bottom: 200,
-          left: 60,
-          child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAuthButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    Color? textColor,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        icon: Icon(icon),
-        label: Text(label),
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor ?? Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          textStyle: AppTheme.buttonStyle,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmailRegisterForm(Size screenSize) {
-    final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
-
-    return Stack(
-      children: [
-        Container(
-          color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Form(
-              key: _formKey,
+            child: SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: formMaxWidth),
                 child: Column(
@@ -971,142 +695,92 @@ class _AuthScreenState extends State<AuthScreen>
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: isSmallScreen ? 20 : 32),
 
                     // Title
                     Text(
-                      "Create an account",
+                      "Sign in to your account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
+                        fontSize: isSmallScreen ? 24 : 28,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: isSmallScreen ? 4 : 8),
                     Text(
-                      "Register with email and password",
+                      "Choose how you want to sign in",
                       style: AppTheme.subheadingStyle.copyWith(
                         color: Colors.white.withOpacity(0.7),
-                        fontSize: 18,
+                        fontSize: isSmallScreen ? 16 : 18,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: isSmallScreen ? 32 : 48),
 
-                    // Name field
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Name',
-                        hintText: 'Enter your name',
-                        prefixIcon: const Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      textInputAction: TextInputAction.next,
+                    // Login options
+                    _buildAuthButton(
+                      icon: Icons.email_outlined,
+                      label: 'Continue with Email',
+                      color: AppTheme.marineOrange,
+                      onPressed: _showEmailLogin,
+                      height: isSmallScreen ? 48 : 56,
                     ),
-                    const SizedBox(height: 16),
 
-                    // Email field
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'Enter your email',
-                        prefixIcon: const Icon(Icons.email),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        // Check if it's a demo account (allow it)
-                        if (value == 'demo@miniaturepaintfinder.com') {
-                          return null;
-                        }
-                        // Basic email validation
-                        final emailRegex = RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+
+                    _buildAuthButton(
+                      icon: Icons.g_mobiledata_rounded,
+                      label: 'Continue with Google',
+                      color: Colors.red.shade600,
+                      onPressed: _handleGoogleSignIn,
+                      height: isSmallScreen ? 48 : 56,
+                    ),
+
+                    // Show Apple login on iOS and web
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed: _performDirectLogin,
+                      height: isSmallScreen ? 48 : 56,
+                    ),
+
+                    // Show Phone login for Android (and others)
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    _buildAuthButton(
+                      icon: Icons.phone_android,
+                      label: 'Continue with Phone',
+                      color: Colors.green.shade600,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PhoneAuthScreen(),
+                          ),
                         );
-                        if (!emailRegex.hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
                       },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Password field
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: 'Enter your password',
-                        prefixIcon: const Icon(Icons.lock),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Register button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _performRegister,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.marineOrange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Create Account',
-                          style: AppTheme.buttonStyle.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      height: isSmallScreen ? 48 : 56,
                     ),
 
-                    const SizedBox(height: 24),
+                    SizedBox(height: isSmallScreen ? 20 : 32),
 
-                    // Login link
+                    // Don't have an account yet?
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Already have an account?",
+                          "Don't have an account?",
                           style: AppTheme.bodyStyle.copyWith(
                             color: Colors.white70,
                           ),
                         ),
                         TextButton(
-                          onPressed: _showLoginOptions,
+                          onPressed: _showRegisterOptions,
                           style: TextButton.styleFrom(
                             foregroundColor: AppTheme.marineGold,
                             padding: const EdgeInsets.only(left: 8),
                           ),
                           child: Text(
-                            'Sign In',
+                            'Register',
                             style: AppTheme.buttonStyle.copyWith(
                               color: AppTheme.marineGold,
                             ),
@@ -1121,24 +795,33 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes
-        Positioned(
-          bottom: 100,
-          right: 40,
-          child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
-        ),
+        // 3D floating cubes - opcional en pantallas pequeñas
+        if (!isSmallScreen) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
 
-        Positioned(
-          top: 120,
-          right: 80,
-          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
-        ),
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+
+          Positioned(
+            bottom: 200,
+            left: 60,
+            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildEmailLoginForm(Size screenSize) {
+  Widget _buildRegisterOptions(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
+    final isSmallScreen = screenSize.height < 700;
 
     return Stack(
       children: [
@@ -1146,15 +829,14 @@ class _AuthScreenState extends State<AuthScreen>
           color: AppTheme.darkBackground,
           padding: const EdgeInsets.all(24),
           child: Center(
-            child: Form(
-              key: _formKey,
+            child: SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: formMaxWidth),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Back button for login form
+                    // Back button
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -1166,161 +848,87 @@ class _AuthScreenState extends State<AuthScreen>
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: isSmallScreen ? 20 : 32),
 
-                    // Title and subtitle
+                    // Title
                     Text(
-                      "Let's sign you in",
+                      "Create an account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
+                        fontSize: isSmallScreen ? 24 : 28,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: isSmallScreen ? 4 : 8),
                     Text(
-                      "Welcome back!",
+                      "Choose how you want to register",
                       style: AppTheme.subheadingStyle.copyWith(
                         color: Colors.white.withOpacity(0.7),
+                        fontSize: isSmallScreen ? 16 : 18,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    SizedBox(height: isSmallScreen ? 32 : 48),
 
-                    // Email field
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'Enter your email',
-                        prefixIcon: const Icon(Icons.email),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        // Check if it's a demo account (always allow it)
-                        if (value == 'demo@miniaturepaintfinder.com') {
-                          return null;
-                        }
-                        // Basic email validation for non-demo emails
-                        final emailRegex = RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                    // Registration options
+                    _buildAuthButton(
+                      icon: Icons.email_outlined,
+                      label: 'Continue with Email',
+                      color: AppTheme.marineOrange,
+                      onPressed: _showEmailRegisterForm,
+                      height: isSmallScreen ? 48 : 56,
+                    ),
+
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+
+                    _buildAuthButton(
+                      icon: Icons.g_mobiledata_rounded,
+                      label: 'Continue with Google',
+                      color: Colors.red.shade600,
+                      onPressed: _handleGoogleSignIn,
+                      height: isSmallScreen ? 48 : 56,
+                    ),
+
+                    // Show Apple login on iOS and web
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed: _performDirectLogin,
+                      height: isSmallScreen ? 48 : 56,
+                    ),
+
+                    // Show Phone login for Android (and others)
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    _buildAuthButton(
+                      icon: Icons.phone_android,
+                      label: 'Continue with Phone',
+                      color: Colors.green.shade600,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PhoneAuthScreen(),
+                          ),
                         );
-                        if (!emailRegex.hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
                       },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Password field
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        hintText: 'Enter your password',
-                        prefixIcon: const Icon(Icons.lock),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
+                      height: isSmallScreen ? 48 : 56,
                     ),
 
-                    // Forgot password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // Forgot password functionality
-                        },
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.marineGold,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: Text(
-                          'Forgot Password?',
-                          style: AppTheme.bodyStyle.copyWith(
-                            color: AppTheme.marineGold,
-                            fontWeight: FontWeight.w500,
-                          ),
+                    SizedBox(height: isSmallScreen ? 20 : 32),
+
+                    // Terms and conditions
+                    Center(
+                      child: Text(
+                        "By signing up, you agree to our Terms of Service and Privacy Policy",
+                        textAlign: TextAlign.center,
+                        style: AppTheme.bodyStyle.copyWith(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: isSmallScreen ? 10 : 12,
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 40),
-
-                    // Bottom section with Register
-                    Column(
-                      children: [
-                        // Account existence check
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Don't have an account?",
-                              style: AppTheme.bodyStyle.copyWith(
-                                color: Colors.white70,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _showRegisterOptions,
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppTheme.marineGold,
-                                padding: const EdgeInsets.only(left: 8),
-                              ),
-                              child: Text(
-                                'Register',
-                                style: AppTheme.buttonStyle.copyWith(
-                                  color: AppTheme.marineGold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Action button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _performDirectLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.marineOrange,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'Sign In',
-                              style: AppTheme.buttonStyle.copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Agregar espacio al final para desplazamiento
+                    SizedBox(height: isSmallScreen ? 16 : 24),
                   ],
                 ),
               ),
@@ -1328,24 +936,484 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes for sign in screen
-        Positioned(
-          bottom: 100,
-          right: 40,
-          child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+        // 3D floating cubes - hacer opcionales en pantallas pequeñas
+        if (!isSmallScreen) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+          Positioned(
+            bottom: 200,
+            left: 60,
+            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAuthButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    Color? textColor,
+    required VoidCallback onPressed,
+    required double height,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: height,
+      child: ElevatedButton.icon(
+        icon: Icon(icon),
+        label: Text(label),
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor ?? Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: AppTheme.buttonStyle,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailRegisterForm(Size screenSize) {
+    final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
+    final isSmallScreen = screenSize.height < 700;
+
+    return Stack(
+      children: [
+        Container(
+          color: AppTheme.darkBackground,
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: formMaxWidth),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Back button
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: _goBack,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 20 : 32),
+
+                      // Title
+                      Text(
+                        "Create an account",
+                        style: AppTheme.headingStyle.copyWith(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 24 : 28,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 4 : 8),
+                      Text(
+                        "Register with email and password",
+                        style: AppTheme.subheadingStyle.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: isSmallScreen ? 14 : 18,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 24 : 32),
+
+                      // Name field
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Name',
+                          hintText: 'Enter your name',
+                          prefixIcon: const Icon(Icons.person),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      SizedBox(height: isSmallScreen ? 12 : 16),
+
+                      // Email field
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'Enter your email',
+                          prefixIcon: const Icon(Icons.email),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          // Check if it's a demo account (allow it)
+                          if (value == 'demo@miniaturepaintfinder.com') {
+                            return null;
+                          }
+                          // Basic email validation
+                          final emailRegex = RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                          );
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: isSmallScreen ? 12 : 16),
+
+                      // Password field
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          prefixIcon: const Icon(Icons.lock),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                      ),
+                      SizedBox(height: isSmallScreen ? 30 : 40),
+
+                      // Register button
+                      SizedBox(
+                        width: double.infinity,
+                        height: isSmallScreen ? 48 : 56,
+                        child: ElevatedButton(
+                          onPressed: _performRegister,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.marineOrange,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Create Account',
+                            style: AppTheme.buttonStyle.copyWith(
+                              color: Colors.white,
+                              fontSize: isSmallScreen ? 14 : 16,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 16 : 24),
+
+                      // Login link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Already have an account?",
+                            style: AppTheme.bodyStyle.copyWith(
+                              color: Colors.white70,
+                              fontSize: isSmallScreen ? 13 : 14,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _showLoginOptions,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.marineGold,
+                              padding: const EdgeInsets.only(left: 8),
+                            ),
+                            child: Text(
+                              'Sign In',
+                              style: AppTheme.buttonStyle.copyWith(
+                                color: AppTheme.marineGold,
+                                fontSize: isSmallScreen ? 13 : 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: isSmallScreen ? 16 : 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
 
-        Positioned(
-          top: 120,
-          right: 80,
-          child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+        // 3D floating cubes - opcional en pantallas pequeñas
+        if (!isSmallScreen) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
+
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmailLoginForm(Size screenSize) {
+    final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
+    final isSmallScreen = screenSize.height < 700;
+
+    return Stack(
+      children: [
+        Container(
+          color: AppTheme.darkBackground,
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: formMaxWidth),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Back button for login form
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: _goBack,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 20 : 32),
+
+                      // Title and subtitle
+                      Text(
+                        "Let's sign you in",
+                        style: AppTheme.headingStyle.copyWith(
+                          color: Colors.white,
+                          fontSize: isSmallScreen ? 24 : 28,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 4 : 8),
+                      Text(
+                        "Welcome back!",
+                        style: AppTheme.subheadingStyle.copyWith(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: isSmallScreen ? 16 : 18,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 32 : 48),
+
+                      // Email field
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'Enter your email',
+                          prefixIcon: const Icon(Icons.email),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          // Check if it's a demo account (always allow it)
+                          if (value == 'demo@miniaturepaintfinder.com') {
+                            return null;
+                          }
+                          // Basic email validation for non-demo emails
+                          final emailRegex = RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
+                          );
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: isSmallScreen ? 12 : 16),
+
+                      // Password field
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          prefixIcon: const Icon(Icons.lock),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                      ),
+
+                      // Forgot password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            // Forgot password functionality
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.marineGold,
+                            padding: EdgeInsets.symmetric(
+                              vertical: isSmallScreen ? 12 : 16,
+                            ),
+                          ),
+                          child: Text(
+                            'Forgot Password?',
+                            style: AppTheme.bodyStyle.copyWith(
+                              color: AppTheme.marineGold,
+                              fontWeight: FontWeight.w500,
+                              fontSize: isSmallScreen ? 13 : 14,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 24 : 40),
+
+                      // Bottom section with Register
+                      Column(
+                        children: [
+                          // Account existence check
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Don't have an account?",
+                                style: AppTheme.bodyStyle.copyWith(
+                                  color: Colors.white70,
+                                  fontSize: isSmallScreen ? 13 : 14,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: _showRegisterOptions,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.marineGold,
+                                  padding: const EdgeInsets.only(left: 8),
+                                ),
+                                child: Text(
+                                  'Register',
+                                  style: AppTheme.buttonStyle.copyWith(
+                                    color: AppTheme.marineGold,
+                                    fontSize: isSmallScreen ? 13 : 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: isSmallScreen ? 16 : 24),
+
+                          // Action button
+                          SizedBox(
+                            width: double.infinity,
+                            height: isSmallScreen ? 48 : 56,
+                            child: ElevatedButton(
+                              onPressed: _performDirectLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.marineOrange,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                'Sign In',
+                                style: AppTheme.buttonStyle.copyWith(
+                                  color: Colors.white,
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: isSmallScreen ? 16 : 0),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
 
-        Positioned(
-          bottom: 200,
-          left: 60,
-          child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
-        ),
+        // 3D floating cubes for sign in screen - opcional en pantallas pequeñas
+        if (!isSmallScreen) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
+
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+
+          Positioned(
+            bottom: 200,
+            left: 60,
+            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+          ),
+        ],
       ],
     );
   }
