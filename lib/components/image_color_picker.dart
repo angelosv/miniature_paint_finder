@@ -9,6 +9,7 @@ import 'package:miniature_paint_finder/services/image_upload_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:image/image.dart' as img;
 import 'package:miniature_paint_finder/components/color_selection_modal.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Modelo para representar una marca de pintura
 class PaintBrand {
@@ -519,8 +520,15 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                             child: ElevatedButton.icon(
                               onPressed:
                                   () => _openPrecisionColorSelector(context),
-                              icon: const Icon(Icons.color_lens),
-                              label: const Text('Pick Colors'),
+                              icon: const Icon(Icons.color_lens, size: 20),
+                              label: Text(
+                                'Pick Colors',
+                                style: TextStyle(
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Theme.of(context).brightness ==
@@ -529,9 +537,13 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                                         : AppTheme.marineBlue,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
+                                  horizontal: 20,
                                   vertical: 12,
                                 ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 2,
                               ),
                             ),
                           ),
@@ -631,24 +643,36 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: 120,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        width: 130,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
-          color: isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
-          borderRadius: BorderRadius.circular(12),
+          color:
+              isDarkMode
+                  ? AppTheme.marineBlue.withOpacity(0.9)
+                  : AppTheme.marineBlue,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 32),
-            const SizedBox(height: 8),
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 10),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                fontFamily: GoogleFonts.poppins().fontFamily,
+                fontSize: 14,
               ),
             ),
           ],

@@ -20,6 +20,7 @@ import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:google_fonts/google_fonts.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -421,7 +422,6 @@ class _PaintListTabState extends State<PaintListTab> {
                   stepNumber: 1,
                   title: 'Choose your brands',
                   subtitle: 'Select brands where to search for matching colors',
-                  icon: Icons.palette_outlined,
                   color: AppTheme.marineBlue,
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -451,6 +451,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                   child: Text(
                                     'No brands selected yet',
                                     style: TextStyle(
+                                      fontFamily:
+                                          GoogleFonts.poppins().fontFamily,
                                       color:
                                           Theme.of(context).brightness ==
                                                   Brightness.dark
@@ -497,7 +499,6 @@ class _PaintListTabState extends State<PaintListTab> {
                   stepNumber: 2,
                   title: 'Choose your image',
                   subtitle: 'Select or take a photo to find matching colors',
-                  icon: Icons.image_search,
                   color: AppTheme.marineOrange,
                   content: ImageColorPicker(
                     imageFile: _imageFile,
@@ -515,8 +516,7 @@ class _PaintListTabState extends State<PaintListTab> {
                   stepNumber: 3,
                   title: 'Selected colors',
                   subtitle: 'Review and save your selected color palette',
-                  icon: Icons.search,
-                  color: AppTheme.purpleColor,
+                  color: AppTheme.marineBlue,
                   content: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -533,6 +533,7 @@ class _PaintListTabState extends State<PaintListTab> {
                               child: Text(
                                 'Selected colors (${_pickedColors.length})',
                                 style: TextStyle(
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
                                   fontWeight: FontWeight.w500,
                                   color:
                                       Theme.of(context).brightness ==
@@ -552,6 +553,7 @@ class _PaintListTabState extends State<PaintListTab> {
                               child: Text(
                                 'Clear all',
                                 style: TextStyle(
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
                                   color:
                                       Theme.of(context).brightness ==
                                               Brightness.dark
@@ -574,6 +576,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                 'No colors selected yet. Use the "Pick Colors" button to select colors from your image.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
                                   color:
                                       Theme.of(context).brightness ==
                                               Brightness.dark
@@ -619,8 +622,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                             backgroundColor:
                                                 Theme.of(context).brightness ==
                                                         Brightness.dark
-                                                    ? AppTheme.marineOrange
-                                                    : AppTheme.purpleColor,
+                                                    ? AppTheme.marineBlue
+                                                    : AppTheme.marineBlue,
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 12,
@@ -652,7 +655,6 @@ class _PaintListTabState extends State<PaintListTab> {
     required int stepNumber,
     required String title,
     required String subtitle,
-    required IconData icon,
     required Color color,
     required Widget content,
   }) {
@@ -678,7 +680,8 @@ class _PaintListTabState extends State<PaintListTab> {
                   child: Center(
                     child: Text(
                       stepNumber.toString(),
-                      style: const TextStyle(
+                      style: TextStyle(
+                        fontFamily: GoogleFonts.poppins().fontFamily,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -688,23 +691,32 @@ class _PaintListTabState extends State<PaintListTab> {
                 const SizedBox(width: 12),
                 // Título e icono
                 Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            subtitle,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.poppins().fontFamily,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
+                        ),
                       ),
-                      Icon(icon, color: color),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.poppins().fontFamily,
+                          fontSize: 14,
+                          color:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1577,7 +1589,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                 colorCode,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  fontFamily: 'monospace',
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
                                 ),
@@ -1604,6 +1616,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                 barcode,
                                 style: TextStyle(
                                   fontSize: 10,
+                                  fontFamily: GoogleFonts.poppins().fontFamily,
                                   color:
                                       isDarkMode
                                           ? Colors.grey[400]
@@ -1635,6 +1648,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     '$matchPercentage% match',
                     style: TextStyle(
                       fontSize: 12,
+                      fontFamily: GoogleFonts.poppins().fontFamily,
                       color: _getMatchColor(matchPercentage as int),
                       fontWeight: FontWeight.bold,
                     ),
@@ -1708,6 +1722,7 @@ class _PaintListTabState extends State<PaintListTab> {
               hexCode,
               style: TextStyle(
                 fontSize: 9,
+                fontFamily: GoogleFonts.poppins().fontFamily,
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[800],
               ),
             ),
