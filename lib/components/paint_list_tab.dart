@@ -802,393 +802,6 @@ class _PaintListTabState extends State<PaintListTab> {
     final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
     _paletteNameController.text = defaultName;
 
-    // Function to build the modal content - extracted to allow rebuilding
-    Widget buildModalContent(
-      BuildContext context,
-      ScrollController scrollController,
-      Function setState,
-    ) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Selected Colors',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: isDarkMode ? Colors.white : null,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: isDarkMode ? Colors.white : null,
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            Text(
-              'Find matching paints for your selected colors',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            Divider(color: isDarkMode ? Colors.grey[700] : null),
-
-            // Palette name field
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: TextField(
-                controller: _paletteNameController,
-                decoration: InputDecoration(
-                  labelText: 'Palette Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                  prefixIcon: const Icon(Icons.palette),
-                ),
-                style: TextStyle(color: isDarkMode ? Colors.white : null),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-            Expanded(
-              child: Stack(
-                children: [
-                  ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.only(bottom: 70),
-                    itemCount: _pickedColors.length,
-                    itemBuilder: (context, index) {
-                      final colorData = _pickedColors[index];
-                      final color = colorData['color'] as Color;
-                      final hexCode = colorData['hexCode'] as String;
-
-                      // Diseño común de las tarjetas siempre simple como en la imagen
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[700]!
-                                    : Colors.grey[300]!,
-                            width: 1,
-                          ),
-                        ),
-                        color: isDarkMode ? Colors.grey[850] : Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Color swatch
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-
-                              // Color info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Color Point ${index + 1}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color:
-                                            isDarkMode
-                                                ? Colors.white
-                                                : Colors.black,
-                                      ),
-                                    ),
-                                    Text(
-                                      hexCode,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color:
-                                            isDarkMode
-                                                ? Colors.grey[400]
-                                                : Colors.grey[600],
-                                      ),
-                                    ),
-
-                                    // Show selected paint info if available
-                                    if (colorData['paintName'] != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          top: 8.0,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 20,
-                                              height: 20,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    isDarkMode
-                                                        ? Colors.grey[800]
-                                                        : Colors.grey[200],
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  colorData['brandAvatar']
-                                                      as String,
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        isDarkMode
-                                                            ? Colors.white
-                                                            : Colors.black,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              "${colorData['paintName']}",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color:
-                                                    isDarkMode
-                                                        ? Colors.white
-                                                        : Colors.black,
-                                              ),
-                                            ),
-
-                                            // Add match percentage
-                                            if (colorData['matchPercentage'] !=
-                                                null)
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                  left: 8.0,
-                                                ),
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: _getMatchColor(
-                                                      colorData['matchPercentage']
-                                                          as int,
-                                                    ).withOpacity(0.2),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    '${colorData['matchPercentage']}%',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: _getMatchColor(
-                                                        colorData['matchPercentage']
-                                                            as int,
-                                                      ),
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-
-                              // Find button
-                              SizedBox(
-                                width: 60,
-                                height: 60,
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    // Key change: await the result and rebuild modal after returning
-                                    await _showMatchingPaintsModal(
-                                      context,
-                                      index,
-                                    );
-                                    // Actualizar inmediatamente el estado del modal
-                                    setState(() {});
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.marineBlue,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.color_lens, size: 20),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Find',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Fixed position Save Palette button
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[900] : Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed:
-                              _isSavingPalette
-                                  ? null
-                                  : () async {
-                                    setState(() {
-                                      _isSavingPalette = true;
-                                    });
-
-                                    try {
-                                      final user =
-                                          FirebaseAuth.instance.currentUser;
-                                      if (user == null)
-                                        throw Exception(
-                                          'Usuario no autenticado',
-                                        );
-                                      final token = await user.getIdToken();
-
-                                      final paintsToSend =
-                                          _pickedColors
-                                              .where(
-                                                (c) => c['paintName'] != null,
-                                              )
-                                              .map(
-                                                (c) =>
-                                                    {
-                                                          'hex': c['hexCode'],
-                                                          'name':
-                                                              c['paintName'],
-                                                          'brand':
-                                                              c['paintBrand'],
-                                                          'colorCode':
-                                                              c['colorCode'],
-                                                          'barcode':
-                                                              c['barcode'],
-                                                        }
-                                                        as Map<String, String>,
-                                              )
-                                              .toList();
-
-                                      final _colorSearchService =
-                                          ColorSearchService();
-
-                                      await _colorSearchService.saveColorSearch(
-                                        token: token as String,
-                                        name: _paletteNameController.text,
-                                        paints: paintsToSend,
-                                      );
-
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Color search "${_paletteNameController.text}" saved!',
-                                          ),
-                                        ),
-                                      );
-                                      _reset();
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error al guardar: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    } finally {
-                                      setState(() {
-                                        _isSavingPalette = false;
-                                      });
-                                    }
-                                  },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.marineBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child:
-                              _isSavingPalette
-                                  ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : const Text(
-                                    'Save Palette',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1199,16 +812,452 @@ class _PaintListTabState extends State<PaintListTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            // Función para actualizar el estado del modal cuando se selecciona una pintura
+            Future<void> _selectPaintForColor(int colorIndex) async {
+              await _showMatchingPaintsModal(
+                context,
+                colorIndex,
+                setModalState,
+              );
+            }
+
             return DraggableScrollableSheet(
               initialChildSize: 0.7,
               maxChildSize: 0.9,
               minChildSize: 0.5,
               expand: false,
               builder: (context, scrollController) {
-                return buildModalContent(
-                  context,
-                  scrollController,
-                  setModalState,
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Selected Colors',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleLarge?.copyWith(
+                                color: isDarkMode ? Colors.white : null,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: isDarkMode ? Colors.white : null,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Find matching paints for your selected colors',
+                        style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                      Divider(color: isDarkMode ? Colors.grey[700] : null),
+
+                      // Palette name field
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: TextField(
+                          controller: _paletteNameController,
+                          decoration: InputDecoration(
+                            labelText: 'Palette Name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDarkMode
+                                    ? Colors.grey[800]
+                                    : Colors.grey[100],
+                            prefixIcon: const Icon(Icons.palette),
+                          ),
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.white : null,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.only(bottom: 70),
+                              itemCount: _pickedColors.length,
+                              itemBuilder: (context, index) {
+                                final colorData = _pickedColors[index];
+                                final color = colorData['color'] as Color;
+                                final hexCode = colorData['hexCode'] as String;
+
+                                // Diseño común de las tarjetas siempre simple como en la imagen
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[700]!
+                                              : Colors.grey[300]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[850]
+                                          : Colors.white,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        // Color swatch
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            color: color,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+
+                                        // Color info
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Color Point ${index + 1}',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black,
+                                                ),
+                                              ),
+                                              Text(
+                                                hexCode,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.grey[400]
+                                                          : Colors.grey[600],
+                                                ),
+                                              ),
+
+                                              // Show selected paint info if available
+                                              if (colorData['paintName'] !=
+                                                  null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 8.0,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 20,
+                                                        height: 20,
+                                                        decoration: BoxDecoration(
+                                                          color:
+                                                              isDarkMode
+                                                                  ? Colors
+                                                                      .grey[800]
+                                                                  : Colors
+                                                                      .grey[200],
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                        child: Center(
+                                                          child: Text(
+                                                            colorData['brandAvatar']
+                                                                as String,
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  isDarkMode
+                                                                      ? Colors
+                                                                          .white
+                                                                      : Colors
+                                                                          .black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        "${colorData['paintName']}",
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              isDarkMode
+                                                                  ? Colors.white
+                                                                  : Colors
+                                                                      .black,
+                                                        ),
+                                                      ),
+
+                                                      // Add match percentage
+                                                      if (colorData['matchPercentage'] !=
+                                                          null)
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                left: 8.0,
+                                                              ),
+                                                          child: Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 2,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: _getMatchColor(
+                                                                colorData['matchPercentage']
+                                                                    as int,
+                                                              ).withOpacity(
+                                                                0.2,
+                                                              ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                            ),
+                                                            child: Text(
+                                                              '${colorData['matchPercentage']}%',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color: _getMatchColor(
+                                                                  colorData['matchPercentage']
+                                                                      as int,
+                                                                ),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        // Find button
+                                        SizedBox(
+                                          width: 60,
+                                          height: 60,
+                                          child: ElevatedButton(
+                                            onPressed: () async {
+                                              await _selectPaintForColor(index);
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.marineBlue,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.color_lens,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                const Text(
+                                                  'Find',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+
+                            // Fixed position Save Palette button
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[900]
+                                          : Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, -2),
+                                    ),
+                                  ],
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed:
+                                        _isSavingPalette
+                                            ? null
+                                            : () async {
+                                              setModalState(() {
+                                                _isSavingPalette = true;
+                                              });
+
+                                              try {
+                                                final user =
+                                                    FirebaseAuth
+                                                        .instance
+                                                        .currentUser;
+                                                if (user == null)
+                                                  throw Exception(
+                                                    'Usuario no autenticado',
+                                                  );
+                                                final token =
+                                                    await user.getIdToken();
+
+                                                final paintsToSend =
+                                                    _pickedColors
+                                                        .where(
+                                                          (c) =>
+                                                              c['paintName'] !=
+                                                              null,
+                                                        )
+                                                        .map(
+                                                          (c) =>
+                                                              {
+                                                                    'hex':
+                                                                        c['hexCode'],
+                                                                    'name':
+                                                                        c['paintName'],
+                                                                    'brand':
+                                                                        c['paintBrand'],
+                                                                    'colorCode':
+                                                                        c['colorCode'],
+                                                                    'barcode':
+                                                                        c['barcode'],
+                                                                  }
+                                                                  as Map<
+                                                                    String,
+                                                                    String
+                                                                  >,
+                                                        )
+                                                        .toList();
+
+                                                final _colorSearchService =
+                                                    ColorSearchService();
+
+                                                await _colorSearchService
+                                                    .saveColorSearch(
+                                                      token: token as String,
+                                                      name:
+                                                          _paletteNameController
+                                                              .text,
+                                                      paints: paintsToSend,
+                                                    );
+
+                                                Navigator.pop(context);
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Color search "${_paletteNameController.text}" saved!',
+                                                    ),
+                                                  ),
+                                                );
+                                                _reset();
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Error al guardar: $e',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              } finally {
+                                                setModalState(() {
+                                                  _isSavingPalette = false;
+                                                });
+                                              }
+                                            },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.marineBlue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                    ),
+                                    child:
+                                        _isSavingPalette
+                                            ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                            : const Text(
+                                              'Save Palette',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 );
               },
             );
@@ -1221,6 +1270,7 @@ class _PaintListTabState extends State<PaintListTab> {
   Future<void> _showMatchingPaintsModal(
     BuildContext context,
     int colorIndex,
+    Function setParentState,
   ) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final colorData = _pickedColors[colorIndex];
@@ -1294,7 +1344,6 @@ class _PaintListTabState extends State<PaintListTab> {
     await loadMorePaints();
 
     int? selectedIndex;
-    bool resultUpdated = false;
 
     await showModalBottomSheet(
       context: context,
@@ -1356,8 +1405,6 @@ class _PaintListTabState extends State<PaintListTab> {
                             paintHex = paintHex.substring(1);
                           }
                           paintHex = paintHex.padLeft(6, '0');
-
-                          print('DEBUG: Mostrando pintura con hex: $paintHex');
 
                           Color paintColor;
                           try {
@@ -1429,25 +1476,29 @@ class _PaintListTabState extends State<PaintListTab> {
                                         Colors.red; // Color de fallback
                                   }
 
-                                  // Actualizar el estado global
+                                  // Actualizar el estado global con los nuevos datos
+                                  _pickedColors[colorIndex] = {
+                                    ..._pickedColors[colorIndex],
+                                    'paintName': paint['name'],
+                                    'paintBrand': paint['brand']['name'],
+                                    'paintColor': paintColor,
+                                    'brandAvatar':
+                                        (paint['brand']['name'] as String)[0],
+                                    'matchPercentage': paint['match'],
+                                    'colorCode': paint['code'],
+                                    'barcode': paint['barcode'],
+                                    'paintId': paint['id'],
+                                    'brandId': paint['brand']['id'],
+                                  };
+
+                                  // Notificar a este widget para que se actualice
                                   this.setState(() {
-                                    _pickedColors[colorIndex] = {
-                                      ..._pickedColors[colorIndex],
-                                      'paintName': paint['name'],
-                                      'paintBrand': paint['brand']['name'],
-                                      'paintColor': paintColor,
-                                      'brandAvatar':
-                                          (paint['brand']['name'] as String)[0],
-                                      'matchPercentage': paint['match'],
-                                      'colorCode': paint['code'],
-                                      'barcode': paint['barcode'],
-                                      'paintId': paint['id'],
-                                      'brandId': paint['brand']['id'],
-                                    };
                                     _pickedColors = List.from(_pickedColors);
                                   });
 
-                                  resultUpdated = true;
+                                  // Notificar al modal padre para que se actualice
+                                  setParentState(() {});
+
                                   Navigator.pop(context);
                                 }
                                 : null,
@@ -1462,9 +1513,6 @@ class _PaintListTabState extends State<PaintListTab> {
         );
       },
     );
-
-    // Importante: devolver un indicador de si se actualizó algo
-    return Future.value(resultUpdated);
   }
 
   // Helper method to get color based on match percentage
