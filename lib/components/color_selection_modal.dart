@@ -175,7 +175,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _updateMagnifierPosition(Offset position) {
     if (!_magnifierMode) return;
 
-    // Ajustar la posición para que el magnificador no se salga de la pantalla
+    // Calculamos la posición donde mostrar la lupa (ligeramente arriba del dedo)
     final screenSize = MediaQuery.of(context).size;
     double x = position.dx;
     double y = position.dy - _magnifierSize - 20; // Mostrar arriba del dedo
@@ -192,59 +192,75 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       x = screenSize.width - _magnifierSize / 2;
     }
 
-    // Obtenemos la posición exacta en la imagen (considerando el zoom)
+    // Obtenemos la posición exacta en la imagen considerando el zoom
     final imagePosition = _getImagePositionFromViewport(position);
 
     if (_decodedImage != null) {
       RenderBox? box =
           _imageKey.currentContext?.findRenderObject() as RenderBox?;
       if (box != null) {
-        // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
-        final visibleImageSize = _getVisibleImageSize(box);
+        // Obtener las dimensiones reales de la imagen mostrada
+        final displayedImageSize = _getImageDisplaySize(box);
 
-        // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
-        final adjustedX =
-            (imagePosition.dx / visibleImageSize.width) * _decodedImage!.width;
-        final adjustedY =
-            (imagePosition.dy / visibleImageSize.height) *
-            _decodedImage!.height;
+        // Calcular la proporción entre imagen original y la mostrada
+        final scaleX = _decodedImage!.width / displayedImageSize.width;
+        final scaleY = _decodedImage!.height / displayedImageSize.height;
 
-        // Aseguramos que estamos dentro de los límites de la imagen
-        final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
-        final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
+        // Convertir posición a coordenadas de píxel
+        final pixelX = (imagePosition.dx * scaleX).round();
+        final pixelY = (imagePosition.dy * scaleY).round();
 
-        // Obtener color desde la imagen original
-        final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-        final color = Color.fromARGB(
-          255,
-          pixel.r.toInt(),
-          pixel.g.toInt(),
-          pixel.b.toInt(),
-        );
-
-        final hexCode =
-            '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-        setState(() {
-          _magnifierPosition = Offset(x, y);
-          _magnifierPoint = ColorPoint(
-            x: imagePosition.dx,
-            y: imagePosition.dy,
-            color: color,
-            hex: hexCode,
+        // Verificar si estamos dentro de los límites
+        if (pixelX >= 0 &&
+            pixelX < _decodedImage!.width &&
+            pixelY >= 0 &&
+            pixelY < _decodedImage!.height) {
+          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+          final color = Color.fromARGB(
+            255,
+            pixel.r.toInt(),
+            pixel.g.toInt(),
+            pixel.b.toInt(),
           );
-        });
+
+          final hexCode =
+              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+          setState(() {
+            _magnifierPosition = Offset(x, y);
+            _magnifierPoint = ColorPoint(
+              x: imagePosition.dx,
+              y: imagePosition.dy,
+              color: color,
+              hex: hexCode,
+            );
+          });
+        }
       }
     }
   }
 
-  // Obtiene el tamaño visible actual de la imagen considerando zoom y posición
-  Size _getVisibleImageSize(RenderBox box) {
-    // Obtenemos el factor de escala actual
-    final scale = _transformationController.value.getMaxScaleOnAxis();
+  // Calculamos el tamaño real de la imagen mostrada en pantalla
+  Size _getImageDisplaySize(RenderBox containerBox) {
+    // Obtenemos el tamaño del contenedor
+    final containerSize = containerBox.size;
 
-    // Calculamos el tamaño de la imagen visible considerando el zoom
-    return Size(box.size.width / scale, box.size.height / scale);
+    // Calculamos el ratio para ajustar la imagen manteniendo la proporción
+    final aspectRatio = _imageSize.width / _imageSize.height;
+
+    double width, height;
+
+    // Si la imagen es más ancha que alta
+    if (aspectRatio > containerSize.width / containerSize.height) {
+      width = containerSize.width;
+      height = width / aspectRatio;
+    } else {
+      // Si la imagen es más alta que ancha
+      height = containerSize.height;
+      width = height * aspectRatio;
+    }
+
+    return Size(width, height);
   }
 
   // Convertir coordenadas de la pantalla a coordenadas de la imagen considerando zoom
@@ -284,42 +300,44 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
             _imageKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null) {
           // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
-          final visibleImageSize = _getVisibleImageSize(box);
+          final displayedImageSize = _getImageDisplaySize(box);
 
-          // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
-          final adjustedX =
-              (imagePosition.dx / visibleImageSize.width) *
-              _decodedImage!.width;
-          final adjustedY =
-              (imagePosition.dy / visibleImageSize.height) *
-              _decodedImage!.height;
+          // Calcular la proporción entre imagen original y la mostrada
+          final scaleX = _decodedImage!.width / displayedImageSize.width;
+          final scaleY = _decodedImage!.height / displayedImageSize.height;
 
-          // Aseguramos que estamos dentro de los límites de la imagen
-          final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
-          final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
+          // Convertir posición a coordenadas de píxel
+          final pixelX = (imagePosition.dx * scaleX).round();
+          final pixelY = (imagePosition.dy * scaleY).round();
 
-          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-          final color = Color.fromARGB(
-            255,
-            pixel.r.toInt(),
-            pixel.g.toInt(),
-            pixel.b.toInt(),
-          );
+          // Verificar si estamos dentro de los límites
+          if (pixelX >= 0 &&
+              pixelX < _decodedImage!.width &&
+              pixelY >= 0 &&
+              pixelY < _decodedImage!.height) {
+            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+            final color = Color.fromARGB(
+              255,
+              pixel.r.toInt(),
+              pixel.g.toInt(),
+              pixel.b.toInt(),
+            );
 
-          final hexCode =
-              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+            final hexCode =
+                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
-          final newPoint = ColorPoint(
-            x: imagePosition.dx,
-            y: imagePosition.dy,
-            color: color,
-            hex: hexCode,
-          );
+            final newPoint = ColorPoint(
+              x: imagePosition.dx,
+              y: imagePosition.dy,
+              color: color,
+              hex: hexCode,
+            );
 
-          setState(() {
-            _points.add(newPoint);
-            widget.onPointsUpdated(_points);
-          });
+            setState(() {
+              _points.add(newPoint);
+              widget.onPointsUpdated(_points);
+            });
+          }
         }
       }
     }
@@ -337,39 +355,41 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
             _imageKey.currentContext?.findRenderObject() as RenderBox?;
         if (box != null) {
           // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
-          final visibleImageSize = _getVisibleImageSize(box);
+          final displayedImageSize = _getImageDisplaySize(box);
 
-          // Ajustamos la posición considerando las proporciones de la imagen y el contenedor
-          final adjustedX =
-              (imagePosition.dx / visibleImageSize.width) *
-              _decodedImage!.width;
-          final adjustedY =
-              (imagePosition.dy / visibleImageSize.height) *
-              _decodedImage!.height;
+          // Calcular la proporción entre imagen original y la mostrada
+          final scaleX = _decodedImage!.width / displayedImageSize.width;
+          final scaleY = _decodedImage!.height / displayedImageSize.height;
 
-          // Aseguramos que estamos dentro de los límites de la imagen
-          final pixelX = adjustedX.round().clamp(0, _decodedImage!.width - 1);
-          final pixelY = adjustedY.round().clamp(0, _decodedImage!.height - 1);
+          // Convertir posición a coordenadas de píxel
+          final pixelX = (imagePosition.dx * scaleX).round();
+          final pixelY = (imagePosition.dy * scaleY).round();
 
-          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-          final color = Color.fromARGB(
-            255,
-            pixel.r.toInt(),
-            pixel.g.toInt(),
-            pixel.b.toInt(),
-          );
-
-          final hexCode =
-              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-          setState(() {
-            _points[_selectedPointIndex!] = ColorPoint(
-              x: imagePosition.dx,
-              y: imagePosition.dy,
-              color: color,
-              hex: hexCode,
+          // Verificar si estamos dentro de los límites
+          if (pixelX >= 0 &&
+              pixelX < _decodedImage!.width &&
+              pixelY >= 0 &&
+              pixelY < _decodedImage!.height) {
+            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+            final color = Color.fromARGB(
+              255,
+              pixel.r.toInt(),
+              pixel.g.toInt(),
+              pixel.b.toInt(),
             );
-          });
+
+            final hexCode =
+                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+
+            setState(() {
+              _points[_selectedPointIndex!] = ColorPoint(
+                x: imagePosition.dx,
+                y: imagePosition.dy,
+                color: color,
+                hex: hexCode,
+              );
+            });
+          }
         }
       }
     } else {
@@ -622,8 +642,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                   // Lupa (magnificador)
                   if (_magnifierMode &&
                       _magnifierPosition != null &&
-                      _magnifierPoint != null &&
-                      _uiImage != null)
+                      _magnifierPoint != null)
                     Positioned(
                       left: _magnifierPosition!.dx - _magnifierSize / 2,
                       top: _magnifierPosition!.dy - _magnifierSize / 2,
@@ -653,20 +672,33 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           child: ClipOval(
                             child: Stack(
                               children: [
-                                // Imagen ampliada usando un CustomPainter
-                                CustomPaint(
-                                  size: Size(_magnifierSize, _magnifierSize),
-                                  painter: MagnifierPainter(
-                                    image: _uiImage!,
-                                    sourceRect: Rect.fromCenter(
-                                      center: Offset(
-                                        _magnifierPoint!.x,
-                                        _magnifierPoint!.y,
+                                // Imagen ampliada
+                                Transform.scale(
+                                  scale: _magnifierScale,
+                                  alignment: Alignment.center,
+                                  child: OverflowBox(
+                                    maxWidth: double.infinity,
+                                    maxHeight: double.infinity,
+                                    child: Transform.translate(
+                                      offset: Offset(
+                                        -(_magnifierPoint!.x *
+                                                _magnifierScale) +
+                                            _magnifierSize / 2,
+                                        -(_magnifierPoint!.y *
+                                                _magnifierScale) +
+                                            _magnifierSize / 2,
                                       ),
-                                      width: _magnifierSize / _magnifierScale,
-                                      height: _magnifierSize / _magnifierScale,
+                                      child: Transform(
+                                        transform:
+                                            _transformationController.value,
+                                        child: Image.file(
+                                          widget.imageFile,
+                                          fit: BoxFit.contain,
+                                          width: _imageSize.width,
+                                          height: _imageSize.height,
+                                        ),
+                                      ),
                                     ),
-                                    scale: _magnifierScale,
                                   ),
                                 ),
 
@@ -980,44 +1012,4 @@ class ColorPoint {
     required this.color,
     required this.hex,
   });
-}
-
-class MagnifierPainter extends CustomPainter {
-  final ui.Image image;
-  final Rect sourceRect;
-  final double scale;
-
-  MagnifierPainter({
-    required this.image,
-    required this.sourceRect,
-    required this.scale,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final matrix =
-        Matrix4.identity()
-          ..translate(sourceRect.left, sourceRect.top)
-          ..scale(1 / scale, 1 / scale)
-          ..translate(-sourceRect.left, -sourceRect.top);
-
-    final paint =
-        Paint()
-          ..filterQuality = FilterQuality.high
-          ..shader = ui.ImageShader(
-            image,
-            TileMode.clamp,
-            TileMode.clamp,
-            matrix.storage,
-          );
-
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(MagnifierPainter oldDelegate) {
-    return oldDelegate.image != image ||
-        oldDelegate.sourceRect != sourceRect ||
-        oldDelegate.scale != scale;
-  }
 }
