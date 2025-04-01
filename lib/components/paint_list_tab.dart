@@ -802,6 +802,9 @@ class _PaintListTabState extends State<PaintListTab> {
     final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
     _paletteNameController.text = defaultName;
 
+    // Hacer una copia de los colores seleccionados para manipular en el modal
+    List<Map<String, dynamic>> modalColorList = List.from(_pickedColors);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -812,15 +815,6 @@ class _PaintListTabState extends State<PaintListTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            // Función para actualizar el estado del modal cuando se selecciona una pintura
-            Future<void> _selectPaintForColor(int colorIndex) async {
-              await _showMatchingPaintsModal(
-                context,
-                colorIndex,
-                setModalState,
-              );
-            }
-
             return DraggableScrollableSheet(
               initialChildSize: 0.7,
               maxChildSize: 0.9,
@@ -895,9 +889,9 @@ class _PaintListTabState extends State<PaintListTab> {
                             ListView.builder(
                               controller: scrollController,
                               padding: const EdgeInsets.only(bottom: 70),
-                              itemCount: _pickedColors.length,
+                              itemCount: modalColorList.length,
                               itemBuilder: (context, index) {
-                                final colorData = _pickedColors[index];
+                                final colorData = modalColorList[index];
                                 final color = colorData['color'] as Color;
                                 final hexCode = colorData['hexCode'] as String;
 
@@ -1078,7 +1072,24 @@ class _PaintListTabState extends State<PaintListTab> {
                                           height: 60,
                                           child: ElevatedButton(
                                             onPressed: () async {
-                                              await _selectPaintForColor(index);
+                                              final result = await _selectPaint(
+                                                context,
+                                                colorData,
+                                              );
+                                              if (result != null) {
+                                                // Si hay un resultado, actualizar el estado
+                                                setModalState(() {
+                                                  modalColorList[index] =
+                                                      result;
+                                                });
+
+                                                // También actualizar el estado general
+                                                setState(() {
+                                                  _pickedColors = List.from(
+                                                    modalColorList,
+                                                  );
+                                                });
+                                              }
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
@@ -1161,7 +1172,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     await user.getIdToken();
 
                                                 final paintsToSend =
-                                                    _pickedColors
+                                                    modalColorList
                                                         .where(
                                                           (c) =>
                                                               c['paintName'] !=
@@ -1199,6 +1210,13 @@ class _PaintListTabState extends State<PaintListTab> {
                                                               .text,
                                                       paints: paintsToSend,
                                                     );
+
+                                                // Guardar cambios en el estado general antes de cerrar
+                                                setState(() {
+                                                  _pickedColors = List.from(
+                                                    modalColorList,
+                                                  );
+                                                });
 
                                                 Navigator.pop(context);
                                                 ScaffoldMessenger.of(
@@ -1267,19 +1285,14 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
-  Future<void> _showMatchingPaintsModal(
+  // Nuevo método para seleccionar una pintura
+  Future<Map<String, dynamic>?> _selectPaint(
     BuildContext context,
-    int colorIndex,
-    Function setParentState,
+    Map<String, dynamic> colorData,
   ) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final colorData = _pickedColors[colorIndex];
     final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
-
-    print(
-      'DEBUG: Mostrando coincidencias para color: $color, hexCode: $hexCode',
-    );
 
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
@@ -1289,62 +1302,32 @@ class _PaintListTabState extends State<PaintListTab> {
             .map((b) => b['id'] as String)
             .toList();
 
-    print('DEBUG: Brands seleccionadas: $brandIds');
+    // Limpiar el hexcode para la API
+    final cleanHexCode =
+        hexCode.startsWith('#') ? hexCode.substring(1) : hexCode;
 
-    _matchingPaints[colorIndex] = [];
-    _currentPages[colorIndex] = 1;
-    _totalPages[colorIndex] = 1;
-    _isLoadingMore[colorIndex] = false;
+    // Cargar las pinturas coincidentes
+    final matchService = PaintMatchService();
+    final data = await matchService.fetchMatchingPaints(
+      token: token!,
+      hexColor: cleanHexCode,
+      brandIds: brandIds,
+      page: 1, // Primera página
+    );
 
-    final ScrollController controller = ScrollController();
-    _scrollControllers[colorIndex] = controller;
-
-    Future<void> loadMorePaints() async {
-      if (_isLoadingMore[colorIndex]! ||
-          _currentPages[colorIndex]! > _totalPages[colorIndex]!)
-        return;
-
-      _isLoadingMore[colorIndex] = true;
-
-      try {
-        final matchService = PaintMatchService();
-        // Asegurar que el hexCode no tiene # al enviarlo a la API
-        final cleanHexCode =
-            hexCode.startsWith('#') ? hexCode.substring(1) : hexCode;
-        print('DEBUG: Buscando pinturas para hexCode (limpio): $cleanHexCode');
-
-        final data = await matchService.fetchMatchingPaints(
-          token: token!,
-          hexColor: cleanHexCode,
-          brandIds: brandIds,
-          page: _currentPages[colorIndex]!,
-        );
-
-        final newPaints = data['paints'] as List<dynamic>;
-        print('DEBUG: Pinturas encontradas: ${newPaints.length}');
-
-        _matchingPaints[colorIndex]!.addAll(newPaints);
-        _totalPages[colorIndex] = data['totalPages'];
-        _currentPages[colorIndex] = _currentPages[colorIndex]! + 1;
-      } catch (e) {
-        print('DEBUG: Error cargando pinturas: $e');
-        debugPrint('❌ Error loading paints: $e');
-      }
-
-      _isLoadingMore[colorIndex] = false;
+    final paints = data['paints'] as List<dynamic>;
+    if (paints.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No matching paints found')));
+      return null;
     }
 
-    controller.addListener(() {
-      if (controller.position.pixels >=
-          controller.position.maxScrollExtent - 100) {
-        loadMorePaints();
-      }
-    });
-
-    await loadMorePaints();
-
+    // Variables para el modal y su estado
+    Map<String, dynamic>? selectedPaint;
     int? selectedIndex;
 
+    // Modal para seleccionar la pintura
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1355,13 +1338,11 @@ class _PaintListTabState extends State<PaintListTab> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final paints = _matchingPaints[colorIndex]!;
-
             return DraggableScrollableSheet(
               initialChildSize: 0.7,
               maxChildSize: 0.9,
               expand: false,
-              builder: (_, __) {
+              builder: (_, scrollController) {
                 return Column(
                   children: [
                     Padding(
@@ -1381,125 +1362,65 @@ class _PaintListTabState extends State<PaintListTab> {
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        controller: controller,
-                        itemCount: paints.length + 1,
-                        itemBuilder: (_, index) {
-                          if (index == paints.length) {
-                            return _isLoadingMore[colorIndex]!
-                                ? const Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                                : const SizedBox.shrink();
-                          }
+                      child:
+                          paints.isEmpty
+                              ? Center(child: Text('No matching paints found'))
+                              : ListView.builder(
+                                controller: scrollController,
+                                itemCount: paints.length,
+                                itemBuilder: (_, index) {
+                                  final paint = paints[index];
+                                  final isSelected = selectedIndex == index;
 
-                          final paint = paints[index];
-                          final isSelected = selectedIndex == index;
-
-                          String paintHex = paint['hex'] as String;
-                          // Asegurar que el hex no tiene # y tiene longitud de 6
-                          if (paintHex.startsWith('#')) {
-                            paintHex = paintHex.substring(1);
-                          }
-                          paintHex = paintHex.padLeft(6, '0');
-
-                          Color paintColor;
-                          try {
-                            paintColor = Color(
-                              int.parse(paintHex, radix: 16) | 0xFF000000,
-                            );
-                          } catch (e) {
-                            print(
-                              'DEBUG: Error convirtiendo hex a color: $e, hex: $paintHex',
-                            );
-                            paintColor = Colors.red; // Color de fallback
-                          }
-
-                          return ListTile(
-                            title: Text(paint['name']),
-                            subtitle: Text(paint['brand']['name']),
-                            leading: CircleAvatar(backgroundColor: paintColor),
-                            trailing:
-                                isSelected
-                                    ? const Icon(Icons.check_circle)
-                                    : null,
-                            onTap:
-                                () => setState(
-                                  () =>
-                                      selectedIndex = isSelected ? null : index,
-                                ),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: ElevatedButton(
-                        onPressed:
-                            selectedIndex != null
-                                ? () {
-                                  final paint =
-                                      _matchingPaints[colorIndex]![selectedIndex!];
-
-                                  // Debuggear la estructura del objeto
-                                  print(
-                                    'DEBUG: Paint seleccionado completo: $paint',
-                                  );
-                                  print(
-                                    'DEBUG: Brand completo: ${paint['brand']}',
-                                  );
-
-                                  // Procesar el hex color correctamente
+                                  // Procesar el hexcode de la pintura
                                   String paintHex = paint['hex'] as String;
                                   if (paintHex.startsWith('#')) {
                                     paintHex = paintHex.substring(1);
                                   }
                                   paintHex = paintHex.padLeft(6, '0');
 
+                                  // Obtener color
                                   Color paintColor;
                                   try {
                                     paintColor = Color(
                                       int.parse(paintHex, radix: 16) |
                                           0xFF000000,
                                     );
-                                    print(
-                                      'DEBUG: Color seleccionado: $paintColor, hex: $paintHex',
-                                    );
                                   } catch (e) {
-                                    print(
-                                      'DEBUG: Error convirtiendo hex a color (al seleccionar): $e, hex: $paintHex',
-                                    );
-                                    paintColor =
-                                        Colors.red; // Color de fallback
+                                    paintColor = Colors.red; // Color fallback
                                   }
 
-                                  // Actualizar el estado global con los nuevos datos
-                                  _pickedColors[colorIndex] = {
-                                    ..._pickedColors[colorIndex],
-                                    'paintName': paint['name'],
-                                    'paintBrand': paint['brand']['name'],
-                                    'paintColor': paintColor,
-                                    'brandAvatar':
-                                        (paint['brand']['name'] as String)[0],
-                                    'matchPercentage': paint['match'],
-                                    'colorCode': paint['code'],
-                                    'barcode': paint['barcode'],
-                                    'paintId': paint['id'],
-                                    'brandId': paint['brand']['id'],
-                                  };
-
-                                  // Notificar a este widget para que se actualice
-                                  this.setState(() {
-                                    _pickedColors = List.from(_pickedColors);
-                                  });
-
-                                  // Notificar al modal padre para que se actualice
-                                  setParentState(() {});
-
-                                  Navigator.pop(context);
+                                  return ListTile(
+                                    title: Text(paint['name']),
+                                    subtitle: Text(paint['brand']['name']),
+                                    leading: CircleAvatar(
+                                      backgroundColor: paintColor,
+                                    ),
+                                    trailing:
+                                        isSelected
+                                            ? const Icon(Icons.check_circle)
+                                            : null,
+                                    onTap:
+                                        () => setState(() {
+                                          selectedIndex =
+                                              isSelected ? null : index;
+                                          selectedPaint =
+                                              isSelected ? null : paint;
+                                        }),
+                                  );
+                                },
+                              ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ElevatedButton(
+                        onPressed:
+                            selectedPaint != null
+                                ? () {
+                                  Navigator.pop(
+                                    context,
+                                    true,
+                                  ); // Cerramos con resultado positivo
                                 }
                                 : null,
                         child: const Text('Confirm Selection'),
@@ -1513,6 +1434,40 @@ class _PaintListTabState extends State<PaintListTab> {
         );
       },
     );
+
+    // Si se seleccionó una pintura, procesarla y devolver los datos actualizados
+    if (selectedPaint != null) {
+      // Procesar el hex color
+      String paintHex = selectedPaint!['hex'] as String;
+      if (paintHex.startsWith('#')) {
+        paintHex = paintHex.substring(1);
+      }
+      paintHex = paintHex.padLeft(6, '0');
+
+      // Convertir a Color
+      Color paintColor;
+      try {
+        paintColor = Color(int.parse(paintHex, radix: 16) | 0xFF000000);
+      } catch (e) {
+        paintColor = Colors.red; // Color fallback
+      }
+
+      // Crear el nuevo objeto con los datos de la pintura seleccionada
+      return {
+        ...colorData,
+        'paintName': selectedPaint!['name'],
+        'paintBrand': selectedPaint!['brand']['name'],
+        'paintColor': paintColor,
+        'brandAvatar': (selectedPaint!['brand']['name'] as String)[0],
+        'matchPercentage': selectedPaint!['match'],
+        'colorCode': selectedPaint!['code'],
+        'barcode': selectedPaint!['barcode'],
+        'paintId': selectedPaint!['id'],
+        'brandId': selectedPaint!['brand']['id'],
+      };
+    }
+
+    return null; // Si no se seleccionó nada
   }
 
   // Helper method to get color based on match percentage
