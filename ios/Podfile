@@ -29,6 +29,7 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   use_frameworks!
+  use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -39,36 +40,41 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
-      
-      # Optimizations for camera performance
-      config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '3'  # Highest optimization level
-      
-      # Disable bitcode as it's deprecated and can cause issues
-      config.build_settings['ENABLE_BITCODE'] = 'NO'
-      
-      # Solución para simuladores en Apple Silicon (M1/M2)
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
-      config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-      
-      # Permitir arm64 en simuladores para Apple Silicon
-      if config.build_settings['SDKROOT'] == 'iphonesimulator'
-        config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
-      end
-    end
-  end
-  
-  # Fix para MLImage.framework - tratar específicamente las dependencias problemáticas
-  installer.pods_project.targets.each do |target|
-    if ['MLImage', 'MLKitVision', 'GoogleMLKit', 'mobile_scanner'].include?(target.name)
-      source_build_dir = "#{Dir.pwd}/Pods/#{target.name}"
+    
+    # Configuración específica por target
+    if ['mobile_scanner', 'MLKitBarcodeScanning', 'MLKitVision', 'MLImage', 'GoogleMLKit'].include?(target.name)
+      # Para Pods problemáticos que no funcionan en simuladores
       target.build_configurations.each do |config|
-        if config.name.include?('iphonesimulator')
-          # Configuración específica para simuladores
-          config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
-          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
+        if config.build_settings['SDKROOT'] == 'iphonesimulator'
+          # Desactivar completamente estos pods en simuladores
           config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+          
+          # Excluir arquitectura arm64 para estos pods en simuladores
+          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64 i386 armv7'
+          
+          # Agregar definición para desactivar el escaneo de códigos en simuladores
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'DISABLE_BARCODE_SCANNING=1'
+        end
+      end
+    else
+      # Para el resto de targets
+      target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
+        
+        # Optimizations for camera performance
+        config.build_settings['GCC_OPTIMIZATION_LEVEL'] = '3'  # Highest optimization level
+        
+        # Disable bitcode as it's deprecated and can cause issues
+        config.build_settings['ENABLE_BITCODE'] = 'NO'
+        
+        # Configuración general para simuladores
+        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+        
+        # Permitir arm64 en simuladores para Apple Silicon
+        if config.build_settings['SDKROOT'] == 'iphonesimulator'
+          config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
         end
       end
     end
