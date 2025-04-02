@@ -1164,10 +1164,16 @@ class _PaintListTabState extends State<PaintListTab> {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: () async {
-                                      if (_paletteNameController.text.trim().isEmpty) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                      if (_paletteNameController.text
+                                          .trim()
+                                          .isEmpty) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Please enter a palette name'),
+                                            content: Text(
+                                              'Please enter a palette name',
+                                            ),
                                           ),
                                         );
                                         return;
@@ -1178,63 +1184,104 @@ class _PaintListTabState extends State<PaintListTab> {
                                       });
 
                                       try {
-                                        debugPrint('🎨 Iniciando proceso de guardado de paleta...');
-                                        debugPrint('📝 Nombre de la paleta: ${_paletteNameController.text}');
-                                        debugPrint('🖼️ URL de imagen: $_uploadedImageUrl');
+                                        debugPrint(
+                                          '🎨 Iniciando proceso de guardado de paleta...',
+                                        );
+                                        debugPrint(
+                                          '📝 Nombre de la paleta: ${_paletteNameController.text}',
+                                        );
+                                        debugPrint(
+                                          '🖼️ URL de imagen: $_uploadedImageUrl',
+                                        );
 
-                                        final paintsToSend = modalColorList
-                                            .where((c) => c['paintName'] != null)
-                                            .map((c) => {
-                                                  'id': c['paintId'],
-                                                  'brand_id': c['brandId'],
-                                                  'hex': c['hexCode'],
-                                                  'name': c['paintName'],
-                                                  'brand': c['paintBrand'],
-                                                  'colorCode': c['colorCode'],
-                                                  'barcode': c['barcode'],
-                                                })
-                                            .toList();
+                                        final paintsToSend =
+                                            modalColorList
+                                                .where(
+                                                  (c) => c['paintName'] != null,
+                                                )
+                                                .map(
+                                                  (c) => {
+                                                    'id': c['paintId'],
+                                                    'brand_id': c['brandId'],
+                                                    'hex': c['hexCode'],
+                                                    'name': c['paintName'],
+                                                    'brand': c['paintBrand'],
+                                                    'colorCode': c['colorCode'],
+                                                    'barcode': c['barcode'],
+                                                  },
+                                                )
+                                                .toList();
 
-                                        debugPrint('🎨 Pinturas seleccionadas: ${paintsToSend.length}');
+                                        debugPrint(
+                                          '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
+                                        );
 
-                                        final _colorSearchService = ColorSearchService();
-                                        final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-                                        
+                                        final _colorSearchService =
+                                            ColorSearchService();
+                                        final token =
+                                            await FirebaseAuth
+                                                .instance
+                                                .currentUser
+                                                ?.getIdToken();
+
                                         if (token == null) {
-                                          throw Exception('No se encontró el token de autenticación');
+                                          throw Exception(
+                                            'No se encontró el token de autenticación',
+                                          );
                                         }
 
-                                        await _colorSearchService.saveColorSearch(
-                                          token: token,
-                                          name: _paletteNameController.text,
-                                          paints: paintsToSend,
-                                          imagePath: _uploadedImageUrl ?? '',
-                                        );
+                                        await _colorSearchService
+                                            .saveColorSearch(
+                                              token: token,
+                                              name: _paletteNameController.text,
+                                              paints: paintsToSend,
+                                              imagePath:
+                                                  _uploadedImageUrl ?? '',
+                                            );
 
                                         // Guardar cambios en el estado general antes de cerrar
                                         setState(() {
-                                          _pickedColors = List.from(modalColorList);
+                                          _pickedColors = List.from(
+                                            modalColorList,
+                                          );
+                                        });
+
+                                        // Primero restablecemos el estado de guardado
+                                        setModalState(() {
+                                          _isSavingPalette = false;
                                         });
 
                                         Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('Color search "${_paletteNameController.text}" saved!'),
+                                            content: Text(
+                                              'Color search "${_paletteNameController.text}" saved!',
+                                            ),
                                           ),
                                         );
                                         _reset();
                                       } catch (e) {
-                                        debugPrint('❌ Error al guardar la paleta: $e');
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error al guardar: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
+                                        debugPrint(
+                                          '❌ Error al guardar la paleta: $e',
                                         );
-                                      } finally {
+
+                                        // Restablecemos el estado de guardado
                                         setModalState(() {
                                           _isSavingPalette = false;
                                         });
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error al guardar: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
