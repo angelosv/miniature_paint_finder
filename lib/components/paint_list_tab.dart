@@ -1364,6 +1364,7 @@ class _PaintListTabState extends State<PaintListTab> {
     // Variables para el modal y su estado
     Map<String, dynamic>? selectedPaint;
     int? selectedIndex;
+    bool modalClosed = false;
 
     // Modal para seleccionar la pintura
     await showModalBottomSheet(
@@ -1394,7 +1395,10 @@ class _PaintListTabState extends State<PaintListTab> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              modalClosed = true;
+                              Navigator.pop(context);
+                            },
                           ),
                         ],
                       ),
@@ -1473,39 +1477,38 @@ class _PaintListTabState extends State<PaintListTab> {
       },
     );
 
+    // Si se cerró el modal o si no se seleccionó una pintura, retornar null
+    if (modalClosed || selectedPaint == null) return null;
+
     // Si se seleccionó una pintura, procesarla y devolver los datos actualizados
-    if (selectedPaint != null) {
-      // Procesar el hex color
-      String paintHex = selectedPaint!['hex'] as String;
-      if (paintHex.startsWith('#')) {
-        paintHex = paintHex.substring(1);
-      }
-      paintHex = paintHex.padLeft(6, '0');
+    // Procesar el hex color
+    String paintHex = selectedPaint!['hex'] as String;
+    if (paintHex.startsWith('#')) {
+      paintHex = paintHex.substring(1);
+    }
+    paintHex = paintHex.padLeft(6, '0');
 
-      // Convertir a Color
-      Color paintColor;
-      try {
-        paintColor = Color(int.parse(paintHex, radix: 16) | 0xFF000000);
-      } catch (e) {
-        paintColor = Colors.red; // Color fallback
-      }
-
-      // Crear el nuevo objeto con los datos de la pintura seleccionada
-      return {
-        ...colorData,
-        'paintName': selectedPaint!['name'],
-        'paintBrand': selectedPaint!['brand']['name'],
-        'paintColor': paintColor,
-        'brandAvatar': (selectedPaint!['brand']['name'] as String)[0],
-        'matchPercentage': selectedPaint!['match'],
-        'colorCode': selectedPaint!['code'],
-        'barcode': selectedPaint!['barcode'],
-        'paintId': selectedPaint!['id'],
-        'brandId': selectedPaint!['brand']['id'],
-      };
+    // Convertir a Color
+    Color paintColor;
+    try {
+      paintColor = Color(int.parse(paintHex, radix: 16) | 0xFF000000);
+    } catch (e) {
+      paintColor = Colors.red; // Color fallback
     }
 
-    return null; // Si no se seleccionó nada
+    // Crear el nuevo objeto con los datos de la pintura seleccionada
+    return {
+      ...colorData,
+      'paintName': selectedPaint!['name'],
+      'paintBrand': selectedPaint!['brand']['name'],
+      'paintColor': paintColor,
+      'brandAvatar': (selectedPaint!['brand']['name'] as String)[0],
+      'matchPercentage': selectedPaint!['match'],
+      'colorCode': selectedPaint!['code'],
+      'barcode': selectedPaint!['barcode'],
+      'paintId': selectedPaint!['id'],
+      'brandId': selectedPaint!['brand']['id'],
+    };
   }
 
   // Helper method to get color based on match percentage
