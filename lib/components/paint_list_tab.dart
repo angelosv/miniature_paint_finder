@@ -1186,6 +1186,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                             .where((c) => c['paintName'] != null)
                                             .map((c) => {
                                                   'id': c['paintId'],
+                                                  'brand_id': c['brandId'],
                                                   'hex': c['hexCode'],
                                                   'name': c['paintName'],
                                                   'brand': c['paintBrand'],

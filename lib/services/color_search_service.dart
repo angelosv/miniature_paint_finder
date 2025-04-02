@@ -33,9 +33,14 @@ class ColorSearchService {
 
       // Paso 3: Agregar las pinturas a la paleta
       debugPrint('📤 Paso 3: Agregando pinturas a la paleta...');
-      final paintsToSend = paints.map((paint) => {
-        'paint_id': paint['id'],
-        'image_color_picks_id': imageId,
+      debugPrint('🔍 Estructura de la primera pintura: ${paints.first}');
+      final paintsToSend = paints.map((paint) {
+        debugPrint('🎨 Pintura a procesar: $paint');
+        return {
+          'paint_id': paint['id'],
+          'brand_id': paint['brand_id'],
+          'image_color_picks_id': imageId,
+        };
       }).toList();
       debugPrint('🎨 Pinturas a enviar: ${paintsToSend.length}');
 
