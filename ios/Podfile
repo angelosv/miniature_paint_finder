@@ -29,6 +29,7 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   use_frameworks!
+  use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -48,27 +49,24 @@ post_install do |installer|
       # Disable bitcode as it's deprecated and can cause issues
       config.build_settings['ENABLE_BITCODE'] = 'NO'
       
-      # Solución para simuladores en Apple Silicon (M1/M2)
+      # Configuración para simuladores
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
       config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
       
-      # Permitir arm64 en simuladores para Apple Silicon
+      # Solución específica para simuladores
       if config.build_settings['SDKROOT'] == 'iphonesimulator'
+        # Habilitar todas las arquitecturas válidas para simuladores modernos
         config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
-      end
-    end
-  end
-  
-  # Fix para MLImage.framework - tratar específicamente las dependencias problemáticas
-  installer.pods_project.targets.each do |target|
-    if ['MLImage', 'MLKitVision', 'GoogleMLKit', 'mobile_scanner'].include?(target.name)
-      source_build_dir = "#{Dir.pwd}/Pods/#{target.name}"
-      target.build_configurations.each do |config|
-        if config.name.include?('iphonesimulator')
-          # Configuración específica para simuladores
-          config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
-          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
-          config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
+        
+        # Para los pods problemáticos específicamente en simuladores
+        if ['MLImage', 'MLKitVision', 'GoogleMLKit', 'MLKitBarcodeScanning', 'mobile_scanner'].include?(target.name)
+          # Excluir completamente MLImage de los simuladores
+          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] += ' arm64'
+          # Desactivar la integración en simuladores para evitar errores de compilación
+          config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+          config.build_settings['OTHER_LDFLAGS'] << '-weak_framework MLImage'
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'DISABLE_BARCODE_SCANNING=1'
         end
       end
     end
