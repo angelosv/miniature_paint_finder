@@ -497,9 +497,24 @@ class _AuthScreenState extends State<AuthScreen>
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
 
+    // Additional responsive adjustments for different screen sizes
+    final isVerySmallScreen = screenSize.height < 600;
+    final imageHeight =
+        isVerySmallScreen ? 200.0 : (isSmallScreen ? 240.0 : 330.0);
+    final titleFontSize =
+        isVerySmallScreen ? 22.0 : (isSmallScreen ? 24.0 : 28.0);
+    final subtitleFontSize =
+        isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final bulletSpacing = isVerySmallScreen ? 2.0 : 4.0;
+    final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
+    final buttonFontSize =
+        isVerySmallScreen ? 13.0 : (isSmallScreen ? 14.0 : 16.0);
+    final buttonVerticalPadding =
+        isVerySmallScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+
     return Container(
       color: AppTheme.darkBackground,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(contentPadding),
       child: Column(
         children: [
           Expanded(
@@ -508,45 +523,46 @@ class _AuthScreenState extends State<AuthScreen>
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Space Marine Image - ajustamos tamaño para pantallas pequeñas
+                  // Space Marine Image - optimized height based on screen size
                   Container(
                     width: double.infinity,
-                    height: isSmallScreen ? 280 : 400,
-                    decoration: BoxDecoration(
+                    height: imageHeight,
+                    decoration: const BoxDecoration(
                       image: DecorationImage(
                         image: AssetImage('assets/images/space_marine.png'),
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  SizedBox(height: isSmallScreen ? 16 : 32),
+                  SizedBox(
+                    height: isVerySmallScreen ? 10 : (isSmallScreen ? 16 : 24),
+                  ),
                   Text(
                     'Miniature Paint Finder',
                     style: AppTheme.headingStyle.copyWith(
                       color: Colors.white,
-                      fontSize: isSmallScreen ? 24 : 28,
+                      fontSize: titleFontSize,
                     ),
                   ),
-                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  SizedBox(
+                    height: isVerySmallScreen ? 4 : (isSmallScreen ? 8 : 12),
+                  ),
                   Text(
                     'Your ultimate companion for miniature painting',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white70,
-                      fontSize: isSmallScreen ? 16 : 18,
+                      fontSize: subtitleFontSize,
                     ),
                   ),
-                  SizedBox(height: isSmallScreen ? 16 : 24),
-                  // Feature bullets
-                  _buildFeatureBullet(
-                    'Track your paint collection and never buy duplicates',
+                  SizedBox(
+                    height: isVerySmallScreen ? 10 : (isSmallScreen ? 14 : 20),
                   ),
-                  _buildFeatureBullet(
-                    'Find matching colors with **AI-powered image recognition** - 100% Free',
+                  // Feature bullets - tighter spacing for small screens
+                  ..._buildFeatureBullets(bulletSpacing),
+                  // Extra bottom space to prevent overlap
+                  SizedBox(
+                    height: isVerySmallScreen ? 12 : (isSmallScreen ? 16 : 24),
                   ),
-                  _buildFeatureBullet('Create and share custom paint palettes'),
-                  _buildFeatureBullet('Scan barcodes for quick paint lookup'),
-                  // Añadimos espacio adicional al final para asegurar que no haya solapamiento
-                  SizedBox(height: isSmallScreen ? 20 : 0),
                 ],
               ),
             ),
@@ -568,13 +584,13 @@ class _AuthScreenState extends State<AuthScreen>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: EdgeInsets.symmetric(
-                            vertical: isSmallScreen ? 16 : 20,
+                            vertical: buttonVerticalPadding,
                           ),
                         ),
                         child: Text(
                           'Register',
                           style: AppTheme.buttonStyle.copyWith(
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: buttonFontSize,
                           ),
                         ),
                       ),
@@ -594,14 +610,14 @@ class _AuthScreenState extends State<AuthScreen>
                             ),
                           ),
                           padding: EdgeInsets.symmetric(
-                            vertical: isSmallScreen ? 16 : 20,
+                            vertical: buttonVerticalPadding,
                           ),
                         ),
                         child: Text(
                           'Sign In',
                           style: AppTheme.buttonStyle.copyWith(
                             color: Colors.white,
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: buttonFontSize,
                           ),
                         ),
                       ),
@@ -617,30 +633,54 @@ class _AuthScreenState extends State<AuthScreen>
     );
   }
 
+  // Helper method to build feature bullets more efficiently
+  List<Widget> _buildFeatureBullets(double verticalSpacing) {
+    final features = [
+      'Track your paint collection and never buy duplicates',
+      'Find matching colors with **AI-powered image recognition** - 100% Free',
+      'Create and share custom paint palettes',
+      'Scan barcodes for quick paint lookup',
+    ];
+
+    return features
+        .map(
+          (text) => Padding(
+            padding: EdgeInsets.symmetric(vertical: verticalSpacing),
+            child: _buildFeatureBullet(text),
+          ),
+        )
+        .toList();
+  }
+
   Widget _buildFeatureBullet(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: AppTheme.marineGold,
-              shape: BoxShape.circle,
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+    final bulletSize = isSmallScreen ? 6.0 : 8.0;
+    final textSize = isSmallScreen ? 13.0 : 14.0;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(top: 6),
+          width: bulletSize,
+          height: bulletSize,
+          decoration: BoxDecoration(
+            color: AppTheme.marineGold,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text.rich(
+            TextSpan(children: _processTextWithBold(text)),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.white70,
+              fontSize: textSize,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text.rich(
-              TextSpan(children: _processTextWithBold(text)),
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -669,12 +709,27 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildLoginOptions(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
     final isSmallScreen = screenSize.height < 700;
+    final isVerySmallScreen = screenSize.height < 600;
+
+    // Responsive values
+    final titleFontSize =
+        isVerySmallScreen ? 22.0 : (isSmallScreen ? 24.0 : 28.0);
+    final subtitleFontSize =
+        isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final buttonHeight =
+        isVerySmallScreen ? 44.0 : (isSmallScreen ? 48.0 : 56.0);
+    final buttonSpacing =
+        isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0);
+    final topPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 32.0);
+    final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
+    final optionsSpacing =
+        isVerySmallScreen ? 24.0 : (isSmallScreen ? 32.0 : 48.0);
 
     return Stack(
       children: [
         Container(
           color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(contentPadding),
           child: Center(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -695,25 +750,27 @@ class _AuthScreenState extends State<AuthScreen>
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 20 : 32),
+                    SizedBox(height: topPadding),
 
                     // Title
                     Text(
                       "Sign in to your account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
-                        fontSize: isSmallScreen ? 24 : 28,
+                        fontSize: titleFontSize,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 4 : 8),
+                    SizedBox(
+                      height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                    ),
                     Text(
                       "Choose how you want to sign in",
                       style: AppTheme.subheadingStyle.copyWith(
                         color: Colors.white.withOpacity(0.7),
-                        fontSize: isSmallScreen ? 16 : 18,
+                        fontSize: subtitleFontSize,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 32 : 48),
+                    SizedBox(height: optionsSpacing),
 
                     // Login options
                     _buildAuthButton(
@@ -721,32 +778,32 @@ class _AuthScreenState extends State<AuthScreen>
                       label: 'Continue with Email',
                       color: AppTheme.marineOrange,
                       onPressed: _showEmailLogin,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
 
                     _buildAuthButton(
                       icon: Icons.g_mobiledata_rounded,
                       label: 'Continue with Google',
                       color: Colors.red.shade600,
                       onPressed: _handleGoogleSignIn,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
                     // Show Apple login on iOS and web
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
                     _buildAuthButton(
                       icon: Icons.apple,
                       label: 'Continue with Apple',
                       color: Colors.white,
                       textColor: AppTheme.darkBackground,
                       onPressed: _performDirectLogin,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
                     _buildAuthButton(
                       icon: Icons.phone_android,
                       label: 'Continue with Phone',
@@ -758,10 +815,13 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                         );
                       },
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
-                    SizedBox(height: isSmallScreen ? 20 : 32),
+                    SizedBox(
+                      height:
+                          isVerySmallScreen ? 20 : (isSmallScreen ? 24 : 32),
+                    ),
 
                     // Don't have an account yet?
                     Row(
@@ -795,8 +855,8 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes - opcional en pantallas pequeñas
-        if (!isSmallScreen) ...[
+        // 3D floating cubes - only show on larger screens
+        if (screenSize.height > 650) ...[
           Positioned(
             bottom: 100,
             right: 40,
@@ -822,12 +882,29 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildRegisterOptions(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
     final isSmallScreen = screenSize.height < 700;
+    final isVerySmallScreen = screenSize.height < 600;
+
+    // Responsive values
+    final titleFontSize =
+        isVerySmallScreen ? 22.0 : (isSmallScreen ? 24.0 : 28.0);
+    final subtitleFontSize =
+        isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final buttonHeight =
+        isVerySmallScreen ? 44.0 : (isSmallScreen ? 48.0 : 56.0);
+    final buttonSpacing =
+        isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0);
+    final topPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 32.0);
+    final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
+    final optionsSpacing =
+        isVerySmallScreen ? 24.0 : (isSmallScreen ? 32.0 : 48.0);
+    final disclaimerFontSize =
+        isVerySmallScreen ? 9.0 : (isSmallScreen ? 10.0 : 12.0);
 
     return Stack(
       children: [
         Container(
           color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(contentPadding),
           child: Center(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -848,25 +925,27 @@ class _AuthScreenState extends State<AuthScreen>
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 20 : 32),
+                    SizedBox(height: topPadding),
 
                     // Title
                     Text(
                       "Create an account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
-                        fontSize: isSmallScreen ? 24 : 28,
+                        fontSize: titleFontSize,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 4 : 8),
+                    SizedBox(
+                      height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                    ),
                     Text(
                       "Choose how you want to register",
                       style: AppTheme.subheadingStyle.copyWith(
                         color: Colors.white.withOpacity(0.7),
-                        fontSize: isSmallScreen ? 16 : 18,
+                        fontSize: subtitleFontSize,
                       ),
                     ),
-                    SizedBox(height: isSmallScreen ? 32 : 48),
+                    SizedBox(height: optionsSpacing),
 
                     // Registration options
                     _buildAuthButton(
@@ -874,32 +953,32 @@ class _AuthScreenState extends State<AuthScreen>
                       label: 'Continue with Email',
                       color: AppTheme.marineOrange,
                       onPressed: _showEmailRegisterForm,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
 
                     _buildAuthButton(
                       icon: Icons.g_mobiledata_rounded,
                       label: 'Continue with Google',
                       color: Colors.red.shade600,
                       onPressed: _handleGoogleSignIn,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
                     // Show Apple login on iOS and web
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
                     _buildAuthButton(
                       icon: Icons.apple,
                       label: 'Continue with Apple',
                       color: Colors.white,
                       textColor: AppTheme.darkBackground,
                       onPressed: _performDirectLogin,
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: buttonSpacing),
                     _buildAuthButton(
                       icon: Icons.phone_android,
                       label: 'Continue with Phone',
@@ -911,10 +990,13 @@ class _AuthScreenState extends State<AuthScreen>
                           ),
                         );
                       },
-                      height: isSmallScreen ? 48 : 56,
+                      height: buttonHeight,
                     ),
 
-                    SizedBox(height: isSmallScreen ? 20 : 32),
+                    SizedBox(
+                      height:
+                          isVerySmallScreen ? 16 : (isSmallScreen ? 20 : 32),
+                    ),
 
                     // Terms and conditions
                     Center(
@@ -923,12 +1005,12 @@ class _AuthScreenState extends State<AuthScreen>
                         textAlign: TextAlign.center,
                         style: AppTheme.bodyStyle.copyWith(
                           color: Colors.white.withOpacity(0.5),
-                          fontSize: isSmallScreen ? 10 : 12,
+                          fontSize: disclaimerFontSize,
                         ),
                       ),
                     ),
-                    // Agregar espacio al final para desplazamiento
-                    SizedBox(height: isSmallScreen ? 16 : 24),
+                    // Extra space at the bottom for scrolling
+                    SizedBox(height: isVerySmallScreen ? 12 : 16),
                   ],
                 ),
               ),
@@ -936,8 +1018,8 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes - hacer opcionales en pantallas pequeñas
-        if (!isSmallScreen) ...[
+        // 3D floating cubes - only show on larger screens
+        if (screenSize.height > 650) ...[
           Positioned(
             bottom: 100,
             right: 40,
@@ -988,12 +1070,32 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildEmailRegisterForm(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
     final isSmallScreen = screenSize.height < 700;
+    final isVerySmallScreen = screenSize.height < 600;
+
+    // Responsive values
+    final titleFontSize =
+        isVerySmallScreen ? 22.0 : (isSmallScreen ? 24.0 : 28.0);
+    final subtitleFontSize =
+        isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final buttonHeight =
+        isVerySmallScreen ? 44.0 : (isSmallScreen ? 48.0 : 56.0);
+    final fieldSpacing =
+        isVerySmallScreen ? 10.0 : (isSmallScreen ? 12.0 : 16.0);
+    final topPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 32.0);
+    final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
+    final buttonTopPadding =
+        isVerySmallScreen ? 20.0 : (isSmallScreen ? 30.0 : 40.0);
+    final fieldVerticalPadding = isVerySmallScreen ? 14.0 : 16.0;
+    final buttonFontSize =
+        isVerySmallScreen ? 13.0 : (isSmallScreen ? 14.0 : 16.0);
+    final linkFontSize =
+        isVerySmallScreen ? 12.0 : (isSmallScreen ? 13.0 : 14.0);
 
     return Stack(
       children: [
         Container(
           color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(contentPadding),
           child: Center(
             child: Form(
               key: _formKey,
@@ -1016,25 +1118,30 @@ class _AuthScreenState extends State<AuthScreen>
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 20 : 32),
+                      SizedBox(height: topPadding),
 
                       // Title
                       Text(
                         "Create an account",
                         style: AppTheme.headingStyle.copyWith(
                           color: Colors.white,
-                          fontSize: isSmallScreen ? 24 : 28,
+                          fontSize: titleFontSize,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 4 : 8),
+                      SizedBox(
+                        height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                      ),
                       Text(
                         "Register with email and password",
                         style: AppTheme.subheadingStyle.copyWith(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: isSmallScreen ? 14 : 18,
+                          fontSize: subtitleFontSize,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 24 : 32),
+                      SizedBox(
+                        height:
+                            isVerySmallScreen ? 16 : (isSmallScreen ? 24 : 32),
+                      ),
 
                       // Name field
                       TextFormField(
@@ -1046,10 +1153,15 @@ class _AuthScreenState extends State<AuthScreen>
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: fieldVerticalPadding,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 14 : 16),
                         textInputAction: TextInputAction.next,
                       ),
-                      SizedBox(height: isSmallScreen ? 12 : 16),
+                      SizedBox(height: fieldSpacing),
 
                       // Email field
                       TextFormField(
@@ -1062,7 +1174,12 @@ class _AuthScreenState extends State<AuthScreen>
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: fieldVerticalPadding,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 14 : 16),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
@@ -1081,7 +1198,7 @@ class _AuthScreenState extends State<AuthScreen>
                           return null;
                         },
                       ),
-                      SizedBox(height: isSmallScreen ? 12 : 16),
+                      SizedBox(height: fieldSpacing),
 
                       // Password field
                       TextFormField(
@@ -1105,16 +1222,21 @@ class _AuthScreenState extends State<AuthScreen>
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: fieldVerticalPadding,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 14 : 16),
                         obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
                       ),
-                      SizedBox(height: isSmallScreen ? 30 : 40),
+                      SizedBox(height: buttonTopPadding),
 
                       // Register button
                       SizedBox(
                         width: double.infinity,
-                        height: isSmallScreen ? 48 : 56,
+                        height: buttonHeight,
                         child: ElevatedButton(
                           onPressed: _performRegister,
                           style: ElevatedButton.styleFrom(
@@ -1128,13 +1250,13 @@ class _AuthScreenState extends State<AuthScreen>
                             'Create Account',
                             style: AppTheme.buttonStyle.copyWith(
                               color: Colors.white,
-                              fontSize: isSmallScreen ? 14 : 16,
+                              fontSize: buttonFontSize,
                             ),
                           ),
                         ),
                       ),
 
-                      SizedBox(height: isSmallScreen ? 16 : 24),
+                      SizedBox(height: isVerySmallScreen ? 12 : 16),
 
                       // Login link
                       Row(
@@ -1144,7 +1266,7 @@ class _AuthScreenState extends State<AuthScreen>
                             "Already have an account?",
                             style: AppTheme.bodyStyle.copyWith(
                               color: Colors.white70,
-                              fontSize: isSmallScreen ? 13 : 14,
+                              fontSize: linkFontSize,
                             ),
                           ),
                           TextButton(
@@ -1157,13 +1279,13 @@ class _AuthScreenState extends State<AuthScreen>
                               'Sign In',
                               style: AppTheme.buttonStyle.copyWith(
                                 color: AppTheme.marineGold,
-                                fontSize: isSmallScreen ? 13 : 14,
+                                fontSize: linkFontSize,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: isSmallScreen ? 16 : 0),
+                      SizedBox(height: isVerySmallScreen ? 12 : 16),
                     ],
                   ),
                 ),
@@ -1172,8 +1294,8 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes - opcional en pantallas pequeñas
-        if (!isSmallScreen) ...[
+        // 3D floating cubes - only show on larger screens
+        if (screenSize.height > 650) ...[
           Positioned(
             bottom: 100,
             right: 40,
@@ -1193,12 +1315,32 @@ class _AuthScreenState extends State<AuthScreen>
   Widget _buildEmailLoginForm(Size screenSize) {
     final formMaxWidth = screenSize.width > 800 ? 400.0 : double.infinity;
     final isSmallScreen = screenSize.height < 700;
+    final isVerySmallScreen = screenSize.height < 600;
+
+    // Responsive values
+    final titleFontSize =
+        isVerySmallScreen ? 22.0 : (isSmallScreen ? 24.0 : 28.0);
+    final subtitleFontSize =
+        isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final buttonHeight =
+        isVerySmallScreen ? 44.0 : (isSmallScreen ? 48.0 : 56.0);
+    final fieldSpacing =
+        isVerySmallScreen ? 10.0 : (isSmallScreen ? 12.0 : 16.0);
+    final topPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 32.0);
+    final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
+    final buttonTopPadding =
+        isVerySmallScreen ? 16.0 : (isSmallScreen ? 24.0 : 40.0);
+    final fieldVerticalPadding = isVerySmallScreen ? 14.0 : 16.0;
+    final buttonFontSize =
+        isVerySmallScreen ? 13.0 : (isSmallScreen ? 14.0 : 16.0);
+    final linkFontSize =
+        isVerySmallScreen ? 12.0 : (isSmallScreen ? 13.0 : 14.0);
 
     return Stack(
       children: [
         Container(
           color: AppTheme.darkBackground,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(contentPadding),
           child: Center(
             child: Form(
               key: _formKey,
@@ -1221,25 +1363,30 @@ class _AuthScreenState extends State<AuthScreen>
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 20 : 32),
+                      SizedBox(height: topPadding),
 
                       // Title and subtitle
                       Text(
                         "Let's sign you in",
                         style: AppTheme.headingStyle.copyWith(
                           color: Colors.white,
-                          fontSize: isSmallScreen ? 24 : 28,
+                          fontSize: titleFontSize,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 4 : 8),
+                      SizedBox(
+                        height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                      ),
                       Text(
                         "Welcome back!",
                         style: AppTheme.subheadingStyle.copyWith(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: isSmallScreen ? 16 : 18,
+                          fontSize: subtitleFontSize,
                         ),
                       ),
-                      SizedBox(height: isSmallScreen ? 32 : 48),
+                      SizedBox(
+                        height:
+                            isVerySmallScreen ? 24 : (isSmallScreen ? 32 : 48),
+                      ),
 
                       // Email field
                       TextFormField(
@@ -1252,7 +1399,12 @@ class _AuthScreenState extends State<AuthScreen>
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: fieldVerticalPadding,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 14 : 16),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
@@ -1271,7 +1423,7 @@ class _AuthScreenState extends State<AuthScreen>
                           return null;
                         },
                       ),
-                      SizedBox(height: isSmallScreen ? 12 : 16),
+                      SizedBox(height: fieldSpacing),
 
                       // Password field
                       TextFormField(
@@ -1295,7 +1447,12 @@ class _AuthScreenState extends State<AuthScreen>
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: fieldVerticalPadding,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: TextStyle(fontSize: isVerySmallScreen ? 14 : 16),
                         obscureText: _obscurePassword,
                         textInputAction: TextInputAction.done,
                       ),
@@ -1310,7 +1467,10 @@ class _AuthScreenState extends State<AuthScreen>
                           style: TextButton.styleFrom(
                             foregroundColor: AppTheme.marineGold,
                             padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 12 : 16,
+                              vertical:
+                                  isVerySmallScreen
+                                      ? 8
+                                      : (isSmallScreen ? 12 : 16),
                             ),
                           ),
                           child: Text(
@@ -1318,74 +1478,74 @@ class _AuthScreenState extends State<AuthScreen>
                             style: AppTheme.bodyStyle.copyWith(
                               color: AppTheme.marineGold,
                               fontWeight: FontWeight.w500,
-                              fontSize: isSmallScreen ? 13 : 14,
+                              fontSize:
+                                  isVerySmallScreen
+                                      ? 12
+                                      : (isSmallScreen ? 13 : 14),
                             ),
                           ),
                         ),
                       ),
 
-                      SizedBox(height: isSmallScreen ? 24 : 40),
+                      SizedBox(height: buttonTopPadding),
+
+                      // Sign in button
+                      SizedBox(
+                        width: double.infinity,
+                        height: buttonHeight,
+                        child: ElevatedButton(
+                          onPressed: _performDirectLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.marineOrange,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Sign In',
+                            style: AppTheme.buttonStyle.copyWith(
+                              color: Colors.white,
+                              fontSize: buttonFontSize,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(
+                        height:
+                            isVerySmallScreen ? 12 : (isSmallScreen ? 16 : 24),
+                      ),
 
                       // Bottom section with Register
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Account existence check
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Don't have an account?",
-                                style: AppTheme.bodyStyle.copyWith(
-                                  color: Colors.white70,
-                                  fontSize: isSmallScreen ? 13 : 14,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _showRegisterOptions,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppTheme.marineGold,
-                                  padding: const EdgeInsets.only(left: 8),
-                                ),
-                                child: Text(
-                                  'Register',
-                                  style: AppTheme.buttonStyle.copyWith(
-                                    color: AppTheme.marineGold,
-                                    fontSize: isSmallScreen ? 13 : 14,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            "Don't have an account?",
+                            style: AppTheme.bodyStyle.copyWith(
+                              color: Colors.white70,
+                              fontSize: linkFontSize,
+                            ),
                           ),
-
-                          SizedBox(height: isSmallScreen ? 16 : 24),
-
-                          // Action button
-                          SizedBox(
-                            width: double.infinity,
-                            height: isSmallScreen ? 48 : 56,
-                            child: ElevatedButton(
-                              onPressed: _performDirectLogin,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.marineOrange,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Sign In',
-                                style: AppTheme.buttonStyle.copyWith(
-                                  color: Colors.white,
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                ),
+                          TextButton(
+                            onPressed: _showRegisterOptions,
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTheme.marineGold,
+                              padding: const EdgeInsets.only(left: 8),
+                            ),
+                            child: Text(
+                              'Register',
+                              style: AppTheme.buttonStyle.copyWith(
+                                color: AppTheme.marineGold,
+                                fontSize: linkFontSize,
                               ),
                             ),
                           ),
-
-                          SizedBox(height: isSmallScreen ? 16 : 0),
                         ],
                       ),
+                      SizedBox(height: isVerySmallScreen ? 12 : 16),
                     ],
                   ),
                 ),
@@ -1394,8 +1554,8 @@ class _AuthScreenState extends State<AuthScreen>
           ),
         ),
 
-        // 3D floating cubes for sign in screen - opcional en pantallas pequeñas
-        if (!isSmallScreen) ...[
+        // 3D floating cubes for sign in screen - only show on larger screens
+        if (screenSize.height > 650) ...[
           Positioned(
             bottom: 100,
             right: 40,
@@ -1469,6 +1629,10 @@ class _AuthScreenState extends State<AuthScreen>
         borderSide: const BorderSide(color: Colors.red, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+}
+
     );
   }
 }
