@@ -62,6 +62,9 @@ class _PaintListTabState extends State<PaintListTab> {
   Color _selectedColor = Colors.white;
   final PaintBrandService _paintBrandService = PaintBrandService();
 
+  // Variable para rastrear si el modal está siendo desmontado para evitar actualizaciones de estado
+  bool _isModalDismissed = false;
+
   // Track both colors and selected matching paints
   List<Map<String, dynamic>> _pickedColors = [];
 
@@ -809,6 +812,9 @@ class _PaintListTabState extends State<PaintListTab> {
   void _showSelectedColorsModal(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Reset modal state tracker
+    _isModalDismissed = false;
+
     // Generate default palette name based on date
     final now = DateTime.now();
     final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
@@ -857,7 +863,11 @@ class _PaintListTabState extends State<PaintListTab> {
                               Icons.close,
                               color: isDarkMode ? Colors.white : null,
                             ),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed:
+                                () => {
+                                  _isModalDismissed = true,
+                                  Navigator.pop(context),
+                                },
                           ),
                         ],
                       ),
@@ -1084,23 +1094,29 @@ class _PaintListTabState extends State<PaintListTab> {
                                           height: 60,
                                           child: ElevatedButton(
                                             onPressed: () async {
+                                              // No hacer nada si el modal está siendo cerrado
+                                              if (_isModalDismissed) return;
+
                                               final result = await _selectPaint(
                                                 context,
                                                 colorData,
                                               );
                                               if (result != null) {
-                                                // Si hay un resultado, actualizar el estado
-                                                setModalState(() {
-                                                  modalColorList[index] =
-                                                      result;
-                                                });
+                                                // Solo actualizar si el modal no está cerrado
+                                                if (!_isModalDismissed) {
+                                                  // Si hay un resultado, actualizar el estado
+                                                  setModalState(() {
+                                                    modalColorList[index] =
+                                                        result;
+                                                  });
 
-                                                // También actualizar el estado general
-                                                setState(() {
-                                                  _pickedColors = List.from(
-                                                    modalColorList,
-                                                  );
-                                                });
+                                                  // También actualizar el estado general
+                                                  setState(() {
+                                                    _pickedColors = List.from(
+                                                      modalColorList,
+                                                    );
+                                                  });
+                                                }
                                               }
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -1164,6 +1180,9 @@ class _PaintListTabState extends State<PaintListTab> {
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: () async {
+                                      // No hacer nada si el modal está siendo cerrado
+                                      if (_isModalDismissed) return;
+
                                       if (_paletteNameController.text
                                           .trim()
                                           .isEmpty) {
@@ -1179,9 +1198,11 @@ class _PaintListTabState extends State<PaintListTab> {
                                         return;
                                       }
 
-                                      setModalState(() {
-                                        _isSavingPalette = true;
-                                      });
+                                      if (!_isModalDismissed) {
+                                        setModalState(() {
+                                          _isSavingPalette = true;
+                                        });
+                                      }
 
                                       try {
                                         debugPrint(
@@ -1247,10 +1268,13 @@ class _PaintListTabState extends State<PaintListTab> {
                                         });
 
                                         // Primero restablecemos el estado de guardado
-                                        setModalState(() {
-                                          _isSavingPalette = false;
-                                        });
+                                        if (!_isModalDismissed) {
+                                          setModalState(() {
+                                            _isSavingPalette = false;
+                                          });
+                                        }
 
+                                        _isModalDismissed = true;
                                         Navigator.pop(context);
                                         ScaffoldMessenger.of(
                                           context,
@@ -1268,9 +1292,11 @@ class _PaintListTabState extends State<PaintListTab> {
                                         );
 
                                         // Restablecemos el estado de guardado
-                                        setModalState(() {
-                                          _isSavingPalette = false;
-                                        });
+                                        if (!_isModalDismissed) {
+                                          setModalState(() {
+                                            _isSavingPalette = false;
+                                          });
+                                        }
 
                                         ScaffoldMessenger.of(
                                           context,
@@ -1329,186 +1355,243 @@ class _PaintListTabState extends State<PaintListTab> {
     Map<String, dynamic> colorData,
   ) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final color = colorData['color'] as Color;
     final hexCode = colorData['hexCode'] as String;
 
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
+
+    if (token == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Authentication required')));
+      return null;
+    }
+
     final brandIds =
         _paintBrands
             .where((b) => b['selected'] == true)
             .map((b) => b['id'] as String)
             .toList();
 
+    if (brandIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one brand')),
+      );
+      return null;
+    }
+
     // Limpiar el hexcode para la API
     final cleanHexCode =
         hexCode.startsWith('#') ? hexCode.substring(1) : hexCode;
 
-    // Cargar las pinturas coincidentes
-    final matchService = PaintMatchService();
-    final data = await matchService.fetchMatchingPaints(
-      token: token!,
-      hexColor: cleanHexCode,
-      brandIds: brandIds,
-      page: 1, // Primera página
-    );
+    try {
+      // Mostrar indicador de carga
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(width: 20),
+                  Text(
+                    'Loading paints...',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
 
-    final paints = data['paints'] as List<dynamic>;
-    if (paints.isEmpty) {
+      // Cargar las pinturas coincidentes
+      final matchService = PaintMatchService();
+      final data = await matchService.fetchMatchingPaints(
+        token: token,
+        hexColor: cleanHexCode,
+        brandIds: brandIds,
+        page: 1, // Primera página
+      );
+
+      // Cerrar el indicador de carga
+      Navigator.of(context, rootNavigator: true).pop();
+
+      final paints = data['paints'] as List<dynamic>;
+      if (paints.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No matching paints found')),
+        );
+        return null;
+      }
+
+      // Configuramos variables para capturar resultados
+      Map<String, dynamic>? selectedPaint;
+
+      // Función para procesar la pintura seleccionada
+      Map<String, dynamic>? processPaintSelection(Map<String, dynamic> paint) {
+        // Procesar el hex color
+        String paintHex = paint['hex'] as String;
+        if (paintHex.startsWith('#')) {
+          paintHex = paintHex.substring(1);
+        }
+        paintHex = paintHex.padLeft(6, '0');
+
+        // Convertir a Color
+        Color paintColor;
+        try {
+          paintColor = Color(int.parse(paintHex, radix: 16) | 0xFF000000);
+        } catch (e) {
+          paintColor = Colors.red; // Color fallback
+        }
+
+        // Crear el nuevo objeto con los datos de la pintura seleccionada
+        return {
+          ...colorData,
+          'paintName': paint['name'],
+          'paintBrand': paint['brand']['name'],
+          'paintColor': paintColor,
+          'brandAvatar': (paint['brand']['name'] as String)[0],
+          'matchPercentage': paint['match'],
+          'colorCode': paint['code'],
+          'barcode': paint['barcode'],
+          'paintId': paint['id'],
+          'brandId': paint['brand']['id'],
+        };
+      }
+
+      // Mostramos el modal de selección
+      final result = await showModalBottomSheet<Map<String, dynamic>?>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              int? selectedIndex;
+
+              return DraggableScrollableSheet(
+                initialChildSize: 0.7,
+                maxChildSize: 0.9,
+                expand: false,
+                builder: (_, scrollController) {
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Matching Paints",
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                Navigator.pop(context, null);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child:
+                            paints.isEmpty
+                                ? Center(
+                                  child: Text('No matching paints found'),
+                                )
+                                : ListView.builder(
+                                  controller: scrollController,
+                                  itemCount: paints.length,
+                                  itemBuilder: (_, index) {
+                                    final paint = paints[index];
+                                    final isSelected = selectedIndex == index;
+
+                                    // Procesar el hexcode de la pintura
+                                    String paintHex = paint['hex'] as String;
+                                    if (paintHex.startsWith('#')) {
+                                      paintHex = paintHex.substring(1);
+                                    }
+                                    paintHex = paintHex.padLeft(6, '0');
+
+                                    // Obtener color
+                                    Color paintColor;
+                                    try {
+                                      paintColor = Color(
+                                        int.parse(paintHex, radix: 16) |
+                                            0xFF000000,
+                                      );
+                                    } catch (e) {
+                                      paintColor = Colors.red; // Color fallback
+                                    }
+
+                                    return ListTile(
+                                      title: Text(paint['name']),
+                                      subtitle: Text(paint['brand']['name']),
+                                      leading: CircleAvatar(
+                                        backgroundColor: paintColor,
+                                      ),
+                                      trailing:
+                                          isSelected
+                                              ? const Icon(Icons.check_circle)
+                                              : null,
+                                      onTap:
+                                          () => setState(() {
+                                            selectedIndex =
+                                                isSelected ? null : index;
+                                            selectedPaint =
+                                                isSelected ? null : paint;
+                                          }),
+                                    );
+                                  },
+                                ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: ElevatedButton(
+                          onPressed:
+                              selectedPaint != null
+                                  ? () {
+                                    if (selectedPaint != null) {
+                                      final result = processPaintSelection(
+                                        selectedPaint!,
+                                      );
+                                      Navigator.pop(context, result);
+                                    }
+                                  }
+                                  : null,
+                          child: const Text('Confirm Selection'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+
+      return result;
+    } catch (e) {
+      // Asegurarse de cerrar el diálogo de carga si ocurre un error
+      Navigator.of(context, rootNavigator: true).pop();
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('No matching paints found')));
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       return null;
     }
-
-    // Variables para el modal y su estado
-    Map<String, dynamic>? selectedPaint;
-    int? selectedIndex;
-    bool modalClosed = false;
-
-    // Modal para seleccionar la pintura
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return DraggableScrollableSheet(
-              initialChildSize: 0.7,
-              maxChildSize: 0.9,
-              expand: false,
-              builder: (_, scrollController) {
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Matching Paints",
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              modalClosed = true;
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child:
-                          paints.isEmpty
-                              ? Center(child: Text('No matching paints found'))
-                              : ListView.builder(
-                                controller: scrollController,
-                                itemCount: paints.length,
-                                itemBuilder: (_, index) {
-                                  final paint = paints[index];
-                                  final isSelected = selectedIndex == index;
-
-                                  // Procesar el hexcode de la pintura
-                                  String paintHex = paint['hex'] as String;
-                                  if (paintHex.startsWith('#')) {
-                                    paintHex = paintHex.substring(1);
-                                  }
-                                  paintHex = paintHex.padLeft(6, '0');
-
-                                  // Obtener color
-                                  Color paintColor;
-                                  try {
-                                    paintColor = Color(
-                                      int.parse(paintHex, radix: 16) |
-                                          0xFF000000,
-                                    );
-                                  } catch (e) {
-                                    paintColor = Colors.red; // Color fallback
-                                  }
-
-                                  return ListTile(
-                                    title: Text(paint['name']),
-                                    subtitle: Text(paint['brand']['name']),
-                                    leading: CircleAvatar(
-                                      backgroundColor: paintColor,
-                                    ),
-                                    trailing:
-                                        isSelected
-                                            ? const Icon(Icons.check_circle)
-                                            : null,
-                                    onTap:
-                                        () => setState(() {
-                                          selectedIndex =
-                                              isSelected ? null : index;
-                                          selectedPaint =
-                                              isSelected ? null : paint;
-                                        }),
-                                  );
-                                },
-                              ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: ElevatedButton(
-                        onPressed:
-                            selectedPaint != null
-                                ? () {
-                                  Navigator.pop(
-                                    context,
-                                    true,
-                                  ); // Cerramos con resultado positivo
-                                }
-                                : null,
-                        child: const Text('Confirm Selection'),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-
-    // Si se cerró el modal o si no se seleccionó una pintura, retornar null
-    if (modalClosed || selectedPaint == null) return null;
-
-    // Si se seleccionó una pintura, procesarla y devolver los datos actualizados
-    // Procesar el hex color
-    String paintHex = selectedPaint!['hex'] as String;
-    if (paintHex.startsWith('#')) {
-      paintHex = paintHex.substring(1);
-    }
-    paintHex = paintHex.padLeft(6, '0');
-
-    // Convertir a Color
-    Color paintColor;
-    try {
-      paintColor = Color(int.parse(paintHex, radix: 16) | 0xFF000000);
-    } catch (e) {
-      paintColor = Colors.red; // Color fallback
-    }
-
-    // Crear el nuevo objeto con los datos de la pintura seleccionada
-    return {
-      ...colorData,
-      'paintName': selectedPaint!['name'],
-      'paintBrand': selectedPaint!['brand']['name'],
-      'paintColor': paintColor,
-      'brandAvatar': (selectedPaint!['brand']['name'] as String)[0],
-      'matchPercentage': selectedPaint!['match'],
-      'colorCode': selectedPaint!['code'],
-      'barcode': selectedPaint!['barcode'],
-      'paintId': selectedPaint!['id'],
-      'brandId': selectedPaint!['brand']['id'],
-    };
   }
 
   // Helper method to get color based on match percentage
