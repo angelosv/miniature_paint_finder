@@ -23,26 +23,49 @@ class PaletteModal extends StatelessWidget {
         color: isDarkMode ? const Color(0xFF101823) : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Imagen de encabezado
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: Stack(
-              children: [
-                // Placeholder image
+          // Header image with overlays
+          Stack(
+            children: [
+              // Image from API or placeholder
+              if (imagePath != null && imagePath!.startsWith('http'))
+                Image.network(
+                  imagePath!,
+                  width: double.infinity,
+                  height: 150,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: double.infinity,
+                      height: 150,
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value:
+                              loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                          color: isDarkMode ? Colors.orange : Colors.blue,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('❌ Error loading network image: $error');
+                    return Image.asset(
+                      'assets/images/placeholder.jpeg',
+                      width: double.infinity,
+                      height: 150,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                )
+              else
                 Image.asset(
                   imagePath ?? 'assets/images/placeholder.jpeg',
                   width: double.infinity,
@@ -65,45 +88,61 @@ class PaletteModal extends StatelessWidget {
                   },
                 ),
 
-                // Overlay con título
-                Container(
-                  width: double.infinity,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.1),
-                        Colors.black.withOpacity(0.6),
-                      ],
-                    ),
+              // Gradient overlay
+              Container(
+                width: double.infinity,
+                height: 150,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.4),
+                      Colors.black.withOpacity(0.6),
+                    ],
                   ),
                 ),
+              ),
 
-                // Título
-                Positioned(
-                  bottom: 16,
-                  left: 24,
-                  right: 24,
-                  child: Text(
-                    paletteName,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 3.0,
-                          color: Color.fromARGB(255, 0, 0, 0),
-                        ),
-                      ],
+              // Handle bar overlay at top
+              Positioned(
+                top: 12,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // Title at bottom
+              Positioned(
+                bottom: 16,
+                left: 24,
+                right: 24,
+                child: Text(
+                  paletteName,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 3.0,
+                        color: Color.fromARGB(255, 0, 0, 0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // Paint list
