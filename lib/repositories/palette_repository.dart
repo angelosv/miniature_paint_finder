@@ -34,11 +34,14 @@ class ApiPaletteRepository implements PaletteRepository {
       print('🎨 Using endpoint Palettes getAll: ${ApiEndpoints.palettes}');
       final response = await _apiService.get(ApiEndpoints.palettes);
       final data = response['data'];
-      final palettes = (data['palettes'] as List)
-          .map((json) => ApiPalette.fromJson(json))
-          .toList();
+      final palettes =
+          (data['palettes'] as List)
+              .map((json) => ApiPalette.fromJson(json))
+              .toList();
 
-      return palettes.map((apiPalette) => _convertApiPaletteToPalette(apiPalette)).toList();
+      return palettes
+          .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
+          .toList();
     } catch (e) {
       print('Error getting all palettes from API: $e');
       return [];
@@ -48,29 +51,37 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10}) async {
     try {
-      print('🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit');
-      print('🎨 Using endpoint: ${ApiEndpoints.userPalettes}?page=$page&limit=$limit');
-      
+      print(
+        '🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit',
+      );
+      print(
+        '🎨 Using endpoint: ${ApiEndpoints.userPalettes}?page=$page&limit=$limit',
+      );
+
       final response = await _apiService.get(
         '${ApiEndpoints.userPalettes}?page=$page&limit=$limit',
       );
-      
+
       print('🎨 API Response status: ${response['executed']}');
       print('🎨 API Response message: ${response['message']}');
       print('🎨 API Response data: ${response['data']}');
-      
+
       final data = response['data'];
       print('🎨 Data from response: ${data.toString()}');
-      
-      final palettes = (data['palettes'] as List)
-          .map((json) => ApiPalette.fromJson(json))
-          .toList();
+
+      final palettes =
+          (data['palettes'] as List)
+              .map((json) => ApiPalette.fromJson(json))
+              .toList();
 
       print('🎨 Converted ${palettes.length} palettes from API');
-      
-      final convertedPalettes = palettes.map((apiPalette) => _convertApiPaletteToPalette(apiPalette)).toList();
+
+      final convertedPalettes =
+          palettes
+              .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
+              .toList();
       print('🎨 Successfully converted palettes to local model');
-      
+
       return convertedPalettes;
     } catch (e) {
       print('❌ Error getting palettes from API: $e');
@@ -79,39 +90,70 @@ class ApiPaletteRepository implements PaletteRepository {
   }
 
   Palette _convertApiPaletteToPalette(ApiPalette apiPalette) {
-    final colors = apiPalette.palettesPaints.map((paint) {
-      if (paint.paint != null) {
-        return Color.fromRGBO(
-          paint.paint!.r,
-          paint.paint!.g,
-          paint.paint!.b,
-          1,
-        );
-      }
-      return Colors.grey; // Color por defecto si no hay pintura
-    }).toList();
+    print('🎨 Converting API Palette to local Palette');
+    print('🎨 API Palette data:');
+    print('  - ID: ${apiPalette.id}');
+    print('  - Name: ${apiPalette.name}');
+    print('  - Image: ${apiPalette.image}');
+    print('  - Created At: ${apiPalette.createdAt}');
+    print('  - Number of paints: ${apiPalette.palettesPaints.length}');
 
-    return Palette(
+    final colors =
+        apiPalette.palettesPaints.map((paint) {
+          if (paint.paint != null) {
+            print('  🎨 Paint found:');
+            print('    - Name: ${paint.paint!.name}');
+            print('    - Hex: ${paint.paint!.hex}');
+            print(
+              '    - RGB: (${paint.paint!.r}, ${paint.paint!.g}, ${paint.paint!.b})',
+            );
+            return Color.fromRGBO(
+              paint.paint!.r,
+              paint.paint!.g,
+              paint.paint!.b,
+              1,
+            );
+          }
+          print('  ⚠️ No paint data available for this color');
+          return Colors.grey; // Color por defecto si no hay pintura
+        }).toList();
+
+    final convertedPalette = Palette(
       id: apiPalette.id,
       name: apiPalette.name,
       imagePath: apiPalette.image ?? 'assets/images/placeholder.jpeg',
       colors: colors,
       createdAt: apiPalette.createdAt,
-      paintSelections: apiPalette.palettesPaints.map((paint) {
-        if (paint.paint != null) {
-          return PaintSelection(
-            colorHex: paint.paint!.hex,
-            paintId: paint.paint!.code,
-            paintName: paint.paint!.name,
-            paintBrand: paint.paint!.set,
-            brandAvatar: paint.paint!.set[0],
-            matchPercentage: 100,
-            paintColorHex: paint.paint!.hex,
-          );
-        }
-        return null;
-      }).whereType<PaintSelection>().toList(),
+      paintSelections:
+          apiPalette.palettesPaints
+              .map((paint) {
+                if (paint.paint != null) {
+                  return PaintSelection(
+                    colorHex: paint.paint!.hex,
+                    paintId: paint.paint!.code,
+                    paintName: paint.paint!.name,
+                    paintBrand: paint.paint!.set,
+                    brandAvatar: paint.paint!.set[0],
+                    matchPercentage: 100,
+                    paintColorHex: paint.paint!.hex,
+                  );
+                }
+                return null;
+              })
+              .whereType<PaintSelection>()
+              .toList(),
     );
+
+    print('🎨 Converted Palette:');
+    print('  - ID: ${convertedPalette.id}');
+    print('  - Name: ${convertedPalette.name}');
+    print('  - Image Path: ${convertedPalette.imagePath}');
+    print('  - Number of colors: ${convertedPalette.colors.length}');
+    print(
+      '  - Number of paint selections: ${convertedPalette.paintSelections?.length ?? 0}',
+    );
+
+    return convertedPalette;
   }
 
   @override
@@ -174,13 +216,10 @@ class ApiPaletteRepository implements PaletteRepository {
     String colorHex,
   ) async {
     try {
-      await _apiService.post(
-        '${ApiEndpoints.paletteById(paletteId)}/paints',
-        {
-          'paint_id': paintId,
-          'color_hex': colorHex,
-        },
-      );
+      await _apiService.post('${ApiEndpoints.paletteById(paletteId)}/paints', {
+        'paint_id': paintId,
+        'color_hex': colorHex,
+      });
       return true;
     } catch (e) {
       print('Error adding paint to palette in API: $e');

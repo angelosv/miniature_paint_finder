@@ -49,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _checkNavigationArguments() {
+    if (!mounted) return;
+
     final arguments = ModalRoute.of(context)?.settings.arguments;
     if (arguments != null && arguments is Map<String, dynamic>) {
       // Seleccionar pestaña específica si se solicita
@@ -67,6 +69,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onItemTapped(int index) {
+    if (!mounted) return;
+
     setState(() {
       _selectedIndex = index;
     });

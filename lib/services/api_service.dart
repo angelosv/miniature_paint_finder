@@ -20,11 +20,9 @@ class ApiService {
   final FirebaseAuth _auth;
 
   /// Constructor del servicio API
-  ApiService({
-    required this.baseUrl,
-    http.Client? client,
-    FirebaseAuth? auth,
-  }) : _client = client ?? http.Client(), _auth = auth ?? FirebaseAuth.instance;
+  ApiService({required this.baseUrl, http.Client? client, FirebaseAuth? auth})
+    : _client = client ?? http.Client(),
+      _auth = auth ?? FirebaseAuth.instance;
 
   /// Realiza una petición GET
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
@@ -32,10 +30,10 @@ class ApiService {
     try {
       final token = await _auth.currentUser?.getIdToken();
       print('🔑 Firebase token: ${token != null ? 'Present' : 'Missing'}');
-      
+
       final url = Uri.parse('$baseUrl$endpoint');
       print('🔗 Full URL: $url');
-      
+
       final requestHeaders = {
         ..._defaultHeaders,
         ...?headers,
@@ -43,15 +41,15 @@ class ApiService {
       };
       print('📤 Headers: $requestHeaders');
 
-      final response = await _client.get(
-        url,
-        headers: requestHeaders,
-      );
+      final response = await _client.get(url, headers: requestHeaders);
 
       print('📥 Response status code: ${response.statusCode}');
       print('📥 Response body: ${response.body}');
 
-      return _handleResponse(response);
+      final parsedResponse = _handleResponse(response);
+      print('📥 Parsed response: $parsedResponse');
+
+      return parsedResponse;
     } catch (e) {
       print('❌ Error in ApiService.get(): $e');
       rethrow;
@@ -68,7 +66,11 @@ class ApiService {
       final token = await _auth.currentUser?.getIdToken();
       final response = await _client.post(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          ..._defaultHeaders,
+          ...?headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
         body: json.encode(data),
       );
 
@@ -88,7 +90,11 @@ class ApiService {
       final token = await _auth.currentUser?.getIdToken();
       final response = await _client.put(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          ..._defaultHeaders,
+          ...?headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
         body: json.encode(data),
       );
 
@@ -107,7 +113,11 @@ class ApiService {
       final token = await _auth.currentUser?.getIdToken();
       final response = await _client.delete(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          ..._defaultHeaders,
+          ...?headers,
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
 
       return _handleResponse(response);

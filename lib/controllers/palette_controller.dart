@@ -52,25 +52,40 @@ class PaletteController extends ChangeNotifier {
 
       final currentPage = page ?? _currentPage;
       print('🎨 Loading palettes for page: $currentPage');
-      
+
       final palettes = await _repository.getUserPalettes(
         page: currentPage,
         limit: _limit,
       );
-      
+
       print('🎨 Got ${palettes.length} palettes from repository');
-      
+
       if (currentPage == 1) {
         _palettes = palettes;
       } else {
         _palettes = [..._palettes, ...palettes];
       }
-      
+
       _currentPage = currentPage;
       _totalPages = (palettes.length / _limit).ceil();
       _totalPalettes = palettes.length;
-      
-      print('🎨 Updated state: currentPage=$_currentPage, totalPages=$_totalPages, totalPalettes=$_totalPalettes');
+
+      print('🎨 Updated state:');
+      print('  - Current page: $_currentPage');
+      print('  - Total pages: $_totalPages');
+      print('  - Total palettes: $_totalPalettes');
+      print('  - Palettes loaded: ${_palettes.length}');
+
+      for (var i = 0; i < _palettes.length; i++) {
+        final palette = _palettes[i];
+        print('  🎨 Palette ${i + 1}:');
+        print('    - Name: ${palette.name}');
+        print('    - Image Path: ${palette.imagePath}');
+        print('    - Colors: ${palette.colors.length}');
+        print(
+          '    - Paint Selections: ${palette.paintSelections?.length ?? 0}',
+        );
+      }
     } catch (e) {
       print('❌ Error loading palettes: $e');
       _error = e.toString();

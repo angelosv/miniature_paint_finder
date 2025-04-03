@@ -350,37 +350,41 @@ class _PaletteScreenState extends State<PaletteScreen> {
         if (name == null || name.isEmpty) {
           name = await showDialog<String>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Name Your Palette'),
-              content: TextField(
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Enter palette name',
-                  border: OutlineInputBorder(),
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Name Your Palette'),
+                  content: TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter palette name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('CANCEL'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final textField =
+                            context.findRenderObject() as RenderBox;
+                        final name = (textField as dynamic).controller.text;
+                        Navigator.pop(context, name);
+                      },
+                      child: const Text('CREATE'),
+                    ),
+                  ],
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('CANCEL'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final textField = context.findRenderObject() as RenderBox;
-                    final name = (textField as dynamic).controller.text;
-                    Navigator.pop(context, name);
-                  },
-                  child: const Text('CREATE'),
-                ),
-              ],
-            ),
           );
         }
 
         if (name != null && name.isNotEmpty) {
           // Primero subimos la imagen
           final imageUploadService = ImageUploadService();
-          final String imageUrl = await imageUploadService.uploadImage(File(image.path));
+          final String imageUrl = await imageUploadService.uploadImage(
+            File(image.path),
+          );
 
           // Luego creamos la paleta con la URL de la imagen
           final success = await _paletteController.createPalette(
@@ -474,91 +478,93 @@ class _PaletteScreenState extends State<PaletteScreen> {
     return Column(
       children: [
         Expanded(
-          child: _paletteController.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _paletteController.error != null
+          child:
+              _paletteController.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _paletteController.error != null
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _paletteController.error!,
-                            style: TextStyle(
-                              color: isDarkMode ? Colors.red[300] : Colors.red,
-                            ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _paletteController.error!,
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.red[300] : Colors.red,
                           ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => _paletteController.loadPalettes(),
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    )
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => _paletteController.loadPalettes(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
                   : _paletteController.palettes.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.palette_outlined,
-                                size: 64,
-                                color: isDarkMode
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.palette_outlined,
+                          size: 64,
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No palettes yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color:
+                                isDarkMode
                                     ? Colors.grey[400]
                                     : Colors.grey[600],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No palettes yet',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Create your first palette to get started',
-                                style: TextStyle(
-                                  color: isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.add),
-                                label: const Text('Create Palette'),
-                                onPressed: _showCreatePaletteOptions,
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount:
-                                MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                            childAspectRatio: 0.8,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                          itemCount: _paletteController.palettes.length,
-                          itemBuilder: (context, index) {
-                            final palette = _paletteController.palettes[index];
-                            return _buildPaletteCard(palette);
-                          },
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Create your first palette to get started',
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Palette'),
+                          onPressed: _showCreatePaletteOptions,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount:
+                          MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                      childAspectRatio: 0.8,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: _paletteController.palettes.length,
+                    itemBuilder: (context, index) {
+                      final palette = _paletteController.palettes[index];
+                      return _buildPaletteCard(palette);
+                    },
+                  ),
         ),
         if (_paletteController.totalPages > 1)
           Container(
@@ -578,9 +584,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
-                  onPressed: _paletteController.currentPage > 1
-                      ? () => _paletteController.loadPreviousPage()
-                      : null,
+                  onPressed:
+                      _paletteController.currentPage > 1
+                          ? () => _paletteController.loadPreviousPage()
+                          : null,
                 ),
                 const SizedBox(width: 16),
                 Text(
@@ -592,9 +599,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 const SizedBox(width: 16),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: _paletteController.currentPage < _paletteController.totalPages
-                      ? () => _paletteController.loadNextPage()
-                      : null,
+                  onPressed:
+                      _paletteController.currentPage <
+                              _paletteController.totalPages
+                          ? () => _paletteController.loadNextPage()
+                          : null,
                 ),
               ],
             ),
@@ -608,10 +617,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final hasPaletteSwatch = palette.colors.isNotEmpty;
     final hasSelections =
         palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
-    final bool hasImage =
-        palette.imagePath.isNotEmpty &&
-        palette.imagePath !=
-            'assets/images/placeholder.png'; // Detectar imágenes antiguas
+    final bool hasImage = palette.imagePath.startsWith('http');
 
     return Hero(
       tag: 'palette-${palette.id}',
@@ -625,7 +631,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
               context,
               palette.name,
               palette.paintSelections ?? [],
-              imagePath: 'assets/images/placeholder.jpeg',
+              imagePath: palette.imagePath,
             );
           },
           borderRadius: BorderRadius.circular(16),
@@ -641,96 +647,29 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 child: Stack(
                   children: [
                     // Background image or color grid
-                    Container(
+                    SizedBox(
                       height: 120,
                       width: double.infinity,
                       child:
                           hasImage
-                              ? Image.asset(
+                              ? Image.network(
                                 palette.imagePath,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  // Si hay error al cargar, usar placeholder
-                                  return Image.asset(
-                                    'assets/images/placeholder.jpeg',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      // Si también falla el placeholder, mostrar grid
-                                      return hasPaletteSwatch
-                                          ? GridView.count(
-                                            physics:
-                                                const NeverScrollableScrollPhysics(),
-                                            crossAxisCount: 3,
-                                            children:
-                                                palette.colors
-                                                    .map(
-                                                      (color) => Container(
-                                                        color: color,
-                                                      ),
-                                                    )
-                                                    .toList(),
-                                          )
-                                          : Container(
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.grey[800]
-                                                    : Colors.grey[200],
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.palette_outlined,
-                                                size: 40,
-                                                color:
-                                                    isDarkMode
-                                                        ? Colors.grey[700]
-                                                        : Colors.grey[400],
-                                              ),
-                                            ),
-                                          );
-                                    },
+                                  print(
+                                    '❌ Error loading network image: $error',
+                                  );
+                                  return _buildFallbackContent(
+                                    isDarkMode,
+                                    hasPaletteSwatch,
+                                    palette,
                                   );
                                 },
                               )
-                              : hasPaletteSwatch
-                              ? Stack(
-                                children: [
-                                  // Fondo con placeholder
-                                  Image.asset(
-                                    'assets/images/placeholder.jpeg',
-                                    fit: BoxFit.cover,
-                                    height: 120,
-                                    width: double.infinity,
-                                  ),
-                                  // Grid de colores con transparencia
-                                  GridView.count(
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    crossAxisCount: 3,
-                                    children:
-                                        palette.colors
-                                            .map(
-                                              (color) => Container(
-                                                color: color.withOpacity(0.6),
-                                              ),
-                                            )
-                                            .toList(),
-                                  ),
-                                ],
-                              )
-                              : Container(
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                child: Center(
-                                  child: Icon(
-                                    Icons.palette_outlined,
-                                    size: 40,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[700]
-                                            : Colors.grey[400],
-                                  ),
-                                ),
+                              : _buildFallbackContent(
+                                isDarkMode,
+                                hasPaletteSwatch,
+                                palette,
                               ),
                     ),
 
@@ -906,6 +845,46 @@ class _PaletteScreenState extends State<PaletteScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildFallbackContent(
+    bool isDarkMode,
+    bool hasPaletteSwatch,
+    Palette palette,
+  ) {
+    if (hasPaletteSwatch) {
+      return Stack(
+        children: [
+          // Fondo con placeholder
+          Image.asset(
+            'assets/images/placeholder.jpeg',
+            fit: BoxFit.cover,
+            height: 120,
+            width: double.infinity,
+          ),
+          // Grid de colores con transparencia
+          GridView.count(
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            children:
+                palette.colors
+                    .map((color) => Container(color: color.withOpacity(0.6)))
+                    .toList(),
+          ),
+        ],
+      );
+    } else {
+      return Container(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+        child: Center(
+          child: Icon(
+            Icons.palette_outlined,
+            size: 40,
+            color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+          ),
+        ),
+      );
+    }
   }
 
   String _formatDate(DateTime date) {

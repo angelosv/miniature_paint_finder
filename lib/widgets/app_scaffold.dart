@@ -56,38 +56,42 @@ class _AppScaffoldState extends State<AppScaffold> {
       return;
     }
 
+    // Update state before navigation
     setState(() {
       _currentIndex = index;
     });
 
-    // Navegar a la pantalla correspondiente usando MaterialPageRoute y pushAndRemoveUntil
-    switch (index) {
-      case 0:
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 1:
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PaletteScreen()),
-          (Route<dynamic> route) => false,
-        );
-        break;
-      case 2:
-        // Navigate to Home screen with Profile tab and ensure bottom nav shows the Profile tab as selected
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-            settings: const RouteSettings(arguments: {'selectedIndex': 1}),
-          ),
-          (Route<dynamic> route) => false,
-        );
-        setState(() {
-          _currentIndex = 2; // Keep the bottom navigation index as Profile
-        });
-        break;
-    }
+    // Use a post-frame callback to ensure the state update is completed
+    // before navigating to prevent potential state updates on unmounted widgets
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // Navegar a la pantalla correspondiente usando MaterialPageRoute y pushAndRemoveUntil
+      switch (index) {
+        case 0:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 1:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const PaletteScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 2:
+          // Navigate to Home screen with Profile tab and ensure bottom nav shows the Profile tab as selected
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+              settings: const RouteSettings(arguments: {'selectedIndex': 1}),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+      }
+    });
   }
 
   @override

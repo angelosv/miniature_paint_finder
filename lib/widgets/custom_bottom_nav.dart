@@ -78,7 +78,14 @@ class CustomBottomNav extends StatelessWidget {
     final Color inactiveColor = isDarkMode ? Colors.white70 : Colors.black54;
 
     return InkWell(
-      onTap: () => onItemSelected(index),
+      onTap: () {
+        // Safely handle tap with a small delay to prevent framework errors
+        Future.microtask(() {
+          if (context.mounted) {
+            onItemSelected(index);
+          }
+        });
+      },
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: AnimatedContainer(
