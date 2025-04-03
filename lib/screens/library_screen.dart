@@ -153,13 +153,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _filteredPaints =
           _allPaints.where((paint) {
             // Filtrar por texto de búsqueda
+            final searchText = _searchController.text.toLowerCase();
             final nameMatches =
-                paint.name.toLowerCase().contains(
-                  _searchController.text.toLowerCase(),
-                ) ||
-                paint.brand.toLowerCase().contains(
-                  _searchController.text.toLowerCase(),
-                );
+                paint.name.toLowerCase().contains(searchText) ||
+                paint.brand.toLowerCase().contains(searchText) ||
+                paint.category.toLowerCase().contains(searchText);
 
             // Filtrar por marca
             final brandMatches =
@@ -246,26 +244,84 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _buildSearchBar(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search paints...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon:
-              _searchController.text.isNotEmpty
-                  ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                    },
-                  )
-                  : null,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
-          filled: true,
-          fillColor: Theme.of(context).cardColor,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search paints...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon:
+                    _searchController.text.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                        : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).cardColor,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () => _showFilterDialog(),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color:
+                    isDarkMode
+                        ? AppTheme.darkSurface
+                        : Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.filter_list,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.primaryBlue,
+                  ),
+                  if (_hasActiveFilters())
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  // Verificar si hay filtros activos
+  bool _hasActiveFilters() {
+    return _selectedBrand != 'All' ||
+        _selectedCategory != 'All' ||
+        _selectedColor != null;
   }
 
   Widget _buildResultsBar(bool isDarkMode) {
@@ -313,95 +369,210 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildPaintGrid(bool isDarkMode) {
-    return Expanded(
-      child:
-          _filteredPaints.isEmpty
-              ? const Center(
-                child: Text('No paints found matching your filters'),
-              )
-              : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(8),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.75,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                            ),
-                        itemCount: _paginatedPaints.length,
-                        itemBuilder: (context, index) {
-                          final paint = _paginatedPaints[index];
-                          final mainColor =
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Theme.of(context).primaryColor;
-                          final isInWishlist = _wishlist.contains(paint.id);
+    return _filteredPaints.isEmpty
+        ? const Center(child: Text('No paints found matching your filters'))
+        : Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8.0,
+          ), // Reduced margin
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Active filters bar
+              if (_hasActiveFilters()) _buildActiveFiltersBar(isDarkMode),
 
-                          return PaintGridCard(
-                            paint: paint,
-                            color: mainColor,
-                            onAddToWishlist: _toggleWishlist,
-                            onAddToInventory: _addToInventory,
-                            isInWishlist: isInWishlist,
-                          );
-                        },
-                      ),
-                    ),
+              Expanded(
+                child: GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: _paginatedPaints.length,
+                  itemBuilder: (context, index) {
+                    final paint = _paginatedPaints[index];
+                    final mainColor =
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Theme.of(context).primaryColor;
+                    final isInWishlist = _wishlist.contains(paint.id);
 
-                    // Controles de paginación
-                    if (_totalPages > 1)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.first_page),
-                              onPressed:
-                                  _currentPage > 1 ? () => _goToPage(1) : null,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_left),
-                              onPressed:
-                                  _currentPage > 1
-                                      ? () => _goToPage(_currentPage - 1)
-                                      : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Page $_currentPage of $_totalPages',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              onPressed:
-                                  _currentPage < _totalPages
-                                      ? () => _goToPage(_currentPage + 1)
-                                      : null,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.last_page),
-                              onPressed:
-                                  _currentPage < _totalPages
-                                      ? () => _goToPage(_totalPages)
-                                      : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                    return PaintGridCard(
+                      paint: paint,
+                      color: mainColor,
+                      onAddToWishlist: _toggleWishlist,
+                      onAddToInventory: _addToInventory,
+                      isInWishlist: isInWishlist,
+                    );
+                  },
                 ),
               ),
+
+              // Controles de paginación
+              if (_totalPages > 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.first_page),
+                        onPressed: _currentPage > 1 ? () => _goToPage(1) : null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed:
+                            _currentPage > 1
+                                ? () => _goToPage(_currentPage - 1)
+                                : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Page $_currentPage of $_totalPages',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed:
+                            _currentPage < _totalPages
+                                ? () => _goToPage(_currentPage + 1)
+                                : null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.last_page),
+                        onPressed:
+                            _currentPage < _totalPages
+                                ? () => _goToPage(_totalPages)
+                                : null,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+  }
+
+  // Construir barra de filtros activos
+  Widget _buildActiveFiltersBar(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (_selectedBrand != 'All')
+            _buildFilterChip(
+              label: _selectedBrand,
+              onRemove: () {
+                setState(() {
+                  _selectedBrand = 'All';
+                  _filterPaints();
+                });
+              },
+              isDarkMode: isDarkMode,
+              icon: Icons.business,
+            ),
+          if (_selectedCategory != 'All')
+            _buildFilterChip(
+              label: _selectedCategory,
+              onRemove: () {
+                setState(() {
+                  _selectedCategory = 'All';
+                  _filterPaints();
+                });
+              },
+              isDarkMode: isDarkMode,
+              icon: Icons.category,
+            ),
+          if (_selectedColor != null)
+            _buildColorFilterChip(
+              color: _selectedColor!,
+              onRemove: () {
+                setState(() {
+                  _selectedColor = null;
+                  _filterPaints();
+                });
+              },
+              isDarkMode: isDarkMode,
+            ),
+          TextButton.icon(
+            onPressed: _resetFilters,
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Clear All'),
+            style: TextButton.styleFrom(
+              foregroundColor:
+                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Construir chip de filtro
+  Widget _buildFilterChip({
+    required String label,
+    required VoidCallback onRemove,
+    required bool isDarkMode,
+    required IconData icon,
+  }) {
+    return Chip(
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+      ),
+      label: Text(label),
+      deleteIcon: const Icon(Icons.close, size: 16),
+      onDeleted: onRemove,
+      backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: isDarkMode ? Colors.white : Colors.black87,
+      ),
+      deleteIconColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  // Construir chip de filtro de color
+  Widget _buildColorFilterChip({
+    required Color color,
+    required VoidCallback onRemove,
+    required bool isDarkMode,
+  }) {
+    return Chip(
+      avatar: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isDarkMode ? Colors.grey[600]! : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+      ),
+      label: const Text('Color filter'),
+      deleteIcon: const Icon(Icons.close, size: 16),
+      onDeleted: onRemove,
+      backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: isDarkMode ? Colors.white : Colors.black87,
+      ),
+      deleteIconColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -523,6 +694,390 @@ class _LibraryScreenState extends State<LibraryScreen> {
         content: const Text('Added to inventory'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // Método para mostrar el diálogo de filtros avanzados
+  void _showFilterDialog() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color:
+                            isDarkMode
+                                ? Colors.grey[600]
+                                : Colors.grey.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 20),
+                    ),
+                  ),
+
+                  // Header
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Filter Paints',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Filtro por marca
+                  Text(
+                    'Brand',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color:
+                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _selectedBrand,
+                      items:
+                          _brands.map((brand) {
+                            return DropdownMenuItem<String>(
+                              value: brand,
+                              child: Text(brand),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() {
+                            _selectedBrand = value;
+                          });
+                        }
+                      },
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      underline: Container(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Filtro por categoría
+                  Text(
+                    'Category',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color:
+                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _selectedCategory,
+                      items:
+                          _categories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() {
+                            _selectedCategory = value;
+                          });
+                        }
+                      },
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      underline: Container(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Filtro por color
+                  Text(
+                    'Color Filter',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Color picker
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Opción para quitar el filtro de color
+                        GestureDetector(
+                          onTap: () {
+                            setModalState(() {
+                              _selectedColor = null;
+                            });
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[600]!
+                                        : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                              color:
+                                  isDarkMode ? Colors.grey[800] : Colors.white,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.not_interested,
+                                size: 20,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Opciones de colores predefinidos
+                        _buildColorOption(
+                          Colors.red,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.orange,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.yellow,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.green,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.blue,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.purple,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.pink,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.brown,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.grey,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.black,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                        _buildColorOption(
+                          Colors.white,
+                          setModalState,
+                          isDarkMode,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Botones de acción
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor:
+                                isDarkMode
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
+                            side: BorderSide(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[600]!
+                                      : Colors.grey[300]!,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('CANCEL'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _filterPaints();
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                isDarkMode
+                                    ? AppTheme.marineOrange
+                                    : AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'APPLY FILTERS',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Construir opción de color para el filtro
+  Widget _buildColorOption(
+    Color color,
+    StateSetter setModalState,
+    bool isDarkMode,
+  ) {
+    final isSelected = _selectedColor == color;
+    final borderColor = isDarkMode ? Colors.grey[600]! : Colors.grey[300]!;
+
+    return GestureDetector(
+      onTap: () {
+        setModalState(() {
+          _selectedColor = color;
+        });
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color:
+                isSelected
+                    ? (isDarkMode
+                        ? AppTheme.marineOrange
+                        : AppTheme.primaryBlue)
+                    : borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: (isDarkMode
+                              ? AppTheme.marineOrange
+                              : AppTheme.primaryBlue)
+                          .withOpacity(0.3),
+                      blurRadius: 4,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                  : null,
+        ),
       ),
     );
   }
