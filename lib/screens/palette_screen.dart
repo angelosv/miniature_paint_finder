@@ -527,16 +527,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
       selectedIndex: 1, // Palette tab
       body: _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'palettes'),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreatePaletteModal(context),
         backgroundColor: Theme.of(context).primaryColor,
-        label: const Row(
-          children: [
-            Icon(Icons.add),
-            SizedBox(width: 8),
-            Text('Create Palette'),
-          ],
-        ),
+        child: const Icon(Icons.add),
+        mini: true,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

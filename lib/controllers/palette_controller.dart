@@ -53,24 +53,26 @@ class PaletteController extends ChangeNotifier {
       final currentPage = page ?? _currentPage;
       print('🎨 Loading palettes for page: $currentPage');
 
-      final palettes = await _repository.getUserPalettes(
+      final result = await _repository.getUserPalettes(
         page: currentPage,
         limit: _limit,
       );
 
-      print('🎨 Got ${palettes.length} palettes from repository');
+      print('🎨 Got ${result['palettes'].length} palettes from repository');
 
       if (currentPage == 1) {
-        _palettes = palettes;
+        _palettes = result['palettes'];
       } else {
-        _palettes = [..._palettes, ...palettes];
+        _palettes = [..._palettes, ...result['palettes']];
       }
 
-      _currentPage = currentPage;
-      _totalPages = (palettes.length / _limit).ceil();
-      _totalPalettes = palettes.length;
+      // Actualizar los valores de paginación usando los datos de la API
+      _currentPage = int.parse(result['currentPage'].toString());
+      _totalPages = int.parse(result['totalPages'].toString());
+      _totalPalettes = int.parse(result['totalPalettes'].toString());
+      _limit = int.parse(result['limit'].toString());
 
-      print('🎨 Updated state:');
+      print('�� Updated state:');
       print('  - Current page: $_currentPage');
       print('  - Total pages: $_totalPages');
       print('  - Total palettes: $_totalPalettes');

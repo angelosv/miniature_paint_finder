@@ -9,7 +9,7 @@ import 'package:miniature_paint_finder/services/api_service.dart';
 /// Repositorio para operaciones con paletas de colores
 abstract class PaletteRepository extends BaseRepository<Palette> {
   /// Obtiene todas las paletas del usuario actual
-  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10});
+  Future<Map<String, dynamic>> getUserPalettes({int page = 1, int limit = 10});
 
   /// Añade una pintura a una paleta existente
   Future<bool> addPaintToPalette(String paletteId, String paintId, String hex);
@@ -45,7 +45,7 @@ class ApiPaletteRepository implements PaletteRepository {
   }
 
   @override
-  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> getUserPalettes({int page = 1, int limit = 10}) async {
     try {
       print(
         '🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit',
@@ -65,23 +65,26 @@ class ApiPaletteRepository implements PaletteRepository {
       final data = response['data'];
       print('🎨 Data from response: ${data.toString()}');
 
-      final palettes =
-          (data['palettes'] as List)
-              .map((json) => ApiPalette.fromJson(json))
-              .toList();
-
-      print('🎨 Converted ${palettes.length} palettes from API');
-
-      final convertedPalettes =
-          palettes
-              .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
-              .toList();
-      print('🎨 Successfully converted palettes to local model');
-
-      return convertedPalettes;
+      // Devolver los datos de paginación junto con las paletas
+      return {
+        'currentPage': int.parse(data['currentPage'].toString()),
+        'totalPages': int.parse(data['totalPages'].toString()),
+        'totalPalettes': int.parse(data['totalPalettes'].toString()),
+        'limit': int.parse(data['limit'].toString()),
+        'palettes': (data['palettes'] as List)
+            .map((json) => ApiPalette.fromJson(json))
+            .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
+            .toList(),
+      };
     } catch (e) {
-      print('❌ Error getting palettes from API: $e');
-      return [];
+      print('❌ Error getting user palettes from API: $e');
+      return {
+        'currentPage': 1,
+        'totalPages': 1,
+        'totalPalettes': 0,
+        'limit': limit,
+        'palettes': <Palette>[],
+      };
     }
   }
 
@@ -313,9 +316,17 @@ class PaletteRepositoryImpl implements PaletteRepository {
   }
 
   @override
-  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> getUserPalettes({int page = 1, int limit = 10}) async {
     // Para esta implementación de prueba, devolvemos todas las paletas
-    return getAll();
+    final palettes = await getAll();
+    
+    return {
+      'currentPage': page,
+      'totalPages': (palettes.length / limit).ceil(),
+      'totalPalettes': palettes.length,
+      'limit': limit,
+      'palettes': palettes,
+    };
   }
 
   @override
