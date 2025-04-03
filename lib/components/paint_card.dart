@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
