@@ -1,48 +1,63 @@
 /// Constantes con los endpoints de la API para la aplicación Miniature Paint Finder
 class ApiEndpoints {
   /// Base URL para todas las llamadas API
-  static const String baseUrl = 'https://api.miniature-paint-finder.com/v1';
+  static const String baseUrl = 'https://paints-api.reachu.io/api';
 
   /// Endpoints relacionados con pinturas
-  static const String paints = '/paints';
-  static const String brands = '/brands';
-  static const String matchColor = '/match-color';
-  static const String extractColors = '/extract-colors';
+  static String get paints => '/paints';
+  static String get brands => '/brands';
+  static String get matchColor => '/match-color';
+  static String get extractColors => '/extract-colors';
 
   /// Endpoints relacionados con autenticación
-  static const String register = '/auth/register';
-  static const String login = '/auth/login';
+  static String get auth => '/auth';
 
   /// Endpoints relacionados con usuario
-  static const String userPalettes = '/user/palettes';
-  static const String userInventory = '/user/inventory';
-  static const String userWishlist = '/user/wishlist';
+  static String get palettes => '/palettes';
+  static String get userPalettes => '/palettes';
+  static String get inventory => '/inventory';
+  static String get wishlist => '/wishlist';
+
+  /// Endpoints relacionados con otras entidades
+  static String get user => '/user';
+  static String get sets => '/sets';
+  static String get register => '/auth/register';
+  static String get login => '/auth/login';
+  static String get logout => '/auth/logout';
+  static String get me => '/auth/me';
+  static String get imageUpload => '/image/upload';
 
   /// Construye un endpoint para obtener una pintura específica por ID
-  static String paintById(String id) => '$paints/$id';
+  static String paintById(String id) => '/paints/$id';
 
   /// Construye un endpoint para pinturas por marca
-  static String paintsByBrand(String brand) => '$paints/by-brand?brand=$brand';
+  static String paintsByBrand(String brand) => '/paints/brand/$brand';
 
   /// Construye un endpoint para pinturas por categoría
-  static String paintsByCategory(String category) =>
-      '$paints/by-category?category=$category';
+  static String paintsByCategory(String category) => '/paints/category/$category';
 
   /// Construye un endpoint para buscar pinturas
-  static String searchPaints(String query) => '$paints/search?q=$query';
+  static String searchPaints(String query) => '/paints/search?q=$query';
 
   /// Construye un endpoint para pinturas por código de barras
-  static String paintsByBarcode(String barcode) =>
-      '$paints/by-barcode?code=$barcode';
+  static String paintsByBarcode(String barcode) => '/paints/barcode/$barcode';
 
   /// Construye un endpoint para pinturas por color
   static String paintsByColor(String colorHex, {double threshold = 0.1}) =>
-      '$paints/by-color?hex=$colorHex&threshold=$threshold';
+      '/paints/color/$colorHex?threshold=$threshold';
 
   /// Construye un endpoint para una paleta específica por ID
-  static String paletteById(String id) => '$userPalettes/$id';
+  static String paletteById(String id) => '/palettes/$id';
 
   /// Construye un endpoint para añadir una pintura a una paleta
-  static String addPaintToPalette(String paletteId) =>
-      '$userPalettes/$paletteId/paints';
+  static String addPaintToPalette(String paletteId) => '/palettes/$paletteId/paints';
+
+  /// Construye un endpoint para una marca específica por ID
+  static String brandById(String id) => '/brands/$id';
+
+  /// Construye un endpoint para un conjunto específico por ID
+  static String setById(String id) => '/sets/$id';
+
+  /// Construye un endpoint para remover una pintura de una paleta
+  static String removePaintFromPalette(String paletteId, String paintId) => '/palettes/$paletteId/paints/$paintId';
 }

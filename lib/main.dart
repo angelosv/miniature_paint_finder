@@ -15,6 +15,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:miniature_paint_finder/models/user.dart';
+import 'package:miniature_paint_finder/services/api_service.dart';
+import 'package:miniature_paint_finder/data/api_constants.dart';
 
 /// App entry point
 void main() async {
@@ -36,7 +38,8 @@ void main() async {
 
   // Initialize repositories
   final PaintRepository paintRepository = PaintRepositoryImpl();
-  final PaletteRepository paletteRepository = PaletteRepositoryImpl();
+  final ApiService apiService = ApiService(baseUrl: ApiEndpoints.baseUrl);
+  final PaletteRepository paletteRepository = ApiPaletteRepository(apiService);
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

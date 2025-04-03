@@ -1,13 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/models/api_palette.dart';
 import 'package:miniature_paint_finder/repositories/base_repository.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 
 /// Repositorio para operaciones con paletas de colores
 abstract class PaletteRepository extends BaseRepository<Palette> {
   /// Obtiene todas las paletas del usuario actual
-  Future<List<Palette>> getUserPalettes();
+  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10});
 
   /// Añade una pintura a una paleta existente
   Future<bool> addPaintToPalette(
@@ -29,30 +31,98 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<List<Palette>> getAll() async {
     try {
-      final response = await _apiService.get(ApiEndpoints.userPalettes);
-      return (response['palettes'] as List)
-          .map((json) => Palette.fromJson(json))
+      print('🎨 Using endpoint Palettes getAll: ${ApiEndpoints.palettes}');
+      final response = await _apiService.get(ApiEndpoints.palettes);
+      final data = response['data'];
+      final palettes = (data['palettes'] as List)
+          .map((json) => ApiPalette.fromJson(json))
           .toList();
+
+      return palettes.map((apiPalette) => _convertApiPaletteToPalette(apiPalette)).toList();
     } catch (e) {
-      print('Error getting palettes from API: $e');
-      return SampleData.getPalettes();
+      print('Error getting all palettes from API: $e');
+      return [];
     }
+  }
+
+  @override
+  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10}) async {
+    try {
+      print('🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit');
+      print('🎨 Using endpoint: ${ApiEndpoints.userPalettes}?page=$page&limit=$limit');
+      
+      final response = await _apiService.get(
+        '${ApiEndpoints.userPalettes}?page=$page&limit=$limit',
+      );
+      
+      print('🎨 API Response status: ${response['executed']}');
+      print('🎨 API Response message: ${response['message']}');
+      print('🎨 API Response data: ${response['data']}');
+      
+      final data = response['data'];
+      print('🎨 Data from response: ${data.toString()}');
+      
+      final palettes = (data['palettes'] as List)
+          .map((json) => ApiPalette.fromJson(json))
+          .toList();
+
+      print('🎨 Converted ${palettes.length} palettes from API');
+      
+      final convertedPalettes = palettes.map((apiPalette) => _convertApiPaletteToPalette(apiPalette)).toList();
+      print('🎨 Successfully converted palettes to local model');
+      
+      return convertedPalettes;
+    } catch (e) {
+      print('❌ Error getting palettes from API: $e');
+      return [];
+    }
+  }
+
+  Palette _convertApiPaletteToPalette(ApiPalette apiPalette) {
+    final colors = apiPalette.palettesPaints.map((paint) {
+      if (paint.paint != null) {
+        return Color.fromRGBO(
+          paint.paint!.r,
+          paint.paint!.g,
+          paint.paint!.b,
+          1,
+        );
+      }
+      return Colors.grey; // Color por defecto si no hay pintura
+    }).toList();
+
+    return Palette(
+      id: apiPalette.id,
+      name: apiPalette.name,
+      imagePath: apiPalette.image ?? 'assets/images/placeholder.jpeg',
+      colors: colors,
+      createdAt: apiPalette.createdAt,
+      paintSelections: apiPalette.palettesPaints.map((paint) {
+        if (paint.paint != null) {
+          return PaintSelection(
+            colorHex: paint.paint!.hex,
+            paintId: paint.paint!.code,
+            paintName: paint.paint!.name,
+            paintBrand: paint.paint!.set,
+            brandAvatar: paint.paint!.set[0],
+            matchPercentage: 100,
+            paintColorHex: paint.paint!.hex,
+          );
+        }
+        return null;
+      }).whereType<PaintSelection>().toList(),
+    );
   }
 
   @override
   Future<Palette?> getById(String id) async {
     try {
       final response = await _apiService.get(ApiEndpoints.paletteById(id));
-      return Palette.fromJson(response);
+      final apiPalette = ApiPalette.fromJson(response);
+      return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
       print('Error getting palette by ID from API: $e');
-      try {
-        return SampleData.getPalettes().firstWhere(
-          (palette) => palette.id == id,
-        );
-      } catch (_) {
-        return null;
-      }
+      return null;
     }
   }
 
@@ -63,18 +133,11 @@ class ApiPaletteRepository implements PaletteRepository {
         ApiEndpoints.userPalettes,
         item.toJson(),
       );
-      return Palette.fromJson(response);
+      final apiPalette = ApiPalette.fromJson(response);
+      return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
       print('Error creating palette in API: $e');
-      // Fallback para desarrollo - asignar un ID temporal
-      return Palette(
-        id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
-        name: item.name,
-        imagePath: item.imagePath,
-        colors: item.colors,
-        createdAt: DateTime.now(),
-        paintSelections: item.paintSelections,
-      );
+      return item;
     }
   }
 
@@ -85,7 +148,8 @@ class ApiPaletteRepository implements PaletteRepository {
         ApiEndpoints.paletteById(item.id),
         item.toJson(),
       );
-      return Palette.fromJson(response);
+      final apiPalette = ApiPalette.fromJson(response);
+      return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
       print('Error updating palette in API: $e');
       return item;
@@ -95,19 +159,12 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<bool> delete(String id) async {
     try {
-      final response = await _apiService.delete(ApiEndpoints.paletteById(id));
-      return response?['success'] ?? false;
+      await _apiService.delete(ApiEndpoints.paletteById(id));
+      return true;
     } catch (e) {
       print('Error deleting palette from API: $e');
       return false;
     }
-  }
-
-  @override
-  Future<List<Palette>> getUserPalettes() async {
-    // En esta implementación, getUserPalettes es lo mismo que getAll
-    // porque ya estamos obteniendo las paletas del usuario autenticado
-    return getAll();
   }
 
   @override
@@ -117,11 +174,14 @@ class ApiPaletteRepository implements PaletteRepository {
     String colorHex,
   ) async {
     try {
-      final response = await _apiService.post(
-        ApiEndpoints.addPaintToPalette(paletteId),
-        {'paintId': paintId, 'colorHex': colorHex},
+      await _apiService.post(
+        '${ApiEndpoints.paletteById(paletteId)}/paints',
+        {
+          'paint_id': paintId,
+          'color_hex': colorHex,
+        },
       );
-      return response?['success'] ?? false;
+      return true;
     } catch (e) {
       print('Error adding paint to palette in API: $e');
       return false;
@@ -131,10 +191,10 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<bool> removePaintFromPalette(String paletteId, String paintId) async {
     try {
-      final response = await _apiService.delete(
-        '${ApiEndpoints.addPaintToPalette(paletteId)}/$paintId',
+      await _apiService.delete(
+        '${ApiEndpoints.paletteById(paletteId)}/paints/$paintId',
       );
-      return response?['success'] ?? false;
+      return true;
     } catch (e) {
       print('Error removing paint from palette in API: $e');
       return false;
@@ -218,7 +278,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
   }
 
   @override
-  Future<List<Palette>> getUserPalettes() async {
+  Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10}) async {
     // Para esta implementación de prueba, devolvemos todas las paletas
     return getAll();
   }
