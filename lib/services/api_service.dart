@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/data/api_endpoints.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Service para realizar llamadas a la API
 class ApiService {
@@ -16,21 +17,44 @@ class ApiService {
     'Accept': 'application/json',
   };
 
+  final FirebaseAuth _auth;
+
   /// Constructor del servicio API
-  ApiService({required this.baseUrl, http.Client? client})
-    : _client = client ?? http.Client();
+  ApiService({
+    required this.baseUrl,
+    http.Client? client,
+    FirebaseAuth? auth,
+  }) : _client = client ?? http.Client(), _auth = auth ?? FirebaseAuth.instance;
 
   /// Realiza una petición GET
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
+    print('🌐 ApiService.get() called with endpoint: $endpoint');
     try {
+      final token = await _auth.currentUser?.getIdToken();
+      print('🔑 Firebase token: ${token != null ? 'Present' : 'Missing'}');
+      
+      final url = Uri.parse('$baseUrl$endpoint');
+      print('🔗 Full URL: $url');
+      
+      final requestHeaders = {
+        ..._defaultHeaders,
+        ...?headers,
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      print('📤 Headers: $requestHeaders');
+
       final response = await _client.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers},
+        url,
+        headers: requestHeaders,
       );
+
+      print('📥 Response status code: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
 
       return _handleResponse(response);
     } catch (e) {
-      throw Exception('Failed to perform GET request: $e');
+      print('❌ Error in ApiService.get(): $e');
+      rethrow;
     }
   }
 
@@ -41,9 +65,10 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     try {
+      final token = await _auth.currentUser?.getIdToken();
       final response = await _client.post(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers},
+        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
         body: json.encode(data),
       );
 
@@ -60,9 +85,10 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     try {
+      final token = await _auth.currentUser?.getIdToken();
       final response = await _client.put(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers},
+        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
         body: json.encode(data),
       );
 
@@ -78,9 +104,10 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     try {
+      final token = await _auth.currentUser?.getIdToken();
       final response = await _client.delete(
         Uri.parse('$baseUrl$endpoint'),
-        headers: {..._defaultHeaders, ...?headers},
+        headers: {..._defaultHeaders, ...?headers, if (token != null) 'Authorization': 'Bearer $token'},
       );
 
       return _handleResponse(response);
