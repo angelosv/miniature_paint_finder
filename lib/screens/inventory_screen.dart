@@ -1,14 +1,35 @@
+/// Inventory Screen for managing miniature paints.
+///
+/// This screen provides a complete inventory management system for miniature paints,
+/// including:
+/// - Browsing all paints in the user's inventory
+/// - Filtering and sorting paints by various criteria
+/// - Managing stock levels for each paint
+/// - Adding notes to paints
+/// - Adding new paints to the inventory
+/// - Viewing which palettes use each paint
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:miniature_paint_finder/components/confirmation_dialog.dart';
 import 'package:miniature_paint_finder/components/pagination_controls.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
-import 'package:miniature_paint_finder/components/confirmation_dialog.dart';
 
+/// A screen for managing the user's paint inventory.
+///
+/// Features:
+/// - Modern card-based UI for paint items
+/// - Advanced filtering options (brand, category, stock range)
+/// - Pagination for large inventories
+/// - Stock management
+/// - Paint details and notes
+/// - Integration with the palette system
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
 
@@ -16,21 +37,38 @@ class InventoryScreen extends StatefulWidget {
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
+/// The state for the InventoryScreen widget.
 class _InventoryScreenState extends State<InventoryScreen> {
-  late List<Paint> _paints;
-  late List<PaintInventoryItem> _inventory;
-  late List<PaintInventoryItem> _filteredInventory;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  bool _isLoading = true;
+  // Services
+  final InventoryService _inventoryService = InventoryService();
 
-  // Paginación
+  // State management
+  bool _isLoading = true;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Inventory data
+  late List<PaintInventoryItem> _filteredInventory;
+
+  // Search and filtering
+  final TextEditingController _searchController = TextEditingController();
+  bool _onlyShowInStock = false;
+  String? _selectedBrand;
+  String? _selectedCategory;
+  RangeValues _stockRange = const RangeValues(0, 10);
+  int _maxPossibleStock = 10;
+
+  // Sorting
+  bool _isAscending = true;
+  String _sortColumn = 'name';
+
+  // Pagination
   final List<int> _pageSizeOptions = [15, 25, 50];
   int _currentPageSize = 25;
   int _currentPage = 1;
   late int _totalPages;
   late List<PaintInventoryItem> _paginatedInventory;
 
-  final TextEditingController _searchController = TextEditingController();
+  // Controllers for adding new paints
   final TextEditingController _newPaintNameController = TextEditingController();
   final TextEditingController _newPaintBrandController =
       TextEditingController();
@@ -39,16 +77,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _newPaintCategoryController =
       TextEditingController();
 
-  // Filtros
-  bool _onlyShowInStock = false;
-  bool _isAscending = true;
-  String _sortColumn = 'name';
-  String? _selectedBrand;
-  String? _selectedCategory;
-  RangeValues _stockRange = const RangeValues(0, 10);
-  int _maxPossibleStock = 10;
-
-  // Lista de marcas y categorías únicas para filtros
+  // Lists for filter dropdowns
   late List<String> _uniqueBrands;
   late List<String> _uniqueCategories;
 
@@ -71,48 +100,41 @@ class _InventoryScreenState extends State<InventoryScreen> {
     super.dispose();
   }
 
+  /// Loads the inventory data from the inventory service.
+  ///
+  /// Sets loading state while data is being fetched and updates
+  /// the UI when complete. Also initializes filtering metadata.
   Future<void> _loadInventory() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Load inventory data
+    await _inventoryService.loadInventory();
 
-    _paints = SampleData.getPaints();
-
-    // Crear inventario inicial con stock aleatorio
-    _inventory =
-        _paints.map((paint) {
-          return PaintInventoryItem(
-            paint: paint,
-            stock: (paint.id.hashCode % 5), // Stock aleatorio entre 0 y 4
-            notes: '',
-          );
-        }).toList();
-
-    // Extraer marcas y categorías únicas para filtros
-    _uniqueBrands = _extractUniqueBrands();
-    _uniqueCategories = _extractUniqueCategories();
-
-    // Determinar el stock máximo para el filtro de rango
-    _maxPossibleStock = _inventory.fold(
-      0,
-      (max, item) => item.stock > max ? item.stock : max,
-    );
-    _stockRange = RangeValues(0, _maxPossibleStock.toDouble());
-
-    _filteredInventory = List.from(_inventory);
-    _updatePaginatedInventory();
-
+    // Get inventory and setup filtering metadata
     setState(() {
+      _filteredInventory = List.from(_inventoryService.inventory);
+
+      // Extract unique brands and categories for filters
+      _uniqueBrands = _inventoryService.getUniqueBrands();
+      _uniqueCategories = _inventoryService.getUniqueCategories();
+
+      // Get max stock level for range filter
+      _maxPossibleStock = _inventoryService.getMaxStockLevel();
+      _stockRange = RangeValues(0, _maxPossibleStock.toDouble());
+
+      // Update pagination
+      _updatePaginatedInventory();
+
+      // Complete loading
       _isLoading = false;
     });
   }
 
   void _updatePaginatedInventory() {
     _totalPages = (_filteredInventory.length / _currentPageSize).ceil();
-    if (_totalPages == 0) _totalPages = 1; // Siempre al menos 1 página
+    if (_totalPages == 0) _totalPages = 1; // Always have at least 1 page
 
     final startIndex = (_currentPage - 1) * _currentPageSize;
     final endIndex = _currentPage * _currentPageSize;
@@ -129,6 +151,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
+  /// Changes the active page in pagination.
+  ///
+  /// [page] must be within valid range (1 to _totalPages).
+  /// Updates the UI to display items for the new page.
   void _goToPage(int page) {
     if (page < 1 || page > _totalPages) return;
     setState(() {
@@ -137,56 +163,47 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Changes the number of items displayed per page.
+  ///
+  /// Resets to the first page when changing page size.
   void _changePageSize(int size) {
     setState(() {
       _currentPageSize = size;
-      _currentPage = 1; // Volver a la primera página
+      _currentPage = 1; // Reset to first page
       _updatePaginatedInventory();
     });
   }
 
+  /// Filters the inventory based on current filter settings and search text.
+  ///
+  /// Applies all active filters:
+  /// - Text search
+  /// - Brand filter
+  /// - Category filter
+  /// - Stock range filter
+  /// - In-stock only filter
+  ///
+  /// Then sorts the results and updates pagination.
   void _filterInventory() {
     final query = _searchController.text.toLowerCase();
 
     setState(() {
-      _filteredInventory =
-          _inventory.where((item) {
-            final paint = item.paint;
-
-            // Filtro de texto
-            final nameMatches = paint.name.toLowerCase().contains(query);
-            final brandMatches = paint.brand.toLowerCase().contains(query);
-            final categoryMatches = paint.category.toLowerCase().contains(
-              query,
-            );
-            final textMatch = (nameMatches || brandMatches || categoryMatches);
-
-            // Filtro de stock
-            final stockMatches = !_onlyShowInStock || item.stock > 0;
-            final stockRangeMatches =
-                item.stock >= _stockRange.start.toInt() &&
-                item.stock <= _stockRange.end.toInt();
-
-            // Filtro de marca y categoría
-            final brandFilterMatches =
-                _selectedBrand == null || paint.brand == _selectedBrand;
-            final categoryFilterMatches =
-                _selectedCategory == null ||
-                paint.category == _selectedCategory;
-
-            return textMatch &&
-                stockMatches &&
-                stockRangeMatches &&
-                brandFilterMatches &&
-                categoryFilterMatches;
-          }).toList();
+      _filteredInventory = _inventoryService.filterInventory(
+        searchQuery: query.isEmpty ? null : query,
+        onlyInStock: _onlyShowInStock ? true : null,
+        brand: _selectedBrand,
+        category: _selectedCategory,
+        minStock: _stockRange.start.toInt(),
+        maxStock: _stockRange.end.toInt(),
+      );
 
       _sortInventory();
-      _currentPage = 1; // Volver a la primera página al filtrar
+      _currentPage = 1; // Reset to first page when filtering
       _updatePaginatedInventory();
     });
   }
 
+  /// Toggles the "only show in-stock items" filter.
   void _toggleStockFilter(bool value) {
     setState(() {
       _onlyShowInStock = value;
@@ -194,6 +211,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Updates the stock range filter.
   void _updateStockRange(RangeValues values) {
     setState(() {
       _stockRange = values;
@@ -201,6 +219,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Updates the brand filter.
   void _updateBrandFilter(String? brand) {
     setState(() {
       _selectedBrand = brand;
@@ -208,6 +227,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Updates the category filter.
   void _updateCategoryFilter(String? category) {
     setState(() {
       _selectedCategory = category;
@@ -215,6 +235,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Resets all filters to their default values.
   void _resetFilters() {
     setState(() {
       _onlyShowInStock = false;
@@ -226,32 +247,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Sorts the filtered inventory by the specified column.
+  ///
+  /// If the same column is selected again, reverses the sort direction.
   void _sortInventory() {
-    _filteredInventory.sort((a, b) {
-      int result;
-      switch (_sortColumn) {
-        case 'name':
-          result = a.paint.name.compareTo(b.paint.name);
-          break;
-        case 'brand':
-          result = a.paint.brand.compareTo(b.paint.brand);
-          break;
-        case 'category':
-          result = a.paint.category.compareTo(b.paint.category);
-          break;
-        case 'stock':
-          result = a.stock.compareTo(b.stock);
-          break;
-        default:
-          result = a.paint.name.compareTo(b.paint.name);
-      }
-
-      return _isAscending ? result : -result;
-    });
+    _filteredInventory = _inventoryService.sortInventory(
+      _filteredInventory,
+      _sortColumn,
+      _isAscending,
+    );
 
     _updatePaginatedInventory();
   }
 
+  /// Changes the column used for sorting.
+  ///
+  /// If the same column is selected again, reverses the sort direction.
   void _changeSortColumn(String column) {
     setState(() {
       if (_sortColumn == column) {
@@ -264,47 +275,64 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  /// Updates the stock level for a paint inventory item.
+  ///
+  /// Updates both the UI state and the inventory service data.
+  /// May trigger filtering if the new stock level doesn't match current filters.
   void _updatePaintStock(PaintInventoryItem item, int newStock) {
-    setState(() {
-      // Actualizar en ambas listas (filtrada y completa)
-      final index = _inventory.indexOf(item);
-      if (index != -1) {
-        _inventory[index] = item.copyWith(stock: newStock);
-      }
+    // Prevent negative stock
+    if (newStock < 0) return;
 
-      final filteredIndex = _filteredInventory.indexOf(item);
-      if (filteredIndex != -1) {
-        _filteredInventory[filteredIndex] = item.copyWith(stock: newStock);
-      }
+    // Update stock through service
+    bool success = _inventoryService.updateStock(item.paint.id, newStock);
 
-      // Si hay filtro de stock, puede que necesitemos actualizar la lista filtrada
-      if (_onlyShowInStock ||
-          newStock < _stockRange.start ||
-          newStock > _stockRange.end) {
-        _filterInventory();
-      } else {
-        _sortInventory();
-      }
-    });
+    if (success) {
+      setState(() {
+        // Update local item reference for the UI
+        final index = _filteredInventory.indexOf(item);
+        if (index != -1) {
+          _filteredInventory[index] = item.copyWith(stock: newStock);
+        }
+
+        // If there's a stock filter, we might need to update the filtered list
+        if (_onlyShowInStock ||
+            newStock < _stockRange.start.toInt() ||
+            newStock > _stockRange.end.toInt()) {
+          _filterInventory();
+        } else {
+          _sortInventory();
+        }
+      });
+    }
   }
 
+  /// Updates the notes for a paint inventory item.
+  ///
+  /// Updates both the UI state and the inventory service data.
   void _updatePaintNotes(PaintInventoryItem item, String notes) {
-    setState(() {
-      // Actualizar en ambas listas
-      final index = _inventory.indexOf(item);
-      if (index != -1) {
-        _inventory[index] = item.copyWith(notes: notes);
-      }
+    // Update notes through service
+    bool success = _inventoryService.updateNotes(item.paint.id, notes);
 
-      final filteredIndex = _filteredInventory.indexOf(item);
-      if (filteredIndex != -1) {
-        _filteredInventory[filteredIndex] = item.copyWith(notes: notes);
-      }
-      _sortInventory();
-    });
+    if (success) {
+      setState(() {
+        // Update local item reference for the UI
+        final index = _filteredInventory.indexOf(item);
+        if (index != -1) {
+          _filteredInventory[index] = item.copyWith(notes: notes);
+        }
+        _sortInventory();
+      });
+    }
   }
 
-  // Mostrar detalles del item y opciones para editar
+  /// Shows a modal bottom sheet with paint details and management options.
+  ///
+  /// The modal allows:
+  /// - Viewing paint details
+  /// - Managing stock level
+  /// - Adding/editing notes
+  /// - Viewing palette usage
+  /// - Removing the paint from inventory
   void _showInventoryItemOptions(PaintInventoryItem item) {
     showModalBottomSheet(
       context: context,
@@ -324,41 +352,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // Get palettes using a specific paint
+  /// Gets a list of palette names using a specific paint.
+  ///
+  /// Uses the inventory service to retrieve palettes associated with the paint.
   List<String> _getPalettesUsingPaint(String paintId) {
-    // In a real app, this would fetch data from a repository or service
-    // For demo purposes, we'll return sample data based on the paintId
-    final List<String> palettes = [];
-
-    // Generate some sample palette names based on the paintId hash
-    final hashCode = paintId.hashCode;
-
-    if (hashCode % 3 == 0) {
-      palettes.add('Space Marines');
-    }
-
-    if (hashCode % 5 == 0) {
-      palettes.add('Imperial Guard');
-    }
-
-    if (hashCode % 7 == 0) {
-      palettes.add('Chaos Warriors');
-    }
-
-    if (hashCode % 11 == 0) {
-      palettes.add('Necrons');
-    }
-
-    if (hashCode % 13 == 0) {
-      palettes.add('Eldar');
-    }
-
-    // Ensure some paints have no palettes
-    if (hashCode % 17 == 0) {
-      palettes.clear();
-    }
-
-    return palettes;
+    return _inventoryService.getPalettesUsingPaint(paintId);
   }
 
   Widget _buildInventoryItemOptionsModal(PaintInventoryItem item) {
@@ -834,9 +832,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (confirmed == true) {
         // Remove from inventory
         setState(() {
-          final index = _inventory.indexOf(item);
+          final index = _filteredInventory.indexOf(item);
           if (index != -1) {
-            _inventory.removeAt(index);
+            _filteredInventory.removeAt(index);
           }
           _filterInventory();
         });
@@ -859,7 +857,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               textColor: isDarkMode ? AppTheme.marineOrange : Colors.white,
               onPressed: () {
                 setState(() {
-                  _inventory.add(item);
+                  _filteredInventory.add(item);
                   _filterInventory();
                 });
               },
@@ -1327,9 +1325,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       },
       onDismissed: (direction) {
         setState(() {
-          final index = _inventory.indexOf(item);
+          final index = _filteredInventory.indexOf(item);
           if (index != -1) {
-            _inventory.removeAt(index);
+            _filteredInventory.removeAt(index);
           }
           _filterInventory();
         });
@@ -1347,7 +1345,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               textColor: isDarkMode ? AppTheme.marineOrange : Colors.white,
               onPressed: () {
                 setState(() {
-                  _inventory.add(item);
+                  _filteredInventory.add(item);
                   _filterInventory();
                 });
               },
@@ -2023,7 +2021,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               );
 
                               setState(() {
-                                _inventory.add(newItem);
+                                _filteredInventory.add(newItem);
 
                                 // Actualizar listas de marcas y categorías únicas
                                 if (!_uniqueBrands.contains(brand)) {
@@ -2105,7 +2103,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   // Método para extraer marcas únicas
   List<String> _extractUniqueBrands() {
-    final brands = _inventory.map((item) => item.paint.brand).toSet().toList();
+    final brands =
+        _filteredInventory.map((item) => item.paint.brand).toSet().toList();
     brands.sort();
     return brands;
   }
@@ -2113,28 +2112,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   // Método para extraer categorías únicas
   List<String> _extractUniqueCategories() {
     final categories =
-        _inventory.map((item) => item.paint.category).toSet().toList();
+        _filteredInventory.map((item) => item.paint.category).toSet().toList();
     categories.sort();
     return categories;
-  }
-}
-
-class PaintInventoryItem {
-  final Paint paint;
-  final int stock;
-  final String notes;
-
-  PaintInventoryItem({
-    required this.paint,
-    required this.stock,
-    required this.notes,
-  });
-
-  PaintInventoryItem copyWith({Paint? paint, int? stock, String? notes}) {
-    return PaintInventoryItem(
-      paint: paint ?? this.paint,
-      stock: stock ?? this.stock,
-      notes: notes ?? this.notes,
-    );
   }
 }
