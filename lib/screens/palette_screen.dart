@@ -526,6 +526,44 @@ class _PaletteScreenState extends State<PaletteScreen> {
       selectedIndex: 1, // Palette tab
       body: _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'palettes'),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreatePaletteModal(context),
+        backgroundColor: Theme.of(context).primaryColor,
+        label: const Row(
+          children: [
+            Icon(Icons.add),
+            SizedBox(width: 8),
+            Text('Create Palette'),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  void _showCreatePaletteModal(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.9,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder:
+                (_, controller) => Container(
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF101823) : Colors.white,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: CreatePaletteSheet(scrollController: controller),
+                ),
+          ),
     );
   }
 

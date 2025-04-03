@@ -18,6 +18,8 @@ class AppScaffold extends StatefulWidget {
   final GlobalKey<ScaffoldState>? scaffoldKey;
   final Widget? drawer;
   final bool Function(int)? onNavItemSelected;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   const AppScaffold({
     Key? key,
@@ -30,6 +32,8 @@ class AppScaffold extends StatefulWidget {
     this.scaffoldKey,
     this.drawer,
     this.onNavItemSelected,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
   }) : super(key: key);
 
   @override
@@ -109,6 +113,8 @@ class _AppScaffoldState extends State<AppScaffold> {
         currentIndex: _currentIndex,
         onItemSelected: _onItemSelected,
       ),
+      floatingActionButton: widget.floatingActionButton,
+      floatingActionButtonLocation: widget.floatingActionButtonLocation,
     );
   }
 
