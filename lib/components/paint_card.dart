@@ -49,7 +49,7 @@ class PaintCard extends StatelessWidget {
                     height: AppDimensions.iconXXL,
                     decoration: BoxDecoration(
                       color: Color(
-                        int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                        int.parse(paint.hex.substring(1, 7), radix: 16) +
                             0xFF000000,
                       ),
                       borderRadius: BorderRadius.circular(
@@ -379,7 +379,7 @@ class PaintCard extends StatelessWidget {
       builder: (context) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;
         final paintColor = Color(
-          int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+          int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
         );
 
         // Controller para notas

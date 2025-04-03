@@ -132,13 +132,7 @@ class PaletteModal extends StatelessWidget {
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 3.0,
-                        color: Color.fromARGB(255, 0, 0, 0),
-                      ),
-                    ],
+                    shadows: [],
                   ),
                 ),
               ),

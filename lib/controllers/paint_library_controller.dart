@@ -158,9 +158,7 @@ class PaintLibraryController extends ChangeNotifier {
           // Filtrar por color (si hay seleccionado)
           bool colorMatches = true;
           if (_selectedColor != null) {
-            final paintColor = Color(
-              int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
-            );
+            final paintColor = _getColorFromHex(paint);
 
             // Comprobar similitud de color con tolerancia
             const tolerance = 50;
@@ -220,5 +218,9 @@ class PaintLibraryController extends ChangeNotifier {
     // Aquí se podrían guardar las preferencias como la wishlist
     // _saveWishlist();
     super.dispose();
+  }
+
+  Color _getColorFromHex(Paint paint) {
+    return Color(int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000);
   }
 }

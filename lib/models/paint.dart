@@ -92,4 +92,38 @@ class Paint {
   Color toColor() {
     return Color.fromRGBO(r, g, b, 1);
   }
+
+  /// Helper method to create a Paint object from hex color
+  static Paint fromHex({
+    required String id,
+    required String name,
+    required String brand,
+    required String hex,
+    required String category,
+    required String set,
+    required String code,
+    bool isMetallic = false,
+    bool isTransparent = false,
+  }) {
+    // Convert hex to RGB
+    final hexColor = hex.startsWith('#') ? hex.substring(1) : hex;
+    final r = int.parse(hexColor.substring(0, 2), radix: 16);
+    final g = int.parse(hexColor.substring(2, 4), radix: 16);
+    final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+    return Paint(
+      id: id,
+      name: name,
+      brand: brand,
+      hex: hex,
+      category: category,
+      set: set,
+      code: code,
+      r: r,
+      g: g,
+      b: b,
+      isMetallic: isMetallic,
+      isTransparent: isTransparent,
+    );
+  }
 }

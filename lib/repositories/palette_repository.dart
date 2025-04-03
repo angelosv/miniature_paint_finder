@@ -12,11 +12,7 @@ abstract class PaletteRepository extends BaseRepository<Palette> {
   Future<List<Palette>> getUserPalettes({int page = 1, int limit = 10});
 
   /// Añade una pintura a una paleta existente
-  Future<bool> addPaintToPalette(
-    String paletteId,
-    String paintId,
-    String colorHex,
-  );
+  Future<bool> addPaintToPalette(String paletteId, String paintId, String hex);
 
   /// Elimina una pintura de una paleta existente
   Future<bool> removePaintFromPalette(String paletteId, String paintId);
@@ -129,12 +125,12 @@ class ApiPaletteRepository implements PaletteRepository {
               .map((paint) {
                 if (paint.paint != null) {
                   return PaintSelection(
-                    colorHex: paint.paint!.hex,
                     paintId: paint.paint!.code,
                     paintName: paint.paint!.name,
                     paintBrand: paint.paint!.set,
                     brandAvatar: paint.paint!.set[0],
                     matchPercentage: 100,
+                    colorHex: paint.paint!.hex,
                     paintColorHex: paint.paint!.hex,
                   );
                 }
@@ -213,12 +209,12 @@ class ApiPaletteRepository implements PaletteRepository {
   Future<bool> addPaintToPalette(
     String paletteId,
     String paintId,
-    String colorHex,
+    String hex,
   ) async {
     try {
       await _apiService.post('${ApiEndpoints.paletteById(paletteId)}/paints', {
         'paint_id': paintId,
-        'color_hex': colorHex,
+        'color_hex': hex,
       });
       return true;
     } catch (e) {
@@ -326,7 +322,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
   Future<bool> addPaintToPalette(
     String paletteId,
     String paintId,
-    String colorHex,
+    String hex,
   ) async {
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 200));

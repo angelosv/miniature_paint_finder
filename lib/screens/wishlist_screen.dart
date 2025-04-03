@@ -291,7 +291,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         height: 52,
                         decoration: BoxDecoration(
                           color: Color(
-                            int.parse(paint.colorHex.substring(1), radix: 16) +
+                            int.parse(paint.hex.substring(1), radix: 16) +
                                 0xFF000000,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -425,7 +425,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                paint.colorHex,
+                                paint.hex,
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.grey[600],
@@ -696,7 +696,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         height: 40,
                         decoration: BoxDecoration(
                           color: Color(
-                            int.parse(paint.colorHex.substring(1), radix: 16) +
+                            int.parse(paint.hex.substring(1), radix: 16) +
                                 0xFF000000,
                           ),
                           borderRadius: BorderRadius.circular(8),
@@ -761,7 +761,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                paint.colorHex,
+                                paint.hex,
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.grey[600],

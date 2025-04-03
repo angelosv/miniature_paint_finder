@@ -34,7 +34,7 @@ class PaintOptionsModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final paintColor = Color(
-      int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
     return Container(
@@ -131,7 +131,7 @@ class PaintOptionsModal extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                paint.colorHex,
+                                paint.hex,
                                 style: const TextStyle(
                                   fontFamily: 'monospace',
                                   fontSize: 14,

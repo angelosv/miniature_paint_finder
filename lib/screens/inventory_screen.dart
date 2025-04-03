@@ -227,7 +227,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildInventoryItemOptionsModal(PaintInventoryItem item) {
     final paint = item.paint;
     final paintColor = Color(
-      int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
@@ -656,7 +656,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         final paint = item.paint;
 
                         final paintColor = Color(
-                          int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                          int.parse(paint.hex.substring(1, 7), radix: 16) +
                               0xFF000000,
                         );
 
@@ -855,12 +855,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     colorHex.isNotEmpty) {
                   // Crear nuevo paint y añadir al inventario
                   final id = 'custom-${DateTime.now().millisecondsSinceEpoch}';
-                  final paint = Paint(
+                  final paint = Paint.fromHex(
                     id: id,
                     name: name,
                     brand: brand,
-                    colorHex: '#$colorHex',
+                    hex: '#$colorHex',
                     category: category,
+                    set: 'Custom',
+                    code: id,
                   );
 
                   final newItem = PaintInventoryItem(

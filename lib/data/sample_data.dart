@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/models/paint.dart' show Paint;
 import 'package:miniature_paint_finder/models/palette.dart';
 
 /// This class provides sample data for the miniature paint finder application
@@ -21,304 +21,368 @@ class SampleData {
       // ==================== CITADEL PAINTS ====================
 
       // Base paints - Solid, high-coverage foundation colors
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-001',
         name: 'Abaddon Black',
         brand: 'Citadel',
-        colorHex: '#231F20',
+        hex: '#231F20',
+        set: 'Base',
+        code: 'AB',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-002',
         name: 'Mephiston Red',
         brand: 'Citadel',
-        colorHex: '#9A1115',
+        hex: '#9A1115',
+        set: 'Base',
+        code: 'MR',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-003',
         name: 'Macragge Blue',
         brand: 'Citadel',
-        colorHex: '#0D407F',
+        hex: '#0D407F',
+        set: 'Base',
+        code: 'MB',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-004',
         name: 'Caliban Green',
         brand: 'Citadel',
-        colorHex: '#00401A',
+        hex: '#00401A',
+        set: 'Base',
+        code: 'CG',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-005',
         name: 'Retributor Armour',
         brand: 'Citadel',
-        colorHex: '#85714D',
+        hex: '#85714D',
+        set: 'Base',
+        code: 'RA',
         category: 'Base',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-006',
         name: 'Bugmans Glow',
         brand: 'Citadel',
-        colorHex: '#834F46',
+        hex: '#834F46',
+        set: 'Base',
+        code: 'BG',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-007',
         name: 'Averland Sunset',
         brand: 'Citadel',
-        colorHex: '#FBB81C',
+        hex: '#FBB81C',
+        set: 'Base',
+        code: 'AS',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-base-008',
         name: 'Zandri Dust',
         brand: 'Citadel',
-        colorHex: '#B7975F',
+        hex: '#B7975F',
+        set: 'Base',
+        code: 'ZD',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Layer paints - Thinner paints for highlights and details
-      Paint(
+      Paint.fromHex(
         id: 'cit-layer-001',
         name: 'Screaming Skull',
         brand: 'Citadel',
-        colorHex: '#D6D5C3',
+        hex: '#D6D5C3',
+        set: 'Layer',
+        code: 'SS',
         category: 'Layer',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-layer-002',
         name: 'Evil Sunz Scarlet',
         brand: 'Citadel',
-        colorHex: '#BE0B0C',
+        hex: '#BE0B0C',
+        set: 'Layer',
+        code: 'ESS',
         category: 'Layer',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-layer-003',
         name: 'Wild Rider Red',
         brand: 'Citadel',
-        colorHex: '#FF4D28',
+        hex: '#FF4D28',
+        set: 'Layer',
+        code: 'WRR',
         category: 'Layer',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-layer-004',
         name: 'Lothern Blue',
         brand: 'Citadel',
-        colorHex: '#31A2F2',
+        hex: '#31A2F2',
+        set: 'Layer',
+        code: 'LB',
         category: 'Layer',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-layer-005',
         name: 'Runefang Steel',
         brand: 'Citadel',
-        colorHex: '#C0C5C9',
+        hex: '#C0C5C9',
+        set: 'Layer',
+        code: 'RS',
         category: 'Layer',
         isMetallic: true,
         isTransparent: false,
       ),
 
       // Shade paints - Transparent washes for shading and depth
-      Paint(
+      Paint.fromHex(
         id: 'cit-shade-001',
         name: 'Nuln Oil',
         brand: 'Citadel',
-        colorHex: '#1A1A1A',
+        hex: '#1A1A1A',
+        set: 'Shade',
+        code: 'NO',
         category: 'Shade',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-shade-002',
         name: 'Agrax Earthshade',
         brand: 'Citadel',
-        colorHex: '#63452A',
+        hex: '#63452A',
+        set: 'Shade',
+        code: 'AE',
         category: 'Shade',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-shade-003',
         name: 'Reikland Fleshshade',
         brand: 'Citadel',
-        colorHex: '#914B28',
+        hex: '#914B28',
+        set: 'Shade',
+        code: 'RF',
         category: 'Shade',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-shade-004',
         name: 'Druchii Violet',
         brand: 'Citadel',
-        colorHex: '#69385C',
+        hex: '#69385C',
+        set: 'Shade',
+        code: 'DV',
         category: 'Shade',
         isMetallic: false,
         isTransparent: true,
       ),
 
       // Technical paints - Special effects
-      Paint(
+      Paint.fromHex(
         id: 'cit-tech-001',
         name: 'Blood for the Blood God',
         brand: 'Citadel',
-        colorHex: '#9A0F0F',
+        hex: '#9A0F0F',
+        set: 'Technical',
+        code: 'BFTBG',
         category: 'Technical',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-tech-002',
         name: 'Nihilakh Oxide',
         brand: 'Citadel',
-        colorHex: '#7ABAD4',
+        hex: '#7ABAD4',
+        set: 'Technical',
+        code: 'NO',
         category: 'Technical',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'cit-tech-003',
         name: 'Typhus Corrosion',
         brand: 'Citadel',
-        colorHex: '#3B342E',
+        hex: '#3B342E',
+        set: 'Technical',
+        code: 'TC',
         category: 'Technical',
         isMetallic: false,
-        isTransparent: false,
+        isTransparent: true,
       ),
 
       // ==================== VALLEJO PAINTS ====================
 
       // Model Color range - Matte acrylic paints
-      Paint(
+      Paint.fromHex(
         id: 'val-model-001',
         name: 'Hull Red',
         brand: 'Vallejo',
-        colorHex: '#800000',
+        hex: '#800000',
+        set: 'Model Color',
+        code: '70.985',
         category: 'Model Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-model-002',
         name: 'German Grey',
         brand: 'Vallejo',
-        colorHex: '#2A3439',
+        hex: '#2A3439',
+        set: 'Model Color',
+        code: '70.995',
         category: 'Model Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-model-003',
         name: 'Silver',
         brand: 'Vallejo',
-        colorHex: '#C0C0C0',
+        hex: '#C0C0C0',
+        set: 'Model Color',
+        code: '70.997',
         category: 'Model Color',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-model-004',
         name: 'Flat Blue',
         brand: 'Vallejo',
-        colorHex: '#2F5C8E',
+        hex: '#2F5C8E',
+        set: 'Model Color',
+        code: '70.962',
         category: 'Model Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-model-005',
         name: 'Flat Green',
         brand: 'Vallejo',
-        colorHex: '#315A45',
+        hex: '#315A45',
+        set: 'Model Color',
+        code: '70.968',
         category: 'Model Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-model-006',
         name: 'Yellow Ochre',
         brand: 'Vallejo',
-        colorHex: '#C88A3D',
+        hex: '#C88A3D',
+        set: 'Model Color',
+        code: '70.913',
         category: 'Model Color',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Game Color range - Brighter colors for fantasy miniatures
-      Paint(
+      Paint.fromHex(
         id: 'val-game-001',
         name: 'Bloody Red',
         brand: 'Vallejo',
-        colorHex: '#B01E23',
+        hex: '#B01E23',
+        set: 'Game Color',
+        code: '72.010',
         category: 'Game Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-game-002',
         name: 'Magic Blue',
         brand: 'Vallejo',
-        colorHex: '#2561A4',
+        hex: '#2561A4',
+        set: 'Game Color',
+        code: '72.021',
         category: 'Game Color',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-game-003',
         name: 'Scorpy Green',
         brand: 'Vallejo',
-        colorHex: '#5F823A',
+        hex: '#5F823A',
+        set: 'Game Color',
+        code: '72.032',
         category: 'Game Color',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Metal Color range - High-quality metallics
-      Paint(
+      Paint.fromHex(
         id: 'val-metal-001',
         name: 'Aluminum',
         brand: 'Vallejo',
-        colorHex: '#D5D6D8',
+        hex: '#D5D6D8',
+        set: 'Metal Color',
+        code: '77.701',
         category: 'Metal Color',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-metal-002',
         name: 'Gold',
         brand: 'Vallejo',
-        colorHex: '#D4AF37',
+        hex: '#D4AF37',
+        set: 'Metal Color',
+        code: '77.702',
         category: 'Metal Color',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'val-metal-003',
         name: 'Copper',
         brand: 'Vallejo',
-        colorHex: '#B87333',
+        hex: '#B87333',
+        set: 'Metal Color',
+        code: '77.703',
         category: 'Metal Color',
         isMetallic: true,
         isTransparent: false,
@@ -327,96 +391,116 @@ class SampleData {
       // ==================== ARMY PAINTER ====================
 
       // Warpaints range
-      Paint(
+      Paint.fromHex(
         id: 'army-warpaints-001',
         name: 'Matt Black',
         brand: 'Army Painter',
-        colorHex: '#0F0F0F',
+        hex: '#0F0F0F',
+        set: 'Warpaints',
+        code: 'WP1101',
         category: 'Warpaints',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-warpaints-002',
         name: 'Dragon Red',
         brand: 'Army Painter',
-        colorHex: '#A32431',
+        hex: '#A32431',
+        set: 'Warpaints',
+        code: 'WP1102',
         category: 'Warpaints',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-warpaints-003',
         name: 'Wolf Grey',
         brand: 'Army Painter',
-        colorHex: '#739CC5',
+        hex: '#739CC5',
+        set: 'Warpaints',
+        code: 'WP1103',
         category: 'Warpaints',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-warpaints-004',
         name: 'Goblin Green',
         brand: 'Army Painter',
-        colorHex: '#3F6C39',
+        hex: '#3F6C39',
+        set: 'Warpaints',
+        code: 'WP1104',
         category: 'Warpaints',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-warpaints-005',
         name: 'Skeleton Bone',
         brand: 'Army Painter',
-        colorHex: '#D5C586',
+        hex: '#D5C586',
+        set: 'Warpaints',
+        code: 'WP1105',
         category: 'Warpaints',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Washes range
-      Paint(
+      Paint.fromHex(
         id: 'army-wash-001',
         name: 'Dark Tone',
         brand: 'Army Painter',
-        colorHex: '#231F20',
+        hex: '#231F20',
+        set: 'Wash',
+        code: 'WP1136',
         category: 'Wash',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-wash-002',
         name: 'Soft Tone',
         brand: 'Army Painter',
-        colorHex: '#A98053',
+        hex: '#A98053',
+        set: 'Wash',
+        code: 'WP1137',
         category: 'Wash',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-wash-003',
         name: 'Green Tone',
         brand: 'Army Painter',
-        colorHex: '#31574A',
+        hex: '#31574A',
+        set: 'Wash',
+        code: 'WP1138',
         category: 'Wash',
         isMetallic: false,
         isTransparent: true,
       ),
 
       // Metallics range
-      Paint(
+      Paint.fromHex(
         id: 'army-metal-001',
         name: 'Shining Silver',
         brand: 'Army Painter',
-        colorHex: '#C9CACB',
+        hex: '#C9CACB',
+        set: 'Metallics',
+        code: 'WP1201',
         category: 'Metallics',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'army-metal-002',
         name: 'Weapon Bronze',
         brand: 'Army Painter',
-        colorHex: '#CD7F32',
+        hex: '#CD7F32',
+        set: 'Metallics',
+        code: 'WP1202',
         category: 'Metallics',
         isMetallic: true,
         isTransparent: false,
@@ -425,58 +509,70 @@ class SampleData {
       // ==================== SCALE75 ====================
 
       // Fantasy & Games range
-      Paint(
+      Paint.fromHex(
         id: 'scale75-fg-001',
         name: 'Inktense Black',
         brand: 'Scale75',
-        colorHex: '#000000',
+        hex: '#000000',
+        set: 'Fantasy & Games',
+        code: 'SFG-01',
         category: 'Fantasy & Games',
         isMetallic: false,
         isTransparent: true,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'scale75-fg-002',
         name: 'Blood Red',
         brand: 'Scale75',
-        colorHex: '#B40F15',
+        hex: '#B40F15',
+        set: 'Fantasy & Games',
+        code: 'SFG-02',
         category: 'Fantasy & Games',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'scale75-fg-003',
         name: 'Navy Blue',
         brand: 'Scale75',
-        colorHex: '#0B2B66',
+        hex: '#0B2B66',
+        set: 'Fantasy & Games',
+        code: 'SFG-03',
         category: 'Fantasy & Games',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'scale75-fg-004',
         name: 'Ardennes Green',
         brand: 'Scale75',
-        colorHex: '#2B473B',
+        hex: '#2B473B',
+        set: 'Fantasy & Games',
+        code: 'SFG-04',
         category: 'Fantasy & Games',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Metal n Alchemy range
-      Paint(
+      Paint.fromHex(
         id: 'scale75-metal-001',
         name: 'Thrash Metal',
         brand: 'Scale75',
-        colorHex: '#5F5F5F',
+        hex: '#5F5F5F',
+        set: 'Metal n Alchemy',
+        code: 'SMA-01',
         category: 'Metal n Alchemy',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'scale75-metal-002',
         name: 'Dwarven Gold',
         brand: 'Scale75',
-        colorHex: '#B5902B',
+        hex: '#B5902B',
+        set: 'Metal n Alchemy',
+        code: 'SMA-02',
         category: 'Metal n Alchemy',
         isMetallic: true,
         isTransparent: false,
@@ -485,134 +581,162 @@ class SampleData {
       // ==================== TAMIYA ====================
 
       // Acrylic Paints
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-xf-001',
         name: 'Flat Black',
         brand: 'Tamiya',
-        colorHex: '#1E1E1E',
+        hex: '#1E1E1E',
+        set: 'XF',
+        code: 'XF-1',
         category: 'Acrylic',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-xf-002',
         name: 'Flat White',
         brand: 'Tamiya',
-        colorHex: '#FFFFFF',
+        hex: '#FFFFFF',
+        set: 'XF',
+        code: 'XF-2',
         category: 'Acrylic',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-xf-003',
         name: 'Flat Red',
         brand: 'Tamiya',
-        colorHex: '#B52A32',
+        hex: '#B52A32',
+        set: 'XF',
+        code: 'XF-7',
         category: 'Acrylic',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-xf-004',
         name: 'Flat Blue',
         brand: 'Tamiya',
-        colorHex: '#0F3C7F',
+        hex: '#0F3C7F',
+        set: 'XF',
+        code: 'XF-8',
         category: 'Acrylic',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // Metallic colors
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-x-011',
         name: 'Chrome Silver',
         brand: 'Tamiya',
-        colorHex: '#C8C8CA',
+        hex: '#C8C8CA',
+        set: 'X',
+        code: 'X-11',
         category: 'Metallic',
         isMetallic: true,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'tamiya-x-012',
         name: 'Gold Leaf',
         brand: 'Tamiya',
-        colorHex: '#CEAA62',
+        hex: '#CEAA62',
+        set: 'X',
+        code: 'X-12',
         category: 'Metallic',
         isMetallic: true,
         isTransparent: false,
       ),
 
       // ==================== P3 (PRIVATEER PRESS) ====================
-      Paint(
+      Paint.fromHex(
         id: 'p3-001',
         name: 'Coal Black',
         brand: 'P3',
-        colorHex: '#062226',
+        hex: '#062226',
+        set: 'Formula P3',
+        code: 'P3-001',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'p3-002',
         name: 'Khador Red Base',
         brand: 'P3',
-        colorHex: '#A0250D',
+        hex: '#A0250D',
+        set: 'Formula P3',
+        code: 'P3-002',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'p3-003',
         name: 'Cygnar Blue Base',
         brand: 'P3',
-        colorHex: '#224F98',
+        hex: '#224F98',
+        set: 'Formula P3',
+        code: 'P3-003',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'p3-004',
         name: 'Thornwood Green',
         brand: 'P3',
-        colorHex: '#354A37',
+        hex: '#354A37',
+        set: 'Formula P3',
+        code: 'P3-004',
         category: 'Base',
         isMetallic: false,
         isTransparent: false,
       ),
 
       // ==================== AK INTERACTIVE ====================
-      Paint(
+      Paint.fromHex(
         id: 'ak-001',
         name: 'Dark Rust',
         brand: 'AK Interactive',
-        colorHex: '#6E3A21',
+        hex: '#6E3A21',
+        set: 'AK Interactive',
+        code: 'AK-710',
         category: 'Weathering',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'ak-002',
         name: 'Track Rust',
         brand: 'AK Interactive',
-        colorHex: '#7F4422',
+        hex: '#7F4422',
+        set: 'AK Interactive',
+        code: 'AK-711',
         category: 'Weathering',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'ak-003',
         name: 'Panzer Gray',
         brand: 'AK Interactive',
-        colorHex: '#414C52',
+        hex: '#414C52',
+        set: 'AK Interactive',
+        code: 'AK-712',
         category: 'AFV',
         isMetallic: false,
         isTransparent: false,
       ),
-      Paint(
+      Paint.fromHex(
         id: 'ak-004',
         name: 'Olive Green',
         brand: 'AK Interactive',
-        colorHex: '#44553A',
+        hex: '#44553A',
+        set: 'AK Interactive',
+        code: 'AK-713',
         category: 'AFV',
         isMetallic: false,
         isTransparent: false,
@@ -1294,7 +1418,7 @@ class SampleData {
 
       // Convert hex to Color
       final Color paintColor = Color(
-        int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+        int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
       );
 
       // Convert paint RGB to HSV
@@ -1322,7 +1446,7 @@ class SampleData {
           'name': paint.name,
           'brand': paint.brand,
           'color': paintColor,
-          'colorHex': paint.colorHex,
+          'colorHex': paint.hex,
           'match': matchPercentage,
           'brandAvatar': brandAvatar,
           'colorCode': '${paint.id.split('-').last}', // Just for demo

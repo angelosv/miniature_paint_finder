@@ -174,8 +174,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             bool colorMatches = true;
             if (_selectedColor != null) {
               final paintColor = Color(
-                int.parse(paint.colorHex.substring(1, 7), radix: 16) +
-                    0xFF000000,
+                int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
               );
               // Comprobar si el color es similar (usando una tolerancia)
               const tolerance = 50; // Ajustar según necesidad
@@ -464,7 +463,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       (p) => p.id == _wishlist.elementAt(index),
                     );
                     final paintColor = Color(
-                      int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                      int.parse(paint.hex.substring(1, 7), radix: 16) +
                           0xFF000000,
                     );
 

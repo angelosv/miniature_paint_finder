@@ -167,7 +167,7 @@ class PaletteController extends ChangeNotifier {
   Future<bool> addPaintToPalette(
     String paletteId,
     Paint paint,
-    String colorHex,
+    String hex,
   ) async {
     _isLoading = true;
     _error = null;
@@ -177,7 +177,7 @@ class PaletteController extends ChangeNotifier {
       final success = await _repository.addPaintToPalette(
         paletteId,
         paint.id,
-        colorHex,
+        hex,
       );
 
       if (success) {

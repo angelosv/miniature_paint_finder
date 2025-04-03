@@ -2317,7 +2317,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              paint.colorHex,
+                              paint.hex,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -2355,7 +2355,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                   decoration: BoxDecoration(
                                     color: Color(
                                       int.parse(
-                                            paint.colorHex.substring(1, 7),
+                                            paint.hex.substring(1, 7),
                                             radix: 16,
                                           ) +
                                           0xFF000000,
@@ -2367,7 +2367,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                       Icons.palette,
                                       color: Color(
                                         int.parse(
-                                              paint.colorHex.substring(1, 7),
+                                              paint.hex.substring(1, 7),
                                               radix: 16,
                                             ) +
                                             0xFF000000,

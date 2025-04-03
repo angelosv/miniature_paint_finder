@@ -166,8 +166,8 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final Color paintColor = Color(
-      int.parse(widget.paint.colorHex.substring(1), radix: 16) + 0xFF000000,
+    final paintColor = Color(
+      int.parse(widget.paint.hex.substring(1), radix: 16) + 0xFF000000,
     );
 
     return Container(
@@ -235,10 +235,11 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        widget.paint.colorHex,
+                        widget.paint.hex,
                         style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
                           color: paintColor,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -614,8 +615,32 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
               const SnackBar(content: Text('Create new palette (coming soon)')),
             );
           },
-          icon: const Icon(Icons.add),
-          label: const Text('Create new palette'),
+          icon: Icon(
+            Icons.add,
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.primaryBlue
+                    : Colors.white,
+          ),
+          label: Text(
+            'Create new palette',
+            style: TextStyle(
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.primaryBlue
+                      : Colors.white,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            backgroundColor:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.marineOrange
+                    : AppTheme.primaryBlue,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
 

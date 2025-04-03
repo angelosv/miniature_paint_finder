@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
+import 'package:miniature_paint_finder/components/create_palette_sheet.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/models/paint.dart';

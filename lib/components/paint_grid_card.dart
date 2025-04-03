@@ -53,7 +53,7 @@ class PaintGridCard extends StatelessWidget {
                     height: 12,
                     decoration: BoxDecoration(
                       color: Color(
-                        int.parse(paint.colorHex.substring(1, 7), radix: 16) +
+                        int.parse(paint.hex.substring(1, 7), radix: 16) +
                             0xFF000000,
                       ),
                       shape: BoxShape.circle,
@@ -75,7 +75,7 @@ class PaintGridCard extends StatelessWidget {
 
   void _showPaintOptions(BuildContext context) {
     final paintColor = Color(
-      int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
     showModalBottomSheet(
@@ -179,7 +179,7 @@ class PaintGridCard extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      paint.colorHex,
+                                      paint.hex,
                                       style: const TextStyle(
                                         fontFamily: 'monospace',
                                         fontSize: 14,
@@ -292,7 +292,7 @@ class PaintGridCard extends StatelessWidget {
 
   void _showPaletteSelector(BuildContext context) {
     final paintColor = Color(
-      int.parse(paint.colorHex.substring(1, 7), radix: 16) + 0xFF000000,
+      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
     // Obtenemos las paletas de sample_data

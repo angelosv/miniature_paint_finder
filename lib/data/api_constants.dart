@@ -34,7 +34,8 @@ class ApiEndpoints {
   static String paintsByBrand(String brand) => '/paints/brand/$brand';
 
   /// Construye un endpoint para pinturas por categoría
-  static String paintsByCategory(String category) => '/paints/category/$category';
+  static String paintsByCategory(String category) =>
+      '/paints/category/$category';
 
   /// Construye un endpoint para buscar pinturas
   static String searchPaints(String query) => '/paints/search?q=$query';
@@ -43,14 +44,15 @@ class ApiEndpoints {
   static String paintsByBarcode(String barcode) => '/paints/barcode/$barcode';
 
   /// Construye un endpoint para pinturas por color
-  static String paintsByColor(String colorHex, {double threshold = 0.1}) =>
-      '/paints/color/$colorHex?threshold=$threshold';
+  static String paintsByColor(String hex, {double threshold = 0.1}) =>
+      '/paints/color/$hex?threshold=$threshold';
 
   /// Construye un endpoint para una paleta específica por ID
   static String paletteById(String id) => '/palettes/$id';
 
   /// Construye un endpoint para añadir una pintura a una paleta
-  static String addPaintToPalette(String paletteId) => '/palettes/$paletteId/paints';
+  static String addPaintToPalette(String paletteId) =>
+      '/palettes/$paletteId/paints';
 
   /// Construye un endpoint para una marca específica por ID
   static String brandById(String id) => '/brands/$id';
@@ -59,5 +61,6 @@ class ApiEndpoints {
   static String setById(String id) => '/sets/$id';
 
   /// Construye un endpoint para remover una pintura de una paleta
-  static String removePaintFromPalette(String paletteId, String paintId) => '/palettes/$paletteId/paints/$paintId';
+  static String removePaintFromPalette(String paletteId, String paintId) =>
+      '/palettes/$paletteId/paints/$paintId';
 }

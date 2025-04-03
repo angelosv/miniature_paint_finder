@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
@@ -218,14 +219,14 @@ class PaintService {
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Para demo, devolvemos pinturas con colores similares
-    final paintColor = int.parse(paint.colorHex.substring(1), radix: 16);
+    final paintColor = int.parse(paint.hex.substring(1), radix: 16);
 
     return SampleData.getPaints()
         .where((p) {
           if (p.id == paint.id) return false;
           if (p.brand == paint.brand) return false;
 
-          final pColor = int.parse(p.colorHex.substring(1), radix: 16);
+          final pColor = int.parse(p.hex.substring(1), radix: 16);
           final diff = (paintColor - pColor).abs();
 
           // Aceptamos pinturas con una diferencia de color menor a cierto umbral
@@ -255,5 +256,21 @@ class PaintService {
 
     _userPalettes.add(palette);
     return palette;
+  }
+
+  double _calculateColorDistance(Paint paint1, Paint paint2) {
+    // Convert hex colors to RGB values
+    final paintColor = int.parse(paint1.hex.substring(1), radix: 16);
+    final r1 = (paintColor >> 16) & 0xFF;
+    final g1 = (paintColor >> 8) & 0xFF;
+    final b1 = paintColor & 0xFF;
+
+    final pColor = int.parse(paint2.hex.substring(1), radix: 16);
+    final r2 = (pColor >> 16) & 0xFF;
+    final g2 = (pColor >> 8) & 0xFF;
+    final b2 = pColor & 0xFF;
+
+    // Calculate Euclidean distance
+    return sqrt(pow(r1 - r2, 2) + pow(g1 - g2, 2) + pow(b1 - b2, 2));
   }
 }

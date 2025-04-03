@@ -838,7 +838,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // We'll keep this for backward compatibility but it won't be used
     final paint = _foundPaint!;
     final Color paintColor = Color(
-      int.parse(paint.colorHex.substring(1), radix: 16) + 0xFF000000,
+      int.parse(paint.hex.substring(1), radix: 16) + 0xFF000000,
     );
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -930,7 +930,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   _buildDetailRow(
                     icon: Icons.colorize,
                     label: 'Color Code',
-                    value: paint.colorHex,
+                    value: paint.hex,
                   ),
                   const SizedBox(height: 16),
                   _buildDetailRow(

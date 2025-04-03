@@ -161,7 +161,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   @override
   Widget build(BuildContext context) {
     final Color paintColor = Color(
-      int.parse(widget.paint.colorHex.substring(1), radix: 16) + 0xFF000000,
+      int.parse(widget.paint.hex.substring(1), radix: 16) + 0xFF000000,
     );
 
     return Container(
@@ -304,7 +304,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              widget.paint.colorHex,
+                              widget.paint.hex,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -570,9 +570,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       children: [
         Text(
           widget.isInInventory ? 'Update in inventory' : 'Add to inventory',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            shadows: [],
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -670,9 +671,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       children: [
         Text(
           'Add to palette',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            shadows: [],
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -726,8 +728,32 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               const SnackBar(content: Text('Create new palette (pending)')),
             );
           },
-          icon: const Icon(Icons.add),
-          label: const Text('Create new palette'),
+          icon: Icon(
+            Icons.add,
+            color:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.primaryBlue
+                    : Colors.white,
+          ),
+          label: Text(
+            'Create new palette',
+            style: TextStyle(
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.primaryBlue
+                      : Colors.white,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            backgroundColor:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.marineOrange
+                    : AppTheme.primaryBlue,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -767,9 +793,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       children: [
         Text(
           'Add to wishlist',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            shadows: [],
+          ),
         ),
         const SizedBox(height: 16),
 
