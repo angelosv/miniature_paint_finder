@@ -14,10 +14,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -47,7 +44,16 @@ class DefaultFirebaseOptions {
     messagingSenderId: '377740311156',
     projectId: 'paints-78769',
     storageBucket: 'paints-78769.firebasestorage.app',
-    iosClientId: '377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com',
+    iosClientId:
+        '377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com',
     iosBundleId: 'com.example.miniaturePaintFinder',
   );
-} 
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyDO9f1l9fuv5kSzwmvfZkn2LJcfqRWD35U',
+    appId: '1:377740311156:android:e2049f0d3e0389ee09af21',
+    messagingSenderId: '377740311156',
+    projectId: 'paints-78769',
+    storageBucket: 'paints-78769.firebasestorage.app',
+  );
+}
