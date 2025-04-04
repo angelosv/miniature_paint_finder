@@ -154,22 +154,36 @@ class PaintService {
 
     final url = Uri.parse('$baseUrl/wishlist/$_id');
 
-    final response = await http.delete(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    print('📤 DELETE Wishlist request: $url');
 
-    if (response.statusCode == 200) {
-      // Mantén actualizado el estado local
-      if (_wishlist.containsKey(paintId)) {
-        _wishlist.remove(paintId);
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print(
+        '📥 DELETE Wishlist response [${response.statusCode}]: ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        // Mantén actualizado el estado local
+        if (_wishlist.containsKey(paintId)) {
+          _wishlist.remove(paintId);
+        }
+        return true;
+      } else {
+        print(
+          '❌ Error al eliminar de wishlist: Código ${response.statusCode}, Respuesta: ${response.body}',
+        );
+        return false;
       }
-      return true;
-    } else {
-      return false;
+    } catch (e) {
+      print('⚠️ Excepción al eliminar de wishlist: $e');
+      rethrow;
     }
   }
 
@@ -188,102 +202,146 @@ class PaintService {
     // Convierte el valor booleano a backend (0 = prioridad, -1 = quitar)
     final priorityValue = isPriority ? 0 : -1;
 
-    final response = await http.patch(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'priority': priorityValue}),
-    );
+    final requestBody = {'priority': priorityValue};
+    print('📤 PATCH Wishlist priority request: $url');
+    print('📤 Request body: ${jsonEncode(requestBody)}');
 
-    if (response.statusCode == 200) {
-      // Actualiza el estado local
-      if (_wishlist.containsKey(paintId)) {
-        _wishlist[paintId]!['isPriority'] = isPriority;
+    try {
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print(
+        '📥 PATCH Wishlist priority response [${response.statusCode}]: ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        // Actualiza el estado local
+        if (_wishlist.containsKey(paintId)) {
+          _wishlist[paintId]!['isPriority'] = isPriority;
+        }
+        return true;
+      } else {
+        print(
+          '❌ Error actualizando prioridad: Código ${response.statusCode}, Respuesta: ${response.body}',
+        );
+        return false;
       }
-      return true;
-    } else {
-      print('Error actualizando prioridad: ${response.body}');
-      return false;
+    } catch (e) {
+      print('⚠️ Excepción al actualizar prioridad: $e');
+      rethrow;
     }
   }
 
   /// Obtiene todas las pinturas de la wishlist
-
   Future<List<Map<String, dynamic>>> getWishlistPaints(String token) async {
     final baseUrl = 'https://paints-api.reachu.io/api';
+    final url = Uri.parse('$baseUrl/wishlist');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/wishlist'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    print('📤 GET Wishlist request: $url');
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch wishlist');
-    }
-
-    final Map<String, dynamic> jsonData = json.decode(response.body);
-    final List<dynamic> wishlist = jsonData['whitelist'];
-
-    final List<Map<String, dynamic>> result = [];
-
-    for (final item in wishlist) {
-      final paintJson = item['paint'];
-      final brandJson = item['brand'];
-      final createdAt = item['created_at'];
-
-      // Parse hex to get rgb components
-      final hexColor =
-          paintJson['hex'].startsWith('#')
-              ? paintJson['hex'].substring(1)
-              : paintJson['hex'];
-      final r = int.parse(hexColor.substring(0, 2), radix: 16);
-      final g = int.parse(hexColor.substring(2, 4), radix: 16);
-      final b = int.parse(hexColor.substring(4, 6), radix: 16);
-
-      final paint = Paint(
-        id: paintJson['code'],
-        name: paintJson['name'],
-        brand: brandJson['name'],
-        hex: paintJson['hex'],
-        set: paintJson['set'] ?? 'Unknown',
-        code: paintJson['code'],
-        r: r,
-        g: g,
-        b: b,
-        category: paintJson['set'] ?? 'Unknown',
-        isMetallic: false,
-        isTransparent: false,
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
-      result.add({
-        'id': item['id'],
-        'paint': paint,
-        'isPriority': item['priority'] != null,
-        'priority': item['priority'],
-        'addedAt': DateTime.fromMillisecondsSinceEpoch(
-          createdAt['_seconds'] * 1000,
-        ),
-      });
-    }
+      print('📥 GET Wishlist response [${response.statusCode}]');
 
-    // Ordenar por prioridad (null al final) y luego por fecha de agregado
-    result.sort((a, b) {
-      final aPriority = a['priority'] ?? 9999;
-      final bPriority = b['priority'] ?? 9999;
-
-      if (aPriority != bPriority) {
-        return aPriority.compareTo(bPriority);
+      if (response.statusCode == 200) {
+        print('✅ Wishlist obtenida correctamente');
+        // Solo logueamos la estructura de la respuesta, no todo el cuerpo para evitar logs muy largos
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        print('📊 Estructura de respuesta: ${jsonData.keys.toList()}');
+        print(
+          '📊 Total de elementos en la wishlist: ${jsonData["whitelist"]?.length ?? 0}',
+        );
+      } else {
+        print(
+          '❌ Error al obtener wishlist: Código ${response.statusCode}, Respuesta: ${response.body}',
+        );
+        throw Exception(
+          'Failed to fetch wishlist (${response.statusCode}): ${response.body}',
+        );
       }
 
-      return (b['addedAt'] as DateTime).compareTo(a['addedAt'] as DateTime);
-    });
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to fetch wishlist (${response.statusCode}): ${response.body}',
+        );
+      }
 
-    return result;
+      final Map<String, dynamic> jsonData = json.decode(response.body);
+      final List<dynamic> wishlist = jsonData['whitelist'];
+
+      final List<Map<String, dynamic>> result = [];
+
+      for (final item in wishlist) {
+        final paintJson = item['paint'];
+        final brandJson = item['brand'];
+        final createdAt = item['created_at'];
+
+        // Parse hex to get rgb components
+        final hexColor =
+            paintJson['hex'].startsWith('#')
+                ? paintJson['hex'].substring(1)
+                : paintJson['hex'];
+        final r = int.parse(hexColor.substring(0, 2), radix: 16);
+        final g = int.parse(hexColor.substring(2, 4), radix: 16);
+        final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+        final paint = Paint(
+          id: paintJson['code'],
+          name: paintJson['name'],
+          brand: brandJson['name'],
+          hex: paintJson['hex'],
+          set: paintJson['set'] ?? 'Unknown',
+          code: paintJson['code'],
+          r: r,
+          g: g,
+          b: b,
+          category: paintJson['set'] ?? 'Unknown',
+          isMetallic: false,
+          isTransparent: false,
+        );
+
+        result.add({
+          'id': item['id'],
+          'paint': paint,
+          'isPriority': item['priority'] != null,
+          'priority': item['priority'],
+          'addedAt': DateTime.fromMillisecondsSinceEpoch(
+            createdAt['_seconds'] * 1000,
+          ),
+        });
+      }
+
+      // Ordenar por prioridad (null al final) y luego por fecha de agregado
+      result.sort((a, b) {
+        final aPriority = a['priority'] ?? 9999;
+        final bPriority = b['priority'] ?? 9999;
+
+        if (aPriority != bPriority) {
+          return aPriority.compareTo(bPriority);
+        }
+
+        return (b['addedAt'] as DateTime).compareTo(a['addedAt'] as DateTime);
+      });
+
+      print('✅ Procesados ${result.length} elementos de la wishlist');
+      return result;
+    } catch (e) {
+      print('⚠️ Excepción al obtener la wishlist: $e');
+      rethrow;
+    }
   }
 
   /// Agrega una pintura a una paleta
