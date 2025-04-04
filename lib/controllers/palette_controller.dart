@@ -60,11 +60,8 @@ class PaletteController extends ChangeNotifier {
 
       print('🎨 Got ${result['palettes'].length} palettes from repository');
 
-      if (currentPage == 1) {
-        _palettes = result['palettes'];
-      } else {
-        _palettes = [..._palettes, ...result['palettes']];
-      }
+      // Siempre reemplazar el contenido de la lista
+      _palettes = result['palettes'];
 
       // Actualizar los valores de paginación usando los datos de la API
       _currentPage = int.parse(result['currentPage'].toString());
