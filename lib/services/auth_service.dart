@@ -7,6 +7,7 @@ import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -31,7 +32,11 @@ class AuthErrorCode {
   static const String unknown = 'unknown';
   static const String cancelled = 'cancelled';
   static const String notImplemented = 'not-implemented';
+  static const String platformNotSupported = 'platform-not-supported';
 }
+
+/// Authentication provider types
+enum AuthProvider { email, google, apple, phone, custom }
 
 /// Abstract interface for authentication service
 abstract class IAuthService {
@@ -63,6 +68,9 @@ abstract class IAuthService {
   /// Sign in with Google
   Future<User> signInWithGoogle();
 
+  /// Sign in with Apple
+  Future<User> signInWithApple();
+
   /// Sign in with custom token
   Future<User> signInWithCustomToken(String token);
 
@@ -81,12 +89,21 @@ abstract class IAuthService {
     required String code,
   });
 
+  /// Check if a provider is available on the current platform
+  bool isProviderAvailable(AuthProvider provider);
+
   /// Dispose resources
   void dispose();
 }
 
 // Verifica si estamos en Android
 bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+
+// Verifica si estamos en iOS
+bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+
+// Verifica si estamos en macOS
+bool get _isMacOS => defaultTargetPlatform == TargetPlatform.macOS;
 
 /// Implementation of the authentication service
 /// This class handles user authentication operations
@@ -180,6 +197,8 @@ class AuthService implements IAuthService {
     switch (provider) {
       case 'google.com':
         return 'google';
+      case 'apple.com':
+        return 'apple';
       case 'password':
         return 'email';
       case 'phone':
@@ -542,6 +561,136 @@ class AuthService implements IAuthService {
     }
   }
 
+  /// Sign in with Apple
+  @override
+  Future<User> signInWithApple() async {
+    try {
+      // Verificar si el método es compatible con la plataforma actual
+      if (!isProviderAvailable(AuthProvider.apple)) {
+        throw AuthException(
+          AuthErrorCode.platformNotSupported,
+          'Sign in with Apple is not available on this platform',
+        );
+      }
+
+      // En Android, lanzamos una excepción ya que no está soportado
+      if (_isAndroid) {
+        throw AuthException(
+          AuthErrorCode.platformNotSupported,
+          'Sign in with Apple is not available on Android',
+        );
+      }
+
+      // Ejecutamos el Sign In con Apple
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      print('Apple Sign In successful');
+      print('Authorization Code: ${appleCredential.authorizationCode}');
+      print('Identity Token: ${appleCredential.identityToken}');
+
+      // Crear un credential para Firebase
+      final oauthCredential = firebase.OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      // Iniciar sesión en Firebase con el credential de Apple
+      final userCredential = await firebase.FirebaseAuth.instance
+          .signInWithCredential(oauthCredential);
+
+      print('Firebase User ID: ${userCredential.user!.uid}');
+
+      // Determinar el nombre del usuario
+      String name = 'Apple User';
+      if (appleCredential.givenName != null &&
+          appleCredential.familyName != null) {
+        name = '${appleCredential.givenName} ${appleCredential.familyName}';
+      } else if (userCredential.user!.displayName != null) {
+        name = userCredential.user!.displayName!;
+      }
+
+      // Determinar el email del usuario
+      String email = '';
+      if (appleCredential.email != null) {
+        email = appleCredential.email!;
+      } else if (userCredential.user!.email != null) {
+        email = userCredential.user!.email!;
+      }
+
+      print('User Name: $name');
+      print('User Email: $email');
+
+      // Hacer el POST al endpoint para crear usuario
+      try {
+        final response = await http.post(
+          Uri.parse('https://paints-api.reachu.io/auth/create-user'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'uid': userCredential.user!.uid,
+            'email': email,
+            'name': name,
+          }),
+        );
+
+        final responseData = jsonDecode(response.body);
+        if (responseData['executed'] == false) {
+          throw AuthException(
+            AuthErrorCode.unknown,
+            responseData['message'] ?? 'Error creating user',
+          );
+        }
+
+        print('Server response create-user: ${response.body}');
+      } catch (e) {
+        print('Error making POST request to create-user server: $e');
+        throw AuthException(
+          AuthErrorCode.unknown,
+          e is AuthException ? e.message : 'Error creating user on server',
+        );
+      }
+
+      // Convertir el usuario de Firebase a nuestro modelo de User
+      _currentUser = User(
+        id: userCredential.user!.uid,
+        name: name,
+        email: email,
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'apple',
+      );
+
+      _authStateController.add(_currentUser);
+
+      return _currentUser!;
+    } catch (e) {
+      print('Error in Apple Sign In: $e');
+
+      // Si el usuario canceló el inicio de sesión
+      if (e.toString().contains('canceled')) {
+        throw AuthException(
+          AuthErrorCode.cancelled,
+          'Apple sign in was cancelled',
+        );
+      }
+
+      // Si es una AuthException personalizada, reenviarla
+      if (e is AuthException) {
+        rethrow;
+      }
+
+      // Para cualquier otro error
+      throw AuthException(
+        AuthErrorCode.unknown,
+        'Apple authentication failed: $e',
+      );
+    }
+  }
+
   /// Sign in with custom token
   @override
   Future<User> signInWithCustomToken(String token) async {
@@ -667,6 +816,24 @@ class AuthService implements IAuthService {
       AuthErrorCode.notImplemented,
       'Code verification is not fully implemented',
     );
+  }
+
+  /// Check if a provider is available on the current platform
+  @override
+  bool isProviderAvailable(AuthProvider provider) {
+    switch (provider) {
+      case AuthProvider.email:
+        return true; // Disponible en todas las plataformas
+      case AuthProvider.google:
+        return true; // Disponible en todas las plataformas
+      case AuthProvider.apple:
+        // Sólo disponible en iOS, macOS y web
+        return _isIOS || _isMacOS || kIsWeb;
+      case AuthProvider.phone:
+        return true; // Disponible en todas las plataformas
+      case AuthProvider.custom:
+        return true;
+    }
   }
 
   /// Dispose resources
