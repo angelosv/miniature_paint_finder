@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
@@ -34,7 +35,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
     });
 
     try {
-      final wishlistItems = await _paintService.getWishlistPaints();
+      // final user = FirebaseAuth.instance.currentUser;
+      // if (user == null) throw Exception('Usuario no autenticado');
+      // final token = await user.getIdToken();
+      final wishlistItems = await _paintService.getWishlistPaints(
+        // token as String,
+        "token",
+      );
 
       setState(() {
         _wishlistItems = wishlistItems;
@@ -56,7 +63,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  Future<void> _removeFromWishlist(String paintId, String paintName) async {
+  Future<void> _removeFromWishlist(
+    String paintId,
+    String paintName,
+    String _id,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -81,7 +92,16 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
 
     try {
-      final result = await _paintService.removeFromWishlist(paintId);
+      // final user = FirebaseAuth.instance.currentUser;
+      // if (user == null) throw Exception('Usuario no autenticado');
+      // final token = await user.getIdToken();
+      final result = await _paintService.removeFromWishlist(
+        paintId,
+        _id,
+        "token",
+
+        // token as String,
+      );
 
       if (result && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -122,10 +142,22 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  Future<void> _togglePriority(String paintId, bool currentPriority) async {
+  Future<void> _togglePriority(
+    String paintId,
+    bool currentPriority,
+    String _id,
+  ) async {
     try {
       final newPriority = !currentPriority;
-      await _paintService.updateWishlistPriority(paintId, newPriority);
+      // final user = FirebaseAuth.instance.currentUser;
+      // if (user == null) throw Exception('Usuario no autenticado');
+      // final token = await user.getIdToken();
+      await _paintService.updateWishlistPriority(
+        paintId,
+        _id,
+        newPriority,
+        "token",
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,7 +183,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  Future<void> _addToInventory(Paint paint) async {
+  Future<void> _addToInventory(Paint paint, String _id) async {
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (context) => _AddToInventoryDialog(paint: paint),
@@ -165,8 +197,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
           note: result['note'] as String?,
         );
 
+        // final user = FirebaseAuth.instance.currentUser;
+        // if (user == null) throw Exception('Usuario no autenticado');
+        // final token = await user.getIdToken();
+
         // Remove from wishlist
-        await _paintService.removeFromWishlist(paint.id);
+        await _paintService.removeFromWishlist(paint.id, _id, "token");
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -253,6 +289,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         final item = _wishlistItems[index];
         final paint = item['paint'] as Paint;
         final isPriority = item['isPriority'] as bool;
+        final _id = item['id'] as String;
         final addedAt = item['addedAt'] as DateTime;
 
         // Simulate paints in palettes - in a real app, this would come from the service
@@ -274,7 +311,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ),
           child: InkWell(
             onTap: () {
-              _showActionSheet(paint, isPriority);
+              _showActionSheet(paint, isPriority, _id);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -647,7 +684,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   /// Shows a bottom sheet with actions for a paint
-  void _showActionSheet(Paint paint, bool isPriority) {
+  void _showActionSheet(Paint paint, bool isPriority, String _id) {
     // Get palettes containing this paint
     final palettes = _paintService.getPalettesContainingPaint(paint.id);
 
@@ -867,7 +904,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             : Theme.of(context).colorScheme.primary,
                     onTap: () {
                       Navigator.pop(context);
-                      _togglePriority(paint.id, isPriority);
+                      _togglePriority(paint.id, isPriority, _id);
                     },
                   ),
 
@@ -877,7 +914,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     color: AppTheme.primaryBlue,
                     onTap: () {
                       Navigator.pop(context);
-                      _addToInventory(paint);
+                      _addToInventory(paint, _id);
                     },
                   ),
 
@@ -887,7 +924,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     color: Colors.red,
                     onTap: () {
                       Navigator.pop(context);
-                      _removeFromWishlist(paint.id, paint.name);
+                      _removeFromWishlist(paint.id, paint.name, _id);
                     },
                   ),
 
