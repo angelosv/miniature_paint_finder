@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 /// Tipo de entrada de inventario
 enum InventoryEntryType {
@@ -144,60 +145,142 @@ class PaintService {
   }
 
   /// Elimina una pintura de la wishlist
-  Future<bool> removeFromWishlist(String paintId) async {
-    // Simulamos una operación asíncrona
-    await Future.delayed(const Duration(milliseconds: 300));
+  Future<bool> removeFromWishlist(
+    String paintId,
+    String _id,
+    String token,
+  ) async {
+    final baseUrl = 'https://paints-api.reachu.io/api';
 
-    if (!_wishlist.containsKey(paintId)) {
+    final url = Uri.parse('$baseUrl/wishlist/$_id');
+
+    final response = await http.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Mantén actualizado el estado local
+      if (_wishlist.containsKey(paintId)) {
+        _wishlist.remove(paintId);
+      }
+      return true;
+    } else {
       return false;
     }
-
-    _wishlist.remove(paintId);
-    return true;
   }
 
   /// Actualiza la prioridad de una pintura en la wishlist
-  Future<bool> updateWishlistPriority(String paintId, bool isPriority) async {
-    // Simulamos una operación asíncrona
-    await Future.delayed(const Duration(milliseconds: 300));
+  Future<bool> updateWishlistPriority(
+    String paintId,
+    String wishlistId,
+    bool isPriority,
+    String token,
+  ) async {
+    // final baseUrl = 'http://10.0.2.2:8000';
 
-    if (!_wishlist.containsKey(paintId)) {
+    final baseUrl = 'https://paints-api.reachu.io/api';
+    final url = Uri.parse('$baseUrl/wishlist/$wishlistId');
+
+    // Convierte el valor booleano a backend (0 = prioridad, -1 = quitar)
+    final priorityValue = isPriority ? 0 : -1;
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'priority': priorityValue}),
+    );
+
+    if (response.statusCode == 200) {
+      // Actualiza el estado local
+      if (_wishlist.containsKey(paintId)) {
+        _wishlist[paintId]!['isPriority'] = isPriority;
+      }
+      return true;
+    } else {
+      print('Error actualizando prioridad: ${response.body}');
       return false;
     }
-
-    _wishlist[paintId]!['isPriority'] = isPriority;
-    return true;
   }
 
   /// Obtiene todas las pinturas de la wishlist
-  Future<List<Map<String, dynamic>>> getWishlistPaints() async {
-    // Simulamos una operación asíncrona
-    await Future.delayed(const Duration(milliseconds: 300));
+
+  Future<List<Map<String, dynamic>>> getWishlistPaints(String token) async {
+    final baseUrl = 'https://paints-api.reachu.io/api';
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/wishlist'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch wishlist');
+    }
+
+    final Map<String, dynamic> jsonData = json.decode(response.body);
+    final List<dynamic> wishlist = jsonData['whitelist'];
 
     final List<Map<String, dynamic>> result = [];
-    final allPaints = SampleData.getPaints();
 
-    for (final entry in _wishlist.entries) {
-      final paint = allPaints.firstWhere(
-        (p) => p.id == entry.key,
-        orElse: () => throw Exception('Paint not found: ${entry.key}'),
+    for (final item in wishlist) {
+      final paintJson = item['paint'];
+      final brandJson = item['brand'];
+      final createdAt = item['created_at'];
+
+      // Parse hex to get rgb components
+      final hexColor =
+          paintJson['hex'].startsWith('#')
+              ? paintJson['hex'].substring(1)
+              : paintJson['hex'];
+      final r = int.parse(hexColor.substring(0, 2), radix: 16);
+      final g = int.parse(hexColor.substring(2, 4), radix: 16);
+      final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+      final paint = Paint(
+        id: paintJson['code'],
+        name: paintJson['name'],
+        brand: brandJson['name'],
+        hex: paintJson['hex'],
+        set: paintJson['set'] ?? 'Unknown',
+        code: paintJson['code'],
+        r: r,
+        g: g,
+        b: b,
+        category: paintJson['set'] ?? 'Unknown',
+        isMetallic: false,
+        isTransparent: false,
       );
 
       result.add({
+        'id': item['id'],
         'paint': paint,
-        'isPriority': entry.value['isPriority'] as bool,
-        'addedAt': entry.value['addedAt'] as DateTime,
+        'isPriority': item['priority'] != null,
+        'priority': item['priority'],
+        'addedAt': DateTime.fromMillisecondsSinceEpoch(
+          createdAt['_seconds'] * 1000,
+        ),
       });
     }
 
-    // Sort: priority first, then most recently added
+    // Ordenar por prioridad (null al final) y luego por fecha de agregado
     result.sort((a, b) {
-      if (a['isPriority'] != b['isPriority']) {
-        return a['isPriority'] ? -1 : 1; // Priority items first
+      final aPriority = a['priority'] ?? 9999;
+      final bPriority = b['priority'] ?? 9999;
+
+      if (aPriority != bPriority) {
+        return aPriority.compareTo(bPriority);
       }
-      return (b['addedAt'] as DateTime).compareTo(
-        a['addedAt'] as DateTime,
-      ); // Most recent first
+
+      return (b['addedAt'] as DateTime).compareTo(a['addedAt'] as DateTime);
     });
 
     return result;
@@ -256,21 +339,5 @@ class PaintService {
 
     _userPalettes.add(palette);
     return palette;
-  }
-
-  double _calculateColorDistance(Paint paint1, Paint paint2) {
-    // Convert hex colors to RGB values
-    final paintColor = int.parse(paint1.hex.substring(1), radix: 16);
-    final r1 = (paintColor >> 16) & 0xFF;
-    final g1 = (paintColor >> 8) & 0xFF;
-    final b1 = paintColor & 0xFF;
-
-    final pColor = int.parse(paint2.hex.substring(1), radix: 16);
-    final r2 = (pColor >> 16) & 0xFF;
-    final g2 = (pColor >> 8) & 0xFF;
-    final b2 = pColor & 0xFF;
-
-    // Calculate Euclidean distance
-    return sqrt(pow(r1 - r2, 2) + pow(g1 - g2, 2) + pow(b1 - b2, 2));
   }
 }
