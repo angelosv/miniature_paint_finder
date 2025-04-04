@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 
 class PaintCard extends StatelessWidget {
   final Paint paint;
@@ -244,103 +245,36 @@ class PaintCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // Mostrar un diálogo para añadir a wishlist
-                      showDialog(
+                      // Mostrar el nuevo modal de wishlist
+                      AddToWishlistModal.show(
                         context: context,
-                        builder: (BuildContext context) {
-                          final notesController = TextEditingController();
-                          int priority = 2; // Prioridad media por defecto
+                        paint: paint,
+                        onAddToWishlist: (paint, priority) {
+                          // Mostrar confirmación con SnackBar
+                          final priorityText = _getPriorityText(priority);
 
-                          return AlertDialog(
-                            title: Text('Add to Wishlist'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${paint.name} will be added to your wishlist.',
-                                ),
-                                SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Text('Priority: '),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Slider(
-                                        value: priority.toDouble(),
-                                        min: 1,
-                                        max: 3,
-                                        divisions: 2,
-                                        label:
-                                            priority == 1
-                                                ? 'Low'
-                                                : priority == 2
-                                                ? 'Medium'
-                                                : 'High',
-                                        onChanged: (double value) {
-                                          priority = value.toInt();
-                                          (context as Element).markNeedsBuild();
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 16),
-                                TextField(
-                                  controller: notesController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Notes (optional)',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  maxLines: 2,
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('Cancel'),
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
                               ),
-                              ElevatedButton(
+                              backgroundColor:
+                                  isDarkMode ? Colors.pinkAccent : Colors.pink,
+                              action: SnackBarAction(
+                                label: 'VIEW',
+                                textColor: Colors.white,
                                 onPressed: () {
-                                  Navigator.pop(context);
-
-                                  // Mostrar confirmación con SnackBar
-                                  final priorityText =
-                                      priority == 1
-                                          ? 'Low'
-                                          : priority == 2
-                                          ? 'Medium'
-                                          : 'High';
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Added ${paint.name} to wishlist with $priorityText priority',
-                                      ),
-                                      backgroundColor: Colors.pink,
-                                      action: SnackBarAction(
-                                        label: 'VIEW',
-                                        textColor: Colors.white,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (context) =>
-                                                      const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
                                     ),
                                   );
                                 },
-                                child: Text('Confirm'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.pink,
-                                ),
                               ),
-                            ],
+                            ),
                           );
                         },
                       );
@@ -607,104 +541,38 @@ class PaintCard extends StatelessWidget {
                       onPressed: () {
                         Navigator.pop(context);
 
-                        // Mostrar un diálogo para añadir a wishlist
-                        showDialog(
+                        // Mostrar el nuevo modal de wishlist
+                        AddToWishlistModal.show(
                           context: context,
-                          builder: (BuildContext context) {
-                            final notesController = TextEditingController();
-                            int priority = 2; // Prioridad media por defecto
+                          paint: paint,
+                          onAddToWishlist: (paint, priority) {
+                            // Mostrar confirmación con SnackBar
+                            final priorityText = _getPriorityText(priority);
 
-                            return AlertDialog(
-                              title: Text('Add to Wishlist'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '${paint.name} will be added to your wishlist.',
-                                  ),
-                                  SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Text('Priority: '),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Slider(
-                                          value: priority.toDouble(),
-                                          min: 1,
-                                          max: 3,
-                                          divisions: 2,
-                                          label:
-                                              priority == 1
-                                                  ? 'Low'
-                                                  : priority == 2
-                                                  ? 'Medium'
-                                                  : 'High',
-                                          onChanged: (double value) {
-                                            priority = value.toInt();
-                                            (context as Element)
-                                                .markNeedsBuild();
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 16),
-                                  TextField(
-                                    controller: notesController,
-                                    decoration: InputDecoration(
-                                      labelText: 'Notes (optional)',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text('Cancel'),
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
                                 ),
-                                ElevatedButton(
+                                backgroundColor:
+                                    isDarkMode
+                                        ? Colors.pinkAccent
+                                        : Colors.pink,
+                                action: SnackBarAction(
+                                  label: 'VIEW',
+                                  textColor: Colors.white,
                                   onPressed: () {
-                                    Navigator.pop(context);
-
-                                    // Mostrar confirmación con SnackBar
-                                    final priorityText =
-                                        priority == 1
-                                            ? 'Low'
-                                            : priority == 2
-                                            ? 'Medium'
-                                            : 'High';
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Added ${paint.name} to wishlist with $priorityText priority',
-                                        ),
-                                        backgroundColor: Colors.pink,
-                                        action: SnackBarAction(
-                                          label: 'VIEW',
-                                          textColor: Colors.white,
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder:
-                                                    (context) =>
-                                                        const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
                                       ),
                                     );
                                   },
-                                  child: Text('Confirm'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.pink,
-                                  ),
                                 ),
-                              ],
+                              ),
                             );
                           },
                         );
@@ -791,5 +659,23 @@ class PaintCard extends StatelessWidget {
       ),
       child: const Text('Metallic', style: TextStyle(fontSize: 10)),
     );
+  }
+
+  // Helper method to get priority text
+  String _getPriorityText(int priority) {
+    switch (priority) {
+      case 1:
+        return "Low";
+      case 2:
+        return "Somewhat Important";
+      case 3:
+        return "Important";
+      case 4:
+        return "Very Important";
+      case 5:
+        return "Highest";
+      default:
+        return "";
+    }
   }
 }
