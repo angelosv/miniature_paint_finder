@@ -72,7 +72,7 @@ class PaletteController extends ChangeNotifier {
       _totalPalettes = int.parse(result['totalPalettes'].toString());
       _limit = int.parse(result['limit'].toString());
 
-      print('�� Updated state:');
+      print('Updated state:');
       print('  - Current page: $_currentPage');
       print('  - Total pages: $_totalPages');
       print('  - Total palettes: $_totalPalettes');

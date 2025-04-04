@@ -26,7 +26,7 @@ class PaletteService {
       throw Exception(responseData['message'] ?? 'Error uploading image');
     }
 
-    debugPrint('✅ Imagen subida exitosamente');
+    debugPrint('✅ Imagen subida exitosamente con ID: ${responseData['data']['id']}');
     return responseData['data'];
   }
 
@@ -51,8 +51,49 @@ class PaletteService {
       throw Exception(responseData['message'] ?? 'Error creating palette');
     }
 
-    debugPrint('✅ Paleta creada exitosamente');
+    debugPrint('✅ Paleta creada exitosamente con ID: ${responseData['data']['id']}');
     return responseData['data'];
+  }
+
+  Future<List<Map<String, dynamic>>> getImagePicks(String imageId, String token, List<Map<String, dynamic>> colorData) async {
+    debugPrint('🔍 Creando picks para la imagen: $imageId');
+    final url = Uri.parse('$baseUrl/image/$imageId/picks');
+    debugPrint('🌐 URL de picks: $url');
+    debugPrint('🔑 Token usado: ${token.substring(0, 10)}...');
+    debugPrint('🎨 Datos de colores a enviar: ${jsonEncode(colorData)}');
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(colorData),
+    );
+
+    debugPrint('📤 Respuesta completa de picks:');
+    debugPrint('📤 Status Code: ${response.statusCode}');
+    debugPrint('📤 Headers: ${response.headers}');
+    debugPrint('📤 Body: ${response.body}');
+
+    final responseData = jsonDecode(response.body);
+
+    if (responseData['executed'] == false) {
+      debugPrint('❌ Error al crear picks: ${responseData['message']}');
+      throw Exception(responseData['message'] ?? 'Error creating image picks');
+    }
+
+    if (responseData['data'] == null) {
+      debugPrint('⚠️ La respuesta no contiene datos de picks');
+      return [];
+    }
+
+    final picks = List<Map<String, dynamic>>.from(responseData['data']);
+    debugPrint('✅ Picks creados exitosamente:');
+    for (var i = 0; i < picks.length; i++) {
+      debugPrint('   Pick $i: ${picks[i]}');
+    }
+    return picks;
   }
 
   Future<void> addPaintsToPalette(
@@ -61,6 +102,7 @@ class PaletteService {
     String token,
   ) async {
     debugPrint('🎨 Agregando ${paints.length} pinturas a la paleta: $paletteId');
+    debugPrint('📤 Datos a enviar: ${jsonEncode(paints)}');
     final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
     final response = await http.post(
