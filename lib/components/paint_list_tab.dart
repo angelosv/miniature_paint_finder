@@ -21,6 +21,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -95,11 +96,11 @@ class _PaintListTabState extends State<PaintListTab> {
   void _onColorsSelected(List<Map<String, dynamic>> colors) {
     // Verificar si el widget está montado antes de actualizar el estado
     if (!mounted) return;
-    
+
     // Usar un post-frame callback para asegurar que las dependencias se actualicen correctamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       setState(() {
         _pickedColors =
             colors.map((colorData) {
@@ -116,11 +117,11 @@ class _PaintListTabState extends State<PaintListTab> {
   void _onImageSelected(File imageFile) {
     // Verificar si el widget está montado antes de actualizar el estado
     if (!mounted) return;
-    
+
     // Usar un post-frame callback para asegurar que las dependencias se actualicen correctamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       setState(() {
         if (imageFile.path.isEmpty) {
           _imageFile = null;
@@ -135,11 +136,11 @@ class _PaintListTabState extends State<PaintListTab> {
   void _onImageUploaded(String url) {
     // Verificar si el widget está montado antes de actualizar el estado
     if (!mounted) return;
-    
+
     // Usar un post-frame callback para asegurar que las dependencias se actualicen correctamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       setState(() {
         _uploadedImageUrl = url;
       });
@@ -149,11 +150,11 @@ class _PaintListTabState extends State<PaintListTab> {
   void _reset() {
     // Verificar si el widget está montado antes de actualizar el estado
     if (!mounted) return;
-    
+
     // Usar un post-frame callback para asegurar que las dependencias se actualicen correctamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       setState(() {
         _showColorPicker = false;
         _imageFile = null;
@@ -1196,161 +1197,175 @@ class _PaintListTabState extends State<PaintListTab> {
                                 child: SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: _isSavingPalette
-                                        ? null
-                                        : () async {
-                                            if (_paletteNameController.text
-                                                .trim()
-                                                .isEmpty) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Please enter a palette name',
-                                                  ),
-                                                ),
-                                              );
-                                              return;
-                                            }
-
-                                            setModalState(() {
-                                              _isSavingPalette = true;
-                                            });
-
-                                            try {
-                                              debugPrint(
-                                                '🎨 Iniciando proceso de guardado de paleta...',
-                                              );
-                                              debugPrint(
-                                                '📝 Nombre de la paleta: ${_paletteNameController.text}',
-                                              );
-                                              debugPrint(
-                                                '🖼️ URL de imagen: $_uploadedImageUrl',
-                                              );
-
-                                              final paintsToSend =
-                                                  modalColorList
-                                                      .where(
-                                                        (c) =>
-                                                            c['paintName'] !=
-                                                            null,
-                                                      )
-                                                      .map(
-                                                        (c) => {
-                                                          'id': c['paintId'],
-                                                          'brand_id':
-                                                              c['brandId'],
-                                                          'hex': c['hexCode'],
-                                                          'name':
-                                                              c['paintName'],
-                                                          'brand':
-                                                              c['paintBrand'],
-                                                          'colorCode':
-                                                              c['colorCode'],
-                                                          'barcode':
-                                                              c['barcode'],
-                                                        },
-                                                      )
-                                                      .toList();
-
-                                              debugPrint(
-                                                '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
-                                              );
-
-                                              final _colorSearchService =
-                                                  ColorSearchService();
-                                              final token =
-                                                  await FirebaseAuth
-                                                      .instance
-                                                      .currentUser
-                                                      ?.getIdToken();
-
-                                              if (token == null) {
-                                                throw Exception(
-                                                  'No se encontró el token de autenticación',
-                                                );
-                                              }
-
-                                              // Guardar una referencia al contexto actual antes de la operación asíncrona
-                                              final currentContext = context;
-                                              final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
-                                              
-                                              await _colorSearchService
-                                                  .saveColorSearch(
-                                                    token: token,
-                                                    name:
-                                                        _paletteNameController
-                                                            .text,
-                                                    paints: paintsToSend,
-                                                    imagePath:
-                                                        _uploadedImageUrl ??
-                                                        '',
-                                                  );
-
-                                              // Verificar si el widget sigue montado después de la operación asíncrona
-                                              if (!mounted) return;
-
-                                              // Guardar cambios en el estado general antes de cerrar
-                                              setState(() {
-                                                _pickedColors = List.from(
-                                                  modalColorList,
-                                                );
-                                              });
-
-                                              // Importante: Restaurar estado del modal antes de cerrarlo
-                                              if (context.mounted) {
-                                                setModalState(() {
-                                                  _isSavingPalette = false;
-                                                });
-
-                                                // Cerrar el modal primero
-                                                Navigator.pop(context);
-                                                
-                                                // Usar un post-frame callback para mostrar el snackbar y resetear
-                                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                                  // Verificar si el contexto sigue montado antes de mostrar el snackbar
-                                                  if (currentContext.mounted) {
-                                                    scaffoldMessenger.showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Color search "${_paletteNameController.text}" saved!',
-                                                        ),
-                                                      ),
-                                                    );
-                                                    
-                                                    // Resetear el estado después de un pequeño retraso
-                                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                                      if (mounted) {
-                                                        _reset();
-                                                      }
-                                                    });
-                                                  }
-                                                });
-                                              }
-                                            } catch (e) {
-                                              debugPrint(
-                                                '❌ Error al guardar la paleta: $e',
-                                              );
-                                              if (context.mounted) {
-                                                setModalState(() {
-                                                  _isSavingPalette = false;
-                                                });
-
+                                    onPressed:
+                                        _isSavingPalette
+                                            ? null
+                                            : () async {
+                                              if (_paletteNameController.text
+                                                  .trim()
+                                                  .isEmpty) {
                                                 ScaffoldMessenger.of(
                                                   context,
                                                 ).showSnackBar(
-                                                  SnackBar(
+                                                  const SnackBar(
                                                     content: Text(
-                                                      'Error al guardar: $e',
+                                                      'Please enter a palette name',
                                                     ),
-                                                    backgroundColor:
-                                                        Colors.red,
                                                   ),
                                                 );
+                                                return;
                                               }
-                                            }
-                                          },
+
+                                              setModalState(() {
+                                                _isSavingPalette = true;
+                                              });
+
+                                              try {
+                                                debugPrint(
+                                                  '🎨 Iniciando proceso de guardado de paleta...',
+                                                );
+                                                debugPrint(
+                                                  '📝 Nombre de la paleta: ${_paletteNameController.text}',
+                                                );
+                                                debugPrint(
+                                                  '🖼️ URL de imagen: $_uploadedImageUrl',
+                                                );
+
+                                                final paintsToSend =
+                                                    modalColorList
+                                                        .where(
+                                                          (c) =>
+                                                              c['paintName'] !=
+                                                              null,
+                                                        )
+                                                        .map(
+                                                          (c) => {
+                                                            'id': c['paintId'],
+                                                            'brand_id':
+                                                                c['brandId'],
+                                                            'hex': c['hexCode'],
+                                                            'name':
+                                                                c['paintName'],
+                                                            'brand':
+                                                                c['paintBrand'],
+                                                            'colorCode':
+                                                                c['colorCode'],
+                                                            'barcode':
+                                                                c['barcode'],
+                                                          },
+                                                        )
+                                                        .toList();
+
+                                                debugPrint(
+                                                  '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
+                                                );
+
+                                                final _colorSearchService =
+                                                    ColorSearchService();
+                                                final token =
+                                                    await FirebaseAuth
+                                                        .instance
+                                                        .currentUser
+                                                        ?.getIdToken();
+
+                                                if (token == null) {
+                                                  throw Exception(
+                                                    'No se encontró el token de autenticación',
+                                                  );
+                                                }
+
+                                                // Guardar una referencia al contexto actual antes de la operación asíncrona
+                                                final currentContext = context;
+                                                final scaffoldMessenger =
+                                                    ScaffoldMessenger.of(
+                                                      currentContext,
+                                                    );
+
+                                                await _colorSearchService
+                                                    .saveColorSearch(
+                                                      token: token,
+                                                      name:
+                                                          _paletteNameController
+                                                              .text,
+                                                      paints: paintsToSend,
+                                                      imagePath:
+                                                          _uploadedImageUrl ??
+                                                          '',
+                                                    );
+
+                                                // Verificar si el widget sigue montado después de la operación asíncrona
+                                                if (!mounted) return;
+
+                                                // Guardar cambios en el estado general antes de cerrar
+                                                setState(() {
+                                                  _pickedColors = List.from(
+                                                    modalColorList,
+                                                  );
+                                                });
+
+                                                // Importante: Restaurar estado del modal antes de cerrarlo
+                                                if (context.mounted) {
+                                                  setModalState(() {
+                                                    _isSavingPalette = false;
+                                                  });
+
+                                                  // Cerrar el modal primero
+                                                  Navigator.pop(context);
+
+                                                  // Usar un post-frame callback para mostrar el snackbar y resetear
+                                                  WidgetsBinding.instance
+                                                      .addPostFrameCallback((
+                                                        _,
+                                                      ) {
+                                                        // Verificar si el contexto sigue montado antes de mostrar el snackbar
+                                                        if (currentContext
+                                                            .mounted) {
+                                                          scaffoldMessenger
+                                                              .showSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    'Color search "${_paletteNameController.text}" saved!',
+                                                                  ),
+                                                                ),
+                                                              );
+
+                                                          // Resetear el estado después de un pequeño retraso
+                                                          Future.delayed(
+                                                            const Duration(
+                                                              milliseconds: 100,
+                                                            ),
+                                                            () {
+                                                              if (mounted) {
+                                                                _reset();
+                                                              }
+                                                            },
+                                                          );
+                                                        }
+                                                      });
+                                                }
+                                              } catch (e) {
+                                                debugPrint(
+                                                  '❌ Error al guardar la paleta: $e',
+                                                );
+                                                if (context.mounted) {
+                                                  setModalState(() {
+                                                    _isSavingPalette = false;
+                                                  });
+
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'Error al guardar: $e',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.marineBlue,
                                       foregroundColor: Colors.white,
@@ -2330,23 +2345,56 @@ class _PaintListTabState extends State<PaintListTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Nombre de la pintura y marca
-                        Text(
-                          paint.name,
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black,
-                          ),
-                        ),
-                        Text(
-                          paint.brand,
-                          style: TextStyle(
-                            fontSize: 20,
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    paint.name,
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.white
+                                              : Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    paint.brand,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Botón de wishlist
+                            IconButton(
+                              icon: Icon(
+                                Icons.favorite_border,
+                                color:
+                                    isDarkMode
+                                        ? AppTheme.marineOrange
+                                        : AppTheme.primaryBlue,
+                                size: 28,
+                              ),
+                              onPressed: () {
+                                // Cerrar este modal primero
+                                Navigator.pop(context);
+
+                                // Importamos y usamos el nuevo modal
+                                _showAddToWishlistModal(context, paint);
+                              },
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 32),
@@ -2471,6 +2519,26 @@ class _PaintListTabState extends State<PaintListTab> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Método para abrir el modal de añadir a wishlist
+  void _showAddToWishlistModal(BuildContext context, Paint paint) {
+    AddToWishlistModal.show(
+      context: context,
+      paint: paint,
+      onAddToWishlist: (paint, priority) {
+        // Aquí manejamos la lógica para añadir a wishlist
+        // Por ahora solo mostramos un mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added ${paint.name} to wishlist ${priority > 0 ? "with priority $priority" : ""}',
+            ),
+            backgroundColor: Colors.green,
           ),
         );
       },

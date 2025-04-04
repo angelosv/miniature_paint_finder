@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 
 /// A bottom sheet that displays detailed information about a paint with options to add to inventory or palette
 class PaintDetailSheet extends StatefulWidget {
@@ -115,8 +116,17 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
       widget.onRemoveFromWishlist(widget.paint);
       _showSuccessSnackbar('Paint removed from wishlist');
     } else {
-      widget.onAddToWishlist(widget.paint, _isPriority);
-      _showSuccessSnackbar('Paint added to your wishlist');
+      Navigator.pop(context);
+
+      AddToWishlistModal.show(
+        context: context,
+        paint: widget.paint,
+        onAddToWishlist: (paint, priority) {
+          final isPriority = priority > 0;
+          widget.onAddToWishlist(paint, isPriority);
+          _showSuccessSnackbar('Paint added to your wishlist');
+        },
+      );
     }
   }
 

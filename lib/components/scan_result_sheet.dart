@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 
 /// Result of a barcode scan with quick actions
 class ScanResultSheet extends StatefulWidget {
@@ -98,9 +99,17 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   }
 
   void _showAddToWishlistDialog() {
-    setState(() {
-      _isAddingToWishlist = true;
-    });
+    Navigator.pop(context);
+
+    AddToWishlistModal.show(
+      context: context,
+      paint: widget.paint,
+      onAddToWishlist: (paint, priority) {
+        final isPriority = priority > 0;
+        widget.onAddToWishlist(paint, isPriority);
+        _showSuccessSnackbar('Paint added to your wishlist');
+      },
+    );
   }
 
   void _addToInventory() {

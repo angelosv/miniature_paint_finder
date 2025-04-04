@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 
 class PaintGridCard extends StatelessWidget {
   final Paint paint;
@@ -258,12 +259,19 @@ class PaintGridCard extends StatelessWidget {
 
                 PaintActionButton(
                   icon: isInWishlist ? Icons.favorite : Icons.favorite_border,
-                  label: 'Add to Wishlist',
+                  label:
+                      isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist',
                   onTap: () {
-                    if (onAddToWishlist != null) {
-                      onAddToWishlist!(paint.id);
-                    }
                     Navigator.pop(context);
+                    if (isInWishlist) {
+                      // Si ya está en la wishlist, simplemente la eliminamos
+                      if (onAddToWishlist != null) {
+                        onAddToWishlist!(paint.id);
+                      }
+                    } else {
+                      // Si no está en la wishlist, mostramos el modal con estrellas
+                      _showAddToWishlistModal(context);
+                    }
                   },
                   isOutlined: true,
                   color: isInWishlist ? Colors.red : null,
@@ -448,6 +456,30 @@ class PaintGridCard extends StatelessWidget {
               ),
             ],
           ),
+    );
+  }
+
+  void _showAddToWishlistModal(BuildContext context) {
+    AddToWishlistModal.show(
+      context: context,
+      paint: paint,
+      onAddToWishlist: (paint, priority) {
+        // Llamamos a la función original pasando el ID
+        if (onAddToWishlist != null) {
+          onAddToWishlist!(paint.id);
+        }
+
+        // Mostramos un mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added ${paint.name} to wishlist ${priority > 0 ? "with priority $priority" : ""}',
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 }
