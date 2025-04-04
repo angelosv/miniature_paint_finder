@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
@@ -54,6 +55,76 @@ class _AuthScreenState extends State<AuthScreen>
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  // Verificar si estamos en iOS o macOS para mostrar el botón de Apple
+  bool get _isAppleSignInAvailable =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      kIsWeb;
+
+  // Nuevo método para manejar el inicio de sesión con Apple
+  Future<void> _handleAppleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+
+      // Verificar si Apple Sign In está disponible
+      if (!_isAppleSignInAvailable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sign in with Apple is not available on this device'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      await authService.signInWithApple();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        if (e is AuthException && e.code == AuthErrorCode.cancelled) {
+          // Si el usuario canceló el inicio de sesión, no mostramos error
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Sign in was cancelled')));
+        } else if (e is AuthException &&
+            e.code == AuthErrorCode.platformNotSupported) {
+          // Si la plataforma no es compatible
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Sign in with Apple is not available on this device',
+              ),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        } else {
+          // Para cualquier otro error
+          _showErrorDialog(
+            e is AuthException ? e.message : 'Authentication failed',
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   // Perform direct login without validation
@@ -413,76 +484,6 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
-  // Nuevas funciones para manejar el sign in con Apple
-  Future<void> _handleAppleSignIn() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final authService = Provider.of<IAuthService>(context, listen: false);
-
-      // Verificar si Apple Sign In está disponible
-      if (!authService.isProviderAvailable(AuthProvider.apple)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign in with Apple is not available on this device'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      await authService.signInWithApple();
-
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        if (e is AuthException && e.code == AuthErrorCode.cancelled) {
-          // Si el usuario canceló el inicio de sesión, no mostramos error
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Sign in was cancelled')));
-        } else if (e is AuthException &&
-            e.code == AuthErrorCode.platformNotSupported) {
-          // Si la plataforma no es compatible
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Sign in with Apple is not available on this device',
-              ),
-              backgroundColor: Colors.red.shade700,
-            ),
-          );
-        } else {
-          // Para cualquier otro error
-          _showErrorDialog(
-            e is AuthException ? e.message : 'Authentication failed',
-          );
-        }
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // Verificar si Apple Sign In está disponible en esta plataforma
-  bool _isAppleSignInAvailable(BuildContext context) {
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    return authService.isProviderAvailable(AuthProvider.apple);
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -795,9 +796,6 @@ class _AuthScreenState extends State<AuthScreen>
     final optionsSpacing =
         isVerySmallScreen ? 24.0 : (isSmallScreen ? 32.0 : 48.0);
 
-    // Verificar disponibilidad del Sign In con Apple
-    final isAppleSignInAvailable = _isAppleSignInAvailable(context);
-
     return Stack(
       children: [
         Container(
@@ -824,145 +822,105 @@ class _AuthScreenState extends State<AuthScreen>
                       ),
                     ),
                     SizedBox(height: topPadding),
+
+                    // Title
                     Text(
-                      'Sign In',
+                      "Sign in to your account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
                         fontSize: titleFontSize,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                    ),
                     Text(
-                      'Choose your preferred sign in method',
-                      style: TextStyle(
-                        color: Colors.white70,
+                      "Choose how you want to sign in",
+                      style: AppTheme.subheadingStyle.copyWith(
+                        color: Colors.white.withOpacity(0.7),
                         fontSize: subtitleFontSize,
                       ),
                     ),
                     SizedBox(height: optionsSpacing),
-                    // Login with Email
-                    SizedBox(
-                      width: double.infinity,
+
+                    // Login options
+                    _buildAuthButton(
+                      icon: Icons.email_outlined,
+                      label: 'Continue with Email',
+                      color: AppTheme.marineOrange,
+                      onPressed: _showEmailLogin,
                       height: buttonHeight,
-                      child: ElevatedButton.icon(
-                        icon: Icon(
-                          Icons.email_outlined,
-                          size: isVerySmallScreen ? 16 : 20,
-                        ),
-                        label: Text(
-                          'Sign in with Email',
-                          style: TextStyle(
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onPressed: _showEmailLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.darkBackground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ),
+
                     SizedBox(height: buttonSpacing),
-                    // Login with Google
-                    SizedBox(
-                      width: double.infinity,
+
+                    _buildAuthButton(
+                      icon: Icons.g_mobiledata_rounded,
+                      label: 'Continue with Google',
+                      color: Colors.red.shade600,
+                      onPressed: _handleGoogleSignIn,
                       height: buttonHeight,
-                      child: ElevatedButton.icon(
-                        icon: Icon(
-                          Icons.g_mobiledata_rounded,
-                          size: 24,
-                          color: Colors.red,
-                        ),
-                        label: Text(
-                          'Sign in with Google',
-                          style: TextStyle(
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onPressed: _handleGoogleSignIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.darkBackground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ),
-                    // Login with Apple (solo mostrar si está disponible)
-                    if (isAppleSignInAvailable) ...[
-                      SizedBox(height: buttonSpacing),
-                      SizedBox(
-                        width: double.infinity,
-                        height: buttonHeight,
-                        child: ElevatedButton.icon(
-                          icon: Icon(
-                            Icons.apple,
-                            size: isVerySmallScreen ? 18 : 22,
+
+                    // Show Apple login on iOS and web
+                    SizedBox(height: buttonSpacing),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed:
+                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                      height: buttonHeight,
+                      // No mostrar el botón en Android
+                      visible: _isAppleSignInAvailable,
+                    ),
+
+                    // Show Phone login for Android (and others)
+                    SizedBox(height: buttonSpacing),
+                    _buildAuthButton(
+                      icon: Icons.phone_android,
+                      label: 'Continue with Phone',
+                      color: Colors.green.shade600,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PhoneAuthScreen(),
                           ),
-                          label: Text(
-                            'Sign in with Apple',
-                            style: TextStyle(
-                              fontSize: isVerySmallScreen ? 14 : 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onPressed: _handleAppleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    SizedBox(height: optionsSpacing),
-                    // Divider
+                        );
+                      },
+                      height: buttonHeight,
+                    ),
+
+                    SizedBox(
+                      height:
+                          isVerySmallScreen ? 20 : (isSmallScreen ? 24 : 32),
+                    ),
+
+                    // Don't have an account yet?
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: Divider(
-                            color: Colors.white.withOpacity(0.3),
-                            thickness: 1,
+                        Text(
+                          "Don't have an account?",
+                          style: AppTheme.bodyStyle.copyWith(
+                            color: Colors.white70,
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        TextButton(
+                          onPressed: _showRegisterOptions,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.marineGold,
+                            padding: const EdgeInsets.only(left: 8),
+                          ),
                           child: Text(
-                            'or',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
+                            'Register',
+                            style: AppTheme.buttonStyle.copyWith(
+                              color: AppTheme.marineGold,
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Divider(
-                            color: Colors.white.withOpacity(0.3),
-                            thickness: 1,
                           ),
                         ),
                       ],
-                    ),
-                    SizedBox(height: optionsSpacing),
-                    // Temporary direct login button
-                    Center(
-                      child: TextButton(
-                        onPressed: _performDirectLogin,
-                        child: Text(
-                          'Continue without login',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                          ),
-                        ),
-                      ),
                     ),
                   ],
                 ),
@@ -970,6 +928,27 @@ class _AuthScreenState extends State<AuthScreen>
             ),
           ),
         ),
+
+        // 3D floating cubes - only show on larger screens
+        if (screenSize.height > 650) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
+
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+
+          Positioned(
+            bottom: 200,
+            left: 60,
+            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+          ),
+        ],
       ],
     );
   }
@@ -992,9 +971,8 @@ class _AuthScreenState extends State<AuthScreen>
     final contentPadding = screenSize.height < 750 ? 16.0 : 24.0;
     final optionsSpacing =
         isVerySmallScreen ? 24.0 : (isSmallScreen ? 32.0 : 48.0);
-
-    // Verificar disponibilidad del Sign In con Apple
-    final isAppleSignInAvailable = _isAppleSignInAvailable(context);
+    final disclaimerFontSize =
+        isVerySmallScreen ? 9.0 : (isSmallScreen ? 10.0 : 12.0);
 
     return Stack(
       children: [
@@ -1022,128 +1000,152 @@ class _AuthScreenState extends State<AuthScreen>
                       ),
                     ),
                     SizedBox(height: topPadding),
+
+                    // Title
                     Text(
-                      'Create Account',
+                      "Create an account",
                       style: AppTheme.headingStyle.copyWith(
                         color: Colors.white,
                         fontSize: titleFontSize,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: isVerySmallScreen ? 2 : (isSmallScreen ? 4 : 8),
+                    ),
                     Text(
-                      'Choose your preferred sign up method',
-                      style: TextStyle(
-                        color: Colors.white70,
+                      "Choose how you want to register",
+                      style: AppTheme.subheadingStyle.copyWith(
+                        color: Colors.white.withOpacity(0.7),
                         fontSize: subtitleFontSize,
                       ),
                     ),
                     SizedBox(height: optionsSpacing),
-                    // Register with Email
-                    SizedBox(
-                      width: double.infinity,
+
+                    // Registration options
+                    _buildAuthButton(
+                      icon: Icons.email_outlined,
+                      label: 'Continue with Email',
+                      color: AppTheme.marineOrange,
+                      onPressed: _showEmailRegisterForm,
                       height: buttonHeight,
-                      child: ElevatedButton.icon(
-                        icon: Icon(
-                          Icons.email_outlined,
-                          size: isVerySmallScreen ? 16 : 20,
-                        ),
-                        label: Text(
-                          'Sign up with Email',
-                          style: TextStyle(
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onPressed: _showEmailRegisterForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.darkBackground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ),
+
                     SizedBox(height: buttonSpacing),
-                    // Register with Google
-                    SizedBox(
-                      width: double.infinity,
+
+                    _buildAuthButton(
+                      icon: Icons.g_mobiledata_rounded,
+                      label: 'Continue with Google',
+                      color: Colors.red.shade600,
+                      onPressed: _handleGoogleSignIn,
                       height: buttonHeight,
-                      child: ElevatedButton.icon(
-                        icon: Icon(
-                          Icons.g_mobiledata_rounded,
-                          size: 24,
-                          color: Colors.red,
-                        ),
-                        label: Text(
-                          'Sign up with Google',
-                          style: TextStyle(
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onPressed: _handleGoogleSignIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.darkBackground,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ),
-                    // Register with Apple (solo mostrar si está disponible)
-                    if (isAppleSignInAvailable) ...[
-                      SizedBox(height: buttonSpacing),
-                      SizedBox(
-                        width: double.infinity,
-                        height: buttonHeight,
-                        child: ElevatedButton.icon(
-                          icon: Icon(
-                            Icons.apple,
-                            size: isVerySmallScreen ? 18 : 22,
+
+                    // Show Apple login on iOS and web
+                    SizedBox(height: buttonSpacing),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed:
+                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                      height: buttonHeight,
+                      // No mostrar el botón en Android
+                      visible: _isAppleSignInAvailable,
+                    ),
+
+                    // Show Phone login for Android (and others)
+                    SizedBox(height: buttonSpacing),
+                    _buildAuthButton(
+                      icon: Icons.phone_android,
+                      label: 'Continue with Phone',
+                      color: Colors.green.shade600,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PhoneAuthScreen(),
                           ),
-                          label: Text(
-                            'Sign up with Apple',
-                            style: TextStyle(
-                              fontSize: isVerySmallScreen ? 14 : 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onPressed: _handleAppleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    // Already have an account link
-                    SizedBox(height: optionsSpacing),
+                        );
+                      },
+                      height: buttonHeight,
+                    ),
+
+                    SizedBox(
+                      height:
+                          isVerySmallScreen ? 16 : (isSmallScreen ? 20 : 32),
+                    ),
+
+                    // Terms and conditions
                     Center(
-                      child: TextButton.icon(
-                        icon: const Icon(
-                          Icons.login,
-                          size: 16,
-                          color: Colors.white70,
+                      child: Text(
+                        "By signing up, you agree to our Terms of Service and Privacy Policy",
+                        textAlign: TextAlign.center,
+                        style: AppTheme.bodyStyle.copyWith(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: disclaimerFontSize,
                         ),
-                        label: const Text(
-                          'Already have an account? Sign In',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                        onPressed: _showLoginOptions,
                       ),
                     ),
+                    // Extra space at the bottom for scrolling
+                    SizedBox(height: isVerySmallScreen ? 12 : 16),
                   ],
                 ),
               ),
             ),
           ),
         ),
+
+        // 3D floating cubes - only show on larger screens
+        if (screenSize.height > 650) ...[
+          Positioned(
+            bottom: 100,
+            right: 40,
+            child: _buildCube(AppTheme.marineOrange, size: 25, angle: 0.7),
+          ),
+          Positioned(
+            top: 120,
+            right: 80,
+            child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
+          ),
+          Positioned(
+            bottom: 200,
+            left: 60,
+            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildAuthButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    Color? textColor,
+    required VoidCallback? onPressed,
+    required double height,
+    bool visible = true,
+  }) {
+    if (!visible) {
+      return SizedBox.shrink(); // No mostrar el botón si no es visible
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      height: height,
+      child: ElevatedButton.icon(
+        icon: Icon(icon),
+        label: Text(label),
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor ?? Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: AppTheme.buttonStyle,
+        ),
+      ),
     );
   }
 
@@ -1386,12 +1388,6 @@ class _AuthScreenState extends State<AuthScreen>
             top: 120,
             right: 80,
             child: _buildCube(AppTheme.marineBlueDark, size: 18, angle: 0.4),
-          ),
-
-          Positioned(
-            bottom: 200,
-            left: 60,
-            child: _buildCube(AppTheme.marineGold, size: 20, angle: 0.9),
           ),
         ],
       ],

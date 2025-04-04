@@ -587,16 +587,21 @@ class AuthService implements IAuthService {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        webAuthenticationOptions: WebAuthenticationOptions(
+          clientId: 'com.example.miniaturePaintFinder',
+          redirectUri: Uri.parse('https://paints-api.reachu.io/auth/callback'),
+        ),
       );
 
       print('Apple Sign In successful');
       print('Authorization Code: ${appleCredential.authorizationCode}');
       print('Identity Token: ${appleCredential.identityToken}');
 
-      // Crear un credential para Firebase
+      // Crear un credential para Firebase - este es el punto crítico
       final oauthCredential = firebase.OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
+        rawNonce: _createNonce(),
       );
 
       // Iniciar sesión en Firebase con el credential de Apple
@@ -610,15 +615,17 @@ class AuthService implements IAuthService {
       if (appleCredential.givenName != null &&
           appleCredential.familyName != null) {
         name = '${appleCredential.givenName} ${appleCredential.familyName}';
-      } else if (userCredential.user!.displayName != null) {
+      } else if (userCredential.user!.displayName != null &&
+          userCredential.user!.displayName!.isNotEmpty) {
         name = userCredential.user!.displayName!;
       }
 
       // Determinar el email del usuario
       String email = '';
-      if (appleCredential.email != null) {
+      if (appleCredential.email != null && appleCredential.email!.isNotEmpty) {
         email = appleCredential.email!;
-      } else if (userCredential.user!.email != null) {
+      } else if (userCredential.user!.email != null &&
+          userCredential.user!.email!.isNotEmpty) {
         email = userCredential.user!.email!;
       }
 
@@ -864,5 +871,14 @@ class AuthService implements IAuthService {
         'Please provide a password',
       );
     }
+  }
+
+  String _createNonce() {
+    // Este método genera un nonce seguro criptográficamente
+    const charset =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
+    final random = DateTime.now().millisecondsSinceEpoch;
+
+    return List.generate(32, (_) => charset[random % charset.length]).join();
   }
 }
