@@ -22,6 +22,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -2539,6 +2542,48 @@ class _PaintListTabState extends State<PaintListTab> {
               'Added ${paint.name} to wishlist ${priority > 0 ? "with priority $priority" : ""}',
             ),
             backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WishlistScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Método para abrir el modal de añadir al inventario
+  void _showAddToInventoryModal(BuildContext context, Paint paint) {
+    AddToInventoryModal.show(
+      context: context,
+      paint: paint,
+      onAddToInventory: (paint, quantity, notes) {
+        // Aquí manejamos la lógica para añadir al inventario
+        // Por ahora solo mostramos un mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added $quantity ${paint.name} to inventory'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InventoryScreen(),
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

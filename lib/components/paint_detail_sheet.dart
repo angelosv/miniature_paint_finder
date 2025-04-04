@@ -4,6 +4,9 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 
 /// A bottom sheet that displays detailed information about a paint with options to add to inventory or palette
 class PaintDetailSheet extends StatefulWidget {
@@ -84,31 +87,28 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
   }
 
   void _showAddToInventoryDialog() {
-    setState(() {
-      _isAddingToInventory = true;
-    });
+    Navigator.pop(context);
+
+    // Usar el nuevo modal para añadir al inventario
+    AddToInventoryModal.show(
+      context: context,
+      paint: widget.paint,
+      onAddToInventory: (paint, quantity, notes) {
+        if (widget.isInInventory) {
+          widget.onUpdateInventory(paint, quantity, notes);
+          _showSuccessSnackbar('Inventory updated');
+        } else {
+          widget.onAddToInventory(paint, quantity, notes);
+          _showSuccessSnackbar('Paint added to your inventory');
+        }
+      },
+    );
   }
 
   void _showAddToPaletteDialog() {
     setState(() {
       _isAddingToPalette = true;
     });
-  }
-
-  void _addToInventory() {
-    widget.onAddToInventory(widget.paint, _quantity, _note);
-    setState(() {
-      _isAddingToInventory = false;
-    });
-    _showSuccessSnackbar('Paint added to your inventory');
-  }
-
-  void _updateInventory() {
-    widget.onUpdateInventory(widget.paint, _quantity, _note);
-    setState(() {
-      _isAddingToInventory = false;
-    });
-    _showSuccessSnackbar('Inventory updated');
   }
 
   void _toggleWishlist() {
@@ -146,6 +146,34 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
         content: Text(message),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
+        action:
+            message.contains('wishlist')
+                ? SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WishlistScreen(),
+                      ),
+                    );
+                  },
+                )
+                : message.contains('inventory')
+                ? SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const InventoryScreen(),
+                      ),
+                    );
+                  },
+                )
+                : null,
       ),
     );
   }
@@ -550,7 +578,9 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
             Expanded(
               child: ElevatedButton(
                 onPressed:
-                    widget.isInInventory ? _updateInventory : _addToInventory,
+                    widget.isInInventory
+                        ? _showAddToInventoryDialog
+                        : _showAddToInventoryDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,

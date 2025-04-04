@@ -1,43 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
-class AddToWishlistModal extends StatefulWidget {
+class AddToInventoryModal extends StatefulWidget {
   final Paint paint;
-  final Function(Paint paint, int priority) onAddToWishlist;
+  final Function(Paint paint, int quantity, String? notes) onAddToInventory;
 
-  const AddToWishlistModal({
+  const AddToInventoryModal({
     super.key,
     required this.paint,
-    required this.onAddToWishlist,
+    required this.onAddToInventory,
   });
 
   // Método estático para mostrar el modal
   static Future<void> show({
     required BuildContext context,
     required Paint paint,
-    required Function(Paint paint, int priority) onAddToWishlist,
+    required Function(Paint paint, int quantity, String? notes)
+    onAddToInventory,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder:
-          (context) => AddToWishlistModal(
+          (context) => AddToInventoryModal(
             paint: paint,
-            onAddToWishlist: onAddToWishlist,
+            onAddToInventory: onAddToInventory,
           ),
     );
   }
 
   @override
-  State<AddToWishlistModal> createState() => _AddToWishlistModalState();
+  State<AddToInventoryModal> createState() => _AddToInventoryModalState();
 }
 
-class _AddToWishlistModalState extends State<AddToWishlistModal> {
-  int _selectedPriority = 3; // Prioridad media por defecto
+class _AddToInventoryModalState extends State<AddToInventoryModal> {
+  int _quantity = 1;
   final TextEditingController _notesController = TextEditingController();
 
   @override
@@ -82,7 +82,7 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
 
           // Título del modal
           Text(
-            'Add to Wishlist',
+            'Update Inventory',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -134,48 +134,75 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
           ),
           const SizedBox(height: 24),
 
-          // Selector de prioridad con estrellas
+          // Selector de cantidad
           Text(
-            'Priority',
+            'Quantity',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
 
           Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: List.generate(5, (index) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedPriority = index + 1;
-                  });
-                },
-                child: Icon(
-                  index < _selectedPriority ? Icons.star : Icons.star_border,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.remove_circle,
                   color:
-                      index < _selectedPriority
-                          ? AppTheme.marineOrange
-                          : isDarkMode
-                          ? Colors.grey[400]
-                          : Colors.grey[500],
+                      isDarkMode
+                          ? (_quantity > 1
+                              ? AppTheme.drawerOrange
+                              : Colors.grey[700])
+                          : (_quantity > 1
+                              ? AppTheme.primaryBlue
+                              : Colors.grey[400]),
                   size: 36,
                 ),
-              );
-            }),
-          ),
-
-          // Texto descriptivo de la prioridad
-          Text(
-            _getPriorityLabel(_selectedPriority),
-            style: TextStyle(
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
+                onPressed:
+                    _quantity > 1
+                        ? () {
+                          setState(() {
+                            _quantity--;
+                          });
+                        }
+                        : null,
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$_quantity',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.add_circle,
+                  color:
+                      isDarkMode ? AppTheme.drawerOrange : AppTheme.primaryBlue,
+                  size: 36,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _quantity++;
+                  });
+                },
+              ),
+            ],
           ),
 
           const SizedBox(height: 24),
@@ -218,18 +245,26 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    widget.onAddToWishlist(widget.paint, _selectedPriority);
+                    widget.onAddToInventory(
+                      widget.paint,
+                      _quantity,
+                      _notesController.text.isNotEmpty
+                          ? _notesController.text
+                          : null,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        isDarkMode ? Colors.pinkAccent : Colors.pink,
+                        isDarkMode
+                            ? AppTheme.drawerOrange
+                            : AppTheme.primaryBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Add to Wishlist'),
+                  child: const Text('Add to Inventory'),
                 ),
               ),
             ],
@@ -237,22 +272,5 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
         ],
       ),
     );
-  }
-
-  String _getPriorityLabel(int priority) {
-    switch (priority) {
-      case 1:
-        return "Low priority";
-      case 2:
-        return "Somewhat important";
-      case 3:
-        return "Important";
-      case 4:
-        return "Very important";
-      case 5:
-        return "Highest priority";
-      default:
-        return "";
-    }
   }
 }

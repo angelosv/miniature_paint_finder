@@ -4,7 +4,9 @@ import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 
 class PaintCard extends StatelessWidget {
   final Paint paint;
@@ -134,91 +136,35 @@ class PaintCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // Mostrar un diálogo de confirmación con opciones
-                      showDialog(
+                      // Mostrar el nuevo modal de inventario
+                      AddToInventoryModal.show(
                         context: context,
-                        builder: (BuildContext context) {
-                          int quantity = 1;
-
-                          return AlertDialog(
-                            title: Text('Update Inventory'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${paint.name} will be added to your inventory.',
-                                ),
-                                SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text('Quantity: '),
-                                    SizedBox(width: 8),
-                                    IconButton(
-                                      icon: Icon(Icons.remove_circle_outline),
-                                      onPressed: () {
-                                        if (quantity > 1) {
-                                          quantity--;
-                                          (context as Element).markNeedsBuild();
-                                        }
-                                      },
-                                    ),
-                                    Text(
-                                      '$quantity',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.add_circle_outline),
-                                      onPressed: () {
-                                        quantity++;
-                                        (context as Element).markNeedsBuild();
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('Cancel'),
+                        paint: paint,
+                        onAddToInventory: (paint, quantity, notes) {
+                          // Mostrar confirmación con SnackBar
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Added $quantity ${paint.name} to inventory',
                               ),
-                              ElevatedButton(
+                              backgroundColor:
+                                  isDarkMode
+                                      ? AppTheme.drawerOrange
+                                      : AppTheme.primaryBlue,
+                              action: SnackBarAction(
+                                label: 'VIEW',
+                                textColor: Colors.white,
                                 onPressed: () {
-                                  Navigator.pop(context);
-
-                                  // Mostrar confirmación con SnackBar
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Added $quantity ${paint.name} to inventory',
-                                      ),
-                                      backgroundColor:
-                                          isDarkMode
-                                              ? AppTheme.drawerOrange
-                                              : AppTheme.primaryBlue,
-                                      action: SnackBarAction(
-                                        label: 'VIEW',
-                                        textColor: Colors.white,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (context) =>
-                                                      const InventoryScreen(),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => const InventoryScreen(),
                                     ),
                                   );
                                 },
-                                child: Text('Confirm'),
                               ),
-                            ],
+                            ),
                           );
                         },
                       );
@@ -268,8 +214,7 @@ class PaintCard extends StatelessWidget {
                                     context,
                                     MaterialPageRoute(
                                       builder:
-                                          (context) =>
-                                              const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                                          (context) => const WishlistScreen(),
                                     ),
                                   );
                                 },
@@ -431,92 +376,36 @@ class PaintCard extends StatelessWidget {
                       onPressed: () {
                         Navigator.pop(context);
 
-                        // Mostrar un diálogo de confirmación con opciones
-                        showDialog(
+                        // Mostrar el nuevo modal de inventario
+                        AddToInventoryModal.show(
                           context: context,
-                          builder: (BuildContext context) {
-                            int quantity = 1;
-
-                            return AlertDialog(
-                              title: Text('Update Inventory'),
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '${paint.name} will be added to your inventory.',
-                                  ),
-                                  SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text('Quantity: '),
-                                      SizedBox(width: 8),
-                                      IconButton(
-                                        icon: Icon(Icons.remove_circle_outline),
-                                        onPressed: () {
-                                          if (quantity > 1) {
-                                            quantity--;
-                                            (context as Element)
-                                                .markNeedsBuild();
-                                          }
-                                        },
-                                      ),
-                                      Text(
-                                        '$quantity',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.add_circle_outline),
-                                        onPressed: () {
-                                          quantity++;
-                                          (context as Element).markNeedsBuild();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text('Cancel'),
+                          paint: paint,
+                          onAddToInventory: (paint, quantity, notes) {
+                            // Mostrar confirmación con SnackBar
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Added $quantity ${paint.name} to inventory',
                                 ),
-                                ElevatedButton(
+                                backgroundColor:
+                                    isDarkMode
+                                        ? AppTheme.drawerOrange
+                                        : AppTheme.primaryBlue,
+                                action: SnackBarAction(
+                                  label: 'VIEW',
+                                  textColor: Colors.white,
                                   onPressed: () {
-                                    Navigator.pop(context);
-
-                                    // Mostrar confirmación con SnackBar
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Added $quantity ${paint.name} to inventory',
-                                        ),
-                                        backgroundColor:
-                                            isDarkMode
-                                                ? AppTheme.drawerOrange
-                                                : AppTheme.primaryBlue,
-                                        action: SnackBarAction(
-                                          label: 'VIEW',
-                                          textColor: Colors.white,
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder:
-                                                    (context) =>
-                                                        const InventoryScreen(),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const InventoryScreen(),
                                       ),
                                     );
                                   },
-                                  child: Text('Confirm'),
                                 ),
-                              ],
+                              ),
                             );
                           },
                         );
@@ -566,8 +455,7 @@ class PaintCard extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) =>
-                                                const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
+                                            (context) => const WishlistScreen(),
                                       ),
                                     );
                                   },
