@@ -424,78 +424,76 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor:
-                isDarkMode ? const Color(0xFF101823) : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              'Delete Palette',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Are you sure you want to delete "${palette.name}"?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: isDarkMode ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This action cannot be undone.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDarkMode ? Colors.red[300] : Colors.red[700],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isDarkMode ? Colors.red[300] : Colors.red[600],
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode ? const Color(0xFF101823) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Delete Palette',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black87,
           ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete "${palette.name}"?',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? Colors.red[300] : Colors.red[700],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDarkMode ? Colors.red[300] : Colors.red[600],
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
     );
 
     if (confirmed == true) {
       final success = await _paletteController.deletePalette(palette.id);
 
       if (mounted) {
+        // Mostrar mensaje de éxito o error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -511,6 +509,14 @@ class _PaletteScreenState extends State<PaletteScreen> {
             ),
           ),
         );
+
+        // Si la eliminación fue exitosa y estamos en la última página con una sola paleta,
+        // cargar la página anterior
+        if (success && 
+            _paletteController.palettes.isEmpty && 
+            _paletteController.currentPage > 1) {
+          await _paletteController.loadPreviousPage();
+        }
       }
     }
   }

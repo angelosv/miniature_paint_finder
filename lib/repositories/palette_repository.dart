@@ -200,8 +200,8 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<bool> delete(String id) async {
     try {
-      await _apiService.delete(ApiEndpoints.paletteById(id));
-      return true;
+      final response = await _apiService.delete(ApiEndpoints.paletteById(id));
+      return response['executed'] == true;
     } catch (e) {
       print('Error deleting palette from API: $e');
       return false;
