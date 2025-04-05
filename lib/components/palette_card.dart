@@ -42,39 +42,25 @@ class PaletteCard extends StatelessWidget {
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(ResponsiveGuidelines.radiusL),
               ),
-              child: Container(
+              child: SizedBox(
                 height: 120.h,
                 width: double.infinity,
-                child: Image.asset(
-                  'assets/images/placeholder.jpeg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    // Fallback si la imagen no se puede cargar
-                    return Container(
-                      color: AppTheme.marineBlue.withOpacity(0.1),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 36.r,
-                              color: Colors.grey[400],
-                            ),
-                            SizedBox(height: 8.h),
-                            Text(
-                              'No image available',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: ResponsiveGuidelines.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ),
+                child: palette.imagePath.startsWith('http')
+                    ? Image.network(
+                        palette.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          print('❌ Error loading network image: $error');
+                          return _buildFallbackImage(context);
+                        },
+                      )
+                    : Image.asset(
+                        palette.imagePath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildFallbackImage(context);
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ),
 
@@ -145,6 +131,32 @@ class PaletteCard extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackImage(BuildContext context) {
+    return Container(
+      color: AppTheme.marineBlue.withOpacity(0.1),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.image_not_supported_outlined,
+              size: 36.r,
+              color: Colors.grey[400],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'No image available',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: ResponsiveGuidelines.bodySmall,
               ),
             ),
           ],

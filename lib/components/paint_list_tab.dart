@@ -25,6 +25,10 @@ import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:miniature_paint_finder/models/palette.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -337,26 +341,32 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 12),
 
             // Lista horizontal de paletas
-            SizedBox(
-              height: 220,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: SampleData.getPalettes().length,
-                itemBuilder: (context, index) {
-                  final palette = SampleData.getPalettes()[index];
-                  return PaletteCard(
-                    palette: palette,
-                    onTap: () {
-                      // Abrir el modal de paleta cuando se toca
-                      showPaletteModal(
-                        context,
-                        palette.name,
-                        palette.paintSelections ?? [],
+            Consumer<PaletteController>(
+              builder: (context, paletteController, child) {
+                final recentPalettes = paletteController.palettes.take(10).toList();
+                
+                return SizedBox(
+                  height: 220,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: recentPalettes.length,
+                    itemBuilder: (context, index) {
+                      final palette = recentPalettes[index];
+                      return PaletteCard(
+                        palette: palette,
+                        onTap: () {
+                          // Abrir el modal de paleta cuando se toca
+                          showPaletteModal(
+                            context,
+                            palette.name,
+                            palette.paintSelections ?? [],
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 24),
