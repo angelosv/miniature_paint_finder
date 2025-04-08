@@ -567,7 +567,7 @@ class AuthService implements IAuthService {
   Future<User> signInWithApple() async {
     try {
       // Constante para desactivar Sign in with Apple en desarrollo sin cuenta de Apple Developer
-      const bool disableForDevelopment = true;
+      const bool disableForDevelopment = false;
 
       if (disableForDevelopment) {
         throw AuthException(
