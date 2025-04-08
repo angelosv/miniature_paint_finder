@@ -16,6 +16,25 @@ class PaintApiService {
     }
   }
 
+  // Método para imprimir logs largos con formato JSON
+  void _logJson(String prefix, Map<String, dynamic> json) {
+    if (_enableDetailedLogs) {
+      try {
+        const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+        final String prettyJson = encoder.convert(json);
+        // Dividir por líneas para mejor legibilidad en la consola
+        final lines = prettyJson.split('\n');
+        debugPrint('🟢 PaintAPI $prefix JSON:');
+        for (var line in lines) {
+          debugPrint('🟢 $line');
+        }
+      } catch (e) {
+        debugPrint('🔴 PaintAPI: Error al formatear JSON: $e');
+        debugPrint('🔴 PaintAPI: JSON sin formato: $json');
+      }
+    }
+  }
+
   Future<Map<String, dynamic>> getPaints({
     String? brandId,
     String? name,
@@ -49,6 +68,36 @@ class PaintApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+
+        // Log completo para inspección
+        _logJson('Respuesta', data);
+
+        // Log detallado de la primera pintura si existe
+        if (data['paints'] != null && (data['paints'] as List).isNotEmpty) {
+          final firstPaintJson = (data['paints'] as List)[0];
+          _logJson('Ejemplo de pintura', firstPaintJson);
+
+          // Log específico para campos relacionados con imágenes
+          if (firstPaintJson.containsKey('imageUrl')) {
+            _log(
+              '🖼️ Campo imageUrl encontrado: ${firstPaintJson['imageUrl']}',
+            );
+          }
+          if (firstPaintJson.containsKey('image')) {
+            _log('🖼️ Campo image encontrado: ${firstPaintJson['image']}');
+          }
+          if (firstPaintJson.containsKey('brand_logo')) {
+            _log(
+              '🏷️ Campo brand_logo encontrado: ${firstPaintJson['brand_logo']}',
+            );
+          }
+          if (firstPaintJson.containsKey('brandLogo')) {
+            _log(
+              '🏷️ Campo brandLogo encontrado: ${firstPaintJson['brandLogo']}',
+            );
+          }
+        }
+
         final List<Paint> paints =
             (data['paints'] as List)
                 .map((paintJson) => Paint.fromJson(paintJson))
@@ -91,6 +140,12 @@ class PaintApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+
+        // Log de ejemplo de marca
+        if (data.isNotEmpty) {
+          _logJson('Ejemplo de marca', data[0] as Map<String, dynamic>);
+        }
+
         _log('✅ Received ${data.length} brands');
         return List<Map<String, dynamic>>.from(data);
       } else {

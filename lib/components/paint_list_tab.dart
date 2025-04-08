@@ -343,8 +343,9 @@ class _PaintListTabState extends State<PaintListTab> {
             // Lista horizontal de paletas
             Consumer<PaletteController>(
               builder: (context, paletteController, child) {
-                final recentPalettes = paletteController.palettes.take(10).toList();
-                
+                final recentPalettes =
+                    paletteController.palettes.take(10).toList();
+
                 return SizedBox(
                   height: 220,
                   child: ListView.builder(
