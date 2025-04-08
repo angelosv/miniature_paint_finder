@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
+import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
@@ -19,6 +20,7 @@ import 'firebase_options.dart';
 import 'package:miniature_paint_finder/models/user.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 
 /// App entry point
 void main() async {
@@ -63,6 +65,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (context) => PaintLibraryController(paintApiService),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => WishlistController(PaintService()),
         ),
       ],
       child: const MyApp(),

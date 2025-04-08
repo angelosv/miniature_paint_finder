@@ -8,6 +8,8 @@ import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
@@ -20,75 +22,15 @@ class WishlistScreen extends StatefulWidget {
 
 class _WishlistScreenState extends State<WishlistScreen> {
   final PaintService _paintService = PaintService();
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _wishlistItems = [];
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _loadWishlist();
-  }
-
-  Future<void> _loadWishlist() async {
-    setState(() {
-      _isLoading = true;
+    // Cargar wishlist cuando se inicia el widget
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<WishlistController>().loadWishlist();
     });
-
-    try {
-      String token = "token"; // Fallback token for testing
-      bool usingFallbackToken = true;
-
-      // Get Firebase token if available
-      try {
-        print('🔐 Intentando obtener token de Firebase...');
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          print('👤 Usuario autenticado: ${user.email ?? 'No email'}');
-          final idToken = await user.getIdToken();
-          if (idToken != null) {
-            token = idToken;
-            usingFallbackToken = false;
-            print('✅ Token de Firebase obtenido correctamente');
-          } else {
-            print('⚠️ Token de Firebase es null, usando token de respaldo');
-          }
-        } else {
-          print('⚠️ No hay usuario autenticado, usando token de respaldo');
-        }
-      } catch (e) {
-        print('❌ Error al obtener token de Firebase: $e');
-        print('⚠️ Usando token de respaldo para continuar');
-        // Continue with fallback token
-      }
-
-      if (usingFallbackToken) {
-        print('⚠️ Usando token de respaldo para la petición de wishlist');
-      }
-
-      print('🔄 Obteniendo datos de wishlist...');
-      final wishlistItems = await _paintService.getWishlistPaints(token);
-      print('✅ Datos de wishlist obtenidos: ${wishlistItems.length} elementos');
-
-      setState(() {
-        _wishlistItems = wishlistItems;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('❌ Error al cargar wishlist: $e');
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading wishlist: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _removeFromWishlist(
@@ -119,96 +61,40 @@ class _WishlistScreenState extends State<WishlistScreen> {
       return;
     }
 
-    try {
-      String token = "token"; // Fallback token for testing
-      bool usingFallbackToken = true;
+    final controller = context.read<WishlistController>();
+    final result = await controller.removeFromWishlist(paintId, _id);
 
-      // Get Firebase token if available
-      try {
-        print(
-          '🔐 Intentando obtener token de Firebase para eliminar pintura...',
-        );
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          print('👤 Usuario autenticado: ${user.email ?? 'No email'}');
-          final idToken = await user.getIdToken();
-          if (idToken != null) {
-            token = idToken;
-            usingFallbackToken = false;
-            print('✅ Token de Firebase obtenido correctamente');
-          } else {
-            print('⚠️ Token de Firebase es null, usando token de respaldo');
-          }
-        } else {
-          print('⚠️ No hay usuario autenticado, usando token de respaldo');
-        }
-      } catch (e) {
-        print('❌ Error al obtener token de Firebase: $e');
-        print('⚠️ Usando token de respaldo para continuar');
-        // Continue with fallback token
-      }
+    if (result && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$paintName removed from wishlist'),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () async {
+              // Find the paint in our list to get the priority status
+              final wishlistItems = controller.wishlistItems;
+              final item = wishlistItems.firstWhere(
+                (item) => (item['paint'] as Paint).id == paintId,
+                orElse: () => {'paint': null, 'isPriority': false},
+              );
 
-      if (usingFallbackToken) {
-        print('⚠️ Usando token de respaldo para eliminar de wishlist');
-      }
-
-      print('🔄 Eliminando $paintName de wishlist (ID: $_id)...');
-      final result = await _paintService.removeFromWishlist(
-        paintId,
-        _id,
-        token,
-      );
-
-      if (result && mounted) {
-        print('✅ Pintura eliminada de wishlist correctamente');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$paintName removed from wishlist'),
-            action: SnackBarAction(
-              label: 'UNDO',
-              onPressed: () async {
-                // Find the paint in our list to get the priority status
-                final item = _wishlistItems.firstWhere(
-                  (item) => (item['paint'] as Paint).id == paintId,
-                  orElse: () => {'paint': null, 'isPriority': false},
+              if (item['paint'] != null) {
+                await controller.addToWishlist(
+                  item['paint'] as Paint,
+                  item['isPriority'] as bool,
                 );
-
-                if (item['paint'] != null) {
-                  print('🔄 Recuperando $paintName en wishlist...');
-                  await _paintService.addToWishlist(
-                    item['paint'] as Paint,
-                    item['isPriority'] as bool,
-                  );
-                  print('✅ Pintura recuperada en wishlist correctamente');
-                  _loadWishlist();
-                }
-              },
-            ),
+              }
+            },
           ),
-        );
-
-        _loadWishlist();
-      } else {
-        print('❌ Error al eliminar pintura de wishlist');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error removing paint from wishlist'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('❌ Excepción al eliminar de wishlist: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error removing from wishlist: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error removing paint from wishlist'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -219,50 +105,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
   ) async {
     try {
       final newPriority = !currentPriority;
-      String token = "token"; // Fallback token for testing
-      bool usingFallbackToken = true;
+      final controller = context.read<WishlistController>();
+      final result = await controller.updatePriority(paintId, _id, newPriority);
 
-      // Get Firebase token if available
-      try {
-        print(
-          '🔐 Intentando obtener token de Firebase para actualizar prioridad...',
-        );
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          print('👤 Usuario autenticado: ${user.email ?? 'No email'}');
-          final idToken = await user.getIdToken();
-          if (idToken != null) {
-            token = idToken;
-            usingFallbackToken = false;
-            print('✅ Token de Firebase obtenido correctamente');
-          } else {
-            print('⚠️ Token de Firebase es null, usando token de respaldo');
-          }
-        } else {
-          print('⚠️ No hay usuario autenticado, usando token de respaldo');
-        }
-      } catch (e) {
-        print('❌ Error al obtener token de Firebase: $e');
-        print('⚠️ Usando token de respaldo para continuar');
-        // Continue with fallback token
-      }
-
-      if (usingFallbackToken) {
-        print('⚠️ Usando token de respaldo para actualizar prioridad');
-      }
-
-      print(
-        '🔄 Actualizando prioridad de pintura (ID: $_id) a: ${newPriority ? 'Prioritaria' : 'Normal'}',
-      );
-      await _paintService.updateWishlistPriority(
-        paintId,
-        _id,
-        newPriority,
-        token,
-      );
-
-      if (mounted) {
-        print('✅ Prioridad actualizada correctamente');
+      if (mounted && result) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -271,11 +117,15 @@ class _WishlistScreenState extends State<WishlistScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating priority'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-
-      _loadWishlist();
     } catch (e) {
-      print('❌ Excepción al actualizar prioridad: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -305,49 +155,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
         );
         print('✅ Pintura añadida al inventario correctamente');
 
-        String token = "token"; // Fallback token for testing
-        bool usingFallbackToken = true;
-
-        // Get Firebase token if available
-        try {
-          print(
-            '🔐 Intentando obtener token de Firebase para eliminar de wishlist...',
-          );
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            print('👤 Usuario autenticado: ${user.email ?? 'No email'}');
-            final idToken = await user.getIdToken();
-            if (idToken != null) {
-              token = idToken;
-              usingFallbackToken = false;
-              print('✅ Token de Firebase obtenido correctamente');
-            } else {
-              print('⚠️ Token de Firebase es null, usando token de respaldo');
-            }
-          } else {
-            print('⚠️ No hay usuario autenticado, usando token de respaldo');
-          }
-        } catch (e) {
-          print('❌ Error al obtener token de Firebase: $e');
-          print('⚠️ Usando token de respaldo para continuar');
-          // Continue with fallback token
-        }
-
-        if (usingFallbackToken) {
-          print(
-            '⚠️ Usando token de respaldo para eliminar de wishlist tras añadir al inventario',
-          );
-        }
-
         // Remove from wishlist
-        print(
-          '🔄 Eliminando ${paint.name} de wishlist (ID: $_id) tras añadir al inventario...',
-        );
-        final deleteResult = await _paintService.removeFromWishlist(
-          paint.id,
-          _id,
-          token,
-        );
+        final controller = context.read<WishlistController>();
+        final deleteResult = await controller.removeFromWishlist(paint.id, _id);
 
         if (deleteResult) {
           print('✅ Pintura eliminada de wishlist correctamente');
@@ -365,8 +175,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ),
           );
         }
-
-        _loadWishlist();
       } catch (e) {
         print('❌ Error al añadir al inventario: $e');
         if (mounted) {
@@ -409,11 +217,42 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildBody() {
-    return _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : _wishlistItems.isEmpty
-        ? _buildEmptyState()
-        : _buildWishlistContent();
+    return Consumer<WishlistController>(
+      builder: (context, controller, child) {
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (controller.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading wishlist',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(controller.errorMessage ?? 'Unknown error'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => controller.loadWishlist(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (controller.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return _buildWishlistContent(controller.wishlistItems);
+      },
+    );
   }
 
   Widget _buildEmptyState() {
@@ -449,12 +288,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  Widget _buildWishlistContent() {
+  Widget _buildWishlistContent(List<Map<String, dynamic>> wishlistItems) {
     return ListView.builder(
-      itemCount: _wishlistItems.length,
+      itemCount: wishlistItems.length,
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
-        final item = _wishlistItems[index];
+        final item = wishlistItems[index];
         final paint = item['paint'] as Paint;
         final isPriority = item['isPriority'] as bool;
         final _id = item['id'] as String;
