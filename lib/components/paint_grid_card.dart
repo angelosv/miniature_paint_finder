@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 class PaintGridCard extends StatelessWidget {
   final Paint paint;
@@ -20,58 +22,268 @@ class PaintGridCard extends StatelessWidget {
     this.isInWishlist = false,
   });
 
+  // Helper para obtener el color de la pintura
+  Color _getPaintColor() {
+    return Color(int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000);
+  }
+
+  // Helper para obtener la URL de la imagen del color desde el JSON de la API
+  String _getColorImageUrl() {
+    // Este es el campo 'color' que devuelve la API
+    return 'https://placehold.co/40/${paint.hex.substring(1)}/000000';
+  }
+
+  // Helper para obtener la URL del logo de la marca desde el JSON de la API
+  String _getBrandLogoUrl() {
+    // Este es el campo 'logo_url' que devuelve la API
+    final brandId = paint.brand.toLowerCase();
+    return 'https://raw.githubusercontent.com/Arcturus5404/miniature-paints/refs/heads/main/logos/${brandId}.png';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final paintColor = _getPaintColor();
+    final colorImageUrl = _getColorImageUrl();
+    final brandLogoUrl = _getBrandLogoUrl();
+
     return GestureDetector(
       onTap: () {
         _showPaintOptions(context);
       },
-      child: Card(
-        color: color.withOpacity(0.1),
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                paint.name,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+      child: Stack(
+        children: [
+          // Card principal
+          Card(
+            elevation: 0,
+            color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            clipBehavior:
+                Clip.antiAlias, // Para que la imagen no desborde la tarjeta
+            child: Stack(
+              children: [
+                // Imagen del color que cubre toda la tarjeta
+                Positioned.fill(
+                  child: Image.network(
+                    colorImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Si la imagen no carga, mostrar un contenedor con el color
+                      return Container(
+                        color: paintColor,
+                        child:
+                            paint.isMetallic
+                                ? Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        paintColor,
+                                        paintColor.withOpacity(0.7),
+                                        paintColor.withOpacity(0.9),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                : null,
+                      );
+                    },
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(paint.brand, style: Theme.of(context).textTheme.bodySmall),
-              const Spacer(),
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
+
+                // Overlay para mejorar la visibilidad del texto
+                Positioned.fill(
+                  child: Container(
                     decoration: BoxDecoration(
-                      color: Color(
-                        int.parse(paint.hex.substring(1, 7), radix: 16) +
-                            0xFF000000,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.5),
+                          Colors.transparent,
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.6),
+                        ],
+                        stops: const [0.0, 0.2, 0.7, 1.0],
                       ),
-                      shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    paint.category,
-                    style: TextStyle(fontSize: 12, color: color),
+                ),
+
+                // Contenido de la tarjeta
+                Padding(
+                  padding: EdgeInsets.all(12.r),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nombre y código de la pintura
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Nombre de la pintura
+                            Text(
+                              paint.name,
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    offset: const Offset(1, 1),
+                                    blurRadius: 3,
+                                    color: Colors.black.withOpacity(0.5),
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            SizedBox(height: 4.r),
+
+                            // Código de la pintura
+                            Text(
+                              paint.code,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.white.withOpacity(0.9),
+                                shadows: [
+                                  Shadow(
+                                    offset: const Offset(1, 1),
+                                    blurRadius: 2,
+                                    color: Colors.black.withOpacity(0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Espacio entre el nombre y el footer
+                      Expanded(flex: 3, child: Container()),
+
+                      // Footer con categoría y marca
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Categoría de pintura
+                          Expanded(
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6.r,
+                                vertical: 2.r,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                paint.category,
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(width: 8.r),
+
+                          // Logo de la marca
+                          Container(
+                            width: 28.r,
+                            height: 28.r,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14.r),
+                              child: Image.network(
+                                brandLogoUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) => Center(
+                                      child: Text(
+                                        paint.brand
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
+
+          // Indicador de wishlist
+          if (isInWishlist)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.all(4.r),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(12.r),
+                    bottomLeft: Radius.circular(8.r),
+                  ),
+                ),
+                child: Icon(Icons.favorite, size: 14.r, color: Colors.white),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  // Helper para obtener el color según la categoría
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'base':
+        return AppTheme.marineBlue;
+      case 'layer':
+        return AppTheme.marineOrange;
+      case 'shade':
+      case 'wash':
+        return AppTheme.purpleColor;
+      case 'dry':
+        return AppTheme.greenColor;
+      case 'technical':
+        return AppTheme.marineGold;
+      default:
+        return AppTheme.marineBlue;
+    }
   }
 
   void _showPaintOptions(BuildContext context) {
