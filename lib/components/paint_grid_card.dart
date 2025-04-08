@@ -171,7 +171,7 @@ class PaintGridCard extends StatelessWidget {
                               paint.brand,
                               style: TextStyle(
                                 fontSize: 12.sp,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.bold,
                                 color: textColor,
                               ),
                             ),

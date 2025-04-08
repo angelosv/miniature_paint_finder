@@ -34,7 +34,7 @@ class PaintLibraryController extends ChangeNotifier {
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalPaints = 0;
-  int _pageSize = 25;
+  int _pageSize = 100;
 
   /// Lista de marcas únicas disponibles
   List<String> _availableBrands = ['All'];
@@ -74,7 +74,8 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Lista de categorías únicas disponibles
   List<String> get availableCategories {
-    final categories = _allPaints.map((paint) => paint.category).toSet().toList();
+    final categories =
+        _allPaints.map((paint) => paint.category).toSet().toList();
     categories.sort();
     return ['All', ...categories];
   }
@@ -84,7 +85,9 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cargar todas las pinturas
   Future<void> loadPaints() async {
-    print('Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery');
+    print(
+      'Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery',
+    );
     _isLoading = true;
     _hasError = false;
     _errorMessage = null;
@@ -98,7 +101,9 @@ class PaintLibraryController extends ChangeNotifier {
         name: _searchQuery.isNotEmpty ? _searchQuery : null,
       );
 
-      print('API Response - Total: ${result['totalPaints']}, Pages: ${result['totalPages']}, Current: ${result['currentPage']}');
+      print(
+        'API Response - Total: ${result['totalPaints']}, Pages: ${result['totalPages']}, Current: ${result['currentPage']}',
+      );
 
       _allPaints = result['paints'] as List<Paint>;
       _filteredPaints = _allPaints;
@@ -154,12 +159,14 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Aplicar todos los filtros actuales a la lista de pinturas
   void _applyFilters() {
-    _filteredPaints = _allPaints.where((paint) {
-      if (_selectedCategory != 'All' && paint.category != _selectedCategory) {
-        return false;
-      }
-      return true;
-    }).toList();
+    _filteredPaints =
+        _allPaints.where((paint) {
+          if (_selectedCategory != 'All' &&
+              paint.category != _selectedCategory) {
+            return false;
+          }
+          return true;
+        }).toList();
     notifyListeners();
   }
 
@@ -231,7 +238,9 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Ir a la página siguiente
   void goToNextPage() {
-    print('Going to next page. Current page: $_currentPage, Total pages: $_totalPages');
+    print(
+      'Going to next page. Current page: $_currentPage, Total pages: $_totalPages',
+    );
     if (_currentPage < _totalPages) {
       _currentPage++;
       loadPaints();
