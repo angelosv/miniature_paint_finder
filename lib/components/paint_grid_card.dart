@@ -102,20 +102,47 @@ class PaintGridCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Fila superior con avatar y nombre
+                      // Nombre de la pintura en la parte superior
+                      Text(
+                        paint.name,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      // Código de la pintura
+                      Text(
+                        paint.code,
+                        style: TextStyle(fontSize: 12.sp, color: subtextColor),
+                      ),
+
+                      Spacer(),
+
+                      // Fila inferior con logo y nombre de marca
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           // Logo de la marca (círculo con iniciales como fallback)
                           Container(
-                            width: 24.r,
-                            height: 24.r,
+                            width: 28.r,
+                            height: 28.r,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 2,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12.r),
+                              borderRadius: BorderRadius.circular(14.r),
                               child: Image.network(
                                 brandLogoUrl,
                                 fit: BoxFit.cover,
@@ -126,7 +153,7 @@ class PaintGridCard extends StatelessWidget {
                                             .substring(0, 1)
                                             .toUpperCase(),
                                         style: TextStyle(
-                                          fontSize: 12.sp,
+                                          fontSize: 14.sp,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.black87,
                                         ),
@@ -138,49 +165,15 @@ class PaintGridCard extends StatelessWidget {
 
                           SizedBox(width: 8.r),
 
-                          // Nombre de la pintura
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  paint.name,
-                                  style: TextStyle(
-                                    fontSize: 15.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-
-                                // Código de la pintura
-                                Text(
-                                  paint.code,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    color: subtextColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      Spacer(),
-
-                      // Fila inferior con información
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
                           // Nombre de la marca
-                          Text(
-                            paint.brand,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: textColor,
+                          Expanded(
+                            child: Text(
+                              paint.brand,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: textColor,
+                              ),
                             ),
                           ),
 
