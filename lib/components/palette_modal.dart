@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/palette.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 
 class PaletteModal extends StatelessWidget {
   final String paletteName;
@@ -822,107 +829,203 @@ class PaletteModal extends StatelessWidget {
 
   // Mostrar diálogo para añadir a wishlist
   void _showWishlistDialog(BuildContext context, PaintSelection paint) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    int priority = 2; // Prioridad media por defecto
-    final notesController = TextEditingController();
+    // Store references outside the callback to prevent deactivated widget errors
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    showDialog(
+    // Get a global reference to PaintService - don't depend on Provider after widget disposal
+    final paintService = PaintService();
+
+    // Convert PaintSelection to Paint for use with AddToWishlistModal with all necessary fields
+    // Parse color components to ensure RGB values are provided
+    final String hexColor =
+        paint.paintColorHex.startsWith('#')
+            ? paint.paintColorHex.substring(1)
+            : paint.paintColorHex;
+
+    // Parse RGB components
+    final r = int.parse(hexColor.substring(0, 2), radix: 16);
+    final g = int.parse(hexColor.substring(2, 4), radix: 16);
+    final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+    // Create a more complete Paint object
+    final Paint paintObj = Paint(
+      id: paint.paintId,
+      name: paint.paintName,
+      brand: paint.paintBrand,
+      hex: paint.paintColorHex,
+      // Include these fields with default values to ensure API compatibility
+      set: "Palette Paint", // Using a meaningful value instead of empty string
+      code: paint.paintId, // Using paintId as code
+      r: r,
+      g: g,
+      b: b,
+      category: "Palette", // Using a meaningful category
+      isMetallic: false,
+      isTransparent: false,
+    );
+
+    // Debug print the paint object for debugging
+    print('🔍 Adding paint to wishlist: ${paintObj.toJson()}');
+
+    AddToWishlistModal.show(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Add to Wishlist'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('${paint.paintName} will be added to your wishlist.'),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text('Priority: '),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Slider(
-                          value: priority.toDouble(),
-                          min: 1,
-                          max: 3,
-                          divisions: 2,
-                          label:
-                              priority == 1
-                                  ? 'Low'
-                                  : priority == 2
-                                  ? 'Medium'
-                                  : 'High',
-                          onChanged: (double value) {
-                            setState(() {
-                              priority = value.toInt();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    decoration: InputDecoration(
-                      labelText: 'Notes (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+      paint: paintObj,
+      onAddToWishlist: (paint, priority) async {
+        // Show loading indicator
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
                 ),
-                ElevatedButton(
+                SizedBox(width: 16),
+                Text('Adding to wishlist...'),
+              ],
+            ),
+            duration: Duration(seconds: 10),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        try {
+          // Get current Firebase user
+          final firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser == null) {
+            // Show error if not logged in
+            scaffoldMessenger.hideCurrentSnackBar();
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('You need to be logged in to add to wishlist'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+
+          final userId = firebaseUser.uid;
+          print('🔑 User ID detected: $userId');
+
+          // Call API directly
+          print(
+            '📤 Sending paint ${paint.id} with priority $priority and userId $userId',
+          );
+          print('📤 Paint details: ${paint.toJson()}');
+
+          // Include all required data in the API call
+          final result = await paintService.addToWishlistDirect(
+            paint,
+            priority,
+            userId,
+          );
+
+          scaffoldMessenger.hideCurrentSnackBar();
+
+          // Print complete result
+          print('✅ Complete API Wishlist result: $result');
+
+          if (result['success'] == true) {
+            // Don't try to update the wishlist directly here
+            // Instead, use a notification or refresh when navigating to the WishlistScreen
+
+            // Show success message
+            final priorityText = _getPriorityText(priority);
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
+                ),
+                duration: const Duration(seconds: 3),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
                   onPressed: () {
-                    Navigator.pop(context);
-
-                    // Mostrar confirmación con SnackBar
-                    final priorityText =
-                        priority == 1
-                            ? 'Low'
-                            : priority == 2
-                            ? 'Medium'
-                            : 'High';
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Added ${paint.paintName} to wishlist with $priorityText priority',
-                        ),
-                        backgroundColor: Colors.pink,
-                        action: SnackBarAction(
-                          label: 'VIEW',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        const InventoryScreen(), // Cambiar a WishlistScreen cuando esté disponible
-                              ),
-                            );
-                          },
-                        ),
+                    // When navigating to WishlistScreen, it will load the data in its initState
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WishlistScreen(),
                       ),
                     );
                   },
-                  child: Text('Confirm'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
                 ),
-              ],
+              ),
             );
-          },
-        );
+          } else {
+            // Show error with details
+            print(
+              '❌ Error details: ${result['raw_response'] ?? result['message']}',
+            );
+
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Error: ${result['message']}'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Details',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    // Show dialog with complete error details
+                    showDialog(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Error Details'),
+                            content: SingleChildScrollView(
+                              child: Text(result.toString()),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+        } catch (e, stackTrace) {
+          print('❌ Exception adding to wishlist: $e');
+          print('❌ Stack trace: $stackTrace');
+
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       },
     );
+  }
+
+  String _getPriorityText(int priority) {
+    switch (priority) {
+      case 1:
+        return 'low';
+      case 2:
+        return 'somewhat important';
+      case 3:
+        return 'important';
+      case 4:
+        return 'very important';
+      case 5:
+        return 'highest';
+      default:
+        return '';
+    }
   }
 
   Color _getColorFromHex(String hexColor) {

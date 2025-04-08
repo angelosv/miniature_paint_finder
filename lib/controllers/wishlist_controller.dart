@@ -75,14 +75,25 @@ class WishlistController extends ChangeNotifier {
       }
 
       print('🔄 WishlistController: Obteniendo datos de wishlist...');
+
+      // Print token used (for debugging, without exposing full token)
+      final tokenPreview =
+          token.length > 8
+              ? '${token.substring(0, 4)}...${token.substring(token.length - 4)}'
+              : '[token too short]';
+      print('🔑 WishlistController: Usando token: $tokenPreview');
+
+      // Call the service to get wishlist items
       final wishlistItems = await _paintService.getWishlistPaints(token);
+
       print(
         '✅ WishlistController: Datos de wishlist obtenidos: ${wishlistItems.length} elementos',
       );
 
       _wishlistItems = wishlistItems;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ WishlistController: Error al cargar wishlist: $e');
+      print('❌ WishlistController: Stack trace: $stackTrace');
       _hasError = true;
       _errorMessage = 'Error al cargar wishlist: $e';
     } finally {
@@ -251,21 +262,41 @@ class WishlistController extends ChangeNotifier {
   /// Añadir una pintura a la wishlist
   Future<bool> addToWishlist(Paint paint, bool isPriority) async {
     try {
+      if (paint == null) {
+        print(
+          '❌ WishlistController: Intento de añadir pintura null a wishlist',
+        );
+        return false;
+      }
+
       print(
         '🔄 WishlistController: Añadiendo ${paint.name} a wishlist con prioridad: ${isPriority ? 'Alta' : 'Normal'}',
       );
+
+      // Call the service method
       final result = await _paintService.addToWishlist(paint, isPriority);
 
       if (result) {
         print('✅ WishlistController: Pintura añadida a wishlist correctamente');
-        await loadWishlist(); // Recargar la lista completa para obtener el ID generado
+
+        // Try to reload wishlist but handle errors
+        try {
+          await loadWishlist(); // Recargar la lista completa para obtener el ID generado
+        } catch (reloadError) {
+          print(
+            '⚠️ WishlistController: Error al recargar wishlist: $reloadError',
+          );
+          // Continue with success flow even if reload fails
+        }
+
         return true;
       } else {
         print('❌ WishlistController: Error al añadir pintura a wishlist');
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ WishlistController: Excepción al añadir a wishlist: $e');
+      print('❌ WishlistController: Stack trace: $stackTrace');
       return false;
     }
   }

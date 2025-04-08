@@ -256,15 +256,7 @@ class PaintService {
 
       print('📥 GET Wishlist response [${response.statusCode}]');
 
-      if (response.statusCode == 200) {
-        print('✅ Wishlist obtenida correctamente');
-        // Solo logueamos la estructura de la respuesta, no todo el cuerpo para evitar logs muy largos
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-        print('📊 Estructura de respuesta: ${jsonData.keys.toList()}');
-        print(
-          '📊 Total de elementos en la wishlist: ${jsonData["whitelist"]?.length ?? 0}',
-        );
-      } else {
+      if (response.statusCode != 200) {
         print(
           '❌ Error al obtener wishlist: Código ${response.statusCode}, Respuesta: ${response.body}',
         );
@@ -273,55 +265,126 @@ class PaintService {
         );
       }
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to fetch wishlist (${response.statusCode}): ${response.body}',
-        );
-      }
-
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      final List<dynamic> wishlist = jsonData['whitelist'];
+      print('📊 Estructura de respuesta: ${jsonData.keys.toList()}');
+
+      final List<dynamic> wishlist = jsonData['whitelist'] ?? [];
+      print('📊 Total de elementos en la wishlist: ${wishlist.length}');
 
       final List<Map<String, dynamic>> result = [];
+      int skippedCount = 0;
+      int processedCount = 0;
 
       for (final item in wishlist) {
-        final paintJson = item['paint'];
-        final brandJson = item['brand'];
-        final createdAt = item['created_at'];
+        // Skip items with missing data
+        if (item == null) {
+          skippedCount++;
+          continue;
+        }
 
-        // Parse hex to get rgb components
-        final hexColor =
-            paintJson['hex'].startsWith('#')
-                ? paintJson['hex'].substring(1)
-                : paintJson['hex'];
-        final r = int.parse(hexColor.substring(0, 2), radix: 16);
-        final g = int.parse(hexColor.substring(2, 4), radix: 16);
-        final b = int.parse(hexColor.substring(4, 6), radix: 16);
+        try {
+          // Check if item has direct paint_id and brand_id vs nested paint and brand objects
+          bool isDirectFormat =
+              item['paint'] == null && item['paint_id'] != null;
+          String paintId =
+              isDirectFormat ? item['paint_id'] : item['paint']?['code'];
+          String brandId =
+              isDirectFormat ? item['brand_id'] : item['brand']?['name'];
 
-        final paint = Paint(
-          id: paintJson['code'],
-          name: paintJson['name'],
-          brand: brandJson['name'],
-          hex: paintJson['hex'],
-          set: paintJson['set'] ?? 'Unknown',
-          code: paintJson['code'],
-          r: r,
-          g: g,
-          b: b,
-          category: paintJson['set'] ?? 'Unknown',
-          isMetallic: false,
-          isTransparent: false,
-        );
+          if (paintId == null || brandId == null) {
+            print('⚠️ Skipping wishlist item with missing data: $item');
+            skippedCount++;
+            continue;
+          }
 
-        result.add({
-          'id': item['id'],
-          'paint': paint,
-          'isPriority': item['priority'] != null,
-          'priority': item['priority'],
-          'addedAt': DateTime.fromMillisecondsSinceEpoch(
-            createdAt['_seconds'] * 1000,
-          ),
-        });
+          // In direct format case, we need to find the paint details
+          if (isDirectFormat) {
+            print('🔍 Processing direct format wishlist item: $item');
+
+            // For direct format, we'll attempt to find the paint or create a placeholder
+            final createdAt = item['created_at'];
+
+            // Create a minimal Paint object with available information
+            final Paint paint = Paint.fromHex(
+              id: paintId,
+              name: _getPaintNameFromId(paintId),
+              brand: _formatBrandId(brandId),
+              hex: '#9c27b0', // Default purple color
+              set: '',
+              code: paintId,
+              category: '',
+            );
+
+            DateTime addedAt;
+            try {
+              addedAt = DateTime.fromMillisecondsSinceEpoch(
+                createdAt['_seconds'] * 1000,
+              );
+            } catch (e) {
+              print('⚠️ Error parsing date: $e');
+              addedAt = DateTime.now(); // Fallback to current time
+            }
+
+            result.add({
+              'id': item['id'] ?? 'unknown-id',
+              'paint': paint,
+              'isPriority': item['priority'] != null,
+              'priority': item['priority'],
+              'addedAt': addedAt,
+            });
+
+            processedCount++;
+          }
+          // Original format with nested paint and brand objects
+          else if (item['paint'] != null && item['brand'] != null) {
+            final paintJson = item['paint'];
+            final brandJson = item['brand'];
+            final createdAt = item['created_at'];
+
+            // Parse hex to get rgb components
+            final hexColor =
+                paintJson['hex'].startsWith('#')
+                    ? paintJson['hex'].substring(1)
+                    : paintJson['hex'];
+            final r = int.parse(hexColor.substring(0, 2), radix: 16);
+            final g = int.parse(hexColor.substring(2, 4), radix: 16);
+            final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+            final paint = Paint(
+              id: paintJson['code'],
+              name: paintJson['name'],
+              brand: brandJson['name'],
+              hex: paintJson['hex'],
+              set: paintJson['set'] ?? 'Unknown',
+              code: paintJson['code'],
+              r: r,
+              g: g,
+              b: b,
+              category: paintJson['set'] ?? 'Unknown',
+              isMetallic: false,
+              isTransparent: false,
+            );
+
+            result.add({
+              'id': item['id'] ?? 'unknown-id',
+              'paint': paint,
+              'isPriority': item['priority'] != null,
+              'priority': item['priority'],
+              'addedAt': DateTime.fromMillisecondsSinceEpoch(
+                createdAt['_seconds'] * 1000,
+              ),
+            });
+
+            processedCount++;
+          } else {
+            print('⚠️ Skipping wishlist item with missing data: $item');
+            skippedCount++;
+          }
+        } catch (e) {
+          print('⚠️ Error processing wishlist item: $e');
+          print('⚠️ Item data: $item');
+          skippedCount++;
+        }
       }
 
       // Ordenar por prioridad (null al final) y luego por fecha de agregado
@@ -336,11 +399,47 @@ class PaintService {
         return (b['addedAt'] as DateTime).compareTo(a['addedAt'] as DateTime);
       });
 
-      print('✅ Procesados ${result.length} elementos de la wishlist');
+      print('✅ Procesados $processedCount elementos de la wishlist');
+      print('⚠️ Omitidos $skippedCount elementos de la wishlist');
       return result;
     } catch (e) {
       print('⚠️ Excepción al obtener la wishlist: $e');
-      rethrow;
+      return []; // Return empty list instead of rethrowing
+    }
+  }
+
+  /// Obtener un nombre de pintura a partir de un ID
+  String _getPaintNameFromId(String paintId) {
+    // Convertir IDs como "violet-volt-764287" a "Violet Volt"
+    try {
+      // Convertir guiones a espacios y capitalizar cada palabra
+      final namePart = paintId
+          .split('-')
+          .where(
+            (part) =>
+                // Filtrar partes que parecen ser números/códigos
+                !RegExp(r'^[0-9]+$').hasMatch(part),
+          )
+          .map(
+            (part) =>
+                // Capitalizar primera letra de cada palabra
+                part.substring(0, 1).toUpperCase() + part.substring(1),
+          )
+          .join(' ');
+
+      return namePart.isNotEmpty ? namePart : paintId;
+    } catch (e) {
+      return paintId; // Devolver el ID si hay algún error
+    }
+  }
+
+  /// Formatear un ID de marca a un nombre más legible
+  String _formatBrandId(String brandId) {
+    try {
+      // Remplazar guiones bajos por espacios
+      return brandId.replaceAll('_', ' ');
+    } catch (e) {
+      return brandId;
     }
   }
 
@@ -405,16 +504,37 @@ class PaintService {
     int priority,
     String userId,
   ) async {
+    // Debug log the full request parameters
+    print('📝 addToWishlistDirect request parameters:');
+    print('- Paint: ${paint.toJson()}');
+    print('- Priority: $priority');
+    print('- User ID: $userId');
+
     try {
+      if (paint == null) {
+        print('❌ Error: Paint object is null');
+        return {'success': false, 'message': 'Paint object is null'};
+      }
+
+      if (userId == null || userId.isEmpty) {
+        print('❌ Error: User ID is null or empty');
+        return {'success': false, 'message': 'User ID is required'};
+      }
+
+      // Ensure we're using the correct API endpoint
       final baseUrl = 'https://paints-api.reachu.io/api';
       final url = Uri.parse('$baseUrl/wishlist');
 
       // Extraer brand_id del nombre de la marca o ID
-      String brandId = paint.brand.replaceAll(' ', '_');
-      if (paint.brand.toLowerCase() == 'citadel') {
-        brandId = 'Citadel_Colour';
+      String brandId = 'Unknown_Brand';
+      if (paint.brand != null && paint.brand.isNotEmpty) {
+        brandId = paint.brand.replaceAll(' ', '_');
+        if (paint.brand.toLowerCase() == 'citadel') {
+          brandId = 'Citadel_Colour';
+        }
       }
 
+      // Create request body EXACTLY as required
       final requestBody = {
         "paint_id": paint.id,
         "brand_id": brandId,
@@ -423,11 +543,12 @@ class PaintService {
       };
 
       print('📤 POST Add to Wishlist direct request: $url');
+      print('📤 Request body: ${jsonEncode(requestBody)}');
       print(
         '📤 Request headers: {"Content-Type": "application/json", "x-user-uid": "$userId"}',
       );
-      print('📤 Request body: ${jsonEncode(requestBody)}');
 
+      // Ensure we're using the POST method with correct headers
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json', 'x-user-uid': userId},
@@ -435,8 +556,19 @@ class PaintService {
       );
 
       print('📥 Direct API response status: ${response.statusCode}');
-      print('📥 Direct API response headers: ${response.headers}');
       print('📥 Direct API response body: ${response.body}');
+
+      // Parse response safely
+      Map<String, dynamic> responseData = {};
+      if (response.body != null && response.body.isNotEmpty) {
+        try {
+          responseData = json.decode(response.body);
+          print('📥 Parsed response data: $responseData');
+        } catch (e) {
+          print('❌ Error parsing response body: $e');
+          responseData = {'error': 'Invalid JSON response: ${response.body}'};
+        }
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Actualizar wishlist local para mantener consistencia
@@ -445,10 +577,9 @@ class PaintService {
           'addedAt': DateTime.now(),
         };
 
-        final responseData = json.decode(response.body);
         return {
           'success': true,
-          'id': responseData['id'],
+          'id': responseData['id'] ?? 'unknown-id',
           'message': 'Pintura añadida a wishlist con éxito',
           'response': responseData,
         };
@@ -457,17 +588,17 @@ class PaintService {
           'success': false,
           'message':
               'Error al añadir a wishlist. Código: ${response.statusCode}',
-          'error': response.body,
+          'error': responseData,
           'raw_response': response.body,
         };
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('⚠️ Excepción al añadir a wishlist directamente: $e');
-      print('⚠️ StackTrace: ${StackTrace.current}');
+      print('⚠️ StackTrace: $stackTrace');
       return {
         'success': false,
         'message': 'Error: $e',
-        'stacktrace': '${StackTrace.current}',
+        'stacktrace': '$stackTrace',
       };
     }
   }
