@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const Icon(Icons.format_paint, size: 80, color: Colors.blue),
             const SizedBox(height: 24),
             const Text(
-              'Miniature Paint Finder',
+              'Miniature Painter',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 48),

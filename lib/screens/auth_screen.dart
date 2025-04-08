@@ -617,7 +617,7 @@ class _AuthScreenState extends State<AuthScreen>
                     height: isVerySmallScreen ? 10 : (isSmallScreen ? 16 : 24),
                   ),
                   Text(
-                    'Miniature Paint Finder',
+                    'Miniature Painter',
                     style: AppTheme.headingStyle.copyWith(
                       color: Colors.white,
                       fontSize: titleFontSize,

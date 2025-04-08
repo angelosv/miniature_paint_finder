@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <application
-        android:label="miniature_paint_finder"
+        android:label="Miniature Painter"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

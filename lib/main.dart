@@ -94,7 +94,7 @@ class MyApp extends StatelessWidget {
       // Construir la aplicación
       builder: (_, child) {
         return MaterialApp(
-          title: 'Miniature Paint Finder',
+          title: 'Miniature Painter',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
