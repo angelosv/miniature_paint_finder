@@ -33,11 +33,25 @@ class PaintGridCard extends StatelessWidget {
     return 'https://placehold.co/40/${paint.hex.substring(1)}/000000';
   }
 
-  // Helper para obtener la URL del logo de la marca desde el JSON de la API
+  // Helper para obtener la URL del logo de la marca directamente del parámetro logo_url
   String _getBrandLogoUrl() {
-    // Este es el campo 'logo_url' que devuelve la API
-    final brandId = paint.brand.toLowerCase();
-    return 'https://raw.githubusercontent.com/Arcturus5404/miniature-paints/refs/heads/main/logos/${brandId}.png';
+    // En una implementación real, esto vendría directamente de la respuesta de la API
+    // como un campo "logo_url" en el objeto Paint
+    // Aquí simulamos la URL basándonos en la marca
+    return 'https://raw.githubusercontent.com/Arcturus5404/miniature-paints/refs/heads/main/logos/${paint.brand.toUpperCase()}.png';
+  }
+
+  // Determina si se debe usar texto oscuro o claro basado en el color de fondo
+  bool _shouldUseWhiteText(Color backgroundColor) {
+    // Calcular el brillo del color (fórmula general: 0.299*R + 0.587*G + 0.114*B)
+    final luminance =
+        (0.299 * backgroundColor.red +
+            0.587 * backgroundColor.green +
+            0.114 * backgroundColor.blue) /
+        255;
+
+    // Si la luminancia es mayor a 0.5, el color es considerado "claro" y debe usar texto oscuro
+    return luminance < 0.5;
   }
 
   @override
@@ -46,6 +60,12 @@ class PaintGridCard extends StatelessWidget {
     final paintColor = _getPaintColor();
     final colorImageUrl = _getColorImageUrl();
     final brandLogoUrl = _getBrandLogoUrl();
+
+    // Determinar color de texto basado en el color de fondo
+    final useWhiteText = _shouldUseWhiteText(paintColor);
+    final textColor = useWhiteText ? Colors.white : Colors.black87;
+    final subtextColor =
+        useWhiteText ? Colors.white.withOpacity(0.8) : Colors.black54;
 
     return GestureDetector(
       onTap: () {
@@ -61,56 +81,18 @@ class PaintGridCard extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.r),
             ),
-            clipBehavior:
-                Clip.antiAlias, // Para que la imagen no desborde la tarjeta
+            clipBehavior: Clip.antiAlias,
             child: Stack(
               children: [
-                // Imagen del color que cubre toda la tarjeta
+                // Imagen del color que cubre toda la tarjeta (sin adulterar)
                 Positioned.fill(
                   child: Image.network(
                     colorImageUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      // Si la imagen no carga, mostrar un contenedor con el color
-                      return Container(
-                        color: paintColor,
-                        child:
-                            paint.isMetallic
-                                ? Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        paintColor,
-                                        paintColor.withOpacity(0.7),
-                                        paintColor.withOpacity(0.9),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                                : null,
-                      );
+                      // Si la imagen no carga, mostrar un contenedor con el color puro
+                      return Container(color: paintColor);
                     },
-                  ),
-                ),
-
-                // Overlay para mejorar la visibilidad del texto
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.5),
-                          Colors.transparent,
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.6),
-                        ],
-                        stops: const [0.0, 0.2, 0.7, 1.0],
-                      ),
-                    ),
                   ),
                 ),
 
@@ -120,103 +102,20 @@ class PaintGridCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nombre y código de la pintura
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Nombre de la pintura
-                            Text(
-                              paint.name,
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    offset: const Offset(1, 1),
-                                    blurRadius: 3,
-                                    color: Colors.black.withOpacity(0.5),
-                                  ),
-                                ],
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-
-                            SizedBox(height: 4.r),
-
-                            // Código de la pintura
-                            Text(
-                              paint.code,
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.white.withOpacity(0.9),
-                                shadows: [
-                                  Shadow(
-                                    offset: const Offset(1, 1),
-                                    blurRadius: 2,
-                                    color: Colors.black.withOpacity(0.5),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Espacio entre el nombre y el footer
-                      Expanded(flex: 3, child: Container()),
-
-                      // Footer con categoría y marca
+                      // Fila superior con avatar y nombre
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Categoría de pintura
-                          Expanded(
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 6.r,
-                                vertical: 2.r,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(4.r),
-                              ),
-                              child: Text(
-                                paint.category,
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(width: 8.r),
-
-                          // Logo de la marca
+                          // Logo de la marca (círculo con iniciales como fallback)
                           Container(
-                            width: 28.r,
-                            height: 28.r,
+                            width: 24.r,
+                            height: 24.r,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14.r),
+                              borderRadius: BorderRadius.circular(12.r),
                               child: Image.network(
                                 brandLogoUrl,
                                 fit: BoxFit.cover,
@@ -227,13 +126,70 @@ class PaintGridCard extends StatelessWidget {
                                             .substring(0, 1)
                                             .toUpperCase(),
                                         style: TextStyle(
-                                          fontSize: 14.sp,
+                                          fontSize: 12.sp,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.black87,
                                         ),
                                       ),
                                     ),
                               ),
+                            ),
+                          ),
+
+                          SizedBox(width: 8.r),
+
+                          // Nombre de la pintura
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  paint.name,
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+
+                                // Código de la pintura
+                                Text(
+                                  paint.code,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: subtextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      Spacer(),
+
+                      // Fila inferior con información
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Nombre de la marca
+                          Text(
+                            paint.brand,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: textColor,
+                            ),
+                          ),
+
+                          // Categoría sin fondo
+                          Text(
+                            paint.category,
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: textColor.withOpacity(0.8),
                             ),
                           ),
                         ],
