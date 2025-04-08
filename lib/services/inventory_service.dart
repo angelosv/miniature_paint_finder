@@ -2,6 +2,9 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// A service for managing paint inventory data.
 ///
@@ -231,5 +234,68 @@ class InventoryService {
     if (hashCode % 17 == 0) palettes.clear();
 
     return palettes;
+  }
+
+  /// Adds a new inventory record using the API.
+  ///
+  /// Returns true if the addition was successful, false otherwise.
+  Future<bool> addInventoryRecord({
+    required String brandId,
+    required String paintId,
+    required int quantity,
+    String? notes,
+  }) async {
+    try {
+      // Obtener el token de Firebase
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('Error: No hay usuario autenticado');
+        return false;
+      }
+
+      final token = await user.getIdToken();
+      if (token == null) {
+        print('Error: No se pudo obtener el token de Firebase');
+        return false;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://paints-api.reachu.io/api/inventory'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'brand_id': brandId,
+          'paint_id': paintId,
+          'quantity': quantity,
+          'notes': notes ?? '',
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Actualizar el inventario local después de una adición exitosa
+        final paint = Paint(
+          id: paintId,
+          name: '', // Estos campos se actualizarán cuando se cargue el inventario
+          brand: brandId,
+          category: '',
+          hex: '',
+          set: '',
+          code: '',
+          r: 0,
+          g: 0,
+          b: 0,
+        );
+        
+        return addPaintToInventory(paint, stock: quantity, notes: notes ?? '');
+      }
+      
+      print('Error en la respuesta del servidor: ${response.statusCode} - ${response.body}');
+      return false;
+    } catch (e) {
+      print('Error adding inventory record: $e');
+      return false;
+    }
   }
 }

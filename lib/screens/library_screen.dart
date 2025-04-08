@@ -7,6 +7,8 @@ import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -19,6 +21,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  late InventoryService _inventoryService;
 
   @override
   void initState() {
@@ -26,6 +29,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PaintLibraryController>().loadPaints();
     });
+    _inventoryService = InventoryService();
   }
 
   @override
@@ -532,13 +536,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  void _addToInventory(String paintId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Added to inventory'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
+  void _addToInventory(String paintId) async {
+    final controller = context.read<PaintLibraryController>();
+    final paint = controller.paginatedPaints.firstWhere((p) => p.id == paintId);
+    final success = await _inventoryService.addInventoryRecord(
+      brandId: paint.brand,
+      paintId: paint.id,
+      quantity: 1,
     );
+
+    if (success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added ${paint.name} to inventory'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InventoryScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to add paint to inventory'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
