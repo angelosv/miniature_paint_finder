@@ -218,6 +218,8 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
+                    // Ahora el componente padre se encargará de hacer la llamada a la API
+                    // y mostrar mensajes de éxito o error
                     widget.onAddToWishlist(widget.paint, _selectedPriority);
                   },
                   style: ElevatedButton.styleFrom(

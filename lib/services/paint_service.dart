@@ -398,4 +398,77 @@ class PaintService {
     _userPalettes.add(palette);
     return palette;
   }
+
+  /// Agrega una pintura a la wishlist usando el endpoint directo
+  Future<Map<String, dynamic>> addToWishlistDirect(
+    Paint paint,
+    int priority,
+    String userId,
+  ) async {
+    try {
+      final baseUrl = 'https://paints-api.reachu.io/api';
+      final url = Uri.parse('$baseUrl/wishlist');
+
+      // Extraer brand_id del nombre de la marca o ID
+      String brandId = paint.brand.replaceAll(' ', '_');
+      if (paint.brand.toLowerCase() == 'citadel') {
+        brandId = 'Citadel_Colour';
+      }
+
+      final requestBody = {
+        "paint_id": paint.id,
+        "brand_id": brandId,
+        "type": "favorite",
+        "priority": priority,
+      };
+
+      print('📤 POST Add to Wishlist direct request: $url');
+      print(
+        '📤 Request headers: {"Content-Type": "application/json", "x-user-uid": "$userId"}',
+      );
+      print('📤 Request body: ${jsonEncode(requestBody)}');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json', 'x-user-uid': userId},
+        body: jsonEncode(requestBody),
+      );
+
+      print('📥 Direct API response status: ${response.statusCode}');
+      print('📥 Direct API response headers: ${response.headers}');
+      print('📥 Direct API response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Actualizar wishlist local para mantener consistencia
+        _wishlist[paint.id] = {
+          'isPriority': priority > 0,
+          'addedAt': DateTime.now(),
+        };
+
+        final responseData = json.decode(response.body);
+        return {
+          'success': true,
+          'id': responseData['id'],
+          'message': 'Pintura añadida a wishlist con éxito',
+          'response': responseData,
+        };
+      } else {
+        return {
+          'success': false,
+          'message':
+              'Error al añadir a wishlist. Código: ${response.statusCode}',
+          'error': response.body,
+          'raw_response': response.body,
+        };
+      }
+    } catch (e) {
+      print('⚠️ Excepción al añadir a wishlist directamente: $e');
+      print('⚠️ StackTrace: ${StackTrace.current}');
+      return {
+        'success': false,
+        'message': 'Error: $e',
+        'stacktrace': '${StackTrace.current}',
+      };
+    }
+  }
 }
