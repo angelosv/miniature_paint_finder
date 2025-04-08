@@ -424,69 +424,72 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF101823) : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(
-          'Delete Palette',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : Colors.black87,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to delete "${palette.name}"?',
+      builder:
+          (context) => AlertDialog(
+            backgroundColor:
+                isDarkMode ? const Color(0xFF101823) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Delete Palette',
               style: TextStyle(
-                fontSize: 16,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'This action cannot be undone.',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDarkMode ? Colors.red[300] : Colors.red[700],
-              ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to delete "${palette.name}"?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDarkMode ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This action cannot be undone.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.red[300] : Colors.red[700],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                fontWeight: FontWeight.w500,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      isDarkMode ? Colors.red[300] : Colors.red[600],
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDarkMode ? Colors.red[300] : Colors.red[600],
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text(
-              'Delete',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      ),
     );
 
     if (confirmed == true) {
@@ -512,8 +515,8 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
         // Si la eliminación fue exitosa y estamos en la última página con una sola paleta,
         // cargar la página anterior
-        if (success && 
-            _paletteController.palettes.isEmpty && 
+        if (success &&
+            _paletteController.palettes.isEmpty &&
             _paletteController.currentPage > 1) {
           await _paletteController.loadPreviousPage();
         }
@@ -533,11 +536,13 @@ class _PaletteScreenState extends State<PaletteScreen> {
       selectedIndex: 1, // Palette tab
       body: _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'palettes'),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreatePaletteModal(context),
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add),
-        mini: true,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreatePaletteOptions,
+        backgroundColor:
+            isDarkMode ? AppTheme.marineOrange : Theme.of(context).primaryColor,
+        foregroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Create Palette'),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -600,11 +605,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 64,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        Image.asset(
+                          'assets/images/palette_palceholder.png',
+                          width: 200,
+                          height: 200,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -612,9 +616,8 @@ class _PaletteScreenState extends State<PaletteScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
+                                isDarkMode ? Colors.white : AppTheme.marineBlue,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -625,21 +628,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                 isDarkMode
                                     ? Colors.grey[400]
                                     : Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Palette'),
-                          onPressed: _showCreatePaletteOptions,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
                           ),
                         ),
                       ],

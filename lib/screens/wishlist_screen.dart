@@ -393,6 +393,18 @@ class _WishlistScreenState extends State<WishlistScreen> {
       selectedIndex: -1, // Not a bottom tab item
       body: _buildBody(),
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Navigate to Library or Paint Browser
+          Navigator.pop(context);
+        },
+        backgroundColor:
+            isDarkMode ? AppTheme.marineOrange : Theme.of(context).primaryColor,
+        foregroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add to Wishlist'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -405,31 +417,31 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.favorite_border, size: 64, color: Colors.grey[400]),
+          Image.asset(
+            'assets/images/wishlist_palceholder.png',
+            width: 200,
+            height: 200,
+          ),
           const SizedBox(height: 16),
           Text(
             'Your wishlist is empty',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: TextStyle(
+              fontSize: 18,
+              color: isDarkMode ? Colors.white : AppTheme.marineBlue,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Add paints you want to purchase later',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to Library or Paint Browser
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.search),
-            label: const Text('Browse Paints'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
         ],
