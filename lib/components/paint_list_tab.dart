@@ -7,6 +7,7 @@ import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/components/paint_card.dart';
 import 'package:miniature_paint_finder/components/palette_card.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
+import 'package:miniature_paint_finder/components/palette_skeleton.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
@@ -345,6 +346,16 @@ class _PaintListTabState extends State<PaintListTab> {
               builder: (context, paletteController, child) {
                 final recentPalettes =
                     paletteController.palettes.take(10).toList();
+
+                // Si está cargando, mostrar skeleton
+                if (paletteController.isLoading) {
+                  return const PaletteSkeletonList(count: 3);
+                }
+
+                // Si no hay paletas, mostrar skeleton
+                if (recentPalettes.isEmpty) {
+                  return const PaletteSkeletonList(count: 3);
+                }
 
                 return SizedBox(
                   height: 220,
