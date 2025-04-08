@@ -58,10 +58,18 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   // Verificar si estamos en iOS o macOS para mostrar el botón de Apple
-  bool get _isAppleSignInAvailable =>
-      defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      kIsWeb;
+  // También verificamos una variable de entorno para desarrollo
+  bool get _isAppleSignInAvailable {
+    // Condición que evalúa si la funcionalidad está disponible para el equipo de desarrollo
+    // Establece esta variable como falsa para equipos sin Apple Developer
+    const bool forceDisableAppleSignIn =
+        true; // Cambiar a false para habilitar en producción
+
+    return !forceDisableAppleSignIn &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS ||
+            kIsWeb);
+  }
 
   // Nuevo método para manejar el inicio de sesión con Apple
   Future<void> _handleAppleSignIn() async {

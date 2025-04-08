@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -565,107 +566,65 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithApple() async {
     try {
-      // Verificar si el método es compatible con la plataforma actual
-      if (!isProviderAvailable(AuthProvider.apple)) {
+      // Constante para desactivar Sign in with Apple en desarrollo sin cuenta de Apple Developer
+      const bool disableForDevelopment = true;
+
+      if (disableForDevelopment) {
         throw AuthException(
           AuthErrorCode.platformNotSupported,
-          'Sign in with Apple is not available on this platform',
+          'Sign in with Apple desactivado para desarrollo local. ' +
+              'Cambiar constante disableForDevelopment a false cuando sea necesario.',
         );
       }
 
-      // En Android, lanzamos una excepción ya que no está soportado
-      if (_isAndroid) {
-        throw AuthException(
-          AuthErrorCode.platformNotSupported,
-          'Sign in with Apple is not available on Android',
-        );
-      }
-
-      // Ejecutamos el Sign In con Apple
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-        webAuthenticationOptions: WebAuthenticationOptions(
-          clientId: 'com.example.miniaturePaintFinder',
-          redirectUri: Uri.parse('https://paints-api.reachu.io/auth/callback'),
-        ),
-      );
-
-      print('Apple Sign In successful');
-      print('Authorization Code: ${appleCredential.authorizationCode}');
-      print('Identity Token: ${appleCredential.identityToken}');
-
-      // Crear un credential para Firebase - este es el punto crítico
-      final oauthCredential = firebase.OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        accessToken: appleCredential.authorizationCode,
-        rawNonce: _createNonce(),
-      );
-
-      // Iniciar sesión en Firebase con el credential de Apple
-      final userCredential = await firebase.FirebaseAuth.instance
-          .signInWithCredential(oauthCredential);
-
-      print('Firebase User ID: ${userCredential.user!.uid}');
-
-      // Determinar el nombre del usuario
-      String name = 'Apple User';
-      if (appleCredential.givenName != null &&
-          appleCredential.familyName != null) {
-        name = '${appleCredential.givenName} ${appleCredential.familyName}';
-      } else if (userCredential.user!.displayName != null &&
-          userCredential.user!.displayName!.isNotEmpty) {
-        name = userCredential.user!.displayName!;
-      }
-
-      // Determinar el email del usuario
-      String email = '';
-      if (appleCredential.email != null && appleCredential.email!.isNotEmpty) {
-        email = appleCredential.email!;
-      } else if (userCredential.user!.email != null &&
-          userCredential.user!.email!.isNotEmpty) {
-        email = userCredential.user!.email!;
-      }
-
-      print('User Name: $name');
-      print('User Email: $email');
-
-      // Hacer el POST al endpoint para crear usuario
-      try {
-        final response = await http.post(
-          Uri.parse('https://paints-api.reachu.io/auth/create-user'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'uid': userCredential.user!.uid,
-            'email': email,
-            'name': name,
-          }),
-        );
-
-        final responseData = jsonDecode(response.body);
-        if (responseData['executed'] == false) {
-          throw AuthException(
-            AuthErrorCode.unknown,
-            responseData['message'] ?? 'Error creating user',
+      if (kIsWeb) {
+        // Web implementation
+        try {
+          await firebase.FirebaseAuth.instance.signInWithPopup(
+            firebase.AppleAuthProvider(),
+          );
+        } catch (e) {
+          // If popup fails, try redirect
+          await firebase.FirebaseAuth.instance.signInWithRedirect(
+            firebase.AppleAuthProvider(),
           );
         }
+      } else {
+        // Mobile implementation
+        // Generate nonce for Apple sign-in
+        final rawNonce = _generateNonce();
+        final nonce = _sha256ofString(rawNonce);
 
-        print('Server response create-user: ${response.body}');
-      } catch (e) {
-        print('Error making POST request to create-user server: $e');
-        throw AuthException(
-          AuthErrorCode.unknown,
-          e is AuthException ? e.message : 'Error creating user on server',
+        // Request credential from Apple
+        final appleCredential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+          nonce: nonce,
+        );
+
+        // Create OAuthCredential
+        final oauthCredential = firebase.OAuthProvider('apple.com').credential(
+          idToken: appleCredential.identityToken!,
+          rawNonce: rawNonce,
+        );
+
+        // Sign in with Firebase
+        await firebase.FirebaseAuth.instance.signInWithCredential(
+          oauthCredential,
         );
       }
 
+      // Update user display name if needed
+      await _updateDisplayNameIfNeeded();
+
       // Convertir el usuario de Firebase a nuestro modelo de User
+      final firebaseUser = firebase.FirebaseAuth.instance.currentUser!;
       _currentUser = User(
-        id: userCredential.user!.uid,
-        name: name,
-        email: email,
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? 'User',
+        email: firebaseUser.email ?? '',
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
         authProvider: 'apple',
@@ -675,26 +634,24 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } catch (e) {
-      print('Error in Apple Sign In: $e');
-
-      // Si el usuario canceló el inicio de sesión
-      if (e.toString().contains('canceled')) {
-        throw AuthException(
-          AuthErrorCode.cancelled,
-          'Apple sign in was cancelled',
-        );
-      }
-
-      // Si es una AuthException personalizada, reenviarla
-      if (e is AuthException) {
+      print('Apple Sign In Error: $e');
+      if (e is SignInWithAppleAuthorizationException) {
+        if (e.code == AuthorizationErrorCode.canceled) {
+          throw AuthException(
+            AuthErrorCode.cancelled,
+            'Apple sign in was cancelled',
+          );
+        } else {
+          throw AuthException(
+            AuthErrorCode.unknown,
+            'Apple sign in failed: ${e.message}',
+          );
+        }
+      } else if (e is AuthException) {
         rethrow;
+      } else {
+        throw AuthException(AuthErrorCode.unknown, 'Apple sign in failed: $e');
       }
-
-      // Para cualquier otro error
-      throw AuthException(
-        AuthErrorCode.unknown,
-        'Apple authentication failed: $e',
-      );
     }
   }
 
@@ -880,5 +837,29 @@ class AuthService implements IAuthService {
     final random = DateTime.now().millisecondsSinceEpoch;
 
     return List.generate(32, (_) => charset[random % charset.length]).join();
+  }
+
+  String _generateNonce() {
+    // Este método genera un nonce seguro criptográficamente
+    const charset =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
+    final random = DateTime.now().millisecondsSinceEpoch;
+
+    return List.generate(32, (_) => charset[random % charset.length]).join();
+  }
+
+  String _sha256ofString(String input) {
+    // Este método genera un hash SHA-256 de una cadena de entrada
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> _updateDisplayNameIfNeeded() async {
+    // Este método actualiza el nombre de usuario si es necesario
+    final user = firebase.FirebaseAuth.instance.currentUser;
+    if (user != null && user.displayName != _currentUser?.name) {
+      await user.updateDisplayName(_currentUser?.name);
+    }
   }
 }
