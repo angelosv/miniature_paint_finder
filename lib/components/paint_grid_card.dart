@@ -5,6 +5,8 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 
 class PaintGridCard extends StatelessWidget {
   final Paint paint;
@@ -621,25 +623,136 @@ class PaintGridCard extends StatelessWidget {
   }
 
   void _showAddToWishlistModal(BuildContext context) {
+    // Obtenemos una referencia al ScaffoldMessengerState antes de empezar
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     AddToWishlistModal.show(
       context: context,
       paint: paint,
-      onAddToWishlist: (paint, priority) {
-        // Llamamos a la función original pasando el ID
-        if (onAddToWishlist != null) {
-          onAddToWishlist!(paint.id);
-        }
-
-        // Mostramos un mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Added ${paint.name} to wishlist ${priority > 0 ? "with priority $priority" : ""}',
+      onAddToWishlist: (paint, priority) async {
+        // Mostrar loading
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
+                ),
+                SizedBox(width: 16),
+                Text('Añadiendo a wishlist...'),
+              ],
             ),
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 10),
             behavior: SnackBarBehavior.floating,
           ),
         );
+
+        try {
+          // Obtener el usuario actual de Firebase
+          final firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser == null) {
+            // Si no hay usuario, mostrar error
+            scaffoldMessenger.hideCurrentSnackBar();
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Debes iniciar sesión para añadir a wishlist'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+
+          final userId = firebaseUser.uid;
+          print('🔑 User ID detectado: $userId');
+
+          // Llamar directamente a la API
+          final paintService = PaintService();
+          print(
+            '📤 Enviando pintura ${paint.id} con prioridad $priority y userId $userId',
+          );
+
+          final result = await paintService.addToWishlistDirect(
+            paint,
+            priority,
+            userId,
+          );
+
+          scaffoldMessenger.hideCurrentSnackBar();
+
+          // Imprimir resultado completo
+          print('✅ Resultado completo de API Wishlist: $result');
+
+          if (result['success'] == true) {
+            // Actualizar UI localmente con callback
+            if (onAddToWishlist != null) {
+              onAddToWishlist!(paint.id);
+            }
+
+            // Mostrar mensaje de éxito
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Added ${paint.name} to wishlist (Priority: $priority, ID: ${result['id']})',
+                ),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            // Mostrar error con detalles
+            print(
+              '❌ Error con detalles: ${result['raw_response'] ?? result['message']}',
+            );
+
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Error: ${result['message']}'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Detalles',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    // Mostrar diálogo con detalles completos del error
+                    showDialog(
+                      context: context,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Error Details'),
+                            content: SingleChildScrollView(
+                              child: Text(result.toString()),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cerrar'),
+                              ),
+                            ],
+                          ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          print('⚠️ Excepción: $e');
+          print('⚠️ Stack trace: ${StackTrace.current}');
+
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       },
     );
   }
