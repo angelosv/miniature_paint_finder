@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
+import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
@@ -10,6 +11,7 @@ import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -36,10 +38,11 @@ void main() async {
   final IAuthService authService = AuthService();
   await authService.init();
 
-  // Initialize repositories
+  // Initialize repositories and services
   final PaintRepository paintRepository = PaintRepositoryImpl();
   final ApiService apiService = ApiService(baseUrl: ApiEndpoints.baseUrl);
   final PaletteRepository paletteRepository = ApiPaletteRepository(apiService);
+  final PaintApiService paintApiService = PaintApiService();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -54,8 +57,12 @@ void main() async {
         Provider<IAuthService>.value(value: authService),
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
+        Provider<PaintApiService>.value(value: paintApiService),
         ChangeNotifierProvider(
           create: (context) => PaletteController(paletteRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => PaintLibraryController(paintApiService),
         ),
       ],
       child: const MyApp(),

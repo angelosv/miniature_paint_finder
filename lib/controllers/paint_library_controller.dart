@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
-import 'package:miniature_paint_finder/repositories/paint_repository.dart';
+import 'package:miniature_paint_finder/services/paint_api_service.dart';
 
 /// Controlador para manejar la lógica de la pantalla de biblioteca de pinturas
 class PaintLibraryController extends ChangeNotifier {
   /// Repositorio para acceder a datos de pinturas
-  final PaintRepository _paintRepository;
+  final PaintApiService _apiService;
 
   /// Lista completa de pinturas cargadas
   List<Paint> _allPaints = [];
@@ -13,13 +13,16 @@ class PaintLibraryController extends ChangeNotifier {
   /// Lista de pinturas filtrada
   List<Paint> _filteredPaints = [];
 
+  /// Lista de marcas únicas disponibles
+  List<Map<String, dynamic>> _brands = [];
+
   /// Conjunto de IDs de pinturas en la lista de deseos
-  final Set<String> _wishlist = {};
+  Set<String> _wishlist = {};
 
   /// Estados de la carga
   bool _isLoading = false;
   bool _hasError = false;
-  String _errorMessage = '';
+  String? _errorMessage;
 
   /// Filtros actuales
   String _searchQuery = '';
@@ -29,10 +32,21 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Configuración de paginación
   int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalPaints = 0;
   int _pageSize = 25;
 
+  /// Lista de marcas únicas disponibles
+  List<String> _availableBrands = ['All'];
+
+  /// Lista de categorías únicas disponibles
+  List<String> _availableCategories = ['All'];
+
+  /// Lista de tamaños de página disponibles
+  List<int> pageSizeOptions = [25, 50, 100];
+
   /// Constructor que recibe el repositorio
-  PaintLibraryController(this._paintRepository);
+  PaintLibraryController(this._apiService);
 
   /// Getters para acceder a los datos desde la UI
   List<Paint> get allPaints => _allPaints;
@@ -40,43 +54,27 @@ class PaintLibraryController extends ChangeNotifier {
   Set<String> get wishlist => _wishlist;
   bool get isLoading => _isLoading;
   bool get hasError => _hasError;
-  String get errorMessage => _errorMessage;
+  String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedBrand => _selectedBrand;
   String get selectedCategory => _selectedCategory;
   Color? get selectedColor => _selectedColor;
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
+  int get totalPages => _totalPages;
+  int get totalPaints => _totalPaints;
 
   /// Lista de pinturas paginadas para la UI
-  List<Paint> get paginatedPaints {
-    final startIndex = (currentPage - 1) * pageSize;
-    final endIndex = currentPage * pageSize;
-
-    if (startIndex >= _filteredPaints.length) {
-      return [];
-    }
-
-    return _filteredPaints.sublist(
-      startIndex,
-      endIndex < _filteredPaints.length ? endIndex : _filteredPaints.length,
-    );
-  }
-
-  /// Número total de páginas basado en la cantidad de pinturas filtradas
-  int get totalPages => (_filteredPaints.length / pageSize).ceil();
+  List<Paint> get paginatedPaints => _filteredPaints;
 
   /// Lista de marcas únicas disponibles
   List<String> get availableBrands {
-    final brands = _allPaints.map((paint) => paint.brand).toSet().toList();
-    brands.sort();
-    return ['All', ...brands];
+    return _availableBrands;
   }
 
   /// Lista de categorías únicas disponibles
   List<String> get availableCategories {
-    final categories =
-        _allPaints.map((paint) => paint.category).toSet().toList();
+    final categories = _allPaints.map((paint) => paint.category).toSet().toList();
     categories.sort();
     return ['All', ...categories];
   }
@@ -86,15 +84,31 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cargar todas las pinturas
   Future<void> loadPaints() async {
+    print('Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery');
     _isLoading = true;
     _hasError = false;
-    _errorMessage = '';
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      _allPaints = await _paintRepository.getAll();
-      _applyFilters();
+      final result = await _apiService.getPaints(
+        page: _currentPage,
+        limit: _pageSize,
+        brandId: _selectedBrand == 'All' ? null : _selectedBrand,
+        name: _searchQuery.isNotEmpty ? _searchQuery : null,
+      );
+
+      print('API Response - Total: ${result['totalPaints']}, Pages: ${result['totalPages']}, Current: ${result['currentPage']}');
+
+      _allPaints = result['paints'] as List<Paint>;
+      _filteredPaints = _allPaints;
+      _currentPage = result['currentPage'] as int;
+      _totalPages = result['totalPages'] as int;
+      _totalPaints = result['totalPaints'] as int;
+
+      await _loadBrands();
     } catch (e) {
+      print('Error loading paints: $e');
       _hasError = true;
       _errorMessage = 'Error al cargar las pinturas: $e';
     } finally {
@@ -106,13 +120,15 @@ class PaintLibraryController extends ChangeNotifier {
   /// Buscar pinturas por texto
   void searchPaints(String query) {
     _searchQuery = query;
-    _applyFilters();
+    _currentPage = 1;
+    loadPaints();
   }
 
   /// Establecer el filtro de marca
   void filterByBrand(String brand) {
     _selectedBrand = brand;
-    _applyFilters();
+    _currentPage = 1;
+    loadPaints();
   }
 
   /// Establecer el filtro de categoría
@@ -138,61 +154,29 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Aplicar todos los filtros actuales a la lista de pinturas
   void _applyFilters() {
-    _filteredPaints =
-        _allPaints.where((paint) {
-          // Filtrar por búsqueda de texto
-          final nameMatches =
-              paint.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              paint.brand.toLowerCase().contains(_searchQuery.toLowerCase());
-
-          // Filtrar por marca
-          final brandMatches =
-              _selectedBrand == 'All' ||
-              paint.brand.toLowerCase() == _selectedBrand.toLowerCase();
-
-          // Filtrar por categoría
-          final categoryMatches =
-              _selectedCategory == 'All' ||
-              paint.category.toLowerCase() == _selectedCategory.toLowerCase();
-
-          // Filtrar por color (si hay seleccionado)
-          bool colorMatches = true;
-          if (_selectedColor != null) {
-            final paintColor = _getColorFromHex(paint);
-
-            // Comprobar similitud de color con tolerancia
-            const tolerance = 50;
-            final redDiff = (paintColor.red - _selectedColor!.red).abs();
-            final greenDiff = (paintColor.green - _selectedColor!.green).abs();
-            final blueDiff = (paintColor.blue - _selectedColor!.blue).abs();
-
-            colorMatches =
-                redDiff < tolerance &&
-                greenDiff < tolerance &&
-                blueDiff < tolerance;
-          }
-
-          return nameMatches && brandMatches && categoryMatches && colorMatches;
-        }).toList();
-
-    // Resetear la paginación cuando cambian los filtros
-    _currentPage = 1;
-
+    _filteredPaints = _allPaints.where((paint) {
+      if (_selectedCategory != 'All' && paint.category != _selectedCategory) {
+        return false;
+      }
+      return true;
+    }).toList();
     notifyListeners();
   }
 
   /// Cambiar a una página específica
   void goToPage(int page) {
-    if (page < 1 || page > totalPages) return;
+    print('Going to page: $page');
+    if (page < 1 || page > _totalPages) return;
     _currentPage = page;
-    notifyListeners();
+    loadPaints();
   }
 
   /// Cambiar el tamaño de página
   void setPageSize(int size) {
+    print('Changing page size to: $size');
     _pageSize = size;
     _currentPage = 1; // Volver a la primera página
-    notifyListeners();
+    loadPaints();
   }
 
   /// Añadir o quitar una pintura de la wishlist
@@ -220,7 +204,37 @@ class PaintLibraryController extends ChangeNotifier {
     super.dispose();
   }
 
+  Future<void> _loadBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      _brands = brands;
+      _availableBrands = ['All', ...brands.map((b) => b['name'] as String)];
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Error al cargar las marcas: $e';
+      notifyListeners();
+    }
+  }
+
   Color _getColorFromHex(Paint paint) {
     return Color(int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000);
+  }
+
+  /// Ir a la página anterior
+  void goToPreviousPage() {
+    print('Going to previous page. Current page: $_currentPage');
+    if (_currentPage > 1) {
+      _currentPage--;
+      loadPaints();
+    }
+  }
+
+  /// Ir a la página siguiente
+  void goToNextPage() {
+    print('Going to next page. Current page: $_currentPage, Total pages: $_totalPages');
+    if (_currentPage < _totalPages) {
+      _currentPage++;
+      loadPaints();
+    }
   }
 }
