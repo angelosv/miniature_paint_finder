@@ -141,41 +141,44 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
   }
 
   void _showSuccessSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-        action:
-            message.contains('wishlist')
-                ? SnackBarAction(
-                  label: 'VIEW',
-                  textColor: Colors.white,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WishlistScreen(),
-                      ),
-                    );
-                  },
-                )
-                : message.contains('inventory')
-                ? SnackBarAction(
-                  label: 'VIEW',
-                  textColor: Colors.white,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const InventoryScreen(),
-                      ),
-                    );
-                  },
-                )
-                : null,
-      ),
-    );
+    // Verificar si el widget está montado antes de mostrar el SnackBar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+          action:
+              message.contains('wishlist')
+                  ? SnackBarAction(
+                    label: 'VIEW',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WishlistScreen(),
+                        ),
+                      );
+                    },
+                  )
+                  : message.contains('inventory')
+                  ? SnackBarAction(
+                    label: 'VIEW',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const InventoryScreen(),
+                        ),
+                      );
+                    },
+                  )
+                  : null,
+        ),
+      );
+    }
   }
 
   // Helper to build info rows
