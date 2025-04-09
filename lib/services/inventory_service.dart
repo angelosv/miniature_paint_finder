@@ -5,6 +5,7 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 
 /// A service for managing paint inventory data.
 ///
@@ -18,6 +19,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 class InventoryService {
   List<PaintInventoryItem> _inventory = [];
   bool _isInitialized = false;
+  final PaintBrandService _brandService = PaintBrandService();
+  int _totalPages = 1;
 
   /// Gets a list of all inventory items.
   /// Returns a copy of the inventory list to prevent external modification.
@@ -30,30 +33,30 @@ class InventoryService {
   ///
   /// In a real application, this would load data from a local database or remote API.
   /// For this example, it uses sample data with a simulated delay.
-  Future<void> loadInventory() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    final paints = SampleData.getPaints();
-
-    // Create inventory with randomized stock levels
-    _inventory =
-        paints.map((paint) {
-          return PaintInventoryItem(
-            paint: paint,
-            stock: (paint.id.hashCode % 5), // Random stock between 0 and 4
-            notes: '',
-          );
-        }).toList();
-
-    _isInitialized = true;
+  Future<void> loadInventory({required int limit, required int page}) async {
+    print('>>> InventoryService: Entrando a loadInventory(limit: $limit, page: $page)');
+    try {
+      final result = await loadInventoryFromApi(limit: limit, page: page);
+      _inventory = result['inventories'] as List<PaintInventoryItem>;
+      _totalPages = result['totalPages'] as int;
+    } catch (e) {
+      print('Error loading inventory: $e');
+      rethrow;
+    }
   }
 
-  /// Gets unique brands from the inventory for filtering.
-  List<String> getUniqueBrands() {
-    final brands = _inventory.map((item) => item.paint.brand).toSet().toList();
-    brands.sort();
-    return brands;
+  /// Gets unique brands from the API for filtering.
+  Future<List<String>> getUniqueBrands() async {
+    try {
+      final brands = await _brandService.getPaintBrands();
+      return brands.map((brand) => brand.name).toList()..sort();
+    } catch (e) {
+      print('Error loading brands from API: $e');
+      // Fallback a marcas del inventario local
+      final brands = _inventory.map((item) => item.paint.brand).toSet().toList();
+      brands.sort();
+      return brands;
+    }
   }
 
   /// Gets unique categories from the inventory for filtering.
@@ -296,6 +299,70 @@ class InventoryService {
     } catch (e) {
       print('Error adding inventory record: $e');
       return false;
+    }
+  }
+
+  /// Carga el inventario desde la API con paginación y filtros
+  Future<Map<String, dynamic>> loadInventoryFromApi({
+    int limit = 10,
+    int page = 1,
+  }) async {
+    try {
+      print('Iniciando carga de inventario desde API...');
+      print('URL: https://paints-api.reachu.io/api/inventory?limit=$limit&page=$page');
+      
+      // Obtener el token de Firebase
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('Error: No hay usuario autenticado');
+        throw Exception('No hay usuario autenticado');
+      }
+
+      final token = await user.getIdToken();
+      if (token == null) {
+        print('Error: No se pudo obtener el token de Firebase');
+        throw Exception('No se pudo obtener el token de Firebase');
+      }
+      
+      final response = await http.get(
+        Uri.parse('https://paints-api.reachu.io/api/inventory?limit=$limit&page=$page'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Respuesta recibida:');
+      print('Status code: ${response.statusCode}');
+      print('Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Datos decodificados: $data');
+        
+        // Verificar si 'inventories' existe y no es null antes de procesar
+        List<PaintInventoryItem> inventories = [];
+        if (data['inventories'] != null && data['inventories'] is List) {
+          inventories = (data['inventories'] as List)
+              .map((item) => PaintInventoryItem.fromJson(item))
+              .toList();
+        }
+        
+        print('Inventarios procesados: ${inventories.length} items');
+        
+        return {
+          'inventories': inventories,
+          'totalPages': data['totalPages'] ?? 1, // Asegurar un valor por defecto
+        };
+      } else {
+        print('Error en la respuesta: ${response.statusCode}');
+        print('Mensaje de error: ${response.body}');
+        throw Exception('Failed to load inventory: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e, stackTrace) {
+      print('Error detallado al cargar inventario:');
+      print('Error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 }

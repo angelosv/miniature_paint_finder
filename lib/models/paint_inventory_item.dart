@@ -48,8 +48,8 @@ class PaintInventoryItem {
   factory PaintInventoryItem.fromJson(Map<String, dynamic> json) {
     return PaintInventoryItem(
       paint: Paint.fromJson(json['paint'] as Map<String, dynamic>),
-      stock: json['stock'] as int,
-      notes: json['notes'] as String,
+      stock: json['quantity'] as int,
+      notes: json['notes'] as String? ?? '',
     );
   }
 

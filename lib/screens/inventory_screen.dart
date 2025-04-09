@@ -49,6 +49,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   // Inventory data
   late List<PaintInventoryItem> _filteredInventory;
+  late List<PaintInventoryItem> _paginatedInventory;
 
   // Search and filtering
   final TextEditingController _searchController = TextEditingController();
@@ -67,7 +68,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int _currentPageSize = 25;
   int _currentPage = 1;
   late int _totalPages;
-  late List<PaintInventoryItem> _paginatedInventory;
 
   // Controllers for adding new paints
   final TextEditingController _newPaintNameController = TextEditingController();
@@ -85,6 +85,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
+    _filteredInventory = [];
+    _paginatedInventory = [];
+    _totalPages = 1;
+    _uniqueBrands = [];
+    _uniqueCategories = [];
     _loadInventory();
 
     // Listener para búsqueda
@@ -101,36 +106,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
     super.dispose();
   }
 
-  /// Loads the inventory data from the inventory service.
-  ///
-  /// Sets loading state while data is being fetched and updates
-  /// the UI when complete. Also initializes filtering metadata.
   Future<void> _loadInventory() async {
+    print('>>> InventoryScreen: Entrando a _loadInventory()');
     setState(() {
       _isLoading = true;
     });
 
-    // Load inventory data
-    await _inventoryService.loadInventory();
-
-    // Get inventory and setup filtering metadata
-    setState(() {
-      _filteredInventory = List.from(_inventoryService.inventory);
-
-      // Extract unique brands and categories for filters
-      _uniqueBrands = _inventoryService.getUniqueBrands();
+    try {
+      await _inventoryService.loadInventory(limit: _currentPageSize, page: _currentPage);
+      _filteredInventory = _inventoryService.inventory;
       _uniqueCategories = _inventoryService.getUniqueCategories();
-
-      // Get max stock level for range filter
-      _maxPossibleStock = _inventoryService.getMaxStockLevel();
-      _stockRange = RangeValues(0, _maxPossibleStock.toDouble());
-
-      // Update pagination
+      _uniqueBrands = await _inventoryService.getUniqueBrands();
       _updatePaginatedInventory();
-
-      // Complete loading
-      _isLoading = false;
-    });
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading inventory: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _updatePaginatedInventory() {
@@ -160,7 +156,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (page < 1 || page > _totalPages) return;
     setState(() {
       _currentPage = page;
-      _updatePaginatedInventory();
+      _loadInventory(); // Recargar con la nueva página
     });
   }
 
@@ -170,8 +166,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _changePageSize(int size) {
     setState(() {
       _currentPageSize = size;
-      _currentPage = 1; // Reset to first page
-      _updatePaginatedInventory();
+      _currentPage = 1; // Reset a primera página
+      _loadInventory(); // Recargar con el nuevo tamaño
     });
   }
 
@@ -186,20 +182,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Then sorts the results and updates pagination.
   void _filterInventory() {
-    final query = _searchController.text.toLowerCase();
-
+    if (_filteredInventory.isEmpty) return;
+    
     setState(() {
+      _currentPage = 1; // Reset a primera página al filtrar
       _filteredInventory = _inventoryService.filterInventory(
-        searchQuery: query.isEmpty ? null : query,
-        onlyInStock: _onlyShowInStock ? true : null,
+        searchQuery: _searchController.text,
+        onlyInStock: _onlyShowInStock,
         brand: _selectedBrand,
         category: _selectedCategory,
         minStock: _stockRange.start.toInt(),
         maxStock: _stockRange.end.toInt(),
       );
-
-      _sortInventory();
-      _currentPage = 1; // Reset to first page when filtering
       _updatePaginatedInventory();
     });
   }
@@ -1799,21 +1793,5 @@ class _InventoryScreenState extends State<InventoryScreen> {
         );
       },
     );
-  }
-
-  // Método para extraer marcas únicas
-  List<String> _extractUniqueBrands() {
-    final brands =
-        _filteredInventory.map((item) => item.paint.brand).toSet().toList();
-    brands.sort();
-    return brands;
-  }
-
-  // Método para extraer categorías únicas
-  List<String> _extractUniqueCategories() {
-    final categories =
-        _filteredInventory.map((item) => item.paint.category).toSet().toList();
-    categories.sort();
-    return categories;
   }
 }

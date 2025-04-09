@@ -74,18 +74,18 @@ class Paint {
   /// Create a Paint object from JSON data
   factory Paint.fromJson(Map<String, dynamic> json) {
     return Paint(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      hex: json['hex'] as String,
-      set: json['set'] as String,
-      code: json['code'] as String,
-      r: json['r'] as int,
-      g: json['g'] as int,
-      b: json['b'] as int,
-      brand: json['brand'] as String,
-      category: json['category'] as String,
-      isMetallic: json['isMetallic'] ?? false,
-      isTransparent: json['isTransparent'] ?? false,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      hex: json['hex'] as String? ?? '',
+      set: json['set'] as String? ?? '',
+      code: json['code'] as String? ?? '',
+      r: json['r'] as int? ?? 0,
+      g: json['g'] as int? ?? 0,
+      b: json['b'] as int? ?? 0,
+      brand: json['brand'] as String? ?? '',
+      category: json['category'] as String? ?? '',
+      isMetallic: json['isMetallic'] as bool? ?? false,
+      isTransparent: json['isTransparent'] as bool? ?? false,
     );
   }
 
