@@ -110,6 +110,52 @@ class InventoryService {
     return true;
   }
 
+  /// Updates the stock level for a paint item using the API.
+  ///
+  /// Returns true if the update was successful, false otherwise.
+  Future<bool> updateStockFromApi(String inventoryId, int newStock) async {
+    try {
+      print('🔄 Iniciando actualización de stock para inventoryId: $inventoryId, nuevo stock: $newStock');
+      
+      // Obtener el token de Firebase
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ Error: No hay usuario autenticado');
+        return false;
+      }
+
+      final token = await user.getIdToken();
+      if (token == null) {
+        print('❌ Error: No se pudo obtener el token de Firebase');
+        return false;
+      }
+
+      final response = await http.put(
+        Uri.parse('https://paints-api.reachu.io/api/inventory/$inventoryId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'quantity': newStock,
+        }),
+      );
+
+      print('📥 Respuesta del servidor: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Stock actualizado exitosamente');
+        return true;
+      }
+      
+      print('❌ Error en la respuesta del servidor: ${response.statusCode} - ${response.body}');
+      return false;
+    } catch (e) {
+      print('❌ Error al actualizar stock: $e');
+      return false;
+    }
+  }
+
   /// Updates the notes for a paint item.
   ///
   /// Returns true if the update was successful, false otherwise.

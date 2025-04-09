@@ -276,19 +276,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Updates both the UI state and the inventory service data.
   /// May trigger filtering if the new stock level doesn't match current filters.
-  void _updatePaintStock(PaintInventoryItem item, int newStock) {
+  void _updatePaintStock(PaintInventoryItem item, int newStock) async {
     // Prevent negative stock
     if (newStock < 0) return;
 
     // Update stock through service
-    bool success = _inventoryService.updateStock(item.paint.id, newStock);
+    bool success = await _inventoryService.updateStockFromApi(item.id, newStock);
 
     if (success) {
       setState(() {
-        // Update local item reference for the UI
-        final index = _filteredInventory.indexOf(item);
+        // Create a new modifiable list instead of modifying the immutable one
+        final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+        final index = newFilteredInventory.indexOf(item);
         if (index != -1) {
-          _filteredInventory[index] = item.copyWith(stock: newStock);
+          newFilteredInventory[index] = item.copyWith(stock: newStock);
+          _filteredInventory = newFilteredInventory;
         }
 
         // If there's a stock filter, we might need to update the filtered list
@@ -312,10 +314,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     if (success) {
       setState(() {
-        // Update local item reference for the UI
-        final index = _filteredInventory.indexOf(item);
+        // Create a new modifiable list instead of modifying the immutable one
+        final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+        final index = newFilteredInventory.indexOf(item);
         if (index != -1) {
-          _filteredInventory[index] = item.copyWith(notes: notes);
+          newFilteredInventory[index] = item.copyWith(notes: notes);
+          _filteredInventory = newFilteredInventory;
         }
         _sortInventory();
       });
@@ -366,6 +370,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     // Controller for notes with current value
     final notesController = TextEditingController(text: item.notes);
+    
+    // Variable para almacenar el stock temporal mientras se edita
+    final ValueNotifier<int> tempStock = ValueNotifier<int>(item.stock);
 
     // Get palettes using this paint
     final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
@@ -508,9 +515,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap:
-                        item.stock > 0
+                        tempStock.value > 0
                             ? () {
-                              _updatePaintStock(item, item.stock - 1);
+                              tempStock.value = tempStock.value - 1;
                               // Haptic feedback if available
                               HapticFeedback.mediumImpact();
                             }
@@ -521,7 +528,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color:
-                            item.stock > 0
+                            tempStock.value > 0
                                 ? (isDarkMode
                                     ? AppTheme.marineOrange.withOpacity(0.8)
                                     : AppTheme.primaryBlue.withOpacity(0.9))
@@ -529,7 +536,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     ? Colors.grey[800]
                                     : Colors.grey[300]),
                         boxShadow:
-                            item.stock > 0
+                            tempStock.value > 0
                                 ? [
                                   BoxShadow(
                                     color: (isDarkMode
@@ -552,35 +559,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                 ),
 
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[900] : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        spreadRadius: 0,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
+                ValueListenableBuilder<int>(
+                  valueListenable: tempStock,
+                  builder: (context, value, child) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                    ],
-                  ),
-                  child: Text(
-                    '${item.stock}',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[900] : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            spreadRadius: 0,
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '$value',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    );
+                  },
                 ),
 
                 Material(
@@ -588,7 +600,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      _updatePaintStock(item, item.stock + 1);
+                      tempStock.value = tempStock.value + 1;
                       // Haptic feedback if available
                       HapticFeedback.mediumImpact();
                     },
@@ -705,7 +717,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                // Actualizar notas
                 _updatePaintNotes(item, notesController.text);
+                
+                // Actualizar stock solo si ha cambiado
+                if (tempStock.value != item.stock) {
+                  _updatePaintStock(item, tempStock.value);
+                }
+                
                 Navigator.pop(context);
 
                 // Show confirmation
