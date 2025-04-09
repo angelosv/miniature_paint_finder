@@ -10,6 +10,7 @@ import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
+import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
@@ -103,6 +104,7 @@ class MyApp extends StatelessWidget {
             '/': (context) => const AuthScreen(),
             '/home': (context) => const HomeScreen(),
             '/palettes': (context) => const PaletteScreen(),
+            '/library': (context) => const LibraryScreen(),
           },
           debugShowCheckedModeBanner: false,
         );

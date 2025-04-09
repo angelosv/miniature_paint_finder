@@ -33,6 +33,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && args.containsKey('brandName')) {
+      final String brandName = args['brandName'];
+      context.read<PaintLibraryController>().filterByBrand(brandName);
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
@@ -53,7 +64,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, bool isDarkMode, PaintLibraryController controller) {
+  Widget _buildBody(
+    BuildContext context,
+    bool isDarkMode,
+    PaintLibraryController controller,
+  ) {
     return Stack(
       children: [
         Column(
@@ -67,9 +82,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (controller.isLoading)
           Container(
             color: Colors.black.withOpacity(0.3),
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: const Center(child: CircularProgressIndicator()),
           ),
       ],
     );
@@ -87,15 +100,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
               decoration: InputDecoration(
                 hintText: 'Search paints...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          controller.searchPaints('');
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchController.text.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            controller.searchPaints('');
+                          },
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10.0),
                 ),
@@ -111,7 +125,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDarkMode ? AppTheme.darkSurface : Theme.of(context).cardColor,
+                color:
+                    isDarkMode
+                        ? AppTheme.darkSurface
+                        : Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
@@ -122,7 +139,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   Icon(
                     Icons.filter_list,
-                    color: isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.primaryBlue,
                   ),
                   if (_hasActiveFilters(controller))
                     Positioned(
@@ -181,9 +201,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     },
                     labelStyle: TextStyle(
                       fontSize: 12,
-                      color: controller.pageSize == size ? AppTheme.primaryBlue : null,
+                      color:
+                          controller.pageSize == size
+                              ? AppTheme.primaryBlue
+                              : null,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 0,
+                    ),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 );
@@ -199,43 +225,50 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return controller.paginatedPaints.isEmpty
         ? const Center(child: Text('No paints found matching your filters'))
         : Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_hasActiveFilters(controller)) _buildActiveFiltersBar(isDarkMode, controller),
-                Expanded(
-                  child: GridView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(8),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: controller.paginatedPaints.length,
-                    itemBuilder: (context, index) {
-                      final paint = controller.paginatedPaints[index];
-                      final mainColor = isDarkMode ? Colors.white : Theme.of(context).primaryColor;
-                      final isInWishlist = controller.isPaintInWishlist(paint.id);
-
-                      return PaintGridCard(
-                        paint: paint,
-                        color: mainColor,
-                        onAddToWishlist: controller.toggleWishlist,
-                        onAddToInventory: _addToInventory,
-                        isInWishlist: isInWishlist,
-                      );
-                    },
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_hasActiveFilters(controller))
+                _buildActiveFiltersBar(isDarkMode, controller),
+              Expanded(
+                child: GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
                   ),
+                  itemCount: controller.paginatedPaints.length,
+                  itemBuilder: (context, index) {
+                    final paint = controller.paginatedPaints[index];
+                    final mainColor =
+                        isDarkMode
+                            ? Colors.white
+                            : Theme.of(context).primaryColor;
+                    final isInWishlist = controller.isPaintInWishlist(paint.id);
+
+                    return PaintGridCard(
+                      paint: paint,
+                      color: mainColor,
+                      onAddToWishlist: controller.toggleWishlist,
+                      onAddToInventory: _addToInventory,
+                      isInWishlist: isInWishlist,
+                    );
+                  },
                 ),
-              ],
-            ),
-          );
+              ),
+            ],
+          ),
+        );
   }
 
-  Widget _buildActiveFiltersBar(bool isDarkMode, PaintLibraryController controller) {
+  Widget _buildActiveFiltersBar(
+    bool isDarkMode,
+    PaintLibraryController controller,
+  ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       child: Wrap(
@@ -267,7 +300,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             icon: const Icon(Icons.close, size: 16),
             label: const Text('Clear All'),
             style: TextButton.styleFrom(
-              foregroundColor: isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+              foregroundColor:
+                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
             ),
@@ -343,11 +377,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.first_page),
-            onPressed: controller.currentPage > 1 ? () => controller.goToPage(1) : null,
+            onPressed:
+                controller.currentPage > 1
+                    ? () => controller.goToPage(1)
+                    : null,
           ),
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: controller.currentPage > 1 ? () => controller.goToPreviousPage() : null,
+            onPressed:
+                controller.currentPage > 1
+                    ? () => controller.goToPreviousPage()
+                    : null,
           ),
           const SizedBox(width: 8),
           Text(
@@ -357,18 +397,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: controller.currentPage < controller.totalPages ? () => controller.goToNextPage() : null,
+            onPressed:
+                controller.currentPage < controller.totalPages
+                    ? () => controller.goToNextPage()
+                    : null,
           ),
           IconButton(
             icon: const Icon(Icons.last_page),
-            onPressed: controller.currentPage < controller.totalPages ? () => controller.goToPage(controller.totalPages) : null,
+            onPressed:
+                controller.currentPage < controller.totalPages
+                    ? () => controller.goToPage(controller.totalPages)
+                    : null,
           ),
         ],
       ),
     );
   }
 
-  void _showFilterDialog(BuildContext context, PaintLibraryController controller) {
+  void _showFilterDialog(
+    BuildContext context,
+    PaintLibraryController controller,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -400,7 +449,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[600] : Colors.grey.withOpacity(0.5),
+                        color:
+                            isDarkMode
+                                ? Colors.grey[600]
+                                : Colors.grey.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       margin: const EdgeInsets.only(bottom: 20),
@@ -428,21 +480,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+                      border: Border.all(
+                        color:
+                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       color: isDarkMode ? AppTheme.darkSurface : Colors.white,
                     ),
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value: controller.selectedBrand,
-                      items: controller.availableBrands.map((brand) {
-                        return DropdownMenuItem<String>(
-                          value: brand,
-                          child: Text(brand),
-                        );
-                      }).toList(),
+                      items:
+                          controller.availableBrands.map((brand) {
+                            return DropdownMenuItem<String>(
+                              value: brand,
+                              child: Text(brand),
+                            );
+                          }).toList(),
                       onChanged: (value) {
                         if (value != null) {
                           controller.filterByBrand(value);
@@ -466,21 +525,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+                      border: Border.all(
+                        color:
+                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       color: isDarkMode ? AppTheme.darkSurface : Colors.white,
                     ),
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value: controller.selectedCategory,
-                      items: controller.availableCategories.map((category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
+                      items:
+                          controller.availableCategories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
                       onChanged: (value) {
                         if (value != null) {
                           controller.filterByCategory(value);
@@ -502,10 +568,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             Navigator.pop(context);
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                            side: BorderSide(color: isDarkMode ? Colors.grey[600]! : Colors.grey[300]!),
+                            foregroundColor:
+                                isDarkMode
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
+                            side: BorderSide(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[600]!
+                                      : Colors.grey[300]!,
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('CANCEL'),
                         ),
@@ -517,10 +593,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                            backgroundColor:
+                                isDarkMode
+                                    ? AppTheme.marineOrange
+                                    : AppTheme.primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('APPLY FILTERS'),
                         ),

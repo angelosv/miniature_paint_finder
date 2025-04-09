@@ -404,7 +404,13 @@ class _PaintListTabState extends State<PaintListTab> {
                   title: brand['name'] as String,
                   count: brand['paintCount'] as int,
                   color: brand['color'] as Color,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/library',
+                      arguments: {'brandName': brand['id']},
+                    );
+                  },
                 );
               },
             ),
