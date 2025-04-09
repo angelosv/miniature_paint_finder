@@ -16,7 +16,6 @@ import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 import 'package:miniature_paint_finder/services/paint_match_service.dart';
 import 'package:miniature_paint_finder/services/color_search_service.dart';
-
 import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -30,6 +29,7 @@ import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -2555,29 +2555,102 @@ class _PaintListTabState extends State<PaintListTab> {
     AddToWishlistModal.show(
       context: context,
       paint: paint,
-      onAddToWishlist: (paint, priority) {
-        // Aquí manejamos la lógica para añadir a wishlist
-        // Por ahora solo mostramos un mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Added ${paint.name} to wishlist ${priority > 0 ? "with priority $priority" : ""}',
+      onAddToWishlist: (paint, priority) async {
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        final paintService = PaintService();
+
+        // Show loading indicator
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
+                ),
+                SizedBox(width: 16),
+                Text('Adding to wishlist...'),
+              ],
             ),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'VIEW',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WishlistScreen(),
-                  ),
-                );
-              },
-            ),
+            duration: Duration(seconds: 10),
+            behavior: SnackBarBehavior.floating,
           ),
         );
+
+        try {
+          // Get current Firebase user
+          final firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser == null) {
+            // Show error if not logged in
+            scaffoldMessenger.hideCurrentSnackBar();
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('You need to be logged in to add to wishlist'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+
+          final userId = firebaseUser.uid;
+
+          // Call API directly
+          final result = await paintService.addToWishlistDirect(
+            paint,
+            priority,
+            userId,
+          );
+
+          scaffoldMessenger.hideCurrentSnackBar();
+
+          if (result['success'] == true) {
+            // Determine the correct message based on if the paint was already in the wishlist
+            final String message =
+                result['alreadyExists'] == true
+                    ? '${paint.name} is already in your wishlist'
+                    : 'Added ${paint.name} to wishlist${priority > 0 ? " with priority $priority" : ""}';
+
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.green,
+                action: SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WishlistScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          } else {
+            // Show error with details
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Error: ${result['message']}'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        } catch (e) {
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       },
     );
   }

@@ -7,6 +7,8 @@ import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PaintCard extends StatelessWidget {
   final Paint paint;
@@ -195,32 +197,111 @@ class PaintCard extends StatelessWidget {
                       AddToWishlistModal.show(
                         context: context,
                         paint: paint,
-                        onAddToWishlist: (paint, priority) {
-                          // Mostrar confirmación con SnackBar
-                          final priorityText = _getPriorityText(priority);
+                        onAddToWishlist: (paint, priority) async {
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
+                          final paintService = PaintService();
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
-                              ),
-                              backgroundColor:
-                                  isDarkMode ? Colors.pinkAccent : Colors.pink,
-                              action: SnackBarAction(
-                                label: 'VIEW',
-                                textColor: Colors.white,
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => const WishlistScreen(),
+                          // Show loading indicator
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
                                     ),
-                                  );
-                                },
+                                    strokeWidth: 2,
+                                  ),
+                                  SizedBox(width: 16),
+                                  Text('Adding to wishlist...'),
+                                ],
                               ),
+                              duration: Duration(seconds: 10),
+                              behavior: SnackBarBehavior.floating,
                             ),
                           );
+
+                          try {
+                            // Get current Firebase user
+                            final firebaseUser =
+                                FirebaseAuth.instance.currentUser;
+                            if (firebaseUser == null) {
+                              // Show error if not logged in
+                              scaffoldMessenger.hideCurrentSnackBar();
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'You need to be logged in to add to wishlist',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            final userId = firebaseUser.uid;
+
+                            // Call API directly
+                            final result = await paintService
+                                .addToWishlistDirect(paint, priority, userId);
+
+                            scaffoldMessenger.hideCurrentSnackBar();
+
+                            if (result['success'] == true) {
+                              // Determine the correct message based on if the paint was already in the wishlist
+                              final String message =
+                                  result['alreadyExists'] == true
+                                      ? '${paint.name} is already in your wishlist'
+                                      : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
+
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(message),
+                                  backgroundColor:
+                                      isDarkMode
+                                          ? Colors.pinkAccent
+                                          : Colors.pink,
+                                  action: SnackBarAction(
+                                    label: 'VIEW',
+                                    textColor: Colors.white,
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                                  const WishlistScreen(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            } else {
+                              // Show error with details
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${result['message']}'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            scaffoldMessenger.hideCurrentSnackBar();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
                         },
                       );
                     },
@@ -434,34 +515,113 @@ class PaintCard extends StatelessWidget {
                         AddToWishlistModal.show(
                           context: context,
                           paint: paint,
-                          onAddToWishlist: (paint, priority) {
-                            // Mostrar confirmación con SnackBar
-                            final priorityText = _getPriorityText(priority);
+                          onAddToWishlist: (paint, priority) async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+                            final paintService = PaintService();
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
-                                ),
-                                backgroundColor:
-                                    isDarkMode
-                                        ? Colors.pinkAccent
-                                        : Colors.pink,
-                                action: SnackBarAction(
-                                  label: 'VIEW',
-                                  textColor: Colors.white,
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => const WishlistScreen(),
+                            // Show loading indicator
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
                                       ),
-                                    );
-                                  },
+                                      strokeWidth: 2,
+                                    ),
+                                    SizedBox(width: 16),
+                                    Text('Adding to wishlist...'),
+                                  ],
                                 ),
+                                duration: Duration(seconds: 10),
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
+
+                            try {
+                              // Get current Firebase user
+                              final firebaseUser =
+                                  FirebaseAuth.instance.currentUser;
+                              if (firebaseUser == null) {
+                                // Show error if not logged in
+                                scaffoldMessenger.hideCurrentSnackBar();
+                                scaffoldMessenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'You need to be logged in to add to wishlist',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final userId = firebaseUser.uid;
+
+                              // Call API directly
+                              final result = await paintService
+                                  .addToWishlistDirect(paint, priority, userId);
+
+                              scaffoldMessenger.hideCurrentSnackBar();
+
+                              if (result['success'] == true) {
+                                // Determine the correct message based on if the paint was already in the wishlist
+                                final String message =
+                                    result['alreadyExists'] == true
+                                        ? '${paint.name} is already in your wishlist'
+                                        : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
+
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(message),
+                                    backgroundColor:
+                                        isDarkMode
+                                            ? Colors.pinkAccent
+                                            : Colors.pink,
+                                    action: SnackBarAction(
+                                      label: 'VIEW',
+                                      textColor: Colors.white,
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const WishlistScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                // Show error with details
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error: ${result['message']}',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 5),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              scaffoldMessenger.hideCurrentSnackBar();
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            }
                           },
                         );
                       },

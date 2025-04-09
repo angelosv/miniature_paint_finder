@@ -932,11 +932,14 @@ class PaletteModal extends StatelessWidget {
 
             // Show success message
             final priorityText = _getPriorityText(priority);
+            final String message =
+                result['alreadyExists'] == true
+                    ? '${paint.name} is already in your wishlist'
+                    : 'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}';
+
             scaffoldMessenger.showSnackBar(
               SnackBar(
-                content: Text(
-                  'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}',
-                ),
+                content: Text(message),
                 duration: const Duration(seconds: 3),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,

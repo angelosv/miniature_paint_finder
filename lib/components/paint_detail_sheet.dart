@@ -7,6 +7,7 @@ import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// A bottom sheet that displays detailed information about a paint with options to add to inventory or palette
 class PaintDetailSheet extends StatefulWidget {
@@ -121,10 +122,89 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
       AddToWishlistModal.show(
         context: context,
         paint: widget.paint,
-        onAddToWishlist: (paint, priority) {
-          final isPriority = priority > 0;
-          widget.onAddToWishlist(paint, isPriority);
-          _showSuccessSnackbar('Paint added to your wishlist');
+        onAddToWishlist: (paint, priority) async {
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          final paintService = PaintService();
+
+          // Show loading indicator
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 2,
+                  ),
+                  SizedBox(width: 16),
+                  Text('Adding to wishlist...'),
+                ],
+              ),
+              duration: Duration(seconds: 10),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          try {
+            // Get current Firebase user
+            final firebaseUser = FirebaseAuth.instance.currentUser;
+            if (firebaseUser == null) {
+              // Show error if not logged in
+              scaffoldMessenger.hideCurrentSnackBar();
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Text('You need to be logged in to add to wishlist'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+
+            final userId = firebaseUser.uid;
+
+            // Call API directly
+            final result = await paintService.addToWishlistDirect(
+              paint,
+              priority,
+              userId,
+            );
+
+            scaffoldMessenger.hideCurrentSnackBar();
+
+            if (result['success'] == true) {
+              // Determine the correct message based on if the paint was already in the wishlist
+              final String message =
+                  result['alreadyExists'] == true
+                      ? '${paint.name} is already in your wishlist'
+                      : 'Added ${paint.name} to wishlist';
+
+              // Always notify the parent widget for UI updates
+              final isPriority = priority > 0;
+              widget.onAddToWishlist(paint, isPriority);
+
+              _showSuccessSnackbar(message);
+            } else {
+              // Show error with details
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${result['message']}'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+          } catch (e) {
+            scaffoldMessenger.hideCurrentSnackBar();
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
         },
       );
     }
