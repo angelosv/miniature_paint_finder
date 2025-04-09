@@ -276,49 +276,46 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Updates both the UI state and the inventory service data.
   /// May trigger filtering if the new stock level doesn't match current filters.
-  void _updatePaintStock(PaintInventoryItem item, int newStock) {
-    // Prevent negative stock
-    if (newStock < 0) return;
-
-    // Update stock through service
-    bool success = _inventoryService.updateStock(item.paint.id, newStock);
-
-    if (success) {
-      setState(() {
-        // Update local item reference for the UI
-        final index = _filteredInventory.indexOf(item);
-        if (index != -1) {
-          _filteredInventory[index] = item.copyWith(stock: newStock);
-        }
-
-        // If there's a stock filter, we might need to update the filtered list
-        if (_onlyShowInStock ||
-            newStock < _stockRange.start.toInt() ||
-            newStock > _stockRange.end.toInt()) {
-          _filterInventory();
-        } else {
-          _sortInventory();
-        }
-      });
+  Future<bool> _updatePaintStock(String id, int newStock) async {
+    print('>>> InventoryScreen: Actualizando stock para inventario $id a $newStock');
+    try {
+      final success = await _inventoryService.updateStock(id, newStock);
+      if (success) {
+        setState(() {
+          final index = _filteredInventory.indexWhere((item) => item.id == id);
+          if (index != -1) {
+            _filteredInventory[index] = _filteredInventory[index].copyWith(stock: newStock);
+          }
+        });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('>>> InventoryScreen: Error actualizando stock: $e');
+      return false;
     }
   }
 
   /// Updates the notes for a paint inventory item.
   ///
   /// Updates both the UI state and the inventory service data.
-  void _updatePaintNotes(PaintInventoryItem item, String notes) {
-    // Update notes through service
-    bool success = _inventoryService.updateNotes(item.paint.id, notes);
-
-    if (success) {
-      setState(() {
-        // Update local item reference for the UI
-        final index = _filteredInventory.indexOf(item);
-        if (index != -1) {
-          _filteredInventory[index] = item.copyWith(notes: notes);
-        }
-        _sortInventory();
-      });
+  Future<bool> _updatePaintNotes(String id, String newNotes) async {
+    print('>>> InventoryScreen: Actualizando notas para inventario $id');
+    try {
+      final success = await _inventoryService.updateNotes(id, newNotes);
+      if (success) {
+        setState(() {
+          final index = _filteredInventory.indexWhere((item) => item.id == id);
+          if (index != -1) {
+            _filteredInventory[index] = _filteredInventory[index].copyWith(notes: newNotes);
+          }
+        });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('>>> InventoryScreen: Error actualizando notas: $e');
+      return false;
     }
   }
 
@@ -331,21 +328,238 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// - Viewing palette usage
   /// - Removing the paint from inventory
   void _showInventoryItemOptions(PaintInventoryItem item) {
+    final TextEditingController notesController = TextEditingController(text: item.notes);
+    int currentStock = item.stock;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.5,
-            maxChildSize: 0.9,
-            builder:
-                (_, controller) => SingleChildScrollView(
-                  controller: controller,
-                  child: _buildInventoryItemOptionsModal(item),
-                ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          builder: (_, controller) => SingleChildScrollView(
+            controller: controller,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Color(int.parse('0xFF${item.paint.hex.replaceAll('#', '')}')),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.paint.name,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${item.paint.brand} - ${item.paint.category}',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Stock',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove),
+                                    onPressed: () {
+                                      if (currentStock > 0) {
+                                        setModalState(() {
+                                          currentStock--;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  Container(
+                                    width: 50,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Text(
+                                      currentStock.toString(),
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: () {
+                                      setModalState(() {
+                                        currentStock++;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Notes',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: notesController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'Add notes...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.all(12),
+                          ),
+                          onTapOutside: (event) {
+                            FocusScope.of(context).unfocus();
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  final confirmed = await ConfirmationDialog.show(
+                                    context: context,
+                                    title: "Remove from Inventory?",
+                                    message: "Are you sure you want to remove ${item.paint.name} from your inventory?",
+                                    confirmText: "REMOVE",
+                                  );
+                                  
+                                  if (confirmed == true && context.mounted) {
+                                    final success = await _inventoryService.deleteInventoryRecord(item.id);
+                                    if (success) {
+                                      setState(() {
+                                        final index = _filteredInventory.indexWhere((i) => i.id == item.id);
+                                        if (index != -1) {
+                                          _filteredInventory.removeAt(index);
+                                        }
+                                      });
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${item.paint.name} removed from inventory'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                ),
+                                child: const Text('REMOVE'),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () async {
+                                  try {
+                                    // Update stock
+                                    if (currentStock != item.stock) {
+                                      await _updatePaintStock(item.id, currentStock);
+                                    }
+                                    
+                                    // Update notes
+                                    if (notesController.text != item.notes) {
+                                      await _updatePaintNotes(item.id, notesController.text);
+                                    }
+                                    
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Changes saved successfully'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error saving changes: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: const Text('UPDATE'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+        ),
+      ),
     );
   }
 
@@ -354,523 +568,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Uses the inventory service to retrieve palettes associated with the paint.
   List<String> _getPalettesUsingPaint(String paintId) {
     return _inventoryService.getPalettesUsingPaint(paintId);
-  }
-
-  Widget _buildInventoryItemOptionsModal(PaintInventoryItem item) {
-    final paint = item.paint;
-    final paintColor = Color(
-      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
-    );
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
-
-    // Controller for notes with current value
-    final notesController = TextEditingController(text: item.notes);
-
-    // Get palettes using this paint
-    final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      margin: const EdgeInsets.only(top: 40),
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color:
-                    isDarkMode
-                        ? Colors.grey[600]
-                        : Colors.grey.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              margin: const EdgeInsets.only(bottom: 20),
-            ),
-          ),
-
-          // Header with paint info
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Color swatch
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: paintColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Paint details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      paint.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.primaryBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${paint.brand}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isDarkMode ? Colors.white70 : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Category: ${paint.category}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                    if (paint.code.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          'Code: ${paint.code}',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-
-          // Stock control
-          Text(
-            'Stock Management',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.darkSurface : Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Material(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap:
-                        item.stock > 0
-                            ? () {
-                              _updatePaintStock(item, item.stock - 1);
-                              // Haptic feedback if available
-                              HapticFeedback.mediumImpact();
-                            }
-                            : null,
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            item.stock > 0
-                                ? (isDarkMode
-                                    ? AppTheme.marineOrange.withOpacity(0.8)
-                                    : AppTheme.primaryBlue.withOpacity(0.9))
-                                : (isDarkMode
-                                    ? Colors.grey[800]
-                                    : Colors.grey[300]),
-                        boxShadow:
-                            item.stock > 0
-                                ? [
-                                  BoxShadow(
-                                    color: (isDarkMode
-                                            ? AppTheme.marineOrange
-                                            : AppTheme.primaryBlue)
-                                        .withOpacity(0.3),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                                : null,
-                      ),
-                      child: const Icon(
-                        Icons.remove,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[900] : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        spreadRadius: 0,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    '${item.stock}',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                ),
-
-                Material(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      _updatePaintStock(item, item.stock + 1);
-                      // Haptic feedback if available
-                      HapticFeedback.mediumImpact();
-                    },
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.primaryBlue,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isDarkMode
-                                    ? AppTheme.marineOrange
-                                    : AppTheme.primaryBlue)
-                                .withOpacity(0.3),
-                            spreadRadius: 1,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-
-          // Palettes section
-          Text(
-            'Used in Palettes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          palettesUsingPaint.isEmpty
-              ? Text(
-                'Not used in any palette',
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                ),
-              )
-              : Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    palettesUsingPaint.map((palette) {
-                      return Chip(
-                        label: Text(palette),
-                        backgroundColor:
-                            isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 0,
-                        ),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      );
-                    }).toList(),
-              ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-
-          // Notes section
-          Text(
-            'Notes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          TextField(
-            controller: notesController,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: 'Add notes about this paint...',
-              hintStyle: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-            maxLines: 3,
-            style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Update button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                _updatePaintNotes(item, notesController.text);
-                Navigator.pop(context);
-
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${paint.name} updated'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    backgroundColor:
-                        isDarkMode ? Colors.grey[800] : Colors.grey[900],
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'UPDATE',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Remove from inventory option
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                _showRemoveConfirmationDialog(item);
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red[isDarkMode ? 400 : 600],
-                side: BorderSide(color: Colors.red[isDarkMode ? 400 : 600]!),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'REMOVE FROM INVENTORY',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRemoveConfirmationDialog(PaintInventoryItem item) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final paint = item.paint;
-
-    ConfirmationDialog.show(
-      context: context,
-      title: "Remove from Inventory?",
-      message:
-          "Are you sure you want to remove ${paint.name} from your inventory?",
-      confirmText: "REMOVE",
-      content: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Color(
-                  int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
-                ),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    paint.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDarkMode
-                              ? AppTheme.marineOrange
-                              : AppTheme.primaryBlue,
-                    ),
-                  ),
-                  Text(
-                    '${paint.brand} - Stock: ${item.stock}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).then((confirmed) async {
-      if (confirmed == true) {
-        print('🔄 Iniciando eliminación de ${paint.name} del inventario');
-        
-        // Cerrar el modal de opciones primero
-        Navigator.of(context).pop();
-        
-        // Llamar al servicio para eliminar
-        final success = await _inventoryService.deleteInventoryRecord(item.id);
-        
-        if (success) {
-          print('✅ Pintura eliminada exitosamente del inventario');
-          
-          setState(() {
-            // Crear una nueva lista modificable
-            final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
-            final index = newFilteredInventory.indexOf(item);
-            if (index != -1) {
-              newFilteredInventory.removeAt(index);
-            }
-            _filteredInventory = newFilteredInventory;
-            _filterInventory();
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${paint.name} removed from inventory'),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
-            ),
-          );
-        } else {
-          print('❌ Error al eliminar la pintura del inventario');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error removing ${paint.name} from inventory'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    });
   }
 
   @override
@@ -1265,7 +962,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     return Dismissible(
-      key: Key(item.paint.id),
+      key: Key(item.id),
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),

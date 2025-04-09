@@ -21,6 +21,7 @@ class InventoryService {
   bool _isInitialized = false;
   final PaintBrandService _brandService = PaintBrandService();
   int _totalPages = 1;
+  final String _baseUrl = 'https://paints-api.reachu.io/api';
 
   /// Gets a list of all inventory items.
   /// Returns a copy of the inventory list to prevent external modification.
@@ -100,25 +101,116 @@ class InventoryService {
   /// Updates the stock level for a paint item.
   ///
   /// Returns true if the update was successful, false otherwise.
-  bool updateStock(String paintId, int newStock) {
-    if (newStock < 0) return false;
+  Future<bool> updateStock(String id, int newStock) async {
+    print('>>> InventoryService: Iniciando updateStock para inventario $id');
+    try {
+      // Verificar que el stock no sea negativo
+      if (newStock < 0) {
+        print('>>> InventoryService: No se puede establecer un stock negativo');
+        return false;
+      }
 
-    final index = _inventory.indexWhere((item) => item.paint.id == paintId);
-    if (index == -1) return false;
+      // Obtener el token de autenticación
+      final token = await _getAuthToken();
+      if (token.isEmpty) {
+        print('>>> InventoryService: No se pudo obtener el token de autenticación');
+        return false;
+      }
 
-    _inventory[index] = _inventory[index].copyWith(stock: newStock);
-    return true;
+      // Encontrar el item en el inventario
+      final index = _inventory.indexWhere((item) => item.id == id);
+      if (index == -1) {
+        print('>>> InventoryService: No se encontró el item con ID $id');
+        return false;
+      }
+
+      // Actualizar en la API
+      final response = await http.put(
+        Uri.parse('$_baseUrl/inventory/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'stock': newStock,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Actualizar en el inventario local
+        _inventory[index] = _inventory[index].copyWith(stock: newStock);
+        print('>>> InventoryService: Stock actualizado correctamente a $newStock');
+        return true;
+      } else {
+        print('>>> InventoryService: Error al actualizar stock. Código: ${response.statusCode}');
+        print('>>> InventoryService: Respuesta: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('>>> InventoryService: Error en updateStock: $e');
+      return false;
+    }
   }
 
   /// Updates the notes for a paint item.
   ///
   /// Returns true if the update was successful, false otherwise.
-  bool updateNotes(String paintId, String notes) {
-    final index = _inventory.indexWhere((item) => item.paint.id == paintId);
-    if (index == -1) return false;
+  Future<bool> updateNotes(String id, String newNotes) async {
+    print('>>> InventoryService: Iniciando updateNotes para inventario $id');
+    try {
+      // Obtener el token de autenticación
+      final token = await _getAuthToken();
+      if (token.isEmpty) {
+        print('>>> InventoryService: No se pudo obtener el token de autenticación');
+        return false;
+      }
 
-    _inventory[index] = _inventory[index].copyWith(notes: notes);
-    return true;
+      // Encontrar el item en el inventario
+      final index = _inventory.indexWhere((item) => item.id == id);
+      if (index == -1) {
+        print('>>> InventoryService: No se encontró el item con ID $id');
+        return false;
+      }
+
+      // Actualizar en la API
+      final response = await http.put(
+        Uri.parse('$_baseUrl/inventory/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'notes': newNotes,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Actualizar en el inventario local
+        _inventory[index] = _inventory[index].copyWith(notes: newNotes);
+        print('>>> InventoryService: Notas actualizadas correctamente');
+        return true;
+      } else {
+        print('>>> InventoryService: Error al actualizar notas. Código: ${response.statusCode}');
+        print('>>> InventoryService: Respuesta: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('>>> InventoryService: Error en updateNotes: $e');
+      return false;
+    }
+  }
+
+  /// Helper method to get the authentication token
+  Future<String> _getAuthToken() async {
+    // Obtener el token de Firebase
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('Error: No hay usuario autenticado');
+      return '';
+    }
+
+    final token = await user.getIdToken();
+    return token ?? '';
   }
 
   /// Adds a new paint to the inventory.
@@ -393,41 +485,39 @@ class InventoryService {
   /// Elimina un registro del inventario usando la API.
   ///
   /// Returns true si la eliminación fue exitosa, false en caso contrario.
-  Future<bool> deleteInventoryRecord(String inventoryId) async {
+  Future<bool> deleteInventoryRecord(String id) async {
     try {
-      print('🔄 Iniciando eliminación del registro de inventario para inventoryId: $inventoryId');
+      print('🔄 Iniciando eliminación del registro de inventario para inventoryId: $id');
       
-      // Obtener el token de Firebase
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('❌ Error: No hay usuario autenticado');
+      // Obtener el token de autenticación
+      final token = await _getAuthToken();
+      if (token.isEmpty) {
+        print('❌ No se pudo obtener el token de autenticación');
         return false;
       }
-
-      final token = await user.getIdToken();
-      if (token == null) {
-        print('❌ Error: No se pudo obtener el token de Firebase');
-        return false;
-      }
-
+      
+      // Llamar a la API para eliminar el registro
       final response = await http.delete(
-        Uri.parse('https://paints-api.reachu.io/api/inventory/$inventoryId'),
+        Uri.parse('https://paints-api.reachu.io/api/inventory/$id'),
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
-
-      print('📥 Respuesta del servidor: ${response.statusCode} - ${response.body}');
-
-      if (response.statusCode == 200) {
-        print('✅ Registro eliminado exitosamente');
-        return true;
-      }
       
-      print('❌ Error en la respuesta del servidor: ${response.statusCode} - ${response.body}');
-      return false;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('✅ Registro eliminado correctamente');
+        
+        // Eliminar del inventario local
+        _inventory.removeWhere((item) => item.id == id);
+        return true;
+      } else {
+        print('❌ Error al eliminar el registro. Código: ${response.statusCode}');
+        print('❌ Respuesta: ${response.body}');
+        return false;
+      }
     } catch (e) {
-      print('❌ Error al eliminar registro de inventario: $e');
+      print('❌ Error al eliminar el registro: $e');
       return false;
     }
   }
