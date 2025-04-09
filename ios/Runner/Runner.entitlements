@@ -12,6 +12,6 @@
 	
 	<!-- Application identifier para instalación -->
 	<key>application-identifier</key>
-	<string>$(AppIdentifierPrefix)com.angelovs.miniaturePaintFinder</string>
+	<string>$(AppIdentifierPrefix)com.alan.miniaturePaintFinder</string>
 </dict>
 </plist> 

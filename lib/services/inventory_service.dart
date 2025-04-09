@@ -26,6 +26,9 @@ class InventoryService {
   /// Returns a copy of the inventory list to prevent external modification.
   List<PaintInventoryItem> get inventory => List.unmodifiable(_inventory);
 
+  /// Gets the total number of pages available.
+  int get totalPages => _totalPages;
+
   /// Checks if the inventory has been initialized.
   bool get isInitialized => _isInitialized;
 
@@ -33,10 +36,28 @@ class InventoryService {
   ///
   /// In a real application, this would load data from a local database or remote API.
   /// For this example, it uses sample data with a simulated delay.
-  Future<void> loadInventory({required int limit, required int page}) async {
+  Future<void> loadInventory({
+    int limit = 10,
+    int page = 1,
+    String? searchQuery,
+    bool? onlyInStock,
+    String? brand,
+    String? category,
+    int? minStock,
+    int? maxStock,
+  }) async {
     print('>>> InventoryService: Entrando a loadInventory(limit: $limit, page: $page)');
     try {
-      final result = await loadInventoryFromApi(limit: limit, page: page);
+      final result = await loadInventoryFromApi(
+        limit: limit, 
+        page: page,
+        searchQuery: searchQuery,
+        onlyInStock: onlyInStock,
+        brand: brand,
+        category: category,
+        minStock: minStock,
+        maxStock: maxStock,
+      );
       _inventory = result['inventories'] as List<PaintInventoryItem>;
       _totalPages = result['totalPages'] as int;
     } catch (e) {
@@ -128,57 +149,21 @@ class InventoryService {
     return _inventory.length < initialLength;
   }
 
-  /// Filters inventory items based on various criteria.
+  /// Filtra el inventario según los criterios especificados.
   ///
-  /// All filter parameters are optional. If not provided, that filter criterion is ignored.
+  /// Este método ya no es necesario ya que ahora filtramos desde la API.
+  /// Se mantiene por compatibilidad con código existente.
   List<PaintInventoryItem> filterInventory({
-    String? searchQuery,
-    bool? onlyInStock,
+    String searchQuery = '',
+    bool onlyInStock = false,
     String? brand,
     String? category,
-    int? minStock,
-    int? maxStock,
+    int minStock = 0,
+    int maxStock = 999,
   }) {
-    return _inventory.where((item) {
-      // Search query filter
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        final query = searchQuery.toLowerCase();
-        final nameMatches = item.paint.name.toLowerCase().contains(query);
-        final brandMatches = item.paint.brand.toLowerCase().contains(query);
-        final categoryMatches = item.paint.category.toLowerCase().contains(
-          query,
-        );
-
-        if (!(nameMatches || brandMatches || categoryMatches)) {
-          return false;
-        }
-      }
-
-      // Stock filter
-      if (onlyInStock == true && item.stock <= 0) {
-        return false;
-      }
-
-      if (minStock != null && item.stock < minStock) {
-        return false;
-      }
-
-      if (maxStock != null && item.stock > maxStock) {
-        return false;
-      }
-
-      // Brand filter
-      if (brand != null && item.paint.brand != brand) {
-        return false;
-      }
-
-      // Category filter
-      if (category != null && item.paint.category != category) {
-        return false;
-      }
-
-      return true;
-    }).toList();
+    // Este método ya no es necesario ya que ahora filtramos desde la API
+    // Se mantiene por compatibilidad con código existente
+    return _inventory;
   }
 
   /// Sorts inventory items based on the specified column and direction.
@@ -306,10 +291,48 @@ class InventoryService {
   Future<Map<String, dynamic>> loadInventoryFromApi({
     int limit = 10,
     int page = 1,
+    String? searchQuery,
+    bool? onlyInStock,
+    String? brand,
+    String? category,
+    int? minStock,
+    int? maxStock,
   }) async {
     try {
       print('Iniciando carga de inventario desde API...');
-      print('URL: https://paints-api.reachu.io/api/inventory?limit=$limit&page=$page');
+      
+      // Construir la URL con los parámetros de filtrado
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+        'page': page.toString(),
+      };
+      
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        queryParams['search'] = searchQuery;
+      }
+      
+      if (onlyInStock == true) {
+        queryParams['onlyInStock'] = 'true';
+      }
+      
+      if (brand != null && brand.isNotEmpty) {
+        queryParams['brand'] = brand;
+      }
+      
+      if (category != null && category.isNotEmpty) {
+        queryParams['category'] = category;
+      }
+      
+      if (minStock != null) {
+        queryParams['minStock'] = minStock.toString();
+      }
+      
+      if (maxStock != null) {
+        queryParams['maxStock'] = maxStock.toString();
+      }
+      
+      final uri = Uri.parse('https://paints-api.reachu.io/api/inventory').replace(queryParameters: queryParams);
+      print('URL: $uri');
       
       // Obtener el token de Firebase
       final user = FirebaseAuth.instance.currentUser;
@@ -325,7 +348,7 @@ class InventoryService {
       }
       
       final response = await http.get(
-        Uri.parse('https://paints-api.reachu.io/api/inventory?limit=$limit&page=$page'),
+        uri,
         headers: {
           'Authorization': 'Bearer $token',
         },

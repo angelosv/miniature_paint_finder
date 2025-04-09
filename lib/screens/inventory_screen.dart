@@ -113,10 +113,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
 
     try {
-      await _inventoryService.loadInventory(limit: _currentPageSize, page: _currentPage);
+      await _inventoryService.loadInventory(
+        limit: _currentPageSize, 
+        page: _currentPage,
+        searchQuery: _searchController.text,
+        onlyInStock: _onlyShowInStock,
+        brand: _selectedBrand,
+        category: _selectedCategory,
+        minStock: _stockRange.start.toInt(),
+        maxStock: _stockRange.end.toInt(),
+      );
       _filteredInventory = _inventoryService.inventory;
       _uniqueCategories = _inventoryService.getUniqueCategories();
       _uniqueBrands = await _inventoryService.getUniqueBrands();
+      _totalPages = _inventoryService.totalPages;
       _updatePaginatedInventory();
       setState(() {
         _isLoading = false;
@@ -130,22 +140,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _updatePaginatedInventory() {
-    _totalPages = (_filteredInventory.length / _currentPageSize).ceil();
-    if (_totalPages == 0) _totalPages = 1; // Always have at least 1 page
-
-    final startIndex = (_currentPage - 1) * _currentPageSize;
-    final endIndex = _currentPage * _currentPageSize;
-
-    if (startIndex >= _filteredInventory.length) {
-      _paginatedInventory = [];
-    } else {
-      _paginatedInventory = _filteredInventory.sublist(
-        startIndex,
-        endIndex < _filteredInventory.length
-            ? endIndex
-            : _filteredInventory.length,
-      );
-    }
+    // Usar directamente _filteredInventory que ya viene paginado de la API
+    _paginatedInventory = _filteredInventory;
+    
+    // Ya no necesitamos hacer paginación local porque la API ya nos envía los datos paginados
+    // final startIndex = (_currentPage - 1) * _currentPageSize;
+    // final endIndex = _currentPage * _currentPageSize;
+    // 
+    // if (startIndex >= _filteredInventory.length) {
+    //   _paginatedInventory = [];
+    // } else {
+    //   _paginatedInventory = _filteredInventory.sublist(
+    //     startIndex,
+    //     endIndex < _filteredInventory.length
+    //         ? endIndex
+    //         : _filteredInventory.length,
+    //   );
+    // }
   }
 
   /// Changes the active page in pagination.
@@ -182,19 +193,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Then sorts the results and updates pagination.
   void _filterInventory() {
-    if (_filteredInventory.isEmpty) return;
-    
+    // En lugar de filtrar localmente, recargamos desde la API con los filtros
     setState(() {
       _currentPage = 1; // Reset a primera página al filtrar
-      _filteredInventory = _inventoryService.filterInventory(
-        searchQuery: _searchController.text,
-        onlyInStock: _onlyShowInStock,
-        brand: _selectedBrand,
-        category: _selectedCategory,
-        minStock: _stockRange.start.toInt(),
-        maxStock: _stockRange.end.toInt(),
-      );
-      _updatePaginatedInventory();
+      _loadInventory(); // Recargar con los filtros actuales
     });
   }
 
