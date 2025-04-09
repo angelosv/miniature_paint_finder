@@ -47,6 +47,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   bool _isLoading = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Focus nodes
+  final FocusNode _notesFocusNode = FocusNode();
+  late TextEditingController _notesController;
+  late ValueNotifier<String> _tempNotes;
+  late ValueNotifier<int> _tempStock;
+
   // Inventory data
   late List<PaintInventoryItem> _filteredInventory;
   late List<PaintInventoryItem> _paginatedInventory;
@@ -103,6 +109,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _newPaintBrandController.dispose();
     _newPaintColorHexController.dispose();
     _newPaintCategoryController.dispose();
+    _notesFocusNode.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -308,9 +316,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Updates the notes for a paint inventory item.
   ///
   /// Updates both the UI state and the inventory service data.
-  void _updatePaintNotes(PaintInventoryItem item, String notes) {
+  void _updatePaintNotes(PaintInventoryItem item, String notes) async {
     // Update notes through service
-    bool success = _inventoryService.updateNotes(item.paint.id, notes);
+    bool success = await _inventoryService.updateNotesFromApi(item.id, notes);
 
     if (success) {
       setState(() {
@@ -335,22 +343,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// - Viewing palette usage
   /// - Removing the paint from inventory
   void _showInventoryItemOptions(PaintInventoryItem item) {
+    // Inicializar el controlador y los ValueNotifier con los valores actuales
+    _notesController = TextEditingController(text: item.notes);
+    _tempNotes = ValueNotifier<String>(item.notes);
+    _tempStock = ValueNotifier<int>(item.stock);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.5,
-            maxChildSize: 0.9,
-            builder:
-                (_, controller) => SingleChildScrollView(
-                  controller: controller,
-                  child: _buildInventoryItemOptionsModal(item),
-                ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        builder: (_, controller) => SingleChildScrollView(
+          controller: controller,
+          child: _buildInventoryItemOptionsModal(
+            item,
+            _notesController,
+            _tempNotes,
+            _tempStock,
           ),
-    );
+        ),
+      ),
+    ).then((_) {
+      // Limpiar el controlador cuando se cierra el modal
+      _notesController.dispose();
+    });
   }
 
   /// Gets a list of palette names using a specific paint.
@@ -360,427 +379,441 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return _inventoryService.getPalettesUsingPaint(paintId);
   }
 
-  Widget _buildInventoryItemOptionsModal(PaintInventoryItem item) {
+  Widget _buildInventoryItemOptionsModal(
+    PaintInventoryItem item,
+    TextEditingController notesController,
+    ValueNotifier<String> tempNotes,
+    ValueNotifier<int> tempStock,
+  ) {
     final paint = item.paint;
     final paintColor = Color(
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
-
-    // Controller for notes with current value
-    final notesController = TextEditingController(text: item.notes);
     
-    // Variable para almacenar el stock temporal mientras se edita
-    final ValueNotifier<int> tempStock = ValueNotifier<int>(item.stock);
-
     // Get palettes using this paint
     final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+    return GestureDetector(
+      onTap: () {
+        // Ocultar el teclado cuando se toca fuera del TextField
+        _notesFocusNode.unfocus();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
-      ),
-      margin: const EdgeInsets.only(top: 40),
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color:
-                    isDarkMode
-                        ? Colors.grey[600]
-                        : Colors.grey.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              margin: const EdgeInsets.only(bottom: 20),
-            ),
-          ),
-
-          // Header with paint info
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Color swatch
-              Container(
-                width: 60,
-                height: 60,
+        margin: const EdgeInsets.only(top: 40),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: paintColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: borderColor, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color:
+                      isDarkMode
+                          ? Colors.grey[600]
+                          : Colors.grey.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              ),
-              const SizedBox(width: 16),
-
-              // Paint details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      paint.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.primaryBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${paint.brand}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: isDarkMode ? Colors.white70 : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Category: ${paint.category}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                    if (paint.code.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          'Code: ${paint.code}',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-
-          // Stock control
-          Text(
-            'Stock Management',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDarkMode ? AppTheme.darkSurface : Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                width: 1,
+                margin: const EdgeInsets.only(bottom: 20),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+
+            // Header with paint info
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Material(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap:
-                        tempStock.value > 0
-                            ? () {
-                              tempStock.value = tempStock.value - 1;
-                              // Haptic feedback if available
-                              HapticFeedback.mediumImpact();
-                            }
-                            : null,
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            tempStock.value > 0
-                                ? (isDarkMode
-                                    ? AppTheme.marineOrange.withOpacity(0.8)
-                                    : AppTheme.primaryBlue.withOpacity(0.9))
-                                : (isDarkMode
-                                    ? Colors.grey[800]
-                                    : Colors.grey[300]),
-                        boxShadow:
-                            tempStock.value > 0
-                                ? [
-                                  BoxShadow(
-                                    color: (isDarkMode
-                                            ? AppTheme.marineOrange
-                                            : AppTheme.primaryBlue)
-                                        .withOpacity(0.3),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                                : null,
+                // Color swatch
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: paintColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: borderColor, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
                       ),
-                      child: const Icon(
-                        Icons.remove,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: 16),
 
-                ValueListenableBuilder<int>(
-                  valueListenable: tempStock,
-                  builder: (context, value, child) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[900] : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            spreadRadius: 0,
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '$value',
-                        style: TextStyle(
-                          fontSize: 28,
+                // Paint details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        paint.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                          color:
+                              isDarkMode
+                                  ? AppTheme.marineOrange
+                                  : AppTheme.primaryBlue,
                         ),
                       ),
-                    );
-                  },
-                ),
-
-                Material(
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      tempStock.value = tempStock.value + 1;
-                      // Haptic feedback if available
-                      HapticFeedback.mediumImpact();
-                    },
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.primaryBlue,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isDarkMode
-                                    ? AppTheme.marineOrange
-                                    : AppTheme.primaryBlue)
-                                .withOpacity(0.3),
-                            spreadRadius: 1,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${paint.brand}',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: isDarkMode ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Category: ${paint.category}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      if (paint.code.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Code: ${paint.code}',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 24),
 
-          // Palettes section
-          Text(
-            'Used in Palettes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
+            // Stock control
+            Text(
+              'Stock Management',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-          palettesUsingPaint.isEmpty
-              ? Text(
-                'Not used in any palette',
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isDarkMode ? AppTheme.darkSurface : Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Material(
+                    borderRadius: BorderRadius.circular(30),
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap:
+                          tempStock.value > 0
+                              ? () {
+                                tempStock.value = tempStock.value - 1;
+                                // Haptic feedback if available
+                                HapticFeedback.mediumImpact();
+                              }
+                              : null,
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              tempStock.value > 0
+                                  ? (isDarkMode
+                                      ? AppTheme.marineOrange.withOpacity(0.8)
+                                      : AppTheme.primaryBlue.withOpacity(0.9))
+                                  : (isDarkMode
+                                      ? Colors.grey[800]
+                                      : Colors.grey[300]),
+                          boxShadow:
+                              tempStock.value > 0
+                                  ? [
+                                    BoxShadow(
+                                      color: (isDarkMode
+                                              ? AppTheme.marineOrange
+                                              : AppTheme.primaryBlue)
+                                          .withOpacity(0.3),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                  : null,
+                        ),
+                        child: const Icon(
+                          Icons.remove,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  ValueListenableBuilder<int>(
+                    valueListenable: tempStock,
+                    builder: (context, value, child) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.grey[900] : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              spreadRadius: 0,
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '$value',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  Material(
+                    borderRadius: BorderRadius.circular(30),
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        tempStock.value = tempStock.value + 1;
+                        // Haptic feedback if available
+                        HapticFeedback.mediumImpact();
+                      },
+                      borderRadius: BorderRadius.circular(30),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              isDarkMode
+                                  ? AppTheme.marineOrange
+                                  : AppTheme.primaryBlue,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isDarkMode
+                                      ? AppTheme.marineOrange
+                                      : AppTheme.primaryBlue)
+                                  .withOpacity(0.3),
+                              spreadRadius: 1,
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 24),
+
+            // Palettes section
+            Text(
+              'Used in Palettes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            palettesUsingPaint.isEmpty
+                ? Text(
+                  'Not used in any palette',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                )
+                : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      palettesUsingPaint.map((palette) {
+                        return Chip(
+                          label: Text(palette),
+                          backgroundColor:
+                              isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 0,
+                          ),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        );
+                      }).toList(),
+                ),
+
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 24),
+
+            // Notes section
+            Text(
+              'Notes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            TextField(
+              controller: notesController,
+              focusNode: _notesFocusNode,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: 'Add notes about this paint...',
+                hintStyle: TextStyle(
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 ),
-              )
-              : Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    palettesUsingPaint.map((palette) {
-                      return Chip(
-                        label: Text(palette),
-                        backgroundColor:
-                            isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 0,
-                        ),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      );
-                    }).toList(),
               ),
-
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 24),
-
-          // Notes section
-          Text(
-            'Notes',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
+              maxLines: 3,
+              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
+              textInputAction: TextInputAction.done,
+              onChanged: (value) {
+                tempNotes.value = value;
+              },
+              onSubmitted: (value) {
+                tempNotes.value = value;
+                _notesFocusNode.unfocus();
+              },
             ),
-          ),
-          const SizedBox(height: 12),
 
-          TextField(
-            controller: notesController,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: 'Add notes about this paint...',
-              hintStyle: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-            maxLines: 3,
-            style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
-          ),
+            const SizedBox(height: 32),
 
-          const SizedBox(height: 32),
+            // Update button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Actualizar notas con el valor actual del ValueNotifier
+                  _updatePaintNotes(item, tempNotes.value);
+                  
+                  // Actualizar stock solo si ha cambiado
+                  if (tempStock.value != item.stock) {
+                    _updatePaintStock(item, tempStock.value);
+                  }
+                  
+                  Navigator.pop(context);
 
-          // Update button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Actualizar notas
-                _updatePaintNotes(item, notesController.text);
-                
-                // Actualizar stock solo si ha cambiado
-                if (tempStock.value != item.stock) {
-                  _updatePaintStock(item, tempStock.value);
-                }
-                
-                Navigator.pop(context);
-
-                // Show confirmation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${paint.name} updated'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                  // Show confirmation
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${paint.name} updated'),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor:
+                          isDarkMode ? Colors.grey[800] : Colors.grey[900],
                     ),
-                    backgroundColor:
-                        isDarkMode ? Colors.grey[800] : Colors.grey[900],
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'UPDATE',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              child: const Text(
-                'UPDATE',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
             ),
-          ),
 
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // Remove from inventory option
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                _showRemoveConfirmationDialog(item);
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red[isDarkMode ? 400 : 600],
-                side: BorderSide(color: Colors.red[isDarkMode ? 400 : 600]!),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            // Remove from inventory option
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  _showRemoveConfirmationDialog(item);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red[isDarkMode ? 400 : 600],
+                  side: BorderSide(color: Colors.red[isDarkMode ? 400 : 600]!),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'REMOVE FROM INVENTORY',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              child: const Text(
-                'REMOVE FROM INVENTORY',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

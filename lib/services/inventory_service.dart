@@ -167,6 +167,52 @@ class InventoryService {
     return true;
   }
 
+  /// Actualiza las notas de un registro de inventario usando la API.
+  ///
+  /// Returns true si la actualización fue exitosa, false en caso contrario.
+  Future<bool> updateNotesFromApi(String inventoryId, String notes) async {
+    try {
+      print('🔄 Iniciando actualización de notas para inventoryId: $inventoryId');
+      
+      // Obtener el token de Firebase
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ Error: No hay usuario autenticado');
+        return false;
+      }
+
+      final token = await user.getIdToken();
+      if (token == null) {
+        print('❌ Error: No se pudo obtener el token de Firebase');
+        return false;
+      }
+
+      final response = await http.put(
+        Uri.parse('https://paints-api.reachu.io/api/inventory/$inventoryId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'notes': notes,
+        }),
+      );
+
+      print('📥 Respuesta del servidor: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Notas actualizadas exitosamente');
+        return true;
+      }
+      
+      print('❌ Error en la respuesta del servidor: ${response.statusCode} - ${response.body}');
+      return false;
+    } catch (e) {
+      print('❌ Error al actualizar notas: $e');
+      return false;
+    }
+  }
+
   /// Adds a new paint to the inventory.
   ///
   /// Returns true if the addition was successful, false if the paint already exists.
