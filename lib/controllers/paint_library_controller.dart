@@ -129,9 +129,21 @@ class PaintLibraryController extends ChangeNotifier {
     loadPaints();
   }
 
-  /// Establecer el filtro de marca
-  void filterByBrand(String brand) {
-    _selectedBrand = brand;
+  /// Establecer el filtro de marca recibiendo el nombre de la marca y obteniendo su id.
+  void filterByBrand(String brandName) {
+    if (brandName == 'All') {
+      _selectedBrand = 'All';
+    } else {
+      final matchingBrand = _brands.firstWhere(
+        (brand) => brand['name'] == brandName,
+        orElse: () => <String, dynamic>{},
+      );
+      if (matchingBrand.isNotEmpty) {
+        _selectedBrand = matchingBrand['id'] as String;
+      } else {
+        _selectedBrand = brandName;
+      }
+    }
     _currentPage = 1;
     loadPaints();
   }
