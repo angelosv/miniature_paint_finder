@@ -328,6 +328,7 @@ class PaintCard extends StatelessWidget {
   void _showPaintInventoryModal(BuildContext context, Paint paint) {
     // Crear un objeto de inventario temporal para mostrar en el modal
     final inventoryItem = PaintInventoryItem(
+      id: paint.id,
       paint: paint,
       stock: paint.id.hashCode % 5, // Stock simulado
       notes: '',

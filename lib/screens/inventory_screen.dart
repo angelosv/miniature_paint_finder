@@ -825,42 +825,50 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         ),
       ),
-    ).then((confirmed) {
+    ).then((confirmed) async {
       if (confirmed == true) {
-        // Remove from inventory
-        setState(() {
-          final index = _filteredInventory.indexOf(item);
-          if (index != -1) {
-            _filteredInventory.removeAt(index);
-          }
-          _filterInventory();
-        });
-
-        // Close bottom sheet
+        print('🔄 Iniciando eliminación de ${paint.name} del inventario');
+        
+        // Cerrar el modal de opciones primero
         Navigator.of(context).pop();
-
-        // Show confirmation
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${paint.name} removed from inventory'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        
+        // Llamar al servicio para eliminar
+        final success = await _inventoryService.deleteInventoryRecord(item.id);
+        
+        if (success) {
+          print('✅ Pintura eliminada exitosamente del inventario');
+          
+          setState(() {
+            // Crear una nueva lista modificable
+            final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+            final index = newFilteredInventory.indexOf(item);
+            if (index != -1) {
+              newFilteredInventory.removeAt(index);
+            }
+            _filteredInventory = newFilteredInventory;
+            _filterInventory();
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${paint.name} removed from inventory'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
             ),
-            backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
-            action: SnackBarAction(
-              label: 'UNDO',
-              textColor: isDarkMode ? AppTheme.marineOrange : Colors.white,
-              onPressed: () {
-                setState(() {
-                  _filteredInventory.add(item);
-                  _filterInventory();
-                });
-              },
+          );
+        } else {
+          print('❌ Error al eliminar la pintura del inventario');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error removing ${paint.name} from inventory'),
+              backgroundColor: Colors.red,
             ),
-          ),
-        );
+          );
+        }
       }
     });
   }
@@ -1326,35 +1334,46 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         );
       },
-      onDismissed: (direction) {
-        setState(() {
-          final index = _filteredInventory.indexOf(item);
-          if (index != -1) {
-            _filteredInventory.removeAt(index);
-          }
-          _filterInventory();
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${paint.name} removed from inventory'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+      onDismissed: (direction) async {
+        print('🔄 Iniciando eliminación de ${paint.name} del inventario (swipe)');
+        
+        // Llamar al servicio para eliminar
+        final success = await _inventoryService.deleteInventoryRecord(item.id);
+        
+        if (success) {
+          print('✅ Pintura eliminada exitosamente del inventario');
+          
+          setState(() {
+            // Crear una nueva lista modificable
+            final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+            final index = newFilteredInventory.indexOf(item);
+            if (index != -1) {
+              newFilteredInventory.removeAt(index);
+            }
+            _filteredInventory = newFilteredInventory;
+            _filterInventory();
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${paint.name} removed from inventory'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
             ),
-            backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
-            action: SnackBarAction(
-              label: 'UNDO',
-              textColor: isDarkMode ? AppTheme.marineOrange : Colors.white,
-              onPressed: () {
-                setState(() {
-                  _filteredInventory.add(item);
-                  _filterInventory();
-                });
-              },
+          );
+        } else {
+          print('❌ Error al eliminar la pintura del inventario');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error removing ${paint.name} from inventory'),
+              backgroundColor: Colors.red,
             ),
-          ),
-        );
+          );
+        }
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),

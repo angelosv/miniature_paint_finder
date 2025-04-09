@@ -9,6 +9,9 @@ import 'package:miniature_paint_finder/models/paint.dart';
 /// This model supports immutability by providing a [copyWith] method
 /// to create modified copies instead of directly changing properties.
 class PaintInventoryItem {
+  /// The unique identifier for this inventory item
+  final String id;
+
   /// The paint information (color, brand, name, etc.)
   final Paint paint;
 
@@ -22,6 +25,7 @@ class PaintInventoryItem {
   ///
   /// [paint] is required, [stock] defaults to 0, and [notes] defaults to an empty string.
   const PaintInventoryItem({
+    required this.id,
     required this.paint,
     this.stock = 0,
     this.notes = '',
@@ -36,8 +40,9 @@ class PaintInventoryItem {
   /// ```dart
   /// final updatedItem = item.copyWith(stock: item.stock + 1);
   /// ```
-  PaintInventoryItem copyWith({Paint? paint, int? stock, String? notes}) {
+  PaintInventoryItem copyWith({String? id, Paint? paint, int? stock, String? notes}) {
     return PaintInventoryItem(
+      id: id ?? this.id,
       paint: paint ?? this.paint,
       stock: stock ?? this.stock,
       notes: notes ?? this.notes,
@@ -47,6 +52,7 @@ class PaintInventoryItem {
   /// Creates a paint inventory item from JSON data.
   factory PaintInventoryItem.fromJson(Map<String, dynamic> json) {
     return PaintInventoryItem(
+      id: json['id'] as String,
       paint: Paint.fromJson(json['paint'] as Map<String, dynamic>),
       stock: json['quantity'] as int,
       notes: json['notes'] as String? ?? '',
@@ -55,15 +61,20 @@ class PaintInventoryItem {
 
   /// Converts this paint inventory item to a JSON object.
   Map<String, dynamic> toJson() {
-    return {'paint': paint.toJson(), 'stock': stock, 'notes': notes};
+    return {
+      'id': id,
+      'paint': paint.toJson(), 
+      'stock': stock, 
+      'notes': notes
+    };
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is PaintInventoryItem && other.paint.id == paint.id;
+    return other is PaintInventoryItem && other.id == id;
   }
 
   @override
-  int get hashCode => paint.id.hashCode;
+  int get hashCode => id.hashCode;
 }
