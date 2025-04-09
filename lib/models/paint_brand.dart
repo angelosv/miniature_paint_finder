@@ -4,6 +4,7 @@ class PaintBrand {
   final String logoUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int paintCount;
 
   PaintBrand({
     required this.id,
@@ -11,6 +12,7 @@ class PaintBrand {
     required this.logoUrl,
     required this.createdAt,
     required this.updatedAt,
+    required this.paintCount,
   });
 
   factory PaintBrand.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,7 @@ class PaintBrand {
       updatedAt: DateTime.fromMillisecondsSinceEpoch(
         json['updated_at']['_seconds'] * 1000,
       ),
+      paintCount: json['paintCount'] ?? 0,
     );
   }
 
@@ -42,4 +45,4 @@ class PaintBrand {
       },
     };
   }
-} 
+}

@@ -388,39 +388,25 @@ class _PaintListTabState extends State<PaintListTab> {
 
             const SizedBox(height: 12),
 
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.5,
+            GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 2.5,
+              ),
+              itemCount: _paintBrands.length,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              children: [
-                CategoryCard(
-                  title: 'Citadel',
-                  count: 7,
-                  color: AppTheme.primaryBlue,
+              itemBuilder: (context, index) {
+                final brand = _paintBrands[index];
+                return CategoryCard(
+                  title: brand['name'] as String,
+                  count: brand['paintCount'] as int,
+                  color: brand['color'] as Color,
                   onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Vallejo',
-                  count: 3,
-                  color: AppTheme.pinkColor,
-                  onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Army Painter',
-                  count: 0,
-                  color: AppTheme.purpleColor,
-                  onTap: () {},
-                ),
-                CategoryCard(
-                  title: 'Scale75',
-                  count: 0,
-                  color: AppTheme.orangeColor,
-                  onTap: () {},
-                ),
-              ],
+                );
+              },
             ),
 
             const SizedBox(height: 24),
@@ -2698,6 +2684,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     'logoUrl': brand.logoUrl,
                     'selected': false,
                     'color': _getBrandColor(brand.name),
+                    'paintCount': brand.paintCount,
                   },
                 )
                 .toList();
@@ -2712,24 +2699,28 @@ class _PaintListTabState extends State<PaintListTab> {
             'color': AppTheme.primaryBlue,
             'selected': false,
             'logoUrl': null,
+            'paintCount': 0,
           },
           {
             'name': 'Vallejo',
             'color': AppTheme.pinkColor,
             'selected': false,
             'logoUrl': null,
+            'paintCount': 0,
           },
           {
             'name': 'Army Painter',
             'color': AppTheme.purpleColor,
             'selected': false,
             'logoUrl': null,
+            'paintCount': 0,
           },
           {
             'name': 'Scale75',
             'color': AppTheme.orangeColor,
             'selected': false,
             'logoUrl': null,
+            'paintCount': 0,
           },
         ];
       });
@@ -2738,16 +2729,65 @@ class _PaintListTabState extends State<PaintListTab> {
 
   Color _getBrandColor(String brandName) {
     switch (brandName.toLowerCase()) {
-      case 'citadel':
-        return AppTheme.primaryBlue;
-      case 'vallejo':
-        return AppTheme.pinkColor;
+      case 'ak interactive':
+        return const Color(0xFF003366); // Un azul oscuro
+      case 'apple barrel':
+        return const Color(0xFFFF7043); // Naranja brillante
+      case 'the army painter':
       case 'army painter':
-        return AppTheme.purpleColor;
+        return AppTheme.purpleColor; // Púrpura (según lo asignado previamente)
+      case 'arteza':
+        return const Color(0xFF009688); // Un tono teal
+      case 'citadel colour':
+        return AppTheme.primaryBlue; // Azul primario para Citadel
+      case 'coat d\'arms':
+      case 'coat darms':
+        return const Color(0xFF424242); // Gris oscuro
+      case 'creature caster':
+        return const Color(0xFF4CAF50); // Verde (un tono fresco)
+      case 'folkart':
+        return const Color(0xFFFFC107); // Amarillo mostaza
+      case 'wargames foundry':
+        return const Color(0xFF9E9E9E); // Gris medio (industrial)
+      case 'golden artist colors':
+        return const Color(0xFFFFD700); // Dorado
+      case 'green stuff world':
+        return const Color(0xFF8BC34A); // Verde vibrante
+      case 'humbrol':
+        return const Color(0xFF43A047); // Verde oscurecido
+      case 'italeri':
+        return const Color(0xFF1565C0); // Azul intenso
+      case 'kimera kolors':
+        return const Color(0xFFE91E63); // Rosa o fucsia
+      case 'liquitex':
+        return const Color(0xFFD32F2F); // Rojo intenso
+      case 'ammo by mig jimenez':
+        return const Color(0xFF283593); // Azul con matices profundos
+      case 'monument hobbies':
+        return const Color(0xFF00796B); // Azul-verde oscuro
+      case 'formula p3':
+        return const Color(0xFFFF9800); // Naranja
+      case 'pantone':
+        return const Color(0xFF0A74DA); // Azul característico de Pantone
+      case 'ral colours':
+      case 'ral':
+        return const Color(0xFF757575); // Gris estándar
+      case 'reaper miniatures':
+      case 'reaper':
+        return const Color(0xFF212121); // Negro/gris muy oscuro
+      case 'revell':
+        return const Color(0xFFB71C1C); // Rojo oscuro, casi burdeos
       case 'scale75':
-        return AppTheme.orangeColor;
+        return AppTheme
+            .orangeColor; // Usamos el valor que ya teníamos para Scale75
+      case 'tamiya':
+        return const Color(0xFFFFEB3B); // Amarillo brillante (típico de Tamiya)
+      case 'vallejo':
+        return const Color(0xFFFF4081); // Un rosa fuerte
+      case 'warcolours':
+        return const Color(0xFFD50000); // Rojo vibrante
       default:
-        return AppTheme.marineBlue;
+        return AppTheme.marineBlue; // Color por defecto
     }
   }
 }
