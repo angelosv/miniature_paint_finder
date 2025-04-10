@@ -29,6 +29,9 @@ class Paint {
   /// Manufacturer brand name
   final String brand;
 
+  /// Manufacturer brand ID
+  final String? brandId;
+
   /// Paint category (e.g., 'Base', 'Layer', 'Shade', 'Technical')
   final String category;
 
@@ -37,6 +40,9 @@ class Paint {
 
   /// Whether the paint is transparent/translucent
   final bool isTransparent;
+
+  /// List of palettes this paint belongs to
+  final List<String>? palettes;
 
   Paint({
     required this.id,
@@ -48,9 +54,11 @@ class Paint {
     required this.g,
     required this.b,
     required this.brand,
+    this.brandId,
     required this.category,
     this.isMetallic = false,
     this.isTransparent = false,
+    this.palettes = const [],
   });
 
   /// Convert to JSON representation
@@ -65,14 +73,20 @@ class Paint {
       'g': g,
       'b': b,
       'brand': brand,
+      'brandId': brandId,
       'category': category,
       'isMetallic': isMetallic,
       'isTransparent': isTransparent,
+      'palettes': palettes,
     };
   }
 
   /// Create a Paint object from JSON data
   factory Paint.fromJson(Map<String, dynamic> json) {
+    print('🔍 JSON recibido para Paint: $json'); // Debug log
+    final brandId = json['brandId']?.toString();
+    print('🔍 brandId extraído: $brandId'); // Debug log
+    
     return Paint(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -83,9 +97,11 @@ class Paint {
       g: json['g'] as int? ?? 0,
       b: json['b'] as int? ?? 0,
       brand: json['brand'] as String? ?? '',
+      brandId: brandId,
       category: json['category'] as String? ?? '',
       isMetallic: json['isMetallic'] as bool? ?? false,
       isTransparent: json['isTransparent'] as bool? ?? false,
+      palettes: (json['palettes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 
@@ -104,6 +120,7 @@ class Paint {
     required String code,
     bool isMetallic = false,
     bool isTransparent = false,
+    List<String> palettes = const [],
   }) {
     // Convert hex to RGB
     final hexColor = hex.startsWith('#') ? hex.substring(1) : hex;
@@ -124,6 +141,7 @@ class Paint {
       b: b,
       isMetallic: isMetallic,
       isTransparent: isTransparent,
+      palettes: palettes,
     );
   }
 }

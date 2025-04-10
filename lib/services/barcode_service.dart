@@ -1,107 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
-  // Cache de pinturas para evitar cálculos repetitivos
-  Map<String, Paint>? _paintsBarcodeCache;
+  static const String baseUrl = 'https://paints-api.reachu.io/api';
 
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
   /// Devuelve null si no se encuentra una pintura coincidente
   Future<Paint?> findPaintByBarcode(String barcode) async {
     if (barcode.isEmpty) {
+      print('❌ Barcode is empty');
       return null;
     }
 
     try {
       // Normalize barcode (remove spaces, dashes, etc.)
       final normalized = _normalizeBarcode(barcode);
+      print('🔍 Searching for paint with barcode: $normalized');
 
-      // Simulate network delay
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Inicializar el cache si no existe
-      _paintsBarcodeCache ??= _generateBarcodePaintMap();
-
-      // Buscar en el cache usando la versión normalizada primero, luego la original
-      return _paintsBarcodeCache![normalized] ??
-          _paintsBarcodeCache![barcode] ??
-          _searchSimilarBarcode(normalized);
-    } catch (e) {
-      print('Error finding paint by barcode: $e');
-      return null;
-    }
-  }
-
-  /// Genera un mapa de códigos de barras a pinturas
-  Map<String, Paint> _generateBarcodePaintMap() {
-    final Map<String, Paint> paintsByBarcode = {};
-    final List<Paint> allPaints = SampleData.getPaints();
-
-    // Create multiple barcode formats for each paint to increase chances of matches
-    for (final paint in allPaints) {
-      // Standard EAN-13 format
-      final String ean13 = '50119${paint.id.hashCode.abs() % 10000000}';
-      paintsByBarcode[ean13] = paint;
-
-      // UPC format (12 digits)
-      if (ean13.startsWith('0')) {
-        paintsByBarcode[ean13.substring(1)] = paint;
+      // Get Firebase token
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ No user logged in');
+        return null;
       }
 
-      // EAN-8 format (8 digits)
-      final String ean8 = '50${paint.id.hashCode.abs() % 100000}';
-      paintsByBarcode[ean8] = paint;
+      final token = await user.getIdToken();
+      print('🔑 Got Firebase token');
 
-      // QR code version with a prefix
-      paintsByBarcode['PAINT-${paint.id}'] = paint;
+      // Make API call to find paint by barcode
+      final url = Uri.parse('$baseUrl/paint/barcode/$normalized');
+      print('🌐 API URL: $url');
 
-      // Brand specific format
-      final String brandCode =
-          '${paint.brand.substring(0, min(3, paint.brand.length)).toUpperCase()}${paint.id.hashCode.abs() % 1000000}';
-      paintsByBarcode[brandCode] = paint;
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      print('📡 API Response Status: ${response.statusCode}');
+      print('📡 API Response Body: ${response.body}');
 
-      // Código basado en nombre y marca
-      final String nameCode =
-          '${paint.name.substring(0, min(3, paint.name.length)).toUpperCase()}${paint.brand.hashCode.abs() % 10000}';
-      paintsByBarcode[nameCode] = paint;
-
-      // Para demostración: asociar algunos códigos cortos para facilitar el escaneo de cualquier código
-      final String demoCode = '${paint.id.hashCode.abs() % 1000000}';
-      paintsByBarcode[demoCode] = paint;
-    }
-
-    return paintsByBarcode;
-  }
-
-  /// Busca un código de barras similar
-  Paint? _searchSimilarBarcode(String code) {
-    if (_paintsBarcodeCache == null || code.length < 4) {
-      return null;
-    }
-
-    // Intentar encontrar un código que contenga este como subcadena
-    for (final entry in _paintsBarcodeCache!.entries) {
-      if (entry.key.contains(code) || code.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-
-    // Si el código es numérico, tratar de encontrar un código similar
-    if (RegExp(r'^\d+$').hasMatch(code) && code.length >= 6) {
-      final String codeStart = code.substring(0, 4);
-      for (final entry in _paintsBarcodeCache!.entries) {
-        if (entry.key.startsWith(codeStart) &&
-            entry.key.length >= 6 &&
-            RegExp(r'^\d+$').hasMatch(entry.key)) {
-          return entry.value;
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        if (data['executed'] == true && data['data'] != null && data['data'].isNotEmpty) {
+          final paintData = data['data'][0];
+          print('✅ Found paint: ${paintData['name']} (${paintData['brand']})');
+          
+          // Asegurarse de que las paletas vengan exactamente como la API las envía
+          final List<String> palettes = (paintData['palettes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ?? [];
+          
+          print('📦 Palettes from API: $palettes');
+          
+          // Crear el objeto Paint con las paletas exactamente como vienen de la API
+          final paint = Paint(
+            id: paintData['id'],
+            brand: paintData['brand'],
+            brandId: paintData['brandId'],
+            name: paintData['name'],
+            code: paintData['code'],
+            set: paintData['set'],
+            r: paintData['r'],
+            g: paintData['g'],
+            b: paintData['b'],
+            hex: paintData['hex'],
+            category: paintData['category'] ?? '',
+            isMetallic: paintData['isMetallic'] ?? false,
+            isTransparent: paintData['isTransparent'] ?? false,
+            palettes: palettes, // Usar las paletas exactamente como vienen de la API
+          );
+          
+          print('🎨 Created Paint object with palettes: ${paint.palettes}');
+          
+          return paint;
+        } else {
+          print('⚠️ No paint found in API response');
+          return null;
         }
+      } else {
+        print('❌ API Error: ${response.statusCode} - ${response.body}');
+        return null;
       }
+    } catch (e) {
+      print('❌ Error finding paint by barcode: $e');
+      return null;
     }
-
-    return null;
   }
 
   /// Validates if a string is a proper barcode format
@@ -131,16 +122,10 @@ class BarcodeService {
         return true;
       }
 
-      // Para demo, aceptar cualquier código con al menos 3 caracteres
-      if (normalized.length >= 3) {
-        return true;
-      }
-
       return false;
     } catch (e) {
       print('Error validating barcode: $e');
-      // En caso de error, aceptamos el código para procesarlo después
-      return code.length >= 3;
+      return false;
     }
   }
 
@@ -149,7 +134,4 @@ class BarcodeService {
     // Remove spaces, dashes, and other common separators
     return code.trim().replaceAll(RegExp(r'[\s\-_.,:/\\]'), '').toUpperCase();
   }
-
-  /// Utility to get minimum of two integers
-  int min(int a, int b) => a < b ? a : b;
 }
