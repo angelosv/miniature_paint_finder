@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:miniature_paint_finder/components/scan_result_sheet.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
@@ -6,6 +7,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/barcode_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -23,6 +25,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   MobileScannerController? _scannerController;
   final BarcodeService _barcodeService = BarcodeService();
   final PaintService _paintService = PaintService();
+  final InventoryService _inventoryService = InventoryService();
 
   bool _isScanning = true;
   bool _isSearching = false;
@@ -187,6 +190,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     // Look up the paint by barcode
     try {
+      print('🔍 Searching for paint with barcode: $code');
       final Paint? paint = await _barcodeService.findPaintByBarcode(code);
 
       if (mounted) {
@@ -204,12 +208,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
             });
           } else {
+            print('✅ Found paint: ${paint.name} (${paint.brand}) (${paint.brandId})');
+            print('- paint: ${jsonEncode(paint)}');
             // Show result sheet when paint is found
             _showScanResultSheet(paint);
           }
         });
       }
     } catch (e) {
+      print('❌ Error searching for paint: $e');
       if (mounted) {
         setState(() {
           _isSearching = false;
@@ -252,36 +259,70 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             inPalettes: inPalettes.isEmpty ? null : inPalettes,
             userPalettes: userPalettes,
             onAddToInventory: (paint, quantity, note) async {
-              // Use the service to add to inventory
-              await _paintService.addToInventory(paint, quantity, note: note);
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Paint added to inventory!'),
-                    backgroundColor: Colors.green,
-                  ),
+              try {
+                // Use the inventory service to add to inventory
+                final success = await _inventoryService.addInventoryRecord(
+                  brandId: paint.brandId ?? '',
+                  paintId: paint.id,
+                  quantity: quantity,
+                  notes: note ?? '',
                 );
-              }
+                print('✅ Inventory add result: $success');
 
-              Navigator.pop(context);
-              Navigator.pop(context, paint);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Paint added to inventory!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+
+                Navigator.pop(context);
+                Navigator.pop(context, paint);
+              } catch (e) {
+                print('❌ Error adding to inventory: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error adding to inventory: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             onUpdateInventory: (paint, quantity, note) async {
-              // Use the service to update inventory
-              await _paintService.updateInventory(paint, quantity, note: note);
+              try {
+                // Use the inventory service to update inventory
+                final success = await _inventoryService.updateStockFromApi(paint.id, quantity);
+                if (note != null) {
+                  await _inventoryService.updateNotesFromApi(paint.id, note);
+                }
+                print('✅ Inventory update result: $success');
 
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Inventory updated!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Inventory updated!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+
+                Navigator.pop(context);
+                Navigator.pop(context, paint);
+              } catch (e) {
+                print('❌ Error updating inventory: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating inventory: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
-
-              Navigator.pop(context);
-              Navigator.pop(context, paint);
             },
             onAddToWishlist: (paint, isPriority) async {
               // Use the service to add to wishlist
@@ -600,17 +641,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed:
-                              _isPermanentlyDenied
-                                  ? _openAppSettings
-                                  : _forceInitializeCamera,
+                          onPressed: _isPermanentlyDenied
+                              ? _openAppSettings
+                              : _forceInitializeCamera,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryBlue,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
                           ),
                           icon: Icon(
                             _isPermanentlyDenied
@@ -670,25 +706,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
                 // Loading indicator
                 if (_isSearching)
-                  Container(
-                    color: Colors.black.withOpacity(0.3),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text(
-                            'Searching paint...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildSearchingOverlay(),
 
                 // Scan guide overlay
                 if (_isScanning &&
@@ -700,26 +718,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
                 // Error message
                 if (_errorMessage != null)
-                  Positioned(
-                    bottom: 20,
-                    left: 20,
-                    right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
+                  _buildErrorOverlay(),
               ],
             ),
           ),
@@ -829,6 +828,78 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchingOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.3),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.marineOrange),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Searching for paint...',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            if (_lastScannedCode != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Code: $_lastScannedCode',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorOverlay() {
+    return Positioned(
+      bottom: 20,
+      left: 20,
+      right: 20,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text(
+              _errorMessage!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (_lastScannedCode != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Code: $_lastScannedCode',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
