@@ -316,7 +316,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Wishlist',
-      selectedIndex: -1, // Not a bottom tab item
+      selectedIndex: 2, // Uso del índice 2 para Wishlist
       body: _buildBody(),
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
       floatingActionButton: FloatingActionButton.extended(

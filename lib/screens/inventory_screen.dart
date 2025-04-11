@@ -414,34 +414,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      selectedIndex: 2, // Inventory tab
-      title: 'My Inventory',
+      title: 'Inventory',
+      selectedIndex: 1, // Uso del índice 1 para Inventory
       body:
           _isLoading
               ? _buildLoader(isDarkMode)
               : _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'inventory'),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Botón principal (agregar pinturas)
-          FloatingActionButton(
-            heroTag: 'add-button',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LibraryScreen()),
-              );
-            },
-            backgroundColor:
-                Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.marineOrange
-                    : AppTheme.primaryBlue,
-            tooltip: 'Add paint from library',
-            child: const Icon(Icons.add),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LibraryScreen()),
+          );
+        },
+        label: const Text('Add paint from library'),
+        icon: const Icon(Icons.add),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

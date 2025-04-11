@@ -23,7 +23,7 @@ class CustomBottomNav extends StatelessWidget {
     // Obtener el padding inferior para evitar que se oculte por la barra de navegación
     final EdgeInsets viewPadding = MediaQuery.of(context).viewPadding;
     final double bottomPadding =
-        viewPadding.bottom > 0 ? viewPadding.bottom : 16.0;
+        viewPadding.bottom > 0 ? viewPadding.bottom : 10.0;
 
     return Container(
       decoration: BoxDecoration(
