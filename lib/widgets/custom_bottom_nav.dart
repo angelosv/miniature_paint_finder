@@ -43,18 +43,34 @@ class CustomBottomNav extends StatelessWidget {
           ),
           _buildNavItem(
             context: context,
-            icon: Icons.palette_outlined,
-            activeIcon: Icons.palette,
-            label: 'Palettes',
+            icon: Icons.inventory_outlined,
+            activeIcon: Icons.inventory,
+            label: 'Inventory',
             index: 1,
             isDarkMode: isDarkMode,
           ),
           _buildNavItem(
             context: context,
-            icon: Icons.person_outline,
-            activeIcon: Icons.person,
-            label: 'Profile',
+            icon: Icons.favorite_outline,
+            activeIcon: Icons.favorite,
+            label: 'Wishlist',
             index: 2,
+            isDarkMode: isDarkMode,
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.grid_view_outlined,
+            activeIcon: Icons.grid_view,
+            label: 'Library',
+            index: 3,
+            isDarkMode: isDarkMode,
+          ),
+          _buildNavItem(
+            context: context,
+            icon: Icons.palette_outlined,
+            activeIcon: Icons.palette,
+            label: 'My Palettes',
+            index: 4,
             isDarkMode: isDarkMode,
           ),
         ],
@@ -74,8 +90,20 @@ class CustomBottomNav extends StatelessWidget {
 
     // Colores según el tema y selección
     final Color activeColor =
-        isDarkMode ? AppTheme.drawerOrange : AppTheme.marineOrange;
-    final Color inactiveColor = isDarkMode ? Colors.white70 : Colors.black54;
+        isDarkMode
+            ? Colors
+                .white // Blanco en modo oscuro
+            : AppTheme
+                .marineBlue; // Azul marino en modo claro (igual que el side menu)
+
+    final Color inactiveColor =
+        isDarkMode
+            ? Colors.white.withOpacity(
+              0.6,
+            ) // Blanco con opacidad en modo oscuro
+            : AppTheme.marineBlue.withOpacity(
+              0.6,
+            ); // Azul marino con opacidad en modo claro
 
     return InkWell(
       onTap: () {
@@ -91,7 +119,7 @@ class CustomBottomNav extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        width: 80,
+        width: 70,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           border: Border(
@@ -115,8 +143,12 @@ class CustomBottomNav extends StatelessWidget {
               style: TextStyle(
                 color: isSelected ? activeColor : inactiveColor,
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight:
+                    isSelected || isDarkMode
+                        ? FontWeight.bold
+                        : FontWeight.normal,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

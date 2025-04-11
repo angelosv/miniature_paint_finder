@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
+import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/widgets/custom_bottom_nav.dart';
 import 'package:provider/provider.dart';
@@ -80,17 +83,25 @@ class _AppScaffoldState extends State<AppScaffold> {
           break;
         case 1:
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const PaletteScreen()),
+            MaterialPageRoute(builder: (context) => const InventoryScreen()),
             (Route<dynamic> route) => false,
           );
           break;
         case 2:
-          // Navigate to Home screen with Profile tab and ensure bottom nav shows the Profile tab as selected
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-              settings: const RouteSettings(arguments: {'selectedIndex': 1}),
-            ),
+            MaterialPageRoute(builder: (context) => const WishlistScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 3:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LibraryScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 4:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const PaletteScreen()),
             (Route<dynamic> route) => false,
           );
           break;
