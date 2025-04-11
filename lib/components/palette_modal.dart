@@ -1,3 +1,5 @@
+import 'dart:convert'; // Para la codificación/decodificación JSON
+import 'package:http/http.dart' as http; // Para las peticiones HTTP
 import 'package:flutter/material.dart';
 import '../models/palette.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
@@ -21,6 +23,70 @@ class PaletteModal extends StatelessWidget {
     this.imagePath,
   }) : super(key: key);
 
+  /// Llama al endpoint de la API para obtener la información de la pintura.
+  /// El endpoint es: https://paints-api.reachu.io/api/paint/paint-info/{brand}/{paintId}
+  /// Se requieren [brand], [paintId] y un [token] válido.
+  static Future<Map<String, dynamic>> fetchPaintInfo({
+    required String brand,
+    required String paintId,
+    required String token,
+  }) async {
+    final url = Uri.parse(
+      'https://paints-api.reachu.io/api/paint/paint-info/$brand/$paintId',
+    );
+    print('📤 Requesting paint info from: $url');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('📥 Received response: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        return jsonData;
+      } else {
+        return {
+          'executed': false,
+          'message': 'Error: Code ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      print('❌ Exception in fetchPaintInfo: $e');
+      return {'executed': false, 'message': 'Exception: $e', 'data': null};
+    }
+  }
+
+  /// Obtiene el estado de la pintura de la respuesta de la API.
+  /// Retorna "In Inventory" si está en inventario, "In Wishlist" si está en wishlist
+  /// o "Not in Collection" si no se encuentra.
+  String getStatusFromPaintInfo(Map<String, dynamic> responseJson) {
+    if (responseJson.containsKey('data') && responseJson['data'] != null) {
+      final data = responseJson['data'];
+      if (data['in_inventory'] == true) {
+        return "In Inventory";
+      } else if (data['in_whitelist'] == true) {
+        return "In Wishlist";
+      }
+    }
+    return "Not in Collection";
+  }
+
+  /// Helper para obtener el estado dinámico de la pintura consultado a la API.
+  Future<Map<String, dynamic>> _getPaintStatus(PaintSelection paint) async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    return fetchPaintInfo(
+      brand: paint.paintBrand,
+      paintId: paint.paintId,
+      token: token ?? '',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -34,10 +100,8 @@ class PaletteModal extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header image with overlays
           Stack(
             children: [
-              // Image from API or placeholder
               if (imagePath != null && imagePath!.startsWith('http'))
                 Image.network(
                   imagePath!,
@@ -94,8 +158,6 @@ class PaletteModal extends StatelessWidget {
                     );
                   },
                 ),
-
-              // Gradient overlay
               Container(
                 width: double.infinity,
                 height: 150,
@@ -110,8 +172,6 @@ class PaletteModal extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Handle bar overlay at top
               Positioned(
                 top: 12,
                 left: 0,
@@ -127,8 +187,6 @@ class PaletteModal extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Title at bottom
               Positioned(
                 bottom: 16,
                 left: 24,
@@ -145,8 +203,6 @@ class PaletteModal extends StatelessWidget {
               ),
             ],
           ),
-
-          // Paint list
           Expanded(
             child:
                 paints.isEmpty
@@ -166,12 +222,6 @@ class PaletteModal extends StatelessWidget {
                       itemCount: paints.length,
                       itemBuilder: (context, index) {
                         final paint = paints[index];
-
-                        // Simulate random inventory/wishlist status for demo purposes
-                        // In a real app, this would come from your data model
-                        final bool isInInventory = index % 3 == 0;
-                        final bool isInWishlist = index % 3 == 1;
-
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
@@ -185,14 +235,12 @@ class PaletteModal extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Main paint info row
+                              // Fila principal con información de la pintura
                               InkWell(
                                 onTap:
-                                    () => _showPaintOptionsModal(
+                                    () async => await _showPaintOptionsModal(
                                       context,
                                       paint,
-                                      isInInventory,
-                                      isInWishlist,
                                     ),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Padding(
@@ -291,7 +339,6 @@ class PaletteModal extends StatelessWidget {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 12),
                               Divider(
                                 color:
@@ -301,7 +348,6 @@ class PaletteModal extends StatelessWidget {
                                 height: 1,
                               ),
                               const SizedBox(height: 12),
-
                               // Additional info row
                               Row(
                                 children: [
@@ -350,9 +396,7 @@ class PaletteModal extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-
                                   const Spacer(),
-
                                   // Barcode
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -396,130 +440,145 @@ class PaletteModal extends StatelessWidget {
                                   ),
                                 ],
                               ),
-
                               const SizedBox(height: 12),
-
-                              // Status indicators
-                              Row(
-                                children: [
-                                  // Inventory status
-                                  if (isInInventory)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(
-                                          isDarkMode ? 0.2 : 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.green.withOpacity(
-                                            isDarkMode ? 0.3 : 0.2,
+                              // Indicadores de estado dinámicos
+                              FutureBuilder<Map<String, dynamic>>(
+                                future: _getPaintStatus(paint),
+                                builder: (context, snapshot) {
+                                  bool isInInventory = false;
+                                  bool isInWishlist = false;
+                                  if (snapshot.hasData &&
+                                      snapshot.data?['data'] != null) {
+                                    final data = snapshot.data!['data'];
+                                    isInInventory =
+                                        data['in_inventory'] == true;
+                                    isInWishlist = data['in_whitelist'] == true;
+                                  }
+                                  return Row(
+                                    children: [
+                                      if (isInInventory)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
                                           ),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(
-                                            Icons.inventory_2_outlined,
-                                            size: 14,
-                                            color: Colors.green,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            "In Inventory",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.green,
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(
+                                              isDarkMode ? 0.2 : 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.green.withOpacity(
+                                                isDarkMode ? 0.3 : 0.2,
+                                              ),
+                                              width: 1,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-
-                                  // Wishlist status
-                                  if (isInWishlist)
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.withOpacity(
-                                          isDarkMode ? 0.2 : 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.amber.withOpacity(
-                                            isDarkMode ? 0.3 : 0.2,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(
+                                                Icons.inventory_2_outlined,
+                                                size: 14,
+                                                color: Colors.green,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                "In Inventory",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          width: 1,
                                         ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(
-                                            Icons.star_outline,
-                                            size: 14,
-                                            color: Colors.amber,
+                                      if (isInWishlist)
+                                        Container(
+                                          margin: const EdgeInsets.only(
+                                            left: 8,
                                           ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            "In Wishlist",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.amber,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(
+                                              isDarkMode ? 0.2 : 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.amber.withOpacity(
+                                                isDarkMode ? 0.3 : 0.2,
+                                              ),
+                                              width: 1,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-
-                                  // Not in collection
-                                  if (!isInInventory && !isInWishlist)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.withOpacity(
-                                          isDarkMode ? 0.2 : 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.grey.withOpacity(
-                                            isDarkMode ? 0.3 : 0.2,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(
+                                                Icons.star_outline,
+                                                size: 14,
+                                                color: Colors.amber,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                "In Wishlist",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.amber,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          width: 1,
                                         ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(
-                                            Icons.remove_circle_outline,
-                                            size: 14,
-                                            color: Colors.grey,
+                                      if (!isInInventory && !isInWishlist)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
                                           ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            "Not in Collection",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.withOpacity(
+                                              isDarkMode ? 0.2 : 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey.withOpacity(
+                                                isDarkMode ? 0.3 : 0.2,
+                                              ),
+                                              width: 1,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(
+                                                Icons.remove_circle_outline,
+                                                size: 14,
+                                                color: Colors.grey,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                "Not in Collection",
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -533,12 +592,19 @@ class PaletteModal extends StatelessWidget {
   }
 
   // Mostrar modal de opciones para la pintura
-  void _showPaintOptionsModal(
+  Future<void> _showPaintOptionsModal(
     BuildContext context,
     PaintSelection paint,
-    bool isInInventory,
-    bool isInWishlist,
-  ) {
+  ) async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    final paintInfo = await fetchPaintInfo(
+      brand: paint.paintBrand,
+      paintId: paint.paintId,
+      token: token ?? '',
+    );
+    final dynamicStatus = getStatusFromPaintInfo(paintInfo);
+    final bool isInInventory = dynamicStatus == "In Inventory";
+    final bool isInWishlist = dynamicStatus == "In Wishlist";
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -555,7 +621,6 @@ class PaletteModal extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -567,12 +632,9 @@ class PaletteModal extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Paint info header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Color preview
                   Container(
                     width: 60,
                     height: 60,
@@ -588,10 +650,7 @@ class PaletteModal extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 16),
-
-                  // Paint details
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -642,15 +701,9 @@ class PaletteModal extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 24),
-
-              // Divider
               Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300]),
-
               const SizedBox(height: 16),
-
-              // Opciones rápidas
               Text(
                 "Quick Actions",
                 style: TextStyle(
@@ -659,13 +712,11 @@ class PaletteModal extends StatelessWidget {
                   color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Botones de acción
+              // Botones para actualizar inventario o añadir a wishlist
               Row(
                 children: [
-                  // Actualizar inventario
+                  // Actualizar o añadir a inventario
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
@@ -683,10 +734,8 @@ class PaletteModal extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Añadir a wishlist
+                  // Actualizar o añadir a wishlist
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
@@ -705,10 +754,8 @@ class PaletteModal extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 16),
-
-              // Ver en inventario
+              // Botón para ver el inventario
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -737,7 +784,6 @@ class PaletteModal extends StatelessWidget {
     );
   }
 
-  // Mostrar diálogo para actualizar inventario
   void _showInventoryUpdateDialog(BuildContext context, PaintSelection paint) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     int quantity = 1;
@@ -748,19 +794,19 @@ class PaletteModal extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Update Inventory'),
+              title: const Text('Update Inventory'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('${paint.paintName} will be added to your inventory.'),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Quantity: '),
-                      SizedBox(width: 8),
+                      const Text('Quantity: '),
+                      const SizedBox(width: 8),
                       IconButton(
-                        icon: Icon(Icons.remove_circle_outline),
+                        icon: const Icon(Icons.remove_circle_outline),
                         onPressed: () {
                           if (quantity > 1) {
                             setState(() {
@@ -771,10 +817,10 @@ class PaletteModal extends StatelessWidget {
                       ),
                       Text(
                         '$quantity',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        icon: Icon(Icons.add_circle_outline),
+                        icon: const Icon(Icons.add_circle_outline),
                         onPressed: () {
                           setState(() {
                             quantity++;
@@ -788,13 +834,11 @@ class PaletteModal extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-
-                    // Mostrar confirmación con SnackBar
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -817,7 +861,7 @@ class PaletteModal extends StatelessWidget {
                       ),
                     );
                   },
-                  child: Text('Confirm'),
+                  child: const Text('Confirm'),
                 ),
               ],
             );
@@ -827,51 +871,44 @@ class PaletteModal extends StatelessWidget {
     );
   }
 
-  // Mostrar diálogo para añadir a wishlist
+  // Diálogo para añadir a wishlist
   void _showWishlistDialog(BuildContext context, PaintSelection paint) {
-    // Store references outside the callback to prevent deactivated widget errors
+    // Referencia al ScaffoldMessenger para mostrar SnackBars
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    // Get a global reference to PaintService - don't depend on Provider after widget disposal
+    // Instancia de PaintService para hacer la llamada directa a la API
     final paintService = PaintService();
 
-    // Convert PaintSelection to Paint for use with AddToWishlistModal with all necessary fields
-    // Parse color components to ensure RGB values are provided
+    // Conversión de PaintSelection a un objeto Paint completo
     final String hexColor =
         paint.paintColorHex.startsWith('#')
             ? paint.paintColorHex.substring(1)
             : paint.paintColorHex;
 
-    // Parse RGB components
     final r = int.parse(hexColor.substring(0, 2), radix: 16);
     final g = int.parse(hexColor.substring(2, 4), radix: 16);
     final b = int.parse(hexColor.substring(4, 6), radix: 16);
 
-    // Create a more complete Paint object
     final Paint paintObj = Paint(
       id: paint.paintId,
       name: paint.paintName,
       brand: paint.paintBrand,
       hex: paint.paintColorHex,
-      // Include these fields with default values to ensure API compatibility
-      set: "Palette Paint", // Using a meaningful value instead of empty string
-      code: paint.paintId, // Using paintId as code
+      set: "Palette Paint",
+      code: paint.paintId,
       r: r,
       g: g,
       b: b,
-      category: "Palette", // Using a meaningful category
+      category: "Palette",
       isMetallic: false,
       isTransparent: false,
     );
 
-    // Debug print the paint object for debugging
     print('🔍 Adding paint to wishlist: ${paintObj.toJson()}');
 
     AddToWishlistModal.show(
       context: context,
       paint: paintObj,
       onAddToWishlist: (paint, priority) async {
-        // Show loading indicator
         scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Row(
@@ -890,10 +927,8 @@ class PaletteModal extends StatelessWidget {
         );
 
         try {
-          // Get current Firebase user
           final firebaseUser = FirebaseAuth.instance.currentUser;
           if (firebaseUser == null) {
-            // Show error if not logged in
             scaffoldMessenger.hideCurrentSnackBar();
             scaffoldMessenger.showSnackBar(
               const SnackBar(
@@ -907,14 +942,11 @@ class PaletteModal extends StatelessWidget {
 
           final userId = firebaseUser.uid;
           print('🔑 User ID detected: $userId');
-
-          // Call API directly
           print(
             '📤 Sending paint ${paint.id} with priority $priority and userId $userId',
           );
           print('📤 Paint details: ${paint.toJson()}');
 
-          // Include all required data in the API call
           final result = await paintService.addToWishlistDirect(
             paint,
             priority,
@@ -922,15 +954,9 @@ class PaletteModal extends StatelessWidget {
           );
 
           scaffoldMessenger.hideCurrentSnackBar();
-
-          // Print complete result
           print('✅ Complete API Wishlist result: $result');
 
           if (result['success'] == true) {
-            // Don't try to update the wishlist directly here
-            // Instead, use a notification or refresh when navigating to the WishlistScreen
-
-            // Show success message
             final priorityText = _getPriorityText(priority);
             final String message =
                 result['alreadyExists'] == true
@@ -947,7 +973,6 @@ class PaletteModal extends StatelessWidget {
                   label: 'VIEW',
                   textColor: Colors.white,
                   onPressed: () {
-                    // When navigating to WishlistScreen, it will load the data in its initState
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -959,11 +984,9 @@ class PaletteModal extends StatelessWidget {
               ),
             );
           } else {
-            // Show error with details
             print(
               '❌ Error details: ${result['raw_response'] ?? result['message']}',
             );
-
             scaffoldMessenger.showSnackBar(
               SnackBar(
                 content: Text('Error: ${result['message']}'),
@@ -974,7 +997,6 @@ class PaletteModal extends StatelessWidget {
                   label: 'Details',
                   textColor: Colors.white,
                   onPressed: () {
-                    // Show dialog with complete error details
                     showDialog(
                       context: context,
                       builder:
@@ -999,7 +1021,6 @@ class PaletteModal extends StatelessWidget {
         } catch (e, stackTrace) {
           print('❌ Exception adding to wishlist: $e');
           print('❌ Stack trace: $stackTrace');
-
           scaffoldMessenger.hideCurrentSnackBar();
           scaffoldMessenger.showSnackBar(
             SnackBar(
@@ -1014,6 +1035,7 @@ class PaletteModal extends StatelessWidget {
     );
   }
 
+  /// Devuelve una descripción del nivel de prioridad.
   String _getPriorityText(int priority) {
     switch (priority) {
       case 1:
@@ -1031,6 +1053,7 @@ class PaletteModal extends StatelessWidget {
     }
   }
 
+  /// Convierte un string hexadecimal en un objeto Color.
   Color _getColorFromHex(String hexColor) {
     try {
       hexColor = hexColor.replaceAll('#', '');
@@ -1043,31 +1066,32 @@ class PaletteModal extends StatelessWidget {
     }
   }
 
+  /// Genera un código de color basado en el nombre de la pintura.
   String _generateColorCode(String paintName) {
     final nameBytes = paintName.codeUnits;
     if (nameBytes.isEmpty) return '00-00';
 
     final firstCode = (nameBytes[0] % 99).toString().padLeft(2, '0');
     final secondCode =
-        (nameBytes.length > 1
+        nameBytes.length > 1
             ? (nameBytes[1] % 99).toString().padLeft(2, '0')
-            : '00');
+            : '00';
 
     return '$firstCode-$secondCode';
   }
 
+  /// Genera un código de barras basado en el ID de la pintura.
   String _generateBarcode(String paintId) {
     final numericPart = paintId.codeUnits
         .map((unit) => unit % 10)
         .join('')
         .padRight(12, '0')
         .substring(0, 12);
-
     return '5${numericPart}2';
   }
 }
 
-// Helper function to show the modal
+/// Función helper para mostrar el modal de la paleta.
 void showPaletteModal(
   BuildContext context,
   String paletteName,
