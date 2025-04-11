@@ -376,8 +376,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
             _tempStock,
           ),
     ).then((_) {
-      // Limpiar el controlador cuando se cierra el modal
+      // Limpiar recursos cuando se cierra el modal para evitar memory leaks y errores
       _notesController.dispose();
+      _tempNotes.dispose();
+      _tempStock.dispose();
     });
   }
 
@@ -415,8 +417,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      maxChildSize: 0.75, // Fixed at 3/4, doesn't stretch further
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -430,7 +432,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               // Drag handle y encabezado - no scrollable
               Container(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                 child: Column(
                   children: [
                     // Drag handle
@@ -444,29 +446,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 : Colors.grey.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
-                      margin: const EdgeInsets.only(bottom: 20),
+                      margin: const EdgeInsets.only(bottom: 16),
                     ),
 
-                    // Header with paint info
+                    // Header with paint info - similar to the card but with more details
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Color swatch
+                        // Color swatch (same as card)
                         Container(
-                          width: 60,
-                          height: 60,
+                          width: 55,
+                          height: 55,
                           decoration: BoxDecoration(
                             color: paintColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderColor, width: 1),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                spreadRadius: 0,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[700]!
+                                      : Colors.grey[300]!,
+                              width: 1,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -478,10 +478,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             children: [
                               Text(
                                 paint.name,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleLarge?.copyWith(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 18,
                                   color:
                                       isDarkMode
                                           ? AppTheme.marineOrange
@@ -489,339 +488,316 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                officialBrandName,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.titleMedium?.copyWith(
-                                  color:
-                                      isDarkMode
-                                          ? Colors.white70
-                                          : Colors.black87,
-                                ),
+                              // Brand name and added date
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      officialBrandName,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.white70
+                                                : Colors.black87,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '· Added $addedDate',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Added $addedDate',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontStyle: FontStyle.italic,
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
+                              const SizedBox(height: 4),
+                              // Additional paint details
+                              if (paint.code != null && paint.code!.isNotEmpty)
+                                Text(
+                                  'Code: ${paint.code}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                  ),
                                 ),
-                              ),
+                              if (paint.set != null && paint.set!.isNotEmpty)
+                                Text(
+                                  'Set: ${paint.set}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
 
-                        // Stock indicator
-                        Container(
-                          margin: const EdgeInsets.only(top: 8),
-                          child: _buildStockContainer(item.stock, isDarkMode),
-                        ),
+                        // Brand logo
+                        _buildBrandLogo(brandId, officialBrandName, isDarkMode),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              const Divider(height: 32),
+              const Divider(height: 1),
 
               // Contenido scrollable
               Expanded(
-                child: SingleChildScrollView(
+                child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(
-                    24,
-                    0,
-                    24,
-                    80,
-                  ), // Padding adicional abajo para los botones
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Sección más pequeña de Stock Management
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color:
-                              isDarkMode
-                                  ? AppTheme.darkSurface
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[800]!
-                                    : Colors.grey[300]!,
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
+                  children: [
+                    // Compact Stock Management section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Stock Management',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
                           children: [
-                            Text(
-                              'Stock Management',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    isDarkMode ? Colors.white : Colors.black87,
+                            // Decrement button
+                            Material(
+                              borderRadius: BorderRadius.circular(20),
+                              color:
+                                  tempStock.value > 0
+                                      ? (isDarkMode
+                                          ? AppTheme.marineOrange.withOpacity(
+                                            0.8,
+                                          )
+                                          : AppTheme.primaryBlue.withOpacity(
+                                            0.9,
+                                          ))
+                                      : (isDarkMode
+                                          ? Colors.grey[800]
+                                          : Colors.grey[300]),
+                              child: InkWell(
+                                onTap:
+                                    tempStock.value > 0
+                                        ? () {
+                                          tempStock.value = tempStock.value - 1;
+                                          HapticFeedback.mediumImpact();
+                                        }
+                                        : null,
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: const Icon(
+                                    Icons.remove,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 12),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Botón de decrementar
-                                Material(
-                                  borderRadius: BorderRadius.circular(30),
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap:
-                                        tempStock.value > 0
-                                            ? () {
-                                              tempStock.value =
-                                                  tempStock.value - 1;
-                                              HapticFeedback.mediumImpact();
-                                            }
-                                            : null,
-                                    borderRadius: BorderRadius.circular(30),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color:
-                                            tempStock.value > 0
-                                                ? (isDarkMode
-                                                    ? AppTheme.marineOrange
-                                                        .withOpacity(0.8)
-                                                    : AppTheme.primaryBlue
-                                                        .withOpacity(0.9))
-                                                : (isDarkMode
-                                                    ? Colors.grey[800]
-                                                    : Colors.grey[300]),
-                                      ),
-                                      child: const Icon(
-                                        Icons.remove,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Visualización del stock
-                                ValueListenableBuilder<int>(
-                                  valueListenable: tempStock,
-                                  builder: (context, value, child) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 8,
-                                      ),
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isDarkMode
-                                                ? Colors.grey[900]
-                                                : Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.grey[800]!
-                                                  : Colors.grey[300]!,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '$value',
-                                        style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                // Botón de incrementar
-                                Material(
-                                  borderRadius: BorderRadius.circular(30),
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () {
-                                      tempStock.value = tempStock.value + 1;
-                                      HapticFeedback.mediumImpact();
-                                    },
-                                    borderRadius: BorderRadius.circular(30),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color:
-                                            isDarkMode
-                                                ? AppTheme.marineOrange
-                                                : AppTheme.primaryBlue,
-                                      ),
-                                      child: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Palettes section
-                      Text(
-                        'Used in Palettes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      palettesUsingPaint.isEmpty
-                          ? Text(
-                            'Not used in any palette',
-                            style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                            ),
-                          )
-                          : Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children:
-                                palettesUsingPaint.map((palette) {
-                                  return Chip(
-                                    label: Text(palette),
-                                    backgroundColor:
-                                        isDarkMode
-                                            ? Colors.grey[800]
-                                            : Colors.grey[200],
-                                    labelStyle: TextStyle(
-                                      fontSize: 12,
+                            // Stock counter
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: ValueListenableBuilder<int>(
+                                valueListenable: tempStock,
+                                builder: (context, value, child) {
+                                  return Text(
+                                    '$value',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                       color:
                                           isDarkMode
                                               ? Colors.white
                                               : Colors.black87,
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 0,
-                                    ),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
                                   );
-                                }).toList(),
-                          ),
+                                },
+                              ),
+                            ),
 
-                      const SizedBox(height: 24),
-
-                      // Notes section
-                      Text(
-                        'Notes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                            // Increment button
+                            Material(
+                              borderRadius: BorderRadius.circular(20),
+                              color:
+                                  isDarkMode
+                                      ? AppTheme.marineOrange
+                                      : AppTheme.primaryBlue,
+                              child: InkWell(
+                                onTap: () {
+                                  tempStock.value = tempStock.value + 1;
+                                  HapticFeedback.mediumImpact();
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                      ],
+                    ),
 
-                      TextField(
-                        controller: notesController,
-                        focusNode: _notesFocusNode,
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          hintText: 'Add notes about this paint...',
-                          hintStyle: TextStyle(
+                    const SizedBox(height: 24),
+
+                    // Palettes section
+                    Text(
+                      'Used in Palettes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    palettesUsingPaint.isEmpty
+                        ? Text(
+                          'Not used in any palette',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
                             color:
                                 isDarkMode
                                     ? Colors.grey[400]
                                     : Colors.grey[600],
                           ),
+                        )
+                        : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              palettesUsingPaint.map((palette) {
+                                return Chip(
+                                  label: Text(palette),
+                                  backgroundColor:
+                                      isDarkMode
+                                          ? Colors.grey[800]
+                                          : Colors.grey[200],
+                                  labelStyle: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.white
+                                            : Colors.black87,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 0,
+                                  ),
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                );
+                              }).toList(),
                         ),
-                        maxLines: 3,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                        textInputAction: TextInputAction.done,
-                        onChanged: (value) {
-                          tempNotes.value = value;
-                        },
-                        onSubmitted: (value) {
-                          tempNotes.value = value;
-                          _notesFocusNode.unfocus();
-                        },
+
+                    const SizedBox(height: 24),
+
+                    // Notes section
+                    Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: notesController,
+                      focusNode: _notesFocusNode,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        hintText: 'Add notes about this paint...',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      maxLines: 3,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onChanged: (value) {
+                        tempNotes.value = value;
+                      },
+                      onSubmitted: (value) {
+                        tempNotes.value = value;
+                        _notesFocusNode.unfocus();
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
 
-              // Botones fijos en la parte inferior
+              // Botones apilados verticalmente en la parte inferior
               Container(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                 decoration: BoxDecoration(
                   color: Theme.of(context).scaffoldBackgroundColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
+                  // Removed shadow for a cleaner, unified look
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Botón para añadir a wishlist
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        // Aquí iría la lógica para añadir a wishlist
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${paint.name} added to wishlist'),
-                            behavior: SnackBarBehavior.floating,
+                    // Add to wishlist button (top)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          // Aquí iría la lógica para añadir a wishlist
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${paint.name} added to wishlist'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.favorite_border),
+                        label: const Text('Add to wishlist'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.favorite_border),
-                      label: const Text('Add to wishlist'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    // Botón de actualizar
-                    Expanded(
+                    const SizedBox(height: 12),
+
+                    // Update button (bottom)
+                    SizedBox(
+                      width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           // Actualizar stock
@@ -845,7 +821,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               isDarkMode
                                   ? AppTheme.marineOrange
                                   : AppTheme.primaryBlue,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: const Text('Update'),
                       ),
@@ -1377,6 +1356,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     // Formatear la fecha de forma amigable
     final String addedDate = _formatAddedDate(item);
 
+    // Get palettes using this paint
+    final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
+
     return Dismissible(
       key: Key(item.paint.id),
       background: Container(
@@ -1510,30 +1492,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Avatar con el color de la pintura
+                // Color swatch (cuadrado con bordes redondeados, sin sombra)
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 55,
+                  height: 55,
                   decoration: BoxDecoration(
                     color: paintColor,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
                       width: 1,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    // Removed shadow
                   ),
                 ),
                 const SizedBox(width: 12),
 
-                // Paint info
+                // Paint info with brand name and added date
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1548,49 +1523,54 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   ? AppTheme.marineOrange
                                   : AppTheme.primaryBlue,
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Added $addedDate',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Brand logo o imagen
-                Container(
-                  width: 70,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _buildBrandLogo(brandId, officialBrandName, isDarkMode),
-                      const SizedBox(height: 4),
-                      Text(
-                        officialBrandName,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              officialBrandName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white70
+                                        : Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '· Added $addedDate',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
 
-                // Stock tag (tamaño fijo)
+                // Brand logo (increased size)
+                _buildBrandLogo(brandId, officialBrandName, isDarkMode),
+
+                const SizedBox(width: 10),
+
+                // Stock tag (circular shape)
                 _buildStockContainer(item.stock, isDarkMode),
               ],
             ),
@@ -1952,16 +1932,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final String? logoUrl = _getSafeLogoUrl(brandId);
 
     return Container(
-      width: 32,
-      height: 32,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+        color: Colors.white,
         shape: BoxShape.circle,
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1,
+        ),
         image:
             logoUrl != null && logoUrl.isNotEmpty
                 ? DecorationImage(
                   image: NetworkImage(logoUrl),
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   onError: (exception, stackTrace) {
                     print('⚠️ Error cargando imagen: $exception');
                   },
@@ -1975,7 +1959,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   brandName.isNotEmpty ? brandName[0].toUpperCase() : "?",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: Colors.black87,
                   ),
                 ),
               )
@@ -1986,14 +1970,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Construye un widget seguro para mostrar el contenedor de stock
   Widget _buildStockContainer(int stock, bool isDarkMode) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 38, minHeight: 28),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         color:
             stock > 0
                 ? (isDarkMode ? Colors.green[900] : Colors.green[50])
                 : (isDarkMode ? Colors.red[900] : Colors.red[50]),
-        borderRadius: BorderRadius.circular(12),
+        shape: BoxShape.circle,
         border: Border.all(
           color:
               stock > 0
