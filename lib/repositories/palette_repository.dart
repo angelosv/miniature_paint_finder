@@ -45,7 +45,10 @@ class ApiPaletteRepository implements PaletteRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> getUserPalettes({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> getUserPalettes({
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
       print(
         '🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit',
@@ -71,10 +74,11 @@ class ApiPaletteRepository implements PaletteRepository {
         'totalPages': int.parse(data['totalPages'].toString()),
         'totalPalettes': int.parse(data['totalPalettes'].toString()),
         'limit': int.parse(data['limit'].toString()),
-        'palettes': (data['palettes'] as List)
-            .map((json) => ApiPalette.fromJson(json))
-            .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
-            .toList(),
+        'palettes':
+            (data['palettes'] as List)
+                .map((json) => ApiPalette.fromJson(json))
+                .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
+                .toList(),
       };
     } catch (e) {
       print('❌ Error getting user palettes from API: $e');
@@ -135,6 +139,7 @@ class ApiPaletteRepository implements PaletteRepository {
                     matchPercentage: 100,
                     colorHex: paint.paint!.hex,
                     paintColorHex: paint.paint!.hex,
+                    paintBrandId: paint.brandId,
                   );
                 }
                 return null;
@@ -316,10 +321,13 @@ class PaletteRepositoryImpl implements PaletteRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> getUserPalettes({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> getUserPalettes({
+    int page = 1,
+    int limit = 10,
+  }) async {
     // Para esta implementación de prueba, devolvemos todas las paletas
     final palettes = await getAll();
-    
+
     return {
       'currentPage': page,
       'totalPages': (palettes.length / limit).ceil(),

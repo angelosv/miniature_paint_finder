@@ -81,7 +81,7 @@ class PaletteModal extends StatelessWidget {
   Future<Map<String, dynamic>> _getPaintStatus(PaintSelection paint) async {
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     return fetchPaintInfo(
-      brand: paint.paintBrand,
+      brand: paint.paintBrandId ?? '',
       paintId: paint.paintId,
       token: token ?? '',
     );
@@ -598,7 +598,7 @@ class PaletteModal extends StatelessWidget {
   ) async {
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     final paintInfo = await fetchPaintInfo(
-      brand: paint.paintBrand,
+      brand: paint.paintBrandId ?? '',
       paintId: paint.paintId,
       token: token ?? '',
     );

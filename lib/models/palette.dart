@@ -96,6 +96,8 @@ class PaintSelection {
   /// The paint's actual color (might be slightly different from the target color)
   final String paintColorHex;
 
+  final String? paintBrandId;
+
   PaintSelection({
     required this.colorHex,
     required this.paintId,
@@ -104,6 +106,7 @@ class PaintSelection {
     required this.brandAvatar,
     required this.matchPercentage,
     required this.paintColorHex,
+    this.paintBrandId,
   });
 
   /// Convert to JSON
@@ -116,6 +119,7 @@ class PaintSelection {
       'brandAvatar': brandAvatar,
       'matchPercentage': matchPercentage,
       'paintColorHex': paintColorHex,
+      'paintBrandId': paintBrandId ?? '',
     };
   }
 
@@ -129,6 +133,7 @@ class PaintSelection {
       brandAvatar: json['brandAvatar'],
       matchPercentage: json['matchPercentage'],
       paintColorHex: json['paintColorHex'],
+      paintBrandId: json['paintBrandId'] ?? '',
     );
   }
 
