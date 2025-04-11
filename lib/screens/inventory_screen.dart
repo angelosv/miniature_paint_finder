@@ -21,6 +21,9 @@ import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
+import 'package:miniature_paint_finder/services/brand_service_manager.dart';
+import 'package:miniature_paint_finder/models/paint_brand.dart';
+import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 
 /// A screen for managing the user's paint inventory.
 ///
@@ -42,6 +45,8 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   // Services
   final InventoryService _inventoryService = InventoryService();
+  final BrandServiceManager _brandManager = BrandServiceManager();
+  final PaintBrandService _paintBrandService = PaintBrandService();
 
   // State management
   bool _isLoading = true;
@@ -88,6 +93,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   late List<String> _uniqueBrands;
   late List<String> _uniqueCategories;
 
+  // Almacenamiento de logotipos de marcas
+  final Map<String, String?> _brandLogos = {};
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +104,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _totalPages = 1;
     _uniqueBrands = [];
     _uniqueCategories = [];
+    _initializeServices();
     _loadInventory();
 
     // Listener para búsqueda
@@ -122,7 +131,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     try {
       await _inventoryService.loadInventory(
-        limit: _currentPageSize, 
+        limit: _currentPageSize,
         page: _currentPage,
         searchQuery: _searchController.text,
         onlyInStock: _onlyShowInStock,
@@ -150,11 +159,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _updatePaginatedInventory() {
     // Usar directamente _filteredInventory que ya viene paginado de la API
     _paginatedInventory = _filteredInventory;
-    
+
     // Ya no necesitamos hacer paginación local porque la API ya nos envía los datos paginados
     // final startIndex = (_currentPage - 1) * _currentPageSize;
     // final endIndex = _currentPage * _currentPageSize;
-    // 
+    //
     // if (startIndex >= _filteredInventory.length) {
     //   _paginatedInventory = [];
     // } else {
@@ -289,12 +298,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (newStock < 0) return;
 
     // Update stock through service
-    bool success = await _inventoryService.updateStockFromApi(item.id, newStock);
+    bool success = await _inventoryService.updateStockFromApi(
+      item.id,
+      newStock,
+    );
 
     if (success) {
       setState(() {
         // Create a new modifiable list instead of modifying the immutable one
-        final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+        final newFilteredInventory = List<PaintInventoryItem>.from(
+          _filteredInventory,
+        );
         final index = newFilteredInventory.indexOf(item);
         if (index != -1) {
           newFilteredInventory[index] = item.copyWith(stock: newStock);
@@ -323,7 +337,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (success) {
       setState(() {
         // Create a new modifiable list instead of modifying the immutable one
-        final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+        final newFilteredInventory = List<PaintInventoryItem>.from(
+          _filteredInventory,
+        );
         final index = newFilteredInventory.indexOf(item);
         if (index != -1) {
           newFilteredInventory[index] = item.copyWith(notes: notes);
@@ -352,20 +368,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (_, controller) => SingleChildScrollView(
-          controller: controller,
-          child: _buildInventoryItemOptionsModal(
+      builder:
+          (context) => _buildInventoryItemOptionsModal(
             item,
             _notesController,
             _tempNotes,
             _tempStock,
           ),
-        ),
-      ),
     ).then((_) {
       // Limpiar el controlador cuando se cierra el modal
       _notesController.dispose();
@@ -391,430 +400,463 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDarkMode ? Colors.grey[700]! : Colors.grey[300]!;
-    
+
+    // Determinar el brandId correcto de forma segura
+    final String brandId = _getSafeBrandId(paint);
+
+    // Obtener el nombre oficial de forma segura
+    final String officialBrandName = _getSafeBrandName(brandId, paint.brand);
+
+    // Formatear la fecha de forma amigable
+    final String addedDate = _formatAddedDate(item);
+
     // Get palettes using this paint
     final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
 
-    return GestureDetector(
-      onTap: () {
-        // Ocultar el teclado cuando se toca fuera del TextField
-        _notesFocusNode.unfocus();
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        margin: const EdgeInsets.only(top: 40),
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle
-            Align(
-              alignment: Alignment.center,
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color:
-                      isDarkMode
-                          ? Colors.grey[600]
-                          : Colors.grey.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                margin: const EdgeInsets.only(bottom: 20),
-              ),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-
-            // Header with paint info
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Color swatch
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: paintColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: borderColor, width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 2),
+          ),
+          child: Column(
+            children: [
+              // Drag handle y encabezado - no scrollable
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: Column(
+                  children: [
+                    // Drag handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color:
+                            isDarkMode
+                                ? Colors.grey[600]
+                                : Colors.grey.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
+                      margin: const EdgeInsets.only(bottom: 20),
+                    ),
 
-                // Paint details
-                Expanded(
+                    // Header with paint info
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Color swatch
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: paintColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderColor, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Paint details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                paint.name,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      isDarkMode
+                                          ? AppTheme.marineOrange
+                                          : AppTheme.primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                officialBrandName,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color:
+                                      isDarkMode
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Added $addedDate',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Stock indicator
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          child: _buildStockContainer(item.stock, isDarkMode),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 32),
+
+              // Contenido scrollable
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(
+                    24,
+                    0,
+                    24,
+                    80,
+                  ), // Padding adicional abajo para los botones
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        paint.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      // Sección más pequeña de Stock Management
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
                           color:
                               isDarkMode
-                                  ? AppTheme.marineOrange
-                                  : AppTheme.primaryBlue,
+                                  ? AppTheme.darkSurface
+                                  : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[800]!
+                                    : Colors.grey[300]!,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Stock Management',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDarkMode ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Botón de decrementar
+                                Material(
+                                  borderRadius: BorderRadius.circular(30),
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap:
+                                        tempStock.value > 0
+                                            ? () {
+                                              tempStock.value =
+                                                  tempStock.value - 1;
+                                              HapticFeedback.mediumImpact();
+                                            }
+                                            : null,
+                                    borderRadius: BorderRadius.circular(30),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color:
+                                            tempStock.value > 0
+                                                ? (isDarkMode
+                                                    ? AppTheme.marineOrange
+                                                        .withOpacity(0.8)
+                                                    : AppTheme.primaryBlue
+                                                        .withOpacity(0.9))
+                                                : (isDarkMode
+                                                    ? Colors.grey[800]
+                                                    : Colors.grey[300]),
+                                      ),
+                                      child: const Icon(
+                                        Icons.remove,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Visualización del stock
+                                ValueListenableBuilder<int>(
+                                  valueListenable: tempStock,
+                                  builder: (context, value, child) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 8,
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[900]
+                                                : Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.grey[800]!
+                                                  : Colors.grey[300]!,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '$value',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                // Botón de incrementar
+                                Material(
+                                  borderRadius: BorderRadius.circular(30),
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      tempStock.value = tempStock.value + 1;
+                                      HapticFeedback.mediumImpact();
+                                    },
+                                    borderRadius: BorderRadius.circular(30),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color:
+                                            isDarkMode
+                                                ? AppTheme.marineOrange
+                                                : AppTheme.primaryBlue,
+                                      ),
+                                      child: const Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
+
+                      const SizedBox(height: 24),
+
+                      // Palettes section
                       Text(
-                        '${paint.brand}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: isDarkMode ? Colors.white70 : Colors.black87,
+                        'Used in Palettes',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Category: ${paint.category}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                      ),
-                      if (paint.code.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            'Code: ${paint.code}',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(
+                      const SizedBox(height: 12),
+
+                      palettesUsingPaint.isEmpty
+                          ? Text(
+                            'Not used in any palette',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
                               color:
                                   isDarkMode
                                       ? Colors.grey[400]
                                       : Colors.grey[600],
                             ),
+                          )
+                          : Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                palettesUsingPaint.map((palette) {
+                                  return Chip(
+                                    label: Text(palette),
+                                    backgroundColor:
+                                        isDarkMode
+                                            ? Colors.grey[800]
+                                            : Colors.grey[200],
+                                    labelStyle: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.white
+                                              : Colors.black87,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 0,
+                                    ),
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  );
+                                }).toList(),
+                          ),
+
+                      const SizedBox(height: 24),
+
+                      // Notes section
+                      Text(
+                        'Notes',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: notesController,
+                        focusNode: _notesFocusNode,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          hintText: 'Add notes about this paint...',
+                          hintStyle: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                           ),
                         ),
+                        maxLines: 3,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        onChanged: (value) {
+                          tempNotes.value = value;
+                        },
+                        onSubmitted: (value) {
+                          tempNotes.value = value;
+                          _notesFocusNode.unfocus();
+                        },
+                      ),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 24),
-
-            // Stock control
-            Text(
-              'Stock Management',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
               ),
-            ),
-            const SizedBox(height: 16),
 
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              decoration: BoxDecoration(
-                color: isDarkMode ? AppTheme.darkSurface : Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                  width: 1,
+              // Botones fijos en la parte inferior
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Material(
-                    borderRadius: BorderRadius.circular(30),
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap:
-                          tempStock.value > 0
-                              ? () {
-                                tempStock.value = tempStock.value - 1;
-                                // Haptic feedback if available
-                                HapticFeedback.mediumImpact();
-                              }
-                              : null,
-                      borderRadius: BorderRadius.circular(30),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
-                              tempStock.value > 0
-                                  ? (isDarkMode
-                                      ? AppTheme.marineOrange.withOpacity(0.8)
-                                      : AppTheme.primaryBlue.withOpacity(0.9))
-                                  : (isDarkMode
-                                      ? Colors.grey[800]
-                                      : Colors.grey[300]),
-                          boxShadow:
-                              tempStock.value > 0
-                                  ? [
-                                    BoxShadow(
-                                      color: (isDarkMode
-                                              ? AppTheme.marineOrange
-                                              : AppTheme.primaryBlue)
-                                          .withOpacity(0.3),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ]
-                                  : null,
-                        ),
-                        child: const Icon(
-                          Icons.remove,
-                          color: Colors.white,
-                          size: 28,
+                child: Row(
+                  children: [
+                    // Botón para añadir a wishlist
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        // Aquí iría la lógica para añadir a wishlist
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${paint.name} added to wishlist'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.favorite_border),
+                      label: const Text('Add to wishlist'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    // Botón de actualizar
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Actualizar stock
+                          _updatePaintStock(item, tempStock.value);
 
-                  ValueListenableBuilder<int>(
-                    valueListenable: tempStock,
-                    builder: (context, value, child) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[900] : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
-                              spreadRadius: 0,
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                          // Actualizar notas
+                          if (tempNotes.value != item.notes) {
+                            _updatePaintNotes(item, tempNotes.value);
+                          }
+
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${paint.name} updated'),
+                              behavior: SnackBarBehavior.floating,
                             ),
-                          ],
-                        ),
-                        child: Text(
-                          '$value',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  Material(
-                    borderRadius: BorderRadius.circular(30),
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        tempStock.value = tempStock.value + 1;
-                        // Haptic feedback if available
-                        HapticFeedback.mediumImpact();
-                      },
-                      borderRadius: BorderRadius.circular(30),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
                               isDarkMode
                                   ? AppTheme.marineOrange
                                   : AppTheme.primaryBlue,
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isDarkMode
-                                      ? AppTheme.marineOrange
-                                      : AppTheme.primaryBlue)
-                                  .withOpacity(0.3),
-                              spreadRadius: 1,
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 28,
-                        ),
+                        child: const Text('Update'),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 24),
-
-            // Palettes section
-            Text(
-              'Used in Palettes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            palettesUsingPaint.isEmpty
-                ? Text(
-                  'Not used in any palette',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                )
-                : Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      palettesUsingPaint.map((palette) {
-                        return Chip(
-                          label: Text(palette),
-                          backgroundColor:
-                              isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        );
-                      }).toList(),
-                ),
-
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 24),
-
-            // Notes section
-            Text(
-              'Notes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: notesController,
-              focusNode: _notesFocusNode,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: 'Add notes about this paint...',
-                hintStyle: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ],
                 ),
               ),
-              maxLines: 3,
-              style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
-              textInputAction: TextInputAction.done,
-              onChanged: (value) {
-                tempNotes.value = value;
-              },
-              onSubmitted: (value) {
-                tempNotes.value = value;
-                _notesFocusNode.unfocus();
-              },
-            ),
-
-            const SizedBox(height: 32),
-
-            // Update button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Actualizar notas con el valor actual del ValueNotifier
-                  _updatePaintNotes(item, tempNotes.value);
-                  
-                  // Actualizar stock solo si ha cambiado
-                  if (tempStock.value != item.stock) {
-                    _updatePaintStock(item, tempStock.value);
-                  }
-                  
-                  Navigator.pop(context);
-
-                  // Show confirmation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${paint.name} updated'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor:
-                          isDarkMode ? Colors.grey[800] : Colors.grey[900],
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'UPDATE',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Remove from inventory option
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  _showRemoveConfirmationDialog(item);
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red[isDarkMode ? 400 : 600],
-                  side: BorderSide(color: Colors.red[isDarkMode ? 400 : 600]!),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'REMOVE FROM INVENTORY',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -880,19 +922,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
     ).then((confirmed) async {
       if (confirmed == true) {
         print('🔄 Iniciando eliminación de ${paint.name} del inventario');
-        
+
         // Cerrar el modal de opciones primero
         Navigator.of(context).pop();
-        
+
         // Llamar al servicio para eliminar
         final success = await _inventoryService.deleteInventoryRecord(item.id);
-        
+
         if (success) {
           print('✅ Pintura eliminada exitosamente del inventario');
-          
+
           setState(() {
             // Crear una nueva lista modificable
-            final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+            final newFilteredInventory = List<PaintInventoryItem>.from(
+              _filteredInventory,
+            );
             final index = newFilteredInventory.indexOf(item);
             if (index != -1) {
               newFilteredInventory.removeAt(index);
@@ -900,7 +944,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             _filteredInventory = newFilteredInventory;
             _filterInventory();
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${paint.name} removed from inventory'),
@@ -931,25 +975,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      selectedIndex: -1, // Not a bottom nav item
+      selectedIndex: 2, // Inventory tab
       title: 'My Inventory',
       body:
           _isLoading
               ? _buildLoader(isDarkMode)
               : _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'inventory'),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LibraryScreen(),
-            ),
-          );
-        },
-        backgroundColor: isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-        child: const Icon(Icons.add),
-        tooltip: 'Add paint from library',
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Botón principal (agregar pinturas)
+          FloatingActionButton(
+            heroTag: 'add-button',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LibraryScreen()),
+              );
+            },
+            backgroundColor:
+                Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.marineOrange
+                    : AppTheme.primaryBlue,
+            tooltip: 'Add paint from library',
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
@@ -1316,6 +1368,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
+    // Determinar el brandId correcto de forma segura
+    final String brandId = _getSafeBrandId(paint);
+
+    // Obtener el nombre oficial de forma segura
+    final String officialBrandName = _getSafeBrandName(brandId, paint.brand);
+
+    // Formatear la fecha de forma amigable
+    final String addedDate = _formatAddedDate(item);
+
     return Dismissible(
       key: Key(item.paint.id),
       background: Container(
@@ -1335,7 +1396,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           title: "Remove from Inventory?",
           message:
               "Are you sure you want to remove ${paint.name} from your inventory?",
-          confirmText: "REMOVE",
+          confirmText: "Remove",
           content: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1371,7 +1432,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       ),
                       Text(
-                        '${paint.brand} - Stock: ${item.stock}',
+                        '${officialBrandName} - Stock: ${item.stock}',
                         style: TextStyle(
                           fontSize: 13,
                           color:
@@ -1387,17 +1448,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
         );
       },
       onDismissed: (direction) async {
-        print('🔄 Iniciando eliminación de ${paint.name} del inventario (swipe)');
-        
+        print(
+          '🔄 Iniciando eliminación de ${paint.name} del inventario (swipe)',
+        );
+
         // Llamar al servicio para eliminar
         final success = await _inventoryService.deleteInventoryRecord(item.id);
-        
+
         if (success) {
           print('✅ Pintura eliminada exitosamente del inventario');
-          
+
           setState(() {
             // Crear una nueva lista modificable
-            final newFilteredInventory = List<PaintInventoryItem>.from(_filteredInventory);
+            final newFilteredInventory = List<PaintInventoryItem>.from(
+              _filteredInventory,
+            );
             final index = newFilteredInventory.indexOf(item);
             if (index != -1) {
               newFilteredInventory.removeAt(index);
@@ -1405,7 +1470,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             _filteredInventory = newFilteredInventory;
             _filterInventory();
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${paint.name} removed from inventory'),
@@ -1445,24 +1510,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Brand logo or first letter of brand
+                // Avatar con el color de la pintura
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                    color: paintColor,
                     shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      paint.brand.isNotEmpty
-                          ? paint.brand[0].toUpperCase()
-                          : "?",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
+                    border: Border.all(
+                      color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                      width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1485,9 +1551,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${paint.brand} • ${paint.category}',
+                        'Added $addedDate',
                         style: TextStyle(
                           fontSize: 12,
+                          fontStyle: FontStyle.italic,
                           color:
                               isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
@@ -1496,64 +1563,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                 ),
 
-                // Stock tag (smaller)
+                // Brand logo o imagen
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        item.stock > 0
-                            ? (isDarkMode
-                                ? Colors.green[900]
-                                : Colors.green[50])
-                            : (isDarkMode ? Colors.red[900] : Colors.red[50]),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color:
-                          item.stock > 0
-                              ? (isDarkMode
-                                  ? Colors.green[700]!
-                                  : Colors.green[300]!)
-                              : (isDarkMode
-                                  ? Colors.red[700]!
-                                  : Colors.red[300]!),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    '${item.stock}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color:
-                          item.stock > 0
-                              ? (isDarkMode
-                                  ? Colors.green[300]
-                                  : Colors.green[700])
-                              : (isDarkMode
-                                  ? Colors.red[300]
-                                  : Colors.red[700]),
-                    ),
+                  width: 70,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _buildBrandLogo(brandId, officialBrandName, isDarkMode),
+                      const SizedBox(height: 4),
+                      Text(
+                        officialBrandName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
 
-                // Color swatch
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: paintColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                      width: 1,
-                    ),
-                  ),
-                ),
+                // Stock tag (tamaño fijo)
+                _buildStockContainer(item.stock, isDarkMode),
               ],
             ),
           ),
@@ -1866,5 +1904,185 @@ class _InventoryScreenState extends State<InventoryScreen> {
         );
       },
     );
+  }
+
+  /// Inicializa todos los servicios necesarios
+  Future<void> _initializeServices() async {
+    // Cargar datos de marcas en segundo plano para no bloquear la UI
+    _loadBrandData().catchError((e) {
+      print('⚠️ Error inicializando servicio de marcas: $e');
+      // La UI seguirá funcionando aunque falle la carga de marcas
+    });
+  }
+
+  /// Determina el brand_id correcto de forma segura
+  String _getSafeBrandId(Paint paint) {
+    try {
+      return _brandManager.determineBrandIdForPaint(paint);
+    } catch (e) {
+      print('⚠️ Error determinando brand_id: $e');
+      // Retornar el nombre de la marca como fallback
+      return paint.brand;
+    }
+  }
+
+  /// Obtiene el nombre oficial de una marca de forma segura
+  String _getSafeBrandName(String brandId, String fallbackName) {
+    try {
+      final name = _brandManager.getBrandName(brandId);
+      return name ?? fallbackName;
+    } catch (e) {
+      print('⚠️ Error obteniendo nombre de marca: $e');
+      return fallbackName;
+    }
+  }
+
+  /// Obtiene el logoUrl para un brandId de forma segura
+  String? _getSafeLogoUrl(String brandId) {
+    try {
+      return _brandLogos[brandId];
+    } catch (e) {
+      print('⚠️ Error obteniendo logo URL: $e');
+      return null;
+    }
+  }
+
+  /// Construye el logo de la marca para la tarjeta
+  Widget _buildBrandLogo(String brandId, String brandName, bool isDarkMode) {
+    final String? logoUrl = _getSafeLogoUrl(brandId);
+
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+        shape: BoxShape.circle,
+        image:
+            logoUrl != null && logoUrl.isNotEmpty
+                ? DecorationImage(
+                  image: NetworkImage(logoUrl),
+                  fit: BoxFit.cover,
+                  onError: (exception, stackTrace) {
+                    print('⚠️ Error cargando imagen: $exception');
+                  },
+                )
+                : null,
+      ),
+      child:
+          logoUrl == null || logoUrl.isEmpty
+              ? Center(
+                child: Text(
+                  brandName.isNotEmpty ? brandName[0].toUpperCase() : "?",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              )
+              : null,
+    );
+  }
+
+  /// Construye un widget seguro para mostrar el contenedor de stock
+  Widget _buildStockContainer(int stock, bool isDarkMode) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 38, minHeight: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color:
+            stock > 0
+                ? (isDarkMode ? Colors.green[900] : Colors.green[50])
+                : (isDarkMode ? Colors.red[900] : Colors.red[50]),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              stock > 0
+                  ? (isDarkMode ? Colors.green[700]! : Colors.green[300]!)
+                  : (isDarkMode ? Colors.red[700]! : Colors.red[300]!),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          '$stock',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            color:
+                stock > 0
+                    ? (isDarkMode ? Colors.green[300] : Colors.green[700])
+                    : (isDarkMode ? Colors.red[300] : Colors.red[700]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Carga los datos de marcas y logotipos
+  Future<void> _loadBrandData() async {
+    await _brandManager.initialize();
+
+    try {
+      final brands = await _paintBrandService.getPaintBrands();
+      for (final brand in brands) {
+        _brandLogos[brand.id] = brand.logoUrl;
+      }
+      print('✅ Logotipos de marcas cargados: ${_brandLogos.length}');
+
+      // Añadir logotipos predeterminados para marcas conocidas
+      _addDefaultBrandLogos();
+    } catch (e) {
+      print('❌ Error al cargar datos de marcas: $e');
+
+      // Si falla la carga desde API, al menos cargar los logotipos predeterminados
+      _addDefaultBrandLogos();
+    }
+  }
+
+  /// Añade logotipos predeterminados para marcas conocidas
+  void _addDefaultBrandLogos() {
+    final defaultLogos = {
+      'Army_Painter': 'https://i.imgur.com/OuMPZQh.png', // Logo de Army Painter
+      'Citadel_Colour': 'https://i.imgur.com/YOXbGGb.png', // Logo de Citadel
+      'Vallejo': 'https://i.imgur.com/CDx4LhM.png', // Logo de Vallejo
+      'AK': 'https://i.imgur.com/5e8s6Uq.png', // Logo de AK Interactive
+      'Scale75': 'https://i.imgur.com/eSLYGMG.png', // Logo de Scale 75
+      'P3': 'https://i.imgur.com/4X1YQlH.png', // Logo de P3
+      'Green_Stuff_World':
+          'https://i.imgur.com/tNlNiWK.png', // Logo de Green Stuff World
+    };
+
+    // Solo agregar si no existen ya en el mapa
+    defaultLogos.forEach((key, value) {
+      if (!_brandLogos.containsKey(key) ||
+          _brandLogos[key] == null ||
+          _brandLogos[key]!.isEmpty) {
+        _brandLogos[key] = value;
+      }
+    });
+
+    print('✅ Logotipos predeterminados añadidos: ${defaultLogos.length}');
+  }
+
+  /// Formatea la fecha de adición de forma amigable
+  String _formatAddedDate(PaintInventoryItem item) {
+    // En un caso real, se obtendría de item.addedAt
+    // Por ahora usamos una fecha aleatoria para mostrar diferentes formatos
+    final DateTime now = DateTime.now();
+    final int daysAgo = (item.paint.id.hashCode % 30).abs();
+    final DateTime addedDate = now.subtract(Duration(days: daysAgo));
+
+    if (daysAgo == 0) {
+      return 'today';
+    } else if (daysAgo == 1) {
+      return 'yesterday';
+    } else if (daysAgo < 7) {
+      return '$daysAgo days ago';
+    } else if (daysAgo < 30) {
+      final int weeks = (daysAgo / 7).floor();
+      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+    } else {
+      return '${addedDate.day}/${addedDate.month}/${addedDate.year}';
+    }
   }
 }

@@ -22,12 +22,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late InventoryService _inventoryService;
+  bool _argsProcessed = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PaintLibraryController>().loadPaints();
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args == null || !args.containsKey('brandName')) {
+        context.read<PaintLibraryController>().loadPaints();
+      }
     });
     _inventoryService = InventoryService();
   }
@@ -35,11 +40,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (args != null && args.containsKey('brandName')) {
-      final String brandName = args['brandName'];
-      context.read<PaintLibraryController>().filterByBrand(brandName);
+    if (!_argsProcessed) {
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args.containsKey('brandName')) {
+        final String brandName = args['brandName'];
+        context.read<PaintLibraryController>().filterByBrand(brandName);
+      }
+      _argsProcessed = true;
     }
   }
 

@@ -101,10 +101,16 @@ class PaintService {
 
   /// Obtiene las paletas que contienen una pintura específica
   List<Palette> getPalettesContainingPaint(String paintId) {
-    return _userPalettes.where((palette) {
-      // Simulamos la contención de la pintura para demo
-      // En una implementación real, verificaríamos si la paleta contiene la pintura
-      return palette.id.hashCode % 2 == paintId.hashCode % 2;
+    // Obtener las paletas del usuario
+    final userPalettes = getUserPalettes();
+    
+    // Filtrar las paletas que realmente contienen la pintura
+    return userPalettes.where((palette) {
+      // Verificar si la paleta tiene selecciones de pintura
+      if (palette.paintSelections == null) return false;
+      
+      // Buscar si la pintura está en las selecciones
+      return palette.paintSelections!.any((selection) => selection.paintId == paintId);
     }).toList();
   }
 
