@@ -184,8 +184,9 @@ class WishlistController extends ChangeNotifier {
   Future<bool> updatePriority(
     String paintId,
     String id,
-    bool isPriority,
-  ) async {
+    bool isPriority, [
+    int priorityLevel = 0,
+  ]) async {
     try {
       String token = "token"; // Fallback token for testing
       bool usingFallbackToken = true;
@@ -228,14 +229,24 @@ class WishlistController extends ChangeNotifier {
         );
       }
 
+      // Display proper priority level in logs
+      final String priorityDesc =
+          priorityLevel > 0
+              ? 'Nivel ${priorityLevel}'
+              : isPriority
+              ? 'Prioritaria'
+              : 'Normal';
+
       print(
-        '🔄 WishlistController: Actualizando prioridad de pintura (ID: $id) a: ${isPriority ? 'Prioritaria' : 'Normal'}',
+        '🔄 WishlistController: Actualizando prioridad de pintura (ID: $id) a: $priorityDesc',
       );
+
       final result = await _paintService.updateWishlistPriority(
         paintId,
         id,
         isPriority,
         token,
+        priorityLevel,
       );
 
       if (result) {
@@ -244,7 +255,11 @@ class WishlistController extends ChangeNotifier {
         // Actualizar el elemento en la lista local
         final index = _wishlistItems.indexWhere((item) => item['id'] == id);
         if (index != -1) {
-          _wishlistItems[index]['isPriority'] = isPriority;
+          _wishlistItems[index]['isPriority'] = isPriority || priorityLevel > 0;
+          // Store the actual priority level too
+          if (priorityLevel > 0) {
+            _wishlistItems[index]['priority'] = priorityLevel;
+          }
           notifyListeners();
         }
 

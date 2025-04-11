@@ -142,15 +142,24 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     try {
-      // Use the auth service for login
-      await _authService.signInWithEmailPassword(
-        _emailController.text.isNotEmpty
-            ? _emailController.text
-            : 'demo@miniaturepaintfinder.com',
-        _passwordController.text.isNotEmpty
-            ? _passwordController.text
-            : 'password123',
+      print(
+        '🔒 Login: Intentando iniciar sesión con email: ${_emailController.text}',
       );
+
+      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+        throw AuthException(
+          AuthErrorCode.invalidEmail,
+          'Please enter email and password',
+        );
+      }
+
+      // Use the auth service for login with the provided credentials
+      final user = await _authService.signInWithEmailPassword(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      print('✅ Login exitoso: ${user.email} (${user.id})');
 
       if (mounted) {
         // Navigate to home screen after successful login
@@ -1274,10 +1283,6 @@ class _AuthScreenState extends State<AuthScreen>
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          // Check if it's a demo account (allow it)
-                          if (value == 'demo@miniaturepaintfinder.com') {
-                            return null;
-                          }
                           // Basic email validation
                           final emailRegex = RegExp(
                             r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
@@ -1499,11 +1504,7 @@ class _AuthScreenState extends State<AuthScreen>
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          // Check if it's a demo account (always allow it)
-                          if (value == 'demo@miniaturepaintfinder.com') {
-                            return null;
-                          }
-                          // Basic email validation for non-demo emails
+                          // Basic email validation
                           final emailRegex = RegExp(
                             r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$',
                           );

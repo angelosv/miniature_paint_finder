@@ -78,27 +78,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic title based on selected tab
-    String screenTitle = _selectedIndex == 0 ? 'Home' : 'Profile';
-
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      selectedIndex:
-          _selectedIndex == 0 ? 0 : 2, // Map to correct bottom nav index
-      title: screenTitle,
+      selectedIndex: 0, // Siempre usar índice 0 para Home
+      title: 'Home',
       body: _screens[_selectedIndex],
       drawer: const SharedDrawer(currentScreen: 'home'),
-      // Custom handler for bottom nav clicks within HomeScreen
+      // Customizar el comportamiento solo si se agregan otras pestañas a esta pantalla
       onNavItemSelected: (index) {
-        if (index == 0 || index == 2) {
-          // Handle home and profile tabs within this screen
-          setState(() {
-            _selectedIndex =
-                index == 0 ? 0 : 1; // Map 2->1 for internal screens array
-          });
-          return true; // Indicate we handled the navigation
+        // Si estamos ya en Home y el usuario toca Home, no hacemos nada
+        if (index == 0) {
+          return true;
         }
-        return false; // Let AppScaffold handle other navigation
+        return false; // Dejar que AppScaffold maneje la navegación a otras pantallas
       },
     );
   }

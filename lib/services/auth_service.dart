@@ -97,15 +97,6 @@ abstract class IAuthService {
   void dispose();
 }
 
-// Verifica si estamos en Android
-bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
-
-// Verifica si estamos en iOS
-bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
-
-// Verifica si estamos en macOS
-bool get _isMacOS => defaultTargetPlatform == TargetPlatform.macOS;
-
 /// Implementation of the authentication service
 /// This class handles user authentication operations
 class AuthService implements IAuthService {
@@ -135,15 +126,6 @@ class AuthService implements IAuthService {
   @override
   Future<void> init() async {
     try {
-      // En Android, usamos la autenticación simulada
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        _currentUser = null;
-        _authStateController.add(_currentUser);
-        return;
-      }
-
-      // Para otras plataformas, usamos Firebase Auth
       // Check for existing Firebase Auth session
       final firebaseUser = firebase.FirebaseAuth.instance.currentUser;
 
@@ -218,33 +200,6 @@ class AuthService implements IAuthService {
       // Validate email and password
       _validateCredentials(email, password);
 
-      // En Android, usamos autenticación simulada
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        // Simular inicio de sesión exitoso
-        await Future.delayed(const Duration(seconds: 1));
-
-        // Comprobar credenciales de demo
-        if (email == 'demo@example.com' && password == 'password123') {
-          _currentUser = User(
-            id: 'android-mock-user-id',
-            name: 'Android Demo User',
-            email: email,
-            createdAt: DateTime.now(),
-            lastLoginAt: DateTime.now(),
-            authProvider: 'email',
-          );
-          _authStateController.add(_currentUser);
-          return _currentUser!;
-        } else {
-          throw AuthException(
-            AuthErrorCode.wrongPassword,
-            'Invalid email or password',
-          );
-        }
-      }
-
-      // Para otras plataformas, usamos Firebase Auth
       // Sign in with Firebase
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
@@ -326,40 +281,16 @@ class AuthService implements IAuthService {
         );
       }
 
-      // En Android, usamos autenticación simulada
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        // Simular retraso de red
-        await Future.delayed(const Duration(seconds: 1));
+      // Create user with Firebase Auth
+      final userCredential = await firebase.FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-        // Simular el registro
-        _currentUser = User(
-          id: 'android-mock-user-${DateTime.now().millisecondsSinceEpoch}',
-          name: name,
-          email: email,
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          authProvider: 'email',
-        );
-        _authStateController.add(_currentUser);
-        return _currentUser!;
-      }
+      // Update the user's display name
+      await userCredential.user!.updateDisplayName(name);
 
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 1));
-
-      // In real app, this would make an API call to create account
-
-      // Check if email is already in use (demo: check against demo email)
-      if (email == User.demoUser.email) {
-        throw AuthException(
-          AuthErrorCode.emailAlreadyInUse,
-          'This email is already in use',
-        );
-      }
-
-      final newUser = User(
-        id: 'new-user-${DateTime.now().millisecondsSinceEpoch}',
+      // Convert Firebase user to our User model
+      _currentUser = User(
+        id: userCredential.user!.uid,
         name: name,
         email: email,
         createdAt: DateTime.now(),
@@ -367,10 +298,31 @@ class AuthService implements IAuthService {
         authProvider: 'email',
       );
 
-      _currentUser = newUser;
       _authStateController.add(_currentUser);
-
       return _currentUser!;
+    } on firebase.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          throw AuthException(
+            AuthErrorCode.emailAlreadyInUse,
+            'This email is already in use',
+          );
+        case 'weak-password':
+          throw AuthException(
+            AuthErrorCode.weakPassword,
+            'Password is too weak',
+          );
+        case 'invalid-email':
+          throw AuthException(
+            AuthErrorCode.invalidEmail,
+            'Invalid email address',
+          );
+        default:
+          throw AuthException(
+            AuthErrorCode.unknown,
+            'Account creation failed: ${e.message}',
+          );
+      }
     } catch (e) {
       if (e is AuthException) {
         rethrow;
@@ -383,23 +335,20 @@ class AuthService implements IAuthService {
   @override
   Future<void> signOut() async {
     try {
-      // En Android, simplemente reseteamos el usuario
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        _currentUser = null;
-        _authStateController.add(_currentUser);
-        return;
-      }
-
       // Sign out from Firebase
       await firebase.FirebaseAuth.instance.signOut();
 
-      // Sign out from Google
-      await GoogleSignIn().signOut();
+      // Try to sign out from Google if available
+      try {
+        await GoogleSignIn().signOut();
+      } catch (e) {
+        // Ignore errors from Google sign out
+        print('Error signing out from Google: $e');
+      }
 
       // Clear local user data
       _currentUser = null;
-      _authStateController.add(_currentUser);
+      _authStateController.add(null);
     } catch (e) {
       throw AuthException(AuthErrorCode.unknown, 'Sign out failed: $e');
     }
@@ -424,27 +373,28 @@ class AuthService implements IAuthService {
         );
       }
 
-      // En Android, simplemente simulamos el reseteo
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        await Future.delayed(const Duration(seconds: 1));
-        return;
-      }
-
-      // Simulate network delay
-      await Future.delayed(const Duration(seconds: 1));
-
-      // In real app, this would trigger a password reset email
-      // For demo, we just check if it's the demo email
-      if (email != User.demoUser.email &&
-          email != 'demo@miniaturepaintfinder.com') {
-        throw AuthException(
-          AuthErrorCode.userNotFound,
-          'No user found with this email address',
-        );
-      }
+      // Send password reset email with Firebase
+      await firebase.FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
       // Success - no return needed
+    } on firebase.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          throw AuthException(
+            AuthErrorCode.userNotFound,
+            'No user found with this email address',
+          );
+        case 'invalid-email':
+          throw AuthException(
+            AuthErrorCode.invalidEmail,
+            'Invalid email address',
+          );
+        default:
+          throw AuthException(
+            AuthErrorCode.unknown,
+            'Password reset failed: ${e.message}',
+          );
+      }
     } catch (e) {
       if (e is AuthException) {
         rethrow;
@@ -457,24 +407,6 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithGoogle() async {
     try {
-      // En Android, usamos autenticación simulada
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        // Simular inicio de sesión con Google
-        await Future.delayed(const Duration(seconds: 1));
-
-        _currentUser = User(
-          id: 'android-mock-google-user-${DateTime.now().millisecondsSinceEpoch}',
-          name: 'Android Google User',
-          email: 'google@example.com',
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          authProvider: 'google',
-        );
-        _authStateController.add(_currentUser);
-        return _currentUser!;
-      }
-
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
@@ -659,23 +591,7 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithCustomToken(String token) async {
     try {
-      // En Android, usamos autenticación simulada
-      if (_isAndroid) {
-        print('Using mock auth for Android');
-        await Future.delayed(const Duration(seconds: 1));
-
-        _currentUser = User(
-          id: 'android-mock-token-user-${DateTime.now().millisecondsSinceEpoch}',
-          name: 'Android Token User',
-          email: 'token@example.com',
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          authProvider: 'custom',
-        );
-        _authStateController.add(_currentUser);
-        return _currentUser!;
-      }
-
+      // Sign in with Firebase
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithCustomToken(token);
 
@@ -704,23 +620,6 @@ class AuthService implements IAuthService {
   /// Sign in with phone
   @override
   Future<void> signInWithPhone() async {
-    if (_isAndroid) {
-      print('Using mock auth for Android');
-      await Future.delayed(const Duration(seconds: 1));
-
-      _currentUser = User(
-        id: 'android-mock-phone-user-${DateTime.now().millisecondsSinceEpoch}',
-        name: 'Android Phone User',
-        email: '',
-        phoneNumber: '+1234567890',
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        authProvider: 'phone',
-      );
-      _authStateController.add(_currentUser);
-      return;
-    }
-
     throw AuthException(
       AuthErrorCode.notImplemented,
       'Phone authentication is not fully implemented',
@@ -733,15 +632,6 @@ class AuthService implements IAuthService {
     required String phoneNumber,
     required Function(String, int?) onCodeSent,
   }) async {
-    if (_isAndroid) {
-      print('Using mock auth for Android');
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Simular envío de código con un ID de verificación mock
-      onCodeSent('android-mock-verification-id', 123456);
-      return;
-    }
-
     throw AuthException(
       AuthErrorCode.notImplemented,
       'Phone verification is not fully implemented',
@@ -754,28 +644,6 @@ class AuthService implements IAuthService {
     required String verificationId,
     required String code,
   }) async {
-    if (_isAndroid) {
-      print('Using mock auth for Android');
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Verificar que el código sea el esperado (para pruebas)
-      if (code == '123456') {
-        _currentUser = User(
-          id: 'android-mock-phone-verified-user',
-          name: 'Android Phone User',
-          email: '',
-          phoneNumber: '+1234567890',
-          createdAt: DateTime.now(),
-          lastLoginAt: DateTime.now(),
-          authProvider: 'phone',
-        );
-        _authStateController.add(_currentUser);
-        return;
-      } else {
-        throw AuthException(AuthErrorCode.unknown, 'Invalid verification code');
-      }
-    }
-
     throw AuthException(
       AuthErrorCode.notImplemented,
       'Code verification is not fully implemented',
@@ -792,9 +660,9 @@ class AuthService implements IAuthService {
         return true; // Disponible en todas las plataformas
       case AuthProvider.apple:
         // Sólo disponible en iOS, macOS y web
-        return _isIOS || _isMacOS || kIsWeb;
+        return kIsWeb;
       case AuthProvider.phone:
-        return true; // Disponible en todas las plataformas
+        return false; // No disponible en todas las plataformas
       case AuthProvider.custom:
         return true;
     }

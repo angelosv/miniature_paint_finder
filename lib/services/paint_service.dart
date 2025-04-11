@@ -103,14 +103,16 @@ class PaintService {
   List<Palette> getPalettesContainingPaint(String paintId) {
     // Obtener las paletas del usuario
     final userPalettes = getUserPalettes();
-    
+
     // Filtrar las paletas que realmente contienen la pintura
     return userPalettes.where((palette) {
       // Verificar si la paleta tiene selecciones de pintura
       if (palette.paintSelections == null) return false;
-      
+
       // Buscar si la pintura está en las selecciones
-      return palette.paintSelections!.any((selection) => selection.paintId == paintId);
+      return palette.paintSelections!.any(
+        (selection) => selection.paintId == paintId,
+      );
     }).toList();
   }
 
@@ -225,17 +227,26 @@ class PaintService {
     String paintId,
     String wishlistId,
     bool isPriority,
-    String token,
-  ) async {
-    // final baseUrl = 'http://10.0.2.2:8000';
-
+    String token, [
+    int priorityLevel = 0,
+  ]) async {
     final baseUrl = 'https://paints-api.reachu.io/api';
     final url = Uri.parse('$baseUrl/wishlist/$wishlistId');
 
-    // Convierte el valor booleano a backend (0 = prioridad, -1 = quitar)
-    final priorityValue = isPriority ? 0 : -1;
+    // If priorityLevel is provided (0-4), use it as the priority value
+    // Otherwise use the standard conversion (0 = priority, -1 = no priority)
+    final int priorityValue;
+    if (priorityLevel > 0 && priorityLevel < 5) {
+      // Use the provided priority level directly (0-4 where 0 is highest)
+      priorityValue = priorityLevel;
+    } else {
+      // Fall back to boolean conversion for backward compatibility
+      priorityValue = isPriority ? 0 : -1;
+    }
 
-    final requestBody = {'priority': priorityValue};
+    // The API expects a body with type and priority fields
+    final requestBody = {'type': 'favorite', 'priority': priorityValue};
+
     print('📤 PATCH Wishlist priority request: $url');
     print('📤 Request body: ${jsonEncode(requestBody)}');
 
@@ -257,6 +268,7 @@ class PaintService {
         // Actualiza el estado local
         if (_wishlist.containsKey(paintId)) {
           _wishlist[paintId]!['isPriority'] = isPriority;
+          _wishlist[paintId]!['priority'] = priorityValue;
         }
         return true;
       } else {
@@ -1135,7 +1147,7 @@ class PaintService {
     try {
       // 0. Asegurar que tenemos las marcas oficiales cargadas
       if (!_brandManager.isLoaded) {
-        print('🔄 Cargando marcas oficiales primero...');
+        print('🏭 Ya hay una carga de marcas en curso, esperando...');
         final loaded = await loadOfficialBrands();
         if (!loaded) {
           return {

@@ -20,6 +20,9 @@ class BrandService {
   /// Mapa inverso (id a nombre)
   final Map<String, String> brandNames = {};
 
+  /// Mapa de logos de marcas (id a URL)
+  final Map<String, String> brandLogos = {};
+
   /// Estado de carga de marcas
   bool _isLoaded = false;
 
@@ -37,12 +40,115 @@ class BrandService {
 
   /// Inicializa y carga las marcas oficiales
   Future<bool> initialize() async {
+    // Añadir los logos predeterminados inmediatamente
+    _addDefaultBrandLogos();
+
     if (_isLoaded && brands.isNotEmpty) {
       print('✅ Marcas ya están cargadas (${brands.length} variantes)');
       return true;
     }
 
     return await loadBrands();
+  }
+
+  /// Añade logotipos predeterminados para marcas conocidas
+  void _addDefaultBrandLogos() {
+    print('🔄 Añadiendo logos predeterminados a BrandService');
+
+    final defaultLogos = {
+      'Army_Painter': 'https://i.imgur.com/OuMPZQh.png', // Logo de Army Painter
+      'Citadel_Colour': 'https://i.imgur.com/YOXbGGb.png', // Logo de Citadel
+      'Vallejo': 'https://i.imgur.com/CDx4LhM.png', // Logo de Vallejo
+      'AK': 'https://i.imgur.com/5e8s6Uq.png', // Logo de AK Interactive
+      'Scale75': 'https://i.imgur.com/eSLYGMG.png', // Logo de Scale 75
+      'P3': 'https://i.imgur.com/4X1YQlH.png', // Logo de P3
+      'Green_Stuff_World':
+          'https://i.imgur.com/tNlNiWK.png', // Logo de Green Stuff World
+      // Add common variations
+      'army_painter': 'https://i.imgur.com/OuMPZQh.png',
+      'citadel': 'https://i.imgur.com/YOXbGGb.png',
+      'citadel_colour': 'https://i.imgur.com/YOXbGGb.png',
+      'vallejo': 'https://i.imgur.com/CDx4LhM.png',
+      'ak': 'https://i.imgur.com/5e8s6Uq.png',
+      'scale75': 'https://i.imgur.com/eSLYGMG.png',
+      'p3': 'https://i.imgur.com/4X1YQlH.png',
+      'scale_75': 'https://i.imgur.com/eSLYGMG.png',
+      'army painter': 'https://i.imgur.com/OuMPZQh.png',
+      'the army painter': 'https://i.imgur.com/OuMPZQh.png',
+    };
+
+    // Solo agregar si no existen ya en el mapa
+    defaultLogos.forEach((key, value) {
+      if (!brandLogos.containsKey(key) ||
+          brandLogos[key] == null ||
+          brandLogos[key]!.isEmpty) {
+        brandLogos[key] = value;
+      }
+    });
+
+    print('✅ Logotipos predeterminados añadidos: ${defaultLogos.length}');
+    print('🖼️ Brand logos disponibles: ${brandLogos.keys.join(", ")}');
+
+    // Print each logo URL for debugging
+    brandLogos.forEach((key, value) {
+      print('🔹 Logo para "$key": $value');
+    });
+  }
+
+  /// Obtiene la URL del logo para un brandId específico
+  String? getLogoUrl(String brandId) {
+    try {
+      print('🔍 BrandService: Buscando logo para brand ID: "$brandId"');
+
+      // Intentar obtener directamente
+      if (brandLogos.containsKey(brandId)) {
+        final logo = brandLogos[brandId];
+        print('✅ BrandService: Logo encontrado para "$brandId": $logo');
+        return logo;
+      }
+
+      // Print available logos for debugging
+      print(
+        '📋 BrandService: Logos disponibles: ${brandLogos.keys.join(", ")}',
+      );
+
+      // Check for case insensitive matches
+      for (final entry in brandLogos.entries) {
+        if (entry.key.toLowerCase() == brandId.toLowerCase()) {
+          print(
+            '✅ BrandService: Logo encontrado por coincidencia case-insensitive: ${entry.key}',
+          );
+          return entry.value;
+        }
+      }
+
+      // Si no lo encuentra, intentar corregir el brandId
+      String correctedId = validateAndCorrectBrandId(brandId, null);
+      if (correctedId != brandId && brandLogos.containsKey(correctedId)) {
+        print(
+          '✅ BrandService: Logo encontrado para ID corregido "$correctedId"',
+        );
+        return brandLogos[correctedId];
+      }
+
+      // Buscar coincidencias parciales
+      for (final entry in brandLogos.entries) {
+        if (brandId.toLowerCase().contains(entry.key.toLowerCase()) ||
+            entry.key.toLowerCase().contains(brandId.toLowerCase())) {
+          print(
+            '✅ BrandService: Logo encontrado por coincidencia parcial: "${entry.key}" para "$brandId"',
+          );
+          return entry.value;
+        }
+      }
+
+      // No se encontró logo
+      print('⚠️ BrandService: No se encontró logo para "$brandId"');
+      return null;
+    } catch (e) {
+      print('⚠️ BrandService: Error obteniendo logo URL para $brandId: $e');
+      return null;
+    }
   }
 
   /// Carga las marcas oficiales, primero de caché y luego de API si es necesario
@@ -138,6 +244,14 @@ class BrandService {
       brandNamesMap.forEach((key, value) {
         brandNames[key] = value.toString();
       });
+
+      // Si hay logos en caché, cargarlos
+      if (data.containsKey('brand_logos')) {
+        final Map<String, dynamic> brandLogosMap = data['brand_logos'];
+        brandLogosMap.forEach((key, value) {
+          brandLogos[key] = value.toString();
+        });
+      }
 
       print('✅ Marcas cargadas desde caché (${brands.length} variantes)');
       print('📅 Fecha de la caché: ${cacheTime.toIso8601String()}');
@@ -269,6 +383,7 @@ class BrandService {
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'brands': brands,
         'brand_names': brandNames,
+        'brand_logos': brandLogos,
       };
 
       // Serializar y guardar

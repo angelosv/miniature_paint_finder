@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/brand_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
@@ -22,6 +23,7 @@ class WishlistScreen extends StatefulWidget {
 
 class _WishlistScreenState extends State<WishlistScreen> {
   final PaintService _paintService = PaintService();
+  final BrandService _brandService = BrandService();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -30,7 +32,162 @@ class _WishlistScreenState extends State<WishlistScreen> {
     // Cargar wishlist cuando se inicia el widget
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WishlistController>().loadWishlist();
+      _loadBrandData();
     });
+  }
+
+  /// Carga los datos de marcas y logotipos
+  Future<void> _loadBrandData() async {
+    // Ensure brands are loaded before trying to display logos
+    print('🔄 Initializing BrandService...');
+    final success = await _brandService.initialize();
+    print(
+      success
+          ? '✅ BrandService initialized successfully'
+          : '❌ BrandService initialization failed',
+    );
+  }
+
+  /// Determinar el brandId correcto de forma segura
+  String _getSafeBrandId(Paint paint) {
+    try {
+      final brandId = _brandService.getBrandId(paint.brand);
+      if (brandId != null) {
+        return brandId;
+      }
+
+      // Si no se encontró, intentar casos especiales
+      if ((paint.brand.toLowerCase().contains('army') &&
+              paint.brand.toLowerCase().contains('painter')) ||
+          paint.brand.toLowerCase().contains('warpaint')) {
+        return 'Army_Painter';
+      }
+
+      if (paint.brand.toLowerCase().contains('citadel')) {
+        return 'Citadel_Colour';
+      }
+
+      return paint.brand;
+    } catch (e) {
+      print('⚠️ Error determinando brandId: $e');
+      return paint.brand;
+    }
+  }
+
+  /// Obtener el nombre oficial de marca de forma segura
+  String _getSafeBrandName(String brandId, String fallbackName) {
+    try {
+      final name = _brandService.getBrandName(brandId);
+      return name ?? fallbackName;
+    } catch (e) {
+      print('⚠️ Error obteniendo nombre de marca: $e');
+      return fallbackName;
+    }
+  }
+
+  /// Construye el logo de la marca para la tarjeta
+  Widget _buildBrandLogo(String brandId, String brandName, bool isDarkMode) {
+    // Get logo URL from BrandService
+    final String? logoUrl = _brandService.getLogoUrl(brandId);
+
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1,
+        ),
+      ),
+      child:
+          logoUrl != null
+              ? ClipOval(
+                child: Center(
+                  child: Image.network(
+                    logoUrl,
+                    width: 40, // Slightly smaller to ensure it fits
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (ctx, err, stack) {
+                      print('⚠️ Image load error for $brandId: $err');
+                      return Text(
+                        brandName.isNotEmpty ? brandName[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              )
+              : Center(
+                child: Text(
+                  brandName.isNotEmpty ? brandName[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+    );
+  }
+
+  /// Update the togglePriority method to handle priority levels
+  Future<void> _togglePriority(
+    String paintId,
+    bool currentPriority,
+    String _id, [
+    int priorityLevel = 0,
+  ]) async {
+    try {
+      // Use the priorityLevel parameter to determine the new priority
+      final controller = context.read<WishlistController>();
+
+      // Note: In our API, lower numbers = higher priority (0 is highest)
+      // Convert UI priority level to API priority level
+      final bool newPriorityFlag = priorityLevel > 0;
+      final result = await controller.updatePriority(
+        paintId,
+        _id,
+        newPriorityFlag,
+        priorityLevel,
+      );
+
+      if (mounted && result) {
+        String priorityMessage;
+        if (priorityLevel <= 0) {
+          priorityMessage = 'Removed from priority';
+        } else {
+          priorityMessage = 'Priority set to ${5 - priorityLevel} stars';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(priorityMessage),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating priority'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating priority: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _removeFromWishlist(
@@ -98,45 +255,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  Future<void> _togglePriority(
-    String paintId,
-    bool currentPriority,
-    String _id,
-  ) async {
-    try {
-      final newPriority = !currentPriority;
-      final controller = context.read<WishlistController>();
-      final result = await controller.updatePriority(paintId, _id, newPriority);
-
-      if (mounted && result) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newPriority ? 'Marked as priority' : 'Removed from priority',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating priority'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating priority: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _addToInventory(Paint paint, String _id) async {
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
@@ -198,7 +316,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Wishlist',
-      selectedIndex: -1, // Not a bottom tab item
+      selectedIndex: 2, // Uso del índice 2 para Wishlist
       body: _buildBody(),
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
       floatingActionButton: FloatingActionButton.extended(
@@ -289,6 +407,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildWishlistContent(List<Map<String, dynamic>> wishlistItems) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.builder(
       itemCount: wishlistItems.length,
       padding: const EdgeInsets.all(16),
@@ -305,26 +425,35 @@ class _WishlistScreenState extends State<WishlistScreen> {
           int.parse(colorCode.substring(1), radix: 16) + 0xFF000000,
         );
 
-        // Simulate paints in palettes - in a real app, this would come from the service
+        // Determine correct brand ID and get official brand name
+        final String brandId = _getSafeBrandId(paint);
+        final String officialBrandName = _getSafeBrandName(
+          brandId,
+          paint.brand,
+        );
+
+        // Get priority level (0-5) where 0 is highest priority
+        // Backend uses 0 for high priority, -1 for no priority
+        final int priorityLevel = isPriority ? 0 : 5;
+
+        // Get palettes containing this paint
         final palettes = _paintService.getPalettesContainingPaint(paint.id);
 
-        // Simulate a barcode - in a real app, this would come from a barcode service
-        final simulatedBarcode =
-            "EAN-13: ${paint.id.hashCode.abs() % 10000000000000}";
-
-        return Card(
+        // Card to display
+        final card = Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side:
-                isPriority
-                    ? BorderSide(color: AppTheme.marineOrange, width: 2)
-                    : BorderSide(color: Colors.grey.withOpacity(0.2)),
+            side: BorderSide(
+              color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+              width: 1,
+            ),
           ),
+          color: isDarkMode ? AppTheme.darkSurface : Colors.white,
           child: InkWell(
             onTap: () {
-              _showActionSheet(paint, isPriority, _id);
+              _showPaintDetails(paint, isPriority, _id, palettes);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -337,13 +466,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     children: [
                       // Paint color
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 55,
+                        height: 55,
                         decoration: BoxDecoration(
                           color: paintColor,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: Colors.grey.withOpacity(0.3),
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!,
+                            width: 1,
                           ),
                         ),
                       ),
@@ -354,215 +487,257 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Added priority indicator if needed
-                            if (isPriority) ...[
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: AppTheme.marineOrange,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'PRIORITY',
-                                    style: TextStyle(
-                                      color: AppTheme.marineOrange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                            ],
-
                             Text(
                               paint.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
+                                color:
+                                    isDarkMode
+                                        ? AppTheme.marineOrange
+                                        : AppTheme.primaryBlue,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              paint.brand,
+                              officialBrandName,
                               style: TextStyle(
-                                color: Colors.grey[600],
                                 fontSize: 14,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white70
+                                        : Colors.black87,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
+
+                            // Star rating based on priority
                             Row(
                               children: [
+                                ...List.generate(5, (index) {
+                                  return Icon(
+                                    index < (5 - priorityLevel)
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    size: 16,
+                                    color: AppTheme.marineOrange,
+                                  );
+                                }),
+                                if (isPriority)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 4),
+                                    child: Text(
+                                      'PRIORITY',
+                                      style: TextStyle(
+                                        color: AppTheme.marineOrange,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // Category tags and Added date in one row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Category tag
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue.withOpacity(
-                                      0.1,
-                                    ),
+                                    color:
+                                        isDarkMode
+                                            ? AppTheme.primaryBlue.withOpacity(
+                                              0.3,
+                                            )
+                                            : AppTheme.primaryBlue.withOpacity(
+                                              0.1,
+                                            ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     paint.category,
                                     style: TextStyle(
-                                      color: AppTheme.primaryBlue,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.lightBlue[100]
+                                              : AppTheme.primaryBlue,
                                       fontSize: 12,
                                     ),
                                   ),
                                 ),
-                                if (paint.isMetallic ||
-                                    paint.isTransparent) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      paint.isMetallic
-                                          ? 'Metallic'
-                                          : 'Transparent',
-                                      style: TextStyle(
-                                        color: Colors.amber[800],
-                                        fontSize: 12,
+
+                                // Special properties tag
+                                if (paint.isMetallic || paint.isTransparent)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.amber.withOpacity(0.3)
+                                                : Colors.amber.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        paint.isMetallic
+                                            ? 'Metallic'
+                                            : 'Transparent',
+                                        style: TextStyle(
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.amber[100]
+                                                  : Colors.amber[800],
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ],
+
+                                // Added date
+                                const Spacer(),
+                                Text(
+                                  'Added ${_formatDate(addedAt)}',
+                                  style: TextStyle(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
                               ],
                             ),
+
+                            // Palette tags if any
+                            if (palettes.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Used in palettes:',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[300]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPaletteChips(palettes, isDarkMode),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
 
-                      // Brand avatar and info column on the right
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Brand avatar
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: _getBrandColor(paint.brand),
-                            child: Text(
-                              paint.brand.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Color code and barcode in small format
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.color_lens,
-                                size: 12,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                paint.hex,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.qr_code,
-                                size: 12,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'EAN-13',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                      // Brand logo
+                      _buildBrandLogo(brandId, officialBrandName, isDarkMode),
                     ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Show palettes if any
-                  if (palettes.isNotEmpty) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 18,
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'In Palettes:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              _buildPaletteChips(palettes),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-
-                  const SizedBox(height: 12),
-
-                  // Date added
-                  Text(
-                    'Added on ${_formatDate(addedAt)}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                 ],
               ),
             ),
           ),
         );
+
+        // Wrap card with dismissible for swipe-to-delete but use direct deletion without confirmations
+        return Dismissible(
+          key: Key(_id),
+          direction: DismissDirection.endToStart,
+          // Properly align the background with the card
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          // Only confirm once with dialog
+          confirmDismiss: (direction) async {
+            return await showDialog<bool>(
+                  context: context,
+                  builder:
+                      (context) => AlertDialog(
+                        title: const Text('Confirm Removal'),
+                        content: Text(
+                          'Remove ${paint.name} from your wishlist?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('CANCEL'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('REMOVE'),
+                          ),
+                        ],
+                      ),
+                ) ??
+                false;
+          },
+          onDismissed: (direction) {
+            _removeFromWishlist(paint.id, paint.name, _id);
+          },
+          child: card,
+        );
       },
     );
   }
 
-  /// Build palette chips, limiting to 2 initially with a "View more" option
-  Widget _buildPaletteChips(List<Palette> palettes) {
+  /// Build palette chips, limiting to 3 initially with a "View more" option
+  Widget _buildPaletteChips(List<Palette> palettes, bool isDarkMode) {
     // State for expanded view
     bool isExpanded = false;
 
+    // Lilac colors for palette chips
+    final chipColor =
+        isDarkMode
+            ? Color(0xFF9370DB).withOpacity(
+              0.3,
+            ) // Medium purple with opacity for dark mode
+            : Color(
+              0xFFD8BFD8,
+            ).withOpacity(0.6); // Thistle color with opacity for light mode
+
+    final textColor =
+        isDarkMode
+            ? Color(0xFFE6E6FA) // Lavender for dark mode
+            : Color(0xFF7B68EE); // Medium slate blue for light mode
+
+    final borderColor =
+        isDarkMode
+            ? Color(0xFF9370DB).withOpacity(0.5)
+            : Color(0xFF9370DB).withOpacity(0.3);
+
     return StatefulBuilder(
       builder: (context, setState) {
-        // Show all palettes if expanded, otherwise limit to 2
+        // Show all palettes if expanded, otherwise limit to 3
         final displayPalettes =
-            isExpanded ? palettes : palettes.take(2).toList();
+            isExpanded ? palettes : palettes.take(3).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,19 +753,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.1),
+                      color: chipColor,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Text(
                       palette.name,
-                      style: TextStyle(color: Colors.purple[700], fontSize: 11),
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   );
                 }),
 
-                // Show "View more" chip if there are more than 2 palettes and not expanded
-                if (palettes.length > 2 && !isExpanded)
+                // Show "View more" chip if there are more than 3 palettes and not expanded
+                if (palettes.length > 3 && !isExpanded)
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -603,7 +782,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color:
+                            isDarkMode
+                                ? Colors.grey.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: Colors.grey.withOpacity(0.3)),
                       ),
@@ -611,16 +793,22 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '+${palettes.length - 2} more',
+                            '+${palettes.length - 3} more',
                             style: TextStyle(
-                              color: Colors.grey[700],
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
                               fontSize: 11,
                             ),
                           ),
                           Icon(
                             Icons.keyboard_arrow_down,
                             size: 11,
-                            color: Colors.grey[700],
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
                           ),
                         ],
                       ),
@@ -630,7 +818,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ),
 
             // Show collapse option if expanded
-            if (isExpanded && palettes.length > 2)
+            if (isExpanded && palettes.length > 3)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: GestureDetector(
@@ -642,7 +830,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   child: Text(
                     'Show less',
                     style: TextStyle(
-                      color: Colors.purple[700],
+                      color: textColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -655,348 +843,510 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  /// Helper to build info rows for color code and barcode
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text(
-          '$label:',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Returns a brand-specific color for avatars
-  Color _getBrandColor(String brand) {
-    switch (brand.toLowerCase()) {
-      case 'citadel':
-        return Colors.blue[700]!;
-      case 'vallejo':
-        return Colors.green[700]!;
-      case 'army painter':
-        return Colors.red[700]!;
-      case 'scale75':
-        return Colors.purple[700]!;
-      default:
-        // Generate a color based on the brand name
-        return Color((brand.hashCode & 0xFFFFFF) | 0xFF000000);
-    }
-  }
-
   /// Shows a bottom sheet with actions for a paint
-  void _showActionSheet(Paint paint, bool isPriority, String _id) {
-    // Get palettes containing this paint
-    final palettes = _paintService.getPalettesContainingPaint(paint.id);
+  void _showPaintDetails(
+    Paint paint,
+    bool isPriority,
+    String _id,
+    List<Palette> palettes,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Simulate a barcode - in a real app, this would come from a barcode service
-    final simulatedBarcode =
-        "EAN-13: ${paint.id.hashCode.abs() % 10000000000000}";
+    // Determine brand ID and name
+    final String brandId = _getSafeBrandId(paint);
+    final String officialBrandName = _getSafeBrandName(brandId, paint.brand);
+
+    // Current priority level (5 = no priority, 0-4 = priority level)
+    int currentPriorityLevel = isPriority ? 0 : 5;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[400],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 16,
                   ),
-                  const SizedBox(height: 24),
-
-                  // Paint info header with brand avatar on the right
-                  Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Paint color
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Color(
-                            int.parse(paint.hex.substring(1), radix: 16) +
-                                0xFF000000,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.3),
+                      // Handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(height: 24),
 
-                      // Paint name and brand
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              paint.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              paint.brand,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Brand avatar with info below
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      // Paint info header with brand logo on the right
+                      Row(
                         children: [
-                          // Brand avatar
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: _getBrandColor(paint.brand),
-                            child: Text(
-                              paint.brand.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                          // Paint color
+                          Container(
+                            width: 55,
+                            height: 55,
+                            decoration: BoxDecoration(
+                              color: Color(
+                                int.parse(paint.hex.substring(1), radix: 16) +
+                                    0xFF000000,
                               ),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[700]!
+                                        : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Paint name, brand and additional info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  paint.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color:
+                                        isDarkMode
+                                            ? AppTheme.marineOrange
+                                            : AppTheme.primaryBlue,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  officialBrandName,
+                                  style: TextStyle(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.white70
+                                            : Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                // Add color code
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.colorize,
+                                      size: 14,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Code: ${paint.code}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Add barcode/hex
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.qr_code,
+                                      size: 14,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Color: ${paint.hex}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Brand logo
+                          _buildBrandLogo(
+                            brandId,
+                            officialBrandName,
+                            isDarkMode,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Add palette section above priority stars
+                      _buildPalettesSection(palettes, isDarkMode),
+
+                      const SizedBox(height: 20),
+
+                      // Interactive star rating with sliding gesture
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Priority:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: isDarkMode ? Colors.white : Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 8),
 
-                          // Color code and barcode in small format
+                          // Star rating with sliding gesture
+                          GestureDetector(
+                            onHorizontalDragUpdate: (details) {
+                              // Calculate star position based on drag position
+                              final RenderBox box =
+                                  context.findRenderObject() as RenderBox;
+                              final double width = box.size.width;
+                              final double position = details.localPosition.dx
+                                  .clamp(0, width);
+                              final double starWidth = width / 5;
+
+                              // Convert position to star count (0-5)
+                              int starCount = (position / starWidth).ceil();
+                              starCount = starCount.clamp(0, 5);
+
+                              // Update local state for immediate feedback
+                              if (5 - starCount != currentPriorityLevel) {
+                                setState(() {
+                                  currentPriorityLevel = 5 - starCount;
+                                });
+                              }
+                            },
+                            onHorizontalDragEnd: (details) {
+                              // Save the priority when drag ends
+                              Navigator.pop(context);
+
+                              // Convert current priority level to backend format
+                              bool isPriority = currentPriorityLevel < 5;
+                              _togglePriority(
+                                paint.id,
+                                !isPriority,
+                                _id,
+                                5 - currentPriorityLevel,
+                              );
+                            },
+                            child: Container(
+                              color:
+                                  Colors
+                                      .transparent, // Make entire area tappable
+                              height: 40,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(5, (index) {
+                                  return IconButton(
+                                    icon: Icon(
+                                      index < (5 - currentPriorityLevel)
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      size: 28,
+                                      color: AppTheme.marineOrange,
+                                    ),
+                                    onPressed: () {
+                                      // Update local state first for immediate feedback
+                                      setState(() {
+                                        // Toggle between this star level and no priority
+                                        if (currentPriorityLevel == index + 1) {
+                                          currentPriorityLevel =
+                                              5; // No priority
+                                        } else {
+                                          currentPriorityLevel =
+                                              index + 1; // Set to this priority
+                                        }
+                                      });
+
+                                      // Close modal and update server
+                                      Navigator.pop(context);
+
+                                      // Convert current priority level to backend format
+                                      bool isPriority =
+                                          currentPriorityLevel < 5;
+                                      _togglePriority(
+                                        paint.id,
+                                        !isPriority,
+                                        _id,
+                                        5 - currentPriorityLevel,
+                                      );
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    splashRadius: 20,
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
+
+                          // Added indicator text to show sliding capability
+                          Center(
+                            child: Text(
+                              'Slide to adjust priority',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[500]
+                                        : Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // Paint info section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Paint type information
                           Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.color_lens,
-                                size: 12,
-                                color: Colors.grey[600],
+                                Icons.category,
+                                size: 18,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
                               ),
-                              const SizedBox(width: 2),
+                              const SizedBox(width: 8),
                               Text(
-                                paint.hex,
+                                'Type:',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.qr_code,
-                                size: 12,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 2),
+                              const SizedBox(width: 4),
                               Text(
-                                'EAN-13',
+                                paint.isMetallic
+                                    ? 'Metallic'
+                                    : paint.isTransparent
+                                    ? 'Transparent'
+                                    : 'Standard',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
+                      const SizedBox(height: 24),
 
-                  // Paint type information
-                  Row(
-                    children: [
-                      Icon(Icons.category, size: 18, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Type:',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        paint.isMetallic
-                            ? 'Metallic'
-                            : paint.isTransparent
-                            ? 'Transparent'
-                            : 'Standard',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Palettes info (limit to 2 with View More)
-                  if (palettes.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          size: 18,
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'In Palettes:',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              _buildPaletteChips(palettes),
-                            ],
+                      // Add to inventory button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _addToInventory(paint, _id);
+                          },
+                          icon: Icon(Icons.add_shopping_cart),
+                          label: Text('Add to Inventory'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor:
+                                isDarkMode
+                                    ? AppTheme.marineOrange
+                                    : AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
-
-                  // Action buttons
-                  _buildActionButton(
-                    icon: isPriority ? Icons.star : Icons.star_border,
-                    text: isPriority ? 'Remove priority' : 'Mark as priority',
-                    color:
-                        isPriority
-                            ? Colors.amber
-                            : Theme.of(context).colorScheme.primary,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _togglePriority(paint.id, isPriority, _id);
-                    },
-                  ),
-
-                  _buildActionButton(
-                    icon: Icons.add_shopping_cart,
-                    text: 'Add to inventory',
-                    color: AppTheme.primaryBlue,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _addToInventory(paint, _id);
-                    },
-                  ),
-
-                  _buildActionButton(
-                    icon: Icons.delete_outline,
-                    text: 'Remove from wishlist',
-                    color: Colors.red,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _removeFromWishlist(paint.id, paint.name, _id);
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Cancel button with lighter color and rounded style
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
                       ),
-                      child: const Text('Cancel'),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  /// Helper to build action buttons for the bottom sheet
-  Widget _buildActionButton({
-    required IconData icon,
-    required String text,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 22),
-                const SizedBox(width: 16),
-                Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: color,
+  // Create a new section for the palettes in the modal
+  Widget _buildPalettesSection(List<Palette> palettes, bool isDarkMode) {
+    // Demo palettes data if needed
+    final demoPalettes = [
+      {'name': 'Space Marines', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Imperial Guard', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Tau Empire', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Eldar Craftworlds', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Orks', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Tyranids', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Necrons', 'color': Color(0xFFD8BFD8)},
+    ];
+
+    // Use demo data or real data
+    final displayPalettes =
+        palettes.isNotEmpty
+            ? palettes
+            : demoPalettes
+                .map(
+                  (p) => Palette(
+                    id: p['name'] as String,
+                    name: p['name'] as String,
+                    imagePath: '',
+                    colors: [p['color'] as Color],
+                    createdAt: DateTime.now(),
                   ),
+                )
+                .toList();
+
+    // If there are no palettes, early return demo UI
+    if (displayPalettes.isEmpty) {
+      return Container();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.black12 : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.palette_outlined, size: 18, color: Color(0xFF9370DB)),
+              SizedBox(width: 8),
+              Text(
+                'In Palettes:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
                 ),
-                const Spacer(),
-                Icon(Icons.chevron_right, color: color.withOpacity(0.5)),
-              ],
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              // Show first two palettes
+              ...displayPalettes
+                  .take(2)
+                  .map(
+                    (palette) => _buildPaletteChip(palette.name, isDarkMode),
+                  ),
+
+              // Only add "+5 more" button if there are more than 2 palettes
+              if (displayPalettes.length > 2)
+                _buildMorePalettesChip(
+                  '${displayPalettes.length - 2} more',
+                  isDarkMode,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build an individual palette chip
+  Widget _buildPaletteChip(String name, bool isDarkMode) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color(0xFFD8BFD8), // Light purple background
+        borderRadius: BorderRadius.circular(4), // Much less rounded corners
+      ),
+      child: Text(
+        name,
+        style: TextStyle(
+          color: Color(0xFF673AB7), // Deep purple text
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  // Build the "more palettes" chip
+  Widget _buildMorePalettesChip(String text, bool isDarkMode) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[200], // Light grey background
+        borderRadius: BorderRadius.circular(
+          4,
+        ), // Less rounded, matching other chips
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '+$text',
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
             ),
           ),
-        ),
+          Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
+        ],
       ),
     );
   }
