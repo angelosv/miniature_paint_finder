@@ -1592,7 +1592,7 @@ class _InventoryItemModalState extends State<InventoryItemModal> {
     final String addedDate = widget.formatAddedDate(widget.item);
 
     // Get palettes using this paint
-    final palettesUsingPaint = widget.getPalettesUsingPaint(paint.id);
+    final palettesUsingPaint = widget.item.palettes ?? [];
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,

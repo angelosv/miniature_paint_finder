@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/brand_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
@@ -23,6 +24,8 @@ class WishlistScreen extends StatefulWidget {
 class _WishlistScreenState extends State<WishlistScreen> {
   final PaintService _paintService = PaintService();
   final BrandService _brandService = BrandService();
+  final InventoryService _inventoryService = InventoryService();
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -242,7 +245,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  Future<void> _addToInventory(Paint paint, String _id) async {
+  Future<void> _addToInventory(String brandId, Paint paint, String _id) async {
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (context) => _AddToInventoryDialog(paint: paint),
@@ -252,22 +255,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
         print(
           '🔄 Adding ${paint.name} to inventory, quantity: ${result['quantity']}',
         );
-        await _paintService.addToInventory(
-          paint,
-          result['quantity'] as int,
-          note: result['note'] as String?,
+        final success = await _inventoryService.addInventoryRecord(
+          brandId: brandId,
+          paintId: paint.id,
+          quantity: result['quantity'] as int,
+          notes: result['note'] as String?,
         );
         print('✅ Paint added to inventory');
         final controller = context.read<WishlistController>();
         final deleteResult = await controller.removeFromWishlist(paint.id, _id);
-        if (deleteResult) {
+        if (deleteResult && success) {
           print('✅ Paint removed from wishlist');
         } else {
           print(
             '⚠️ Could not remove paint from wishlist after adding to inventory',
           );
         }
-        if (mounted) {
+        if (mounted && success && deleteResult) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${paint.name} added to inventory'),
@@ -1086,7 +1090,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pop(context);
-                            _addToInventory(paint, _id);
+                            _addToInventory(brandId, paint, _id);
                           },
                           icon: const Icon(Icons.add_shopping_cart),
                           label: const Text('Add to Inventory'),
