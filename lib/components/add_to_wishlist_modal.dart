@@ -54,189 +54,194 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E2229) : Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E2229) : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Título del modal
-          Text(
-            'Add to Wishlist',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Detalles de la pintura
-          Row(
-            children: [
-              // Swatch de color
-              Container(
-                width: 60,
-                height: 60,
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: paintColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(width: 16),
+            ),
+            const SizedBox(height: 16),
 
-              // Nombre y marca
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      paint.name,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      paint.brand,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
+            // Título del modal
+            Text(
+              'Add to Wishlist',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Selector de prioridad con estrellas
-          Text(
-            'Priority',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: isDarkMode ? Colors.white : Colors.black87,
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: List.generate(5, (index) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedPriority = index + 1;
-                  });
-                },
-                child: Icon(
-                  index < _selectedPriority ? Icons.star : Icons.star_border,
-                  color:
-                      index < _selectedPriority
-                          ? AppTheme.marineOrange
-                          : isDarkMode
-                          ? Colors.grey[400]
-                          : Colors.grey[500],
-                  size: 36,
-                ),
-              );
-            }),
-          ),
-
-          // Texto descriptivo de la prioridad
-          Text(
-            _getPriorityLabel(_selectedPriority),
-            style: TextStyle(
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Campo de notas opcional
-          TextField(
-            controller: _notesController,
-            decoration: InputDecoration(
-              labelText: 'Notes (optional)',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              hintText: 'Add any notes about this paint...',
-            ),
-            maxLines: 2,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Botones de acción
-          Row(
-            children: [
-              // Botón de cancelar
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            // Detalles de la pintura
+            Row(
+              children: [
+                // Swatch de color
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: paintColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
                   ),
-                  child: const Text('Cancel'),
                 ),
-              ),
-              const SizedBox(width: 16),
+                const SizedBox(width: 16),
 
-              // Botón de confirmar
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    // Ahora el componente padre se encargará de hacer la llamada a la API
-                    // y mostrar mensajes de éxito o error
-                    widget.onAddToWishlist(widget.paint, _selectedPriority);
+                // Nombre y marca
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        paint.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        paint.brand,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Selector de prioridad con estrellas
+            Text(
+              'Priority',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: List.generate(5, (index) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedPriority = index + 1;
+                    });
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isDarkMode ? Colors.pinkAccent : Colors.pink,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  child: Icon(
+                    index < _selectedPriority ? Icons.star : Icons.star_border,
+                    color:
+                        index < _selectedPriority
+                            ? AppTheme.marineOrange
+                            : isDarkMode
+                            ? Colors.grey[400]
+                            : Colors.grey[500],
+                    size: 36,
                   ),
-                  child: const Text('Add to Wishlist'),
-                ),
+                );
+              }),
+            ),
+
+            // Texto descriptivo de la prioridad
+            Text(
+              _getPriorityLabel(_selectedPriority),
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
               ),
-            ],
-          ),
-        ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Campo de notas opcional
+            TextField(
+              controller: _notesController,
+              decoration: InputDecoration(
+                labelText: 'Notes (optional)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                hintText: 'Add any notes about this paint...',
+              ),
+              maxLines: 2,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Botones de acción
+            Row(
+              children: [
+                // Botón de cancelar
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Botón de confirmar
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Ahora el componente padre se encargará de hacer la llamada a la API
+                      // y mostrar mensajes de éxito o error
+                      widget.onAddToWishlist(widget.paint, _selectedPriority);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isDarkMode ? Colors.pinkAccent : Colors.pink,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Add to Wishlist'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
