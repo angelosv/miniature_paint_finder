@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
@@ -14,9 +15,7 @@ import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
-  /// Constructs the wishlist screen
   const WishlistScreen({super.key});
-
   @override
   State<WishlistScreen> createState() => _WishlistScreenState();
 }
@@ -29,16 +28,15 @@ class _WishlistScreenState extends State<WishlistScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar wishlist cuando se inicia el widget
+    // Cargar wishlist cuando se inicia el widget.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WishlistController>().loadWishlist();
       _loadBrandData();
     });
   }
 
-  /// Carga los datos de marcas y logotipos
+  /// Carga los datos de marcas y logotipos.
   Future<void> _loadBrandData() async {
-    // Ensure brands are loaded before trying to display logos
     print('🔄 Initializing BrandService...');
     final success = await _brandService.initialize();
     print(
@@ -48,25 +46,19 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  /// Determinar el brandId correcto de forma segura
+  /// Determinar el brandId correcto de forma segura.
   String _getSafeBrandId(Paint paint) {
     try {
       final brandId = _brandService.getBrandId(paint.brand);
-      if (brandId != null) {
-        return brandId;
-      }
-
-      // Si no se encontró, intentar casos especiales
+      if (brandId != null) return brandId;
       if ((paint.brand.toLowerCase().contains('army') &&
               paint.brand.toLowerCase().contains('painter')) ||
           paint.brand.toLowerCase().contains('warpaint')) {
         return 'Army_Painter';
       }
-
       if (paint.brand.toLowerCase().contains('citadel')) {
         return 'Citadel_Colour';
       }
-
       return paint.brand;
     } catch (e) {
       print('⚠️ Error determinando brandId: $e');
@@ -74,7 +66,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  /// Obtener el nombre oficial de marca de forma segura
+  /// Obtener el nombre oficial de marca de forma segura.
   String _getSafeBrandName(String brandId, String fallbackName) {
     try {
       final name = _brandService.getBrandName(brandId);
@@ -85,57 +77,64 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
-  /// Construye el logo de la marca para la tarjeta
-  Widget _buildBrandLogo(String brandId, String brandName, bool isDarkMode) {
-    // Get logo URL from BrandService
-    final String? logoUrl = _brandService.getLogoUrl(brandId);
-
-    return Container(
+  /// Construye el logo de la marca para la tarjeta.
+  Widget _buildBrandLogo(
+    String brandId,
+    Map<String, dynamic> brand,
+    String brandName,
+    bool isDarkMode,
+  ) {
+    final String? logoUrl = brand["logo_url"];
+    return SizedBox(
       width: 50,
       height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+            width: 1,
+          ),
         ),
-      ),
-      child:
-          logoUrl != null
-              ? ClipOval(
-                child: Center(
-                  child: Image.network(
-                    logoUrl,
-                    width: 40, // Slightly smaller to ensure it fits
-                    height: 40,
+        child:
+            logoUrl != null
+                ? ClipOval(
+                  child: FittedBox(
                     fit: BoxFit.contain,
-                    errorBuilder: (ctx, err, stack) {
-                      print('⚠️ Image load error for $brandId: $err');
-                      return Text(
-                        brandName.isNotEmpty ? brandName[0].toUpperCase() : '?',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      );
-                    },
+                    child: Image.network(
+                      logoUrl,
+                      // No se especifica ancho y alto para dejar que el FittedBox haga su trabajo
+                      errorBuilder: (ctx, err, stack) {
+                        print('⚠️ Image load error for $brandId: $err');
+                        return Text(
+                          brandName.isNotEmpty
+                              ? brandName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                )
+                : Center(
+                  child: Text(
+                    brandName.isNotEmpty ? brandName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
-              )
-              : Center(
-                child: Text(
-                  brandName.isNotEmpty ? brandName[0].toUpperCase() : '?',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
+      ),
     );
   }
 
-  /// Update the togglePriority method to handle priority levels
+  /// _togglePriority:
+  /// Calcula el nuevo valor de prioridad (0 a 5), donde 0 indica “sin prioridad” y 1 a 5 indica que el ítem es prioritario.
   Future<void> _togglePriority(
     String paintId,
     bool currentPriority,
@@ -143,30 +142,25 @@ class _WishlistScreenState extends State<WishlistScreen> {
     int priorityLevel = 0,
   ]) async {
     try {
-      // Use the priorityLevel parameter to determine the new priority
       final controller = context.read<WishlistController>();
-
-      // Note: In our API, lower numbers = higher priority (0 is highest)
-      // Convert UI priority level to API priority level
-      final bool newPriorityFlag = priorityLevel > 0;
+      // Forzar que priorityLevel esté en el rango [0, 5]
+      final int newPriority = priorityLevel.clamp(0, 5);
+      // Se considera prioritario si hay al menos 1 estrella.
+      final bool newPriorityFlag = newPriority >= 1;
       final result = await controller.updatePriority(
         paintId,
         _id,
         newPriorityFlag,
-        priorityLevel,
+        newPriority,
       );
-
       if (mounted && result) {
-        String priorityMessage;
-        if (priorityLevel <= 0) {
-          priorityMessage = 'Removed from priority';
-        } else {
-          priorityMessage = 'Priority set to ${5 - priorityLevel} stars';
-        }
-
+        final message =
+            newPriority >= 1
+                ? 'Priority set to $newPriority stars'
+                : 'Removed from priority';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(priorityMessage),
+            content: Text(message),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -213,14 +207,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ],
           ),
     );
-
-    if (confirmed != true) {
-      return;
-    }
-
+    if (confirmed != true) return;
     final controller = context.read<WishlistController>();
     final result = await controller.removeFromWishlist(paintId, _id);
-
     if (result && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -228,13 +217,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
           action: SnackBarAction(
             label: 'UNDO',
             onPressed: () async {
-              // Find the paint in our list to get the priority status
               final wishlistItems = controller.wishlistItems;
               final item = wishlistItems.firstWhere(
                 (item) => (item['paint'] as Paint).id == paintId,
                 orElse: () => {'paint': null, 'isPriority': false},
               );
-
               if (item['paint'] != null) {
                 await controller.addToWishlist(
                   item['paint'] as Paint,
@@ -260,31 +247,26 @@ class _WishlistScreenState extends State<WishlistScreen> {
       context: context,
       builder: (context) => _AddToInventoryDialog(paint: paint),
     );
-
     if (result != null) {
       try {
         print(
-          '🔄 Añadiendo ${paint.name} al inventario con cantidad: ${result['quantity']}',
+          '🔄 Adding ${paint.name} to inventory, quantity: ${result['quantity']}',
         );
         await _paintService.addToInventory(
           paint,
           result['quantity'] as int,
           note: result['note'] as String?,
         );
-        print('✅ Pintura añadida al inventario correctamente');
-
-        // Remove from wishlist
+        print('✅ Paint added to inventory');
         final controller = context.read<WishlistController>();
         final deleteResult = await controller.removeFromWishlist(paint.id, _id);
-
         if (deleteResult) {
-          print('✅ Pintura eliminada de wishlist correctamente');
+          print('✅ Paint removed from wishlist');
         } else {
           print(
-            '⚠️ No se pudo eliminar la pintura de wishlist tras añadirla al inventario',
+            '⚠️ Could not remove paint from wishlist after adding to inventory',
           );
         }
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -294,7 +276,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           );
         }
       } catch (e) {
-        print('❌ Error al añadir al inventario: $e');
+        print('❌ Error adding to inventory: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -305,23 +287,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
         }
       }
     } else {
-      print('ℹ️ Usuario canceló la adición al inventario');
+      print('ℹ️ User cancelled adding to inventory');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Wishlist',
-      selectedIndex: 2, // Uso del índice 2 para Wishlist
+      selectedIndex: 2,
       body: _buildBody(),
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // Navigate to Library or Paint Browser
           Navigator.pop(context);
         },
         backgroundColor:
@@ -340,7 +320,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
         if (controller.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (controller.hasError) {
           return Center(
             child: Column(
@@ -363,11 +342,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ),
           );
         }
-
         if (controller.isEmpty) {
           return _buildEmptyState();
         }
-
         return _buildWishlistContent(controller.wishlistItems);
       },
     );
@@ -375,15 +352,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   Widget _buildEmptyState() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            'assets/images/wishlist_palceholder.png',
+          SizedBox(
             width: 200,
             height: 200,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: Image.asset('assets/images/wishlist_palceholder.png'),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -408,38 +387,40 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   Widget _buildWishlistContent(List<Map<String, dynamic>> wishlistItems) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return ListView.builder(
       itemCount: wishlistItems.length,
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         final item = wishlistItems[index];
         final paint = item['paint'] as Paint;
-        final isPriority = item['isPriority'] as bool;
-        final _id = item['id'] as String;
-        final addedAt = item['addedAt'] as DateTime;
-
-        // Get color from hex or colorHex property
+        final brand = item['brand'] as Map<String, dynamic>;
+        final int priorityLevel = item['priority'] ?? 0;
+        final bool itemIsPriority = priorityLevel >= 1 && priorityLevel <= 5;
+        final String _id = item['id'] as String;
+        final DateTime addedAt = item['addedAt'] as DateTime;
         final String colorCode = paint.hex;
         final Color paintColor = Color(
           int.parse(colorCode.substring(1), radix: 16) + 0xFF000000,
         );
-
-        // Determine correct brand ID and get official brand name
         final String brandId = _getSafeBrandId(paint);
         final String officialBrandName = _getSafeBrandName(
           brandId,
           paint.brand,
         );
 
-        // Get priority level (0-5) where 0 is highest priority
-        // Backend uses 0 for high priority, -1 for no priority
-        final int priorityLevel = isPriority ? 0 : 5;
+        // Display the star row using the actual priority level.
+        final starRow = Row(
+          children: List.generate(5, (index) {
+            return Icon(
+              index < priorityLevel ? Icons.star : Icons.star_border,
+              size: 16,
+              color: AppTheme.marineOrange,
+            );
+          }),
+        );
 
-        // Get palettes containing this paint
         final palettes = _paintService.getPalettesContainingPaint(paint.id);
 
-        // Card to display
         final card = Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 16),
@@ -453,7 +434,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
           color: isDarkMode ? AppTheme.darkSurface : Colors.white,
           child: InkWell(
             onTap: () {
-              _showPaintDetails(paint, isPriority, _id, palettes);
+              // Here we pass the actual priority level.
+              _showPaintDetails(paint, priorityLevel, _id, palettes, brand);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -464,7 +446,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Paint color
                       Container(
                         width: 55,
                         height: 55,
@@ -481,8 +462,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         ),
                       ),
                       const SizedBox(width: 16),
-
-                      // Paint details
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,41 +493,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 8),
-
-                            // Star rating based on priority
-                            Row(
-                              children: [
-                                ...List.generate(5, (index) {
-                                  return Icon(
-                                    index < (5 - priorityLevel)
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    size: 16,
+                            starRow,
+                            if (itemIsPriority)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Text(
+                                  'PRIORITY',
+                                  style: TextStyle(
                                     color: AppTheme.marineOrange,
-                                  );
-                                }),
-                                if (isPriority)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 4),
-                                    child: Text(
-                                      'PRIORITY',
-                                      style: TextStyle(
-                                        color: AppTheme.marineOrange,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
-                              ],
-                            ),
-
+                                ),
+                              ),
                             const SizedBox(height: 8),
-
-                            // Category tags and Added date in one row
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Category tag
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
@@ -576,8 +537,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                     ),
                                   ),
                                 ),
-
-                                // Special properties tag
                                 if (paint.isMetallic || paint.isTransparent)
                                   Padding(
                                     padding: const EdgeInsets.only(left: 8),
@@ -607,8 +566,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                       ),
                                     ),
                                   ),
-
-                                // Added date
                                 const Spacer(),
                                 Text(
                                   'Added ${_formatDate(addedAt)}',
@@ -623,8 +580,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 ),
                               ],
                             ),
-
-                            // Palette tags if any
                             if (palettes.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
@@ -649,9 +604,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ],
                         ),
                       ),
-
-                      // Brand logo
-                      _buildBrandLogo(brandId, officialBrandName, isDarkMode),
+                      _buildBrandLogo(
+                        brandId,
+                        brand,
+                        officialBrandName,
+                        isDarkMode,
+                      ),
                     ],
                   ),
                 ],
@@ -659,12 +617,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
             ),
           ),
         );
-
-        // Wrap card with dismissible for swipe-to-delete but use direct deletion without confirmations
         return Dismissible(
           key: Key(_id),
           direction: DismissDirection.endToStart,
-          // Properly align the background with the card
           background: Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
@@ -675,7 +630,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
             padding: const EdgeInsets.only(right: 20),
             child: const Icon(Icons.delete, color: Colors.white),
           ),
-          // Only confirm once with dialog
           confirmDismiss: (direction) async {
             return await showDialog<bool>(
                   context: context,
@@ -708,37 +662,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  /// Build palette chips, limiting to 3 initially with a "View more" option
+  /// Build palette chips, limiting to 3 initially with a "View more" option.
   Widget _buildPaletteChips(List<Palette> palettes, bool isDarkMode) {
-    // State for expanded view
+    // State for expanded view.
     bool isExpanded = false;
-
-    // Lilac colors for palette chips
     final chipColor =
         isDarkMode
-            ? Color(0xFF9370DB).withOpacity(
-              0.3,
-            ) // Medium purple with opacity for dark mode
-            : Color(
-              0xFFD8BFD8,
-            ).withOpacity(0.6); // Thistle color with opacity for light mode
-
-    final textColor =
-        isDarkMode
-            ? Color(0xFFE6E6FA) // Lavender for dark mode
-            : Color(0xFF7B68EE); // Medium slate blue for light mode
-
+            ? Color(0xFF9370DB).withOpacity(0.3)
+            : Color(0xFFD8BFD8).withOpacity(0.6);
+    final textColor = isDarkMode ? Color(0xFFE6E6FA) : Color(0xFF7B68EE);
     final borderColor =
         isDarkMode
             ? Color(0xFF9370DB).withOpacity(0.5)
             : Color(0xFF9370DB).withOpacity(0.3);
-
     return StatefulBuilder(
       builder: (context, setState) {
-        // Show all palettes if expanded, otherwise limit to 3
         final displayPalettes =
             isExpanded ? palettes : palettes.take(3).toList();
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -767,8 +707,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                     ),
                   );
                 }),
-
-                // Show "View more" chip if there are more than 3 palettes and not expanded
                 if (palettes.length > 3 && !isExpanded)
                   GestureDetector(
                     onTap: () {
@@ -816,8 +754,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
               ],
             ),
-
-            // Show collapse option if expanded
             if (isExpanded && palettes.length > 3)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -843,22 +779,20 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  /// Shows a bottom sheet with actions for a paint
+  /// Shows a bottom sheet with actions for a paint.
+  /// Se modifica el segundo parámetro a `int currentPriority` para pasar el valor actual.
   void _showPaintDetails(
     Paint paint,
-    bool isPriority,
+    int currentPriority,
     String _id,
     List<Palette> palettes,
+    Map<String, dynamic> brand,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Determine brand ID and name
     final String brandId = _getSafeBrandId(paint);
     final String officialBrandName = _getSafeBrandName(brandId, paint.brand);
-
-    // Current priority level (5 = no priority, 0-4 = priority level)
-    int currentPriorityLevel = isPriority ? 0 : 5;
-
+    // currentPriority (0 = no priority, 1-5 = active priority)
+    int currentPriorityLevel = currentPriority;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -895,11 +829,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
                       // Paint info header with brand logo on the right
                       Row(
                         children: [
-                          // Paint color
                           Container(
                             width: 55,
                             height: 55,
@@ -919,8 +851,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             ),
                           ),
                           const SizedBox(width: 16),
-
-                          // Paint name, brand and additional info
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -948,7 +878,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                     fontSize: 14,
                                   ),
                                 ),
-                                // Add color code
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
@@ -973,7 +902,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                     ),
                                   ],
                                 ),
-                                // Add barcode/hex
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
@@ -1001,24 +929,19 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               ],
                             ),
                           ),
-
-                          // Brand logo
                           _buildBrandLogo(
                             brandId,
+                            brand,
                             officialBrandName,
                             isDarkMode,
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Add palette section above priority stars
+                      // Palette section
                       _buildPalettesSection(palettes, isDarkMode),
-
                       const SizedBox(height: 20),
-
-                      // Interactive star rating with sliding gesture
+                      // Star rating with sliding gesture
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1031,23 +954,16 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-
-                          // Star rating with sliding gesture
                           GestureDetector(
                             onHorizontalDragUpdate: (details) {
-                              // Calculate star position based on drag position
                               final RenderBox box =
                                   context.findRenderObject() as RenderBox;
                               final double width = box.size.width;
                               final double position = details.localPosition.dx
                                   .clamp(0, width);
                               final double starWidth = width / 5;
-
-                              // Convert position to star count (0-5)
                               int starCount = (position / starWidth).ceil();
                               starCount = starCount.clamp(0, 5);
-
-                              // Update local state for immediate feedback
                               if (5 - starCount != currentPriorityLevel) {
                                 setState(() {
                                   currentPriorityLevel = 5 - starCount;
@@ -1055,70 +971,52 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               }
                             },
                             onHorizontalDragEnd: (details) {
-                              // Save the priority when drag ends
                               Navigator.pop(context);
-
-                              // Convert current priority level to backend format
-                              bool isPriority = currentPriorityLevel < 5;
                               _togglePriority(
                                 paint.id,
-                                !isPriority,
+                                currentPriorityLevel >= 1,
                                 _id,
-                                5 - currentPriorityLevel,
+                                currentPriorityLevel,
                               );
                             },
                             child: Container(
-                              color:
-                                  Colors
-                                      .transparent, // Make entire area tappable
+                              color: Colors.transparent,
                               height: 40,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: List.generate(5, (index) {
                                   return IconButton(
                                     icon: Icon(
-                                      index < (5 - currentPriorityLevel)
+                                      index < currentPriorityLevel
                                           ? Icons.star
                                           : Icons.star_border,
                                       size: 28,
                                       color: AppTheme.marineOrange,
                                     ),
                                     onPressed: () {
-                                      // Update local state first for immediate feedback
                                       setState(() {
-                                        // Toggle between this star level and no priority
                                         if (currentPriorityLevel == index + 1) {
-                                          currentPriorityLevel =
-                                              5; // No priority
+                                          currentPriorityLevel = 0;
                                         } else {
-                                          currentPriorityLevel =
-                                              index + 1; // Set to this priority
+                                          currentPriorityLevel = index + 1;
                                         }
                                       });
-
-                                      // Close modal and update server
                                       Navigator.pop(context);
-
-                                      // Convert current priority level to backend format
-                                      bool isPriority =
-                                          currentPriorityLevel < 5;
                                       _togglePriority(
                                         paint.id,
-                                        !isPriority,
+                                        currentPriorityLevel >= 1,
                                         _id,
-                                        5 - currentPriorityLevel,
+                                        currentPriorityLevel,
                                       );
                                     },
                                     padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
+                                    constraints: const BoxConstraints(),
                                     splashRadius: 20,
                                   );
                                 }),
                               ),
                             ),
                           ),
-
-                          // Added indicator text to show sliding capability
                           Center(
                             child: Text(
                               'Slide to adjust priority',
@@ -1134,16 +1032,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 16),
-
                       // Paint info section
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Paint type information
                           Row(
                             children: [
                               Icon(
@@ -1185,10 +1080,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Add to inventory button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -1196,10 +1088,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             Navigator.pop(context);
                             _addToInventory(paint, _id);
                           },
-                          icon: Icon(Icons.add_shopping_cart),
-                          label: Text('Add to Inventory'),
+                          icon: const Icon(Icons.add_shopping_cart),
+                          label: const Text('Add to Inventory'),
                           style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor:
                                 isDarkMode
                                     ? AppTheme.marineOrange
@@ -1222,20 +1114,16 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  // Create a new section for the palettes in the modal
   Widget _buildPalettesSection(List<Palette> palettes, bool isDarkMode) {
-    // Demo palettes data if needed
     final demoPalettes = [
-      {'name': 'Space Marines', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Imperial Guard', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Tau Empire', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Eldar Craftworlds', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Orks', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Tyranids', 'color': Color(0xFFD8BFD8)},
-      {'name': 'Necrons', 'color': Color(0xFFD8BFD8)},
+      {'name': 'Space Marines', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Imperial Guard', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Tau Empire', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Eldar Craftworlds', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Orks', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Tyranids', 'color': const Color(0xFFD8BFD8)},
+      {'name': 'Necrons', 'color': const Color(0xFFD8BFD8)},
     ];
-
-    // Use demo data or real data
     final displayPalettes =
         palettes.isNotEmpty
             ? palettes
@@ -1250,15 +1138,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                 )
                 .toList();
-
-    // If there are no palettes, early return demo UI
-    if (displayPalettes.isEmpty) {
-      return Container();
-    }
-
+    if (displayPalettes.isEmpty) return Container();
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
         color: isDarkMode ? Colors.black12 : Colors.grey[50],
         borderRadius: BorderRadius.circular(8),
@@ -1268,8 +1151,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.palette_outlined, size: 18, color: Color(0xFF9370DB)),
-              SizedBox(width: 8),
+              const Icon(
+                Icons.palette_outlined,
+                size: 18,
+                color: Color(0xFF9370DB),
+              ),
+              const SizedBox(width: 8),
               Text(
                 'In Palettes:',
                 style: TextStyle(
@@ -1280,19 +1167,16 @@ class _WishlistScreenState extends State<WishlistScreen> {
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              // Show first two palettes
               ...displayPalettes
                   .take(2)
                   .map(
                     (palette) => _buildPaletteChip(palette.name, isDarkMode),
                   ),
-
-              // Only add "+5 more" button if there are more than 2 palettes
               if (displayPalettes.length > 2)
                 _buildMorePalettesChip(
                   '${displayPalettes.length - 2} more',
@@ -1305,18 +1189,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  // Build an individual palette chip
   Widget _buildPaletteChip(String name, bool isDarkMode) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Color(0xFFD8BFD8), // Light purple background
-        borderRadius: BorderRadius.circular(4), // Much less rounded corners
+        color: const Color(0xFFD8BFD8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         name,
-        style: TextStyle(
-          color: Color(0xFF673AB7), // Deep purple text
+        style: const TextStyle(
+          color: Color(0xFF673AB7),
           fontWeight: FontWeight.w500,
           fontSize: 14,
         ),
@@ -1324,15 +1207,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  // Build the "more palettes" chip
   Widget _buildMorePalettesChip(String text, bool isDarkMode) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey[200], // Light grey background
-        borderRadius: BorderRadius.circular(
-          4,
-        ), // Less rounded, matching other chips
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1354,25 +1234,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
+    if (difference.inDays == 0)
       return 'Today';
-    } else if (difference.inDays == 1) {
+    else if (difference.inDays == 1)
       return 'Yesterday';
-    } else if (difference.inDays < 7) {
+    else if (difference.inDays < 7)
       return '${difference.inDays} days ago';
-    } else {
+    else
       return '${date.month}/${date.day}/${date.year}';
-    }
   }
 }
 
-/// Dialog to add a paint to inventory
+/// Dialog to add a paint to inventory.
 class _AddToInventoryDialog extends StatefulWidget {
   final Paint paint;
-
   const _AddToInventoryDialog({required this.paint});
-
   @override
   State<_AddToInventoryDialog> createState() => _AddToInventoryDialogState();
 }
@@ -1380,7 +1256,6 @@ class _AddToInventoryDialog extends StatefulWidget {
 class _AddToInventoryDialogState extends State<_AddToInventoryDialog> {
   int _quantity = 1;
   String? _note;
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -1391,8 +1266,6 @@ class _AddToInventoryDialogState extends State<_AddToInventoryDialog> {
         children: [
           const Text('How many do you have?'),
           const SizedBox(height: 16),
-
-          // Quantity selector
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -1433,10 +1306,7 @@ class _AddToInventoryDialogState extends State<_AddToInventoryDialog> {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Note field
           TextField(
             decoration: const InputDecoration(
               labelText: 'Note (optional)',

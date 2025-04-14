@@ -255,7 +255,9 @@ class WishlistController extends ChangeNotifier {
         // Actualizar el elemento en la lista local
         final index = _wishlistItems.indexWhere((item) => item['id'] == id);
         if (index != -1) {
-          _wishlistItems[index]['isPriority'] = isPriority || priorityLevel > 0;
+          _wishlistItems[index]['isPriority'] =
+              priorityLevel >= 1 && priorityLevel <= 5;
+
           // Store the actual priority level too
           if (priorityLevel > 0) {
             _wishlistItems[index]['priority'] = priorityLevel;

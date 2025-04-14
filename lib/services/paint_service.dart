@@ -235,14 +235,7 @@ class PaintService {
 
     // If priorityLevel is provided (0-4), use it as the priority value
     // Otherwise use the standard conversion (0 = priority, -1 = no priority)
-    final int priorityValue;
-    if (priorityLevel > 0 && priorityLevel < 5) {
-      // Use the provided priority level directly (0-4 where 0 is highest)
-      priorityValue = priorityLevel;
-    } else {
-      // Fall back to boolean conversion for backward compatibility
-      priorityValue = isPriority ? 0 : -1;
-    }
+    final int priorityValue = priorityLevel.clamp(0, 5);
 
     // The API expects a body with type and priority fields
     final requestBody = {'type': 'favorite', 'priority': priorityValue};
@@ -376,6 +369,7 @@ class PaintService {
               'isPriority': item['priority'] != null,
               'priority': item['priority'],
               'addedAt': addedAt,
+              'brand': item['brand'],
             });
 
             processedCount++;
@@ -418,6 +412,7 @@ class PaintService {
               'addedAt': DateTime.fromMillisecondsSinceEpoch(
                 createdAt['_seconds'] * 1000,
               ),
+              'brand': item['brand'],
             });
 
             processedCount++;
