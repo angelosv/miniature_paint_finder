@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// Result of a barcode scan with quick actions
@@ -77,12 +78,39 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   bool _isAddingToInventory = false;
   bool _isAddingToPalette = false;
   bool _isAddingToWishlist = false;
+  List<Map<String, dynamic>> _palettes = [];
+  bool _isLoadingPalettes = false;
+  final PaletteService _paletteService = PaletteService();
 
   @override
   void initState() {
     super.initState();
     if (widget.inventoryQuantity != null) {
       _quantity = widget.inventoryQuantity!;
+    }
+    _loadPalettes();
+  }
+
+  Future<void> _loadPalettes() async {
+    setState(() {
+      _isLoadingPalettes = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken() ?? '';
+        final palettes = await _paletteService.getAllPalettesNamesAndIds(token);
+        setState(() {
+          _palettes = palettes;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error cargando paletas: $e');
+    } finally {
+      setState(() {
+        _isLoadingPalettes = false;
+      });
     }
   }
 
@@ -761,12 +789,13 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         const SizedBox(height: 16),
 
         // Palette selector
-        if (widget.userPalettes.isEmpty)
+        if (_isLoadingPalettes)
+          const Center(child: CircularProgressIndicator())
+        else if (_palettes.isEmpty)
           const Text(
             'You have no palettes. Create a new one to add this paint.',
-          ),
-
-        if (widget.userPalettes.isNotEmpty)
+          )
+        else
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -778,21 +807,33 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   border: Border.all(color: Colors.grey.withOpacity(0.3)),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: DropdownButton<Palette>(
-                  value: _selectedPalette,
+                child: DropdownButton<Map<String, dynamic>>(
+                  value: _selectedPalette != null 
+                    ? _palettes.firstWhere(
+                        (palette) => palette['id'] == _selectedPalette!.id,
+                        orElse: () => _palettes.first,
+                      )
+                    : _palettes.first,
                   isExpanded: true,
                   underline: Container(),
-                  items:
-                      widget.userPalettes.map((Palette palette) {
-                        return DropdownMenuItem<Palette>(
-                          value: palette,
-                          child: Text(palette.name),
+                  items: _palettes.map((palette) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: palette,
+                      child: Text(palette['name']),
+                    );
+                  }).toList(),
+                  onChanged: (Map<String, dynamic>? value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedPalette = Palette(
+                          id: value['id'],
+                          name: value['name'],
+                          imagePath: 'assets/images/placeholder.jpg',
+                          colors: [],
+                          createdAt: DateTime.now(),
                         );
-                      }).toList(),
-                  onChanged: (Palette? value) {
-                    setState(() {
-                      _selectedPalette = value;
-                    });
+                      });
+                    }
                   },
                 ),
               ),
