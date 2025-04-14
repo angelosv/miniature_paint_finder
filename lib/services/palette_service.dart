@@ -96,6 +96,39 @@ class PaletteService {
     return picks;
   }
 
+  Future<List<Map<String, dynamic>>> getAllPalettesNamesAndIds(String token) async {
+    final url = Uri.parse('$baseUrl/palettes/simple-list');
+    debugPrint('🌐 URL de getAllPalettesNameAndId: $url');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    debugPrint('📤 Respuesta completa de getAllPalettesNameAndId:');
+    debugPrint('📤 Status Code: ${response.statusCode}');
+    debugPrint('📤 Headers: ${response.headers}');
+    debugPrint('📤 Body: ${response.body}');
+
+    final responseData = jsonDecode(response.body);
+
+    if (responseData['data'] == null) {
+      debugPrint('⚠️ La respuesta no contiene datos de paletas');
+      return [];
+    }
+
+    final palettes = List<Map<String, dynamic>>.from(responseData['data']);
+    
+    // Convertir los datos al formato esperado por el selector
+    return palettes.map((palette) => {
+      'id': palette['id'],
+      'name': palette['name'],
+    }).toList();
+  }
+
   Future<void> addPaintsToPalette(
     String paletteId,
     List<Map<String, dynamic>> paints,
