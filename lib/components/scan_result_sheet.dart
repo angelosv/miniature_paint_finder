@@ -174,314 +174,319 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     final Color paintColor = Color(
       int.parse(widget.paint.hex.substring(1), radix: 16) + 0xFF000000,
     );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
         ),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
+
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            // Header with paint info
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Paint color swatch
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: paintColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.grey.withOpacity(0.3),
-                            width: 1,
+              // Header with paint info
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Paint color swatch
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: paintColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.3),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
-                      ),
-                      const SizedBox(width: 16),
+                        const SizedBox(width: 16),
 
-                      // Paint details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.paint.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: widget.onClose,
-                                  tooltip: 'Close',
-                                ),
-                              ],
-                            ),
-                            Text(
-                              widget.paint.brand,
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue.withOpacity(
-                                      0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    widget.paint.category,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.primaryBlue,
-                                      fontWeight: FontWeight.bold,
+                        // Paint details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      widget.paint.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(fontWeight: FontWeight.bold),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                ),
-                                if (widget.paint.isMetallic ||
-                                    widget.paint.isTransparent) ...[
-                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: widget.onClose,
+                                    tooltip: 'Close',
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                widget.paint.brand,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.amber.withOpacity(0.1),
+                                      color: AppTheme.primaryBlue.withOpacity(
+                                        0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      widget.paint.isMetallic
-                                          ? 'Metallic'
-                                          : 'Transparent',
+                                      widget.paint.category,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.copyWith(
-                                        color: Colors.amber[800],
+                                        color: AppTheme.primaryBlue,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
+                                  if (widget.paint.isMetallic ||
+                                      widget.paint.isTransparent) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        widget.paint.isMetallic
+                                            ? 'Metallic'
+                                            : 'Transparent',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.copyWith(
+                                          color: Colors.amber[800],
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                widget.paint.hex,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Status indicators
+                    const SizedBox(height: 16),
+                    if (widget.isInInventory)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.green.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 24,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.paint.hex,
-                              style: Theme.of(context).textTheme.bodySmall,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'You already have this paint in your inventory',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'Quantity: ${widget.inventoryQuantity}',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _showAddToInventoryDialog,
+                              child: const Text('Edit'),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
 
-                  // Status indicators
-                  const SizedBox(height: 16),
-                  if (widget.isInInventory)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.green.withOpacity(0.3),
+                    if (widget.isInWishlist)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.amber.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 24),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'This paint is in your wishlist',
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 24,
+
+                    if (widget.inPalettes != null &&
+                        widget.inPalettes!.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.purple.withOpacity(0.3),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  'You already have this paint in your inventory',
-                                  style: Theme.of(context).textTheme.bodyLarge
-                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                const Icon(
+                                  Icons.palette,
+                                  color: Colors.purple,
+                                  size: 24,
                                 ),
-                                Text(
-                                  'Quantity: ${widget.inventoryQuantity}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'This paint is in ${widget.inPalettes!.length} ${widget.inPalettes!.length == 1 ? 'palette' : 'palettes'}',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          TextButton(
-                            onPressed: _showAddToInventoryDialog,
-                            child: const Text('Edit'),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (widget.isInWishlist)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.amber.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 24),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'This paint is in your wishlist',
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children:
+                                  widget.inPalettes!
+                                      .map(
+                                        (palette) => Chip(
+                                          label: Text(palette.name),
+                                          backgroundColor: Colors.purple
+                                              .withOpacity(0.1),
+                                        ),
+                                      )
+                                      .toList(),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (widget.inPalettes != null &&
-                      widget.inPalettes!.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.purple.withOpacity(0.3),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.palette,
-                                color: Colors.purple,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'This paint is in ${widget.inPalettes!.length} ${widget.inPalettes!.length == 1 ? 'palette' : 'palettes'}',
-                                  style: Theme.of(context).textTheme.bodyLarge
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children:
-                                widget.inPalettes!
-                                    .map(
-                                      (palette) => Chip(
-                                        label: Text(palette.name),
-                                        backgroundColor: Colors.purple
-                                            .withOpacity(0.1),
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                        ],
+                  ],
+                ),
+              ),
+
+              // Actions
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Quick Actions',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // Action buttons
+                    if (!_isAddingToInventory &&
+                        !_isAddingToPalette &&
+                        !_isAddingToWishlist)
+                      _buildActionButtons(),
+
+                    // Add to inventory form
+                    if (_isAddingToInventory) _buildAddToInventoryForm(),
+
+                    // Add to palette form
+                    if (_isAddingToPalette) _buildAddToPaletteForm(),
+
+                    // Add to wishlist form
+                    if (_isAddingToWishlist) _buildAddToWishlistForm(),
+                  ],
+                ),
               ),
-            ),
-
-            // Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Quick Actions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Action buttons
-                  if (!_isAddingToInventory &&
-                      !_isAddingToPalette &&
-                      !_isAddingToWishlist)
-                    _buildActionButtons(),
-
-                  // Add to inventory form
-                  if (_isAddingToInventory) _buildAddToInventoryForm(),
-
-                  // Add to palette form
-                  if (_isAddingToPalette) _buildAddToPaletteForm(),
-
-                  // Add to wishlist form
-                  if (_isAddingToWishlist) _buildAddToWishlistForm(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
