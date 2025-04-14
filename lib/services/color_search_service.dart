@@ -99,7 +99,10 @@ class ColorSearchService {
       }
 
       debugPrint('🎨 Pinturas finales a enviar: ${jsonEncode(paintsToSend)}');
-      await _paletteService.addPaintsToPalette(paletteId, paintsToSend, token);
+      final paintIds = paintsToSend
+        .map((paint) => paint['id'] as String)
+        .toList();
+      await _paletteService.addPaintsToPalette(paletteId, paintIds);
       debugPrint('✅ Proceso completado exitosamente');
     } catch (e) {
       debugPrint('❌ Error en el proceso: $e');

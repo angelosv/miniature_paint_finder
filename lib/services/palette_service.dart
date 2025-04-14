@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/palette.dart';
+import '../config/api_config.dart';
 
 class PaletteService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  final String baseUrl = ApiConfig.baseUrl;
 
   Future<Map<String, dynamic>> uploadImage(String imagePath, String token) async {
     debugPrint('🖼️ Subiendo imagen: $imagePath');
@@ -96,32 +99,70 @@ class PaletteService {
     return picks;
   }
 
-  Future<void> addPaintsToPalette(
-    String paletteId,
-    List<Map<String, dynamic>> paints,
-    String token,
-  ) async {
-    debugPrint('🎨 Agregando ${paints.length} pinturas a la paleta: $paletteId');
-    debugPrint('📤 Datos a enviar: ${jsonEncode(paints)}');
-    final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
+  Future<List<PaletteSimple>> getSimplePaletteList() async {
+    try {
+      final String? token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      
+      if (token == null) {
+        throw Exception('No authentication token available');
+      }
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(paints),
-    );
+      final response = await http.get(
+        Uri.parse('$baseUrl/palettes/simple-list'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
 
-    debugPrint('📤 Respuesta de agregar pinturas: ${response.body}');
-    final responseData = jsonDecode(response.body);
-
-    if (responseData['executed'] == false) {
-      debugPrint('❌ Error al agregar pinturas: ${responseData['message']}');
-      throw Exception(responseData['message'] ?? 'Error adding paints to palette');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        if (data['executed'] == true && data['data'] != null) {
+          return (data['data'] as List)
+              .map((paletteSimple) => PaletteSimple.fromJson(paletteSimple))
+              .toList();
+        }
+      }
+      
+      throw Exception('Failed to load palettes');
+    } catch (e) {
+      throw Exception('Error fetching palettes: $e');
     }
+  }
 
-    debugPrint('✅ Pinturas agregadas exitosamente');
+  Future<void> addPaintsToPalette(String paletteId, List<Paint> paints) async {
+    try {
+      final String? token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      
+      if (token == null) {
+        throw Exception('No authentication token available');
+      }
+
+      debugPrint('🎨 Adding ${paints.length} paints to palette: $paletteId');
+      debugPrint('📤 Data to send: ${jsonEncode(paints.map((p) => p.id).toList())}');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/palettes/$paletteId/paints'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(paints.map((p) => p.id).toList()),
+      );
+
+      debugPrint('📤 Add paints response: ${response.body}');
+      final responseData = jsonDecode(response.body);
+
+      if (responseData['executed'] == false) {
+        debugPrint('❌ Error adding paints: ${responseData['message']}');
+        throw Exception(responseData['message'] ?? 'Error adding paints to palette');
+      }
+
+      debugPrint('✅ Paints added successfully');
+    } catch (e) {
+      debugPrint('❌ Error in addPaintsToPalette: $e');
+      throw Exception('Failed to add paints to palette: $e');
+    }
   }
 } 

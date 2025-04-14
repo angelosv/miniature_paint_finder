@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import '../services/palette_service.dart';
+import '../repositories/palette_repository.dart';
 
 /// Result of a barcode scan with quick actions
 class ScanResultSheet extends StatefulWidget {
@@ -20,9 +23,6 @@ class ScanResultSheet extends StatefulWidget {
 
   /// Palettes containing this paint
   final List<Palette>? inPalettes;
-
-  /// List of user's palettes to choose from
-  final List<Palette> userPalettes;
 
   /// Callback when adding to inventory
   final Function(Paint paint, int quantity, String? note) onAddToInventory;
@@ -53,7 +53,6 @@ class ScanResultSheet extends StatefulWidget {
     this.inventoryQuantity,
     this.isInWishlist = false,
     this.inPalettes,
-    required this.userPalettes,
     required this.onAddToInventory,
     required this.onUpdateInventory,
     required this.onAddToWishlist,
@@ -71,16 +70,35 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   bool _isPriority = false;
   int _quantity = 1;
   String? _note;
-  Palette? _selectedPalette;
+  PaletteSimple? _selectedPalette;
   bool _isAddingToInventory = false;
   bool _isAddingToPalette = false;
   bool _isAddingToWishlist = false;
+  final PaletteService _paletteService = PaletteService();
+  List<PaletteSimple> _palettes = [];
+  bool _isLoadingPalettes = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.inventoryQuantity != null) {
       _quantity = widget.inventoryQuantity!;
+    }
+    _loadPalettes();
+  }
+
+  Future<void> _loadPalettes() async {
+    try {
+      setState(() => _isLoadingPalettes = true);
+      final paletteList = await _paletteService.getSimplePaletteList();
+      setState(() {
+        _palettes = paletteList;
+        _selectedPalette = _palettes.isNotEmpty ? _palettes.first : null;
+        _isLoadingPalettes = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading palettes: $e');
+      setState(() => _isLoadingPalettes = false);
     }
   }
 
@@ -93,8 +111,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   void _showAddToPaletteDialog() {
     setState(() {
       _isAddingToPalette = true;
-      _selectedPalette =
-          widget.userPalettes.isNotEmpty ? widget.userPalettes.first : null;
     });
   }
 
@@ -128,13 +144,20 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     _showSuccessSnackbar('Inventory updated');
   }
 
-  void _addToPalette() {
-    if (_selectedPalette != null) {
-      widget.onAddToPalette(widget.paint, _selectedPalette!);
-      setState(() {
-        _isAddingToPalette = false;
-      });
-      _showSuccessSnackbar('Paint added to palette ${_selectedPalette!.name}');
+  void _addToPalette() async {
+    try {
+      if (_selectedPalette != null) {
+        debugPrint('Adding paint ${widget.paint.id} to palette ${_selectedPalette!.id}');
+        await _paletteService.addPaintsToPalette(_selectedPalette!.id, [widget.paint.id]);
+        
+        setState(() {
+          _isAddingToPalette = false;
+        });
+        _showSuccessSnackbar('Paint added to palette successfully');
+      }
+    } catch (e) {
+      debugPrint('Error adding paint to palette: $e');
+      _showErrorSnackbar('Error: ${e.toString()}');
     }
   }
 
@@ -163,6 +186,18 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -690,12 +725,13 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         const SizedBox(height: 16),
 
         // Palette selector
-        if (widget.userPalettes.isEmpty)
+        if (_isLoadingPalettes) ...[
+          const Center(child: CircularProgressIndicator()),
+        ] else if (_palettes.isEmpty) ...[
           const Text(
             'You have no palettes. Create a new one to add this paint.',
           ),
-
-        if (widget.userPalettes.isNotEmpty)
+        ] else ...[
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -707,18 +743,17 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   border: Border.all(color: Colors.grey.withOpacity(0.3)),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: DropdownButton<Palette>(
+                child: DropdownButton<PaletteSimple>(
                   value: _selectedPalette,
                   isExpanded: true,
                   underline: Container(),
-                  items:
-                      widget.userPalettes.map((Palette palette) {
-                        return DropdownMenuItem<Palette>(
-                          value: palette,
-                          child: Text(palette.name),
-                        );
-                      }).toList(),
-                  onChanged: (Palette? value) {
+                  items: _palettes.map((PaletteSimple palette) {
+                    return DropdownMenuItem<PaletteSimple>(
+                      value: palette,
+                      child: Text(palette.name),
+                    );
+                  }).toList(),
+                  onChanged: (PaletteSimple? value) {
                     setState(() {
                       _selectedPalette = value;
                     });
@@ -727,46 +762,9 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               ),
             ],
           ),
+        ],
 
-        const SizedBox(height: 16),
-
-        // "Create new palette" button
-        TextButton.icon(
-          onPressed: () {
-            // TODO: Logic to create a new palette
-            // This would typically navigate to a palette creation screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Create new palette (pending)')),
-            );
-          },
-          icon: Icon(
-            Icons.add,
-            color:
-                Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.primaryBlue
-                    : Colors.white,
-          ),
-          label: Text(
-            'Create new palette',
-            style: TextStyle(
-              color:
-                  Theme.of(context).brightness == Brightness.dark
-                      ? AppTheme.primaryBlue
-                      : Colors.white,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            backgroundColor:
-                Theme.of(context).brightness == Brightness.dark
-                    ? AppTheme.marineOrange
-                    : AppTheme.primaryBlue,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
 
         // Action buttons
         Row(
@@ -784,12 +782,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: widget.userPalettes.isEmpty ? null : _addToPalette,
+                onPressed: _selectedPalette != null ? _addToPalette : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Add'),
+                child: const Text('Add to Palette'),
               ),
             ),
           ],

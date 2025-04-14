@@ -241,7 +241,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     final List<Palette> inPalettes = _paintService.getPalettesContainingPaint(
       paint.id,
     );
-    final List<Palette> userPalettes = _paintService.getUserPalettes();
 
     showModalBottomSheet(
       context: context,
@@ -257,7 +256,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             inventoryQuantity: inventoryQuantity,
             isInWishlist: isInWishlist,
             inPalettes: inPalettes.isEmpty ? null : inPalettes,
-            userPalettes: userPalettes,
             onAddToInventory: (paint, quantity, note) async {
               try {
                 // Use the inventory service to add to inventory

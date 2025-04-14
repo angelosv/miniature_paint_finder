@@ -73,6 +73,33 @@ class Palette {
   }
 }
 
+class PaletteSimple {
+  final String id;
+
+  final String name;
+
+  PaletteSimple({
+    required this.id,
+    required this.name,
+  });
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+
+  /// Create from JSON
+  factory PaletteSimple.fromJson(Map<String, dynamic> json) {
+    return PaletteSimple(
+      id: json['id'],
+      name: json['name'],
+    );
+  }
+}
+
 /// A model representing a selected paint for a specific color in a palette
 class PaintSelection {
   /// The color this paint matches (in hex format)
