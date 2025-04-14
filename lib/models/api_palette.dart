@@ -33,11 +33,11 @@ class ApiPalettePaint {
   final String paletteId;
   final String paintId;
   final String? brandId;
-  final String imageColorPicksId;
+  final String? imageColorPicksId;
   final DateTime addedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final ApiImageColorPick imageColorPicks;
+  final ApiImageColorPick? imageColorPicks;
   final ApiPaint? paint;
 
   ApiPalettePaint({
@@ -59,11 +59,15 @@ class ApiPalettePaint {
       paletteId: json['palette_id'],
       paintId: json['paint_id'],
       brandId: json['brand_id'],
-      imageColorPicksId: json['image_color_picks_id'],
+      imageColorPicksId: json['image_color_picks_id'] != null
+          ? json['image_color_picks_id']
+          : null,
       addedAt: DateTime.parse(json['added_at']),
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      imageColorPicks: ApiImageColorPick.fromJson(json['image_color_picks']),
+      imageColorPicks: json['image_color_picks'] != null
+          ? ApiImageColorPick.fromJson(json['image_color_picks'])
+          : null,
       paint: json['paint'] != null ? ApiPaint.fromJson(json['paint']) : null,
     );
   }
