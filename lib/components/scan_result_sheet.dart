@@ -103,6 +103,18 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         final palettes = await _paletteService.getAllPalettesNamesAndIds(token);
         setState(() {
           _palettes = palettes;
+          print('🎨 Paletas cargadas: ${palettes.length}');
+          if (palettes.isNotEmpty) {
+            print('🎨 Paletas cargadas: ${palettes.first['id']}');
+            print('🎨 Paletas cargadas: ${palettes.first['name']}');
+            _selectedPalette = Palette(
+              id: palettes.first['id'],
+              name: palettes.first['name'],
+              imagePath: 'assets/images/placeholder.jpg',
+              colors: [],
+              createdAt: DateTime.now(),
+            );
+          }
         });
       }
     } catch (e) {
@@ -123,8 +135,15 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   void _showAddToPaletteDialog() {
     setState(() {
       _isAddingToPalette = true;
-      _selectedPalette =
-          widget.userPalettes.isNotEmpty ? widget.userPalettes.first : null;
+      if (_palettes.isNotEmpty) {
+        _selectedPalette = Palette(
+          id: _palettes.first['id'],
+          name: _palettes.first['name'],
+          imagePath: 'assets/images/placeholder.jpg',
+          colors: [],
+          createdAt: DateTime.now(),
+        );
+      }
     });
   }
 
@@ -222,13 +241,60 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     _showSuccessSnackbar('Inventory updated');
   }
 
-  void _addToPalette() {
+  void _addToPalette() async {
     if (_selectedPalette != null) {
-      widget.onAddToPalette(widget.paint, _selectedPalette!);
-      setState(() {
-        _isAddingToPalette = false;
-      });
-      _showSuccessSnackbar('Paint added to palette ${_selectedPalette!.name}');
+      print('🎨 Iniciando proceso de añadir pintura a paleta');
+      print('📦 Datos de la pintura: ${widget.paint.toJson()}');
+      print('🎯 Paleta seleccionada: ${_selectedPalette!.toJson()}');
+      
+      try {
+        // Obtener el usuario actual de Firebase
+        final firebaseUser = FirebaseAuth.instance.currentUser;
+        if (firebaseUser == null) {
+          print('❌ No hay usuario autenticado');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Necesitas iniciar sesión para añadir a paleta'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
+        final token = await firebaseUser.getIdToken() ?? '';
+        print('🔑 Token de usuario obtenido');
+        
+        final paletteService = PaletteService();
+        
+        print('📤 Llamando a addPaintsToPalette...');
+        print('🎨 Agregando 1 pintura a la paleta: ${_selectedPalette!.id}');
+        await paletteService.addPaintsToPalette(
+          _selectedPalette!.id,
+          [ { "paint_id": widget.paint.id } ],
+          token,
+        );
+
+        print('✅ Pintura añadida a paleta exitosamente');
+        widget.onAddToPalette(widget.paint, _selectedPalette!);
+        setState(() {
+          _isAddingToPalette = false;
+        });
+        _showSuccessSnackbar('Paint added to palette ${_selectedPalette!.name}');
+      } catch (e) {
+        print('❌ Error al añadir a paleta: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -824,6 +890,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   }).toList(),
                   onChanged: (Map<String, dynamic>? value) {
                     if (value != null) {
+                      print('🎨 Paleta seleccionada: ${value['id']}');
+                      print('🎨 Paleta seleccionada: ${value['name']}');
                       setState(() {
                         _selectedPalette = Palette(
                           id: value['id'],
