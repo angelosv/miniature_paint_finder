@@ -3,6 +3,8 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Result of a barcode scan with quick actions
 class ScanResultSheet extends StatefulWidget {
@@ -104,10 +106,74 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     AddToWishlistModal.show(
       context: context,
       paint: widget.paint,
-      onAddToWishlist: (paint, priority) {
-        final isPriority = priority > 0;
-        widget.onAddToWishlist(paint, isPriority);
-        _showSuccessSnackbar('Paint added to your wishlist');
+      onAddToWishlist: (paint, priority) async {
+        print('🔍 Iniciando proceso de añadir a wishlist');
+        print('📦 Datos de la pintura: ${paint.toJson()}');
+        print('🎯 Prioridad seleccionada: $priority');
+        
+        try {
+          // Obtener el usuario actual de Firebase
+          final firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser == null) {
+            print('❌ No hay usuario autenticado');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Necesitas iniciar sesión para añadir a wishlist'),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+            return;
+          }
+
+          final userId = firebaseUser.uid;
+          print('🔑 ID de usuario: $userId');
+
+          // Crear instancia del servicio
+          final paintService = PaintService();
+          
+          print('📤 Llamando a addToWishlistDirect...');
+          final result = await paintService.addToWishlistDirect(
+            paint,
+            priority,
+            userId,
+          );
+
+          print('📥 Respuesta de addToWishlistDirect: $result');
+
+          if (result['success'] == true) {
+            print('✅ Pintura añadida a wishlist exitosamente');
+            _showSuccessSnackbar(
+              result['alreadyExists'] == true
+                  ? '${paint.name} ya está en tu wishlist'
+                  : '${paint.name} añadido a tu wishlist',
+            );
+          } else {
+            print('❌ Error en la respuesta: ${result['message']}');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${result['message']}'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          print('❌ Error al añadir a wishlist: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: $e'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
       },
     );
   }
