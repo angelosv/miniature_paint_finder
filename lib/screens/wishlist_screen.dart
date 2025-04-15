@@ -263,21 +263,23 @@ class _WishlistScreenState extends State<WishlistScreen> {
         );
         print('✅ Paint added to inventory');
         final controller = context.read<WishlistController>();
-        final deleteResult = await controller.removeFromWishlist(paint.id, _id);
-        if (deleteResult && success) {
+        await controller.removeFromWishlist(paint.id, _id);
+        if (success) {
           print('✅ Paint removed from wishlist');
         } else {
           print(
             '⚠️ Could not remove paint from wishlist after adding to inventory',
           );
         }
-        if (mounted && success && deleteResult) {
+        if (mounted && success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${paint.name} added to inventory'),
               backgroundColor: Colors.green,
             ),
           );
+          await context.read<WishlistController>().loadWishlist();
+          await _loadBrandData();
         }
       } catch (e) {
         print('❌ Error adding to inventory: $e');
