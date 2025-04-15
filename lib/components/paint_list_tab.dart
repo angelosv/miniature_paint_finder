@@ -889,10 +889,15 @@ class _PaintListTabState extends State<PaintListTab> {
   void _showSelectedColorsModal(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Generate default palette name based on date
-    final now = DateTime.now();
-    final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
-    _paletteNameController.text = defaultName;
+    // Si venimos de crear una paleta desde otra pantalla, usamos ese nombre
+    // Si no, generamos un nombre por defecto basado en la fecha
+    if (_isCreatingPaletteFromExternal && _pendingPaletteName != null) {
+      _paletteNameController.text = _pendingPaletteName!;
+    } else {
+      final now = DateTime.now();
+      final defaultName = 'Palette ${now.day}-${now.month}-${now.year}';
+      _paletteNameController.text = defaultName;
+    }
 
     // Hacer una copia de los colores seleccionados para manipular en el modal
     List<Map<String, dynamic>> modalColorList = List.from(_pickedColors);
@@ -1278,30 +1283,35 @@ class _PaintListTabState extends State<PaintListTab> {
                                                   '🖼️ URL de imagen: $_uploadedImageUrl',
                                                 );
 
-                                                final paintsToSend =
-                                                    modalColorList
-                                                        .where(
-                                                          (c) =>
-                                                              c['paintName'] !=
-                                                              null,
-                                                        )
-                                                        .map(
-                                                          (c) => {
-                                                            'id': c['paintId'],
-                                                            'brand_id':
-                                                                c['brandId'],
-                                                            'hex': c['hexCode'],
-                                                            'name':
-                                                                c['paintName'],
-                                                            'brand':
-                                                                c['paintBrand'],
-                                                            'colorCode':
-                                                                c['colorCode'],
-                                                            'barcode':
-                                                                c['barcode'],
-                                                          },
-                                                        )
-                                                        .toList();
+                                                // Si venimos de crear una paleta desde otra pantalla,
+                                                // asegurarnos de usar el nombre correcto
+                                                final paletteName = _isCreatingPaletteFromExternal && _pendingPaletteName != null
+                                                    ? _pendingPaletteName!
+                                                    : _paletteNameController.text;
+
+                                                final paintsToSend = modalColorList
+                                                    .where(
+                                                      (c) =>
+                                                          c['paintName'] !=
+                                                          null,
+                                                    )
+                                                    .map(
+                                                      (c) => {
+                                                        'id': c['paintId'],
+                                                        'brand_id':
+                                                            c['brandId'],
+                                                        'hex': c['hexCode'],
+                                                        'name':
+                                                            c['paintName'],
+                                                        'brand':
+                                                            c['paintBrand'],
+                                                        'colorCode':
+                                                            c['colorCode'],
+                                                        'barcode':
+                                                            c['barcode'],
+                                                      },
+                                                    )
+                                                    .toList();
 
                                                 debugPrint(
                                                   '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
@@ -1332,8 +1342,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     .saveColorSearch(
                                                       token: token,
                                                       name:
-                                                          _paletteNameController
-                                                              .text,
+                                                          paletteName,
                                                       paints: paintsToSend,
                                                       imagePath:
                                                           _uploadedImageUrl ??
@@ -2107,6 +2116,9 @@ class _PaintListTabState extends State<PaintListTab> {
           // Almacenar el nombre de la paleta pendiente
           _pendingPaletteName = paletteInfo['paletteName'] as String;
           _isCreatingPaletteFromExternal = true;
+          
+          // Actualizar el controlador del nombre de la paleta
+          _paletteNameController.text = _pendingPaletteName!;
 
           // Activar directamente el flujo de búsqueda de colores
           setState(() {

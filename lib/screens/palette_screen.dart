@@ -329,7 +329,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
       '/home',
       arguments: {
         'selectedIndex': 0, // Tab de Paint Search
-        'paletteInfo': {'isCreatingPalette': true, 'paletteName': paletteName},
+        'paletteInfo': {
+          'isCreatingPalette': true,
+          'paletteName': paletteName,
+          'source': 'palette_screen'
+        },
       },
     );
   }
