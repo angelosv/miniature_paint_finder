@@ -8,6 +8,7 @@
 /// - Adding notes to paints
 /// - Adding new paints to the inventory
 /// - Viewing which palettes use each paint
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:miniature_paint_finder/components/confirmation_dialog.dart';
@@ -16,6 +17,7 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
@@ -45,6 +47,8 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   // Services
   final InventoryService _inventoryService = InventoryService();
+  final PaintService _paintService = PaintService();
+
   final BrandServiceManager _brandManager = BrandServiceManager();
   final PaintBrandService _paintBrandService = PaintBrandService();
 
@@ -381,7 +385,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             );
           },
-          onAddToWishlist: () {
+          onAddToWishlist: () async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) return;
+            Paint paint = item.paint;
+            paint.id = item.paint.code;
+
+            await _paintService.addToWishlistDirect(
+              paint,
+              0,
+              user.uid,
+            ); // prioridad alta por defecto
             // Lógica para añadir a wishlist
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -390,6 +404,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
+
+            await _loadInventory();
           },
           getSafeBrandId: _getSafeBrandId,
           getSafeBrandName: _getSafeBrandName,

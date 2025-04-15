@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Model representing a miniature paint product
 class Paint {
-  /// Unique identifier for the paint
-  final String id;
+  late String _id;
 
   /// Name of the paint color
   final String name;
@@ -45,7 +44,7 @@ class Paint {
   final List<String>? palettes;
 
   Paint({
-    required this.id,
+    required String id,
     required this.name,
     required this.hex,
     required this.set,
@@ -59,7 +58,7 @@ class Paint {
     this.isMetallic = false,
     this.isTransparent = false,
     this.palettes = const [],
-  });
+  }) : _id = id;
 
   /// Convert to JSON representation
   Map<String, dynamic> toJson() {
@@ -86,7 +85,7 @@ class Paint {
     print('🔍 JSON recibido para Paint: $json'); // Debug log
     final brandId = json['brandId']?.toString();
     print('🔍 brandId extraído: $brandId'); // Debug log
-    
+
     return Paint(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -101,7 +100,11 @@ class Paint {
       category: json['category'] as String? ?? '',
       isMetallic: json['isMetallic'] as bool? ?? false,
       isTransparent: json['isTransparent'] as bool? ?? false,
-      palettes: (json['palettes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      palettes:
+          (json['palettes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -144,4 +147,7 @@ class Paint {
       palettes: palettes,
     );
   }
+
+  String get id => _id;
+  set id(String value) => _id = value;
 }
