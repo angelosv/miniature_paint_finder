@@ -20,12 +20,16 @@ class AddToWishlistModal extends StatefulWidget {
     required Paint paint,
     required Function(Paint paint, int priority) onAddToWishlist,
   }) {
+    // Crear una nueva instancia del widget cada vez que se muestra el modal
+    // para asegurar que tenga un estado fresco
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder:
           (context) => AddToWishlistModal(
+            key:
+                UniqueKey(), // Añadir una key única para forzar la recreación del widget
             paint: paint,
             onAddToWishlist: onAddToWishlist,
           ),
@@ -128,7 +132,8 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
                         paint.brand,
                         style: TextStyle(
                           fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                     ],
