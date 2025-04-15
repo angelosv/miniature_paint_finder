@@ -537,7 +537,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'My Palettes',
-      selectedIndex: 4, // Índice 4 para My Palettes en el menú inferior
+      selectedIndex: 3, // Índice 3 para My Palettes en el menú inferior
       body: _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'palettes'),
       floatingActionButton: FloatingActionButton.extended(
