@@ -6,6 +6,55 @@ import 'package:miniature_paint_finder/models/api_palette.dart';
 import 'package:miniature_paint_finder/repositories/base_repository.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 
+class ApiImageColorPick {
+  final String imageId;
+  final int index;
+  final String hexColor;
+  final int r;
+  final int g;
+  final int b;
+  final String xCoord;
+  final String yCoord;
+  final DateTime createdAt;
+  final String userId;
+  final String imagePath;
+
+  const ApiImageColorPick({
+    required this.imageId,
+    required this.index,
+    required this.hexColor,
+    required this.r,
+    required this.g,
+    required this.b,
+    required this.xCoord,
+    required this.yCoord,
+    required this.createdAt,
+    required this.userId,
+    required this.imagePath,
+  });
+
+  factory ApiImageColorPick.fromJson(Map<String, dynamic> json) {
+    return ApiImageColorPick(
+      imageId: json['image_id'] as String,
+      index: json['index'] as int,
+      hexColor: json['hex_color'] as String,
+      r: json['r'] as int,
+      g: json['g'] as int,
+      b: json['b'] as int,
+      xCoord: json['x_coord'] as String,
+      yCoord: json['y_coord'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      userId: json['user_id'] as String,
+      imagePath: json['image_path'] as String,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'ApiImageColorPick(imageId: $imageId, index: $index, hexColor: $hexColor, r: $r, g: $g, b: $b)';
+  }
+}
+
 /// Repositorio para operaciones con paletas de colores
 abstract class PaletteRepository extends BaseRepository<Palette> {
   /// Obtiene todas las paletas del usuario actual
@@ -100,26 +149,40 @@ class ApiPaletteRepository implements PaletteRepository {
     print('  - Image: ${apiPalette.image}');
     print('  - Created At: ${apiPalette.createdAt}');
     print('  - Number of paints: ${apiPalette.palettesPaints.length}');
+    print('  - Total Paints: ${apiPalette.totalPaints}');
+    print('  - Created At Text: ${apiPalette.createdAtText}');
 
-    final colors =
-        apiPalette.palettesPaints.map((paint) {
-          if (paint.paint != null) {
-            print('  🎨 Paint found:');
-            print('    - Name: ${paint.paint!.name}');
-            print('    - Hex: ${paint.paint!.hex}');
-            print(
-              '    - RGB: (${paint.paint!.r}, ${paint.paint!.g}, ${paint.paint!.b})',
-            );
-            return Color.fromRGBO(
-              paint.paint!.r,
-              paint.paint!.g,
-              paint.paint!.b,
-              1,
-            );
-          }
-          print('  ⚠️ No paint data available for this color');
-          return Colors.grey; // Color por defecto si no hay pintura
-        }).toList();
+    final colors = apiPalette.palettesPaints.map((paint) {
+      if (paint.paint != null) {
+        print('  🎨 Paint found:');
+        print('    - Name: ${paint.paint!.name}');
+        print('    - Hex: ${paint.paint!.hex}');
+        print('    - RGB: (${paint.paint!.r}, ${paint.paint!.g}, ${paint.paint!.b})');
+        return Color.fromRGBO(
+          paint.paint!.r,
+          paint.paint!.g,
+          paint.paint!.b,
+          1,
+        );
+      } else if (paint.imageColorPicks != null) {
+        print('  🎨 Using color from image pick:');
+        print('    - Image Color Pick: ${paint.imageColorPicks.toString()}');
+        if (paint.imageColorPicks!.r == null || 
+            paint.imageColorPicks!.g == null || 
+            paint.imageColorPicks!.b == null) {
+          print('    ⚠️ Warning: RGB values are null, using default color');
+          return Colors.grey;
+        }
+        return Color.fromRGBO(
+          paint.imageColorPicks!.r,
+          paint.imageColorPicks!.g,
+          paint.imageColorPicks!.b,
+          1,
+        );
+      }
+      print('  ⚠️ No paint or color data available');
+      return Colors.grey; // Color por defecto si no hay pintura
+    }).toList();
 
     final convertedPalette = Palette(
       id: apiPalette.id,
@@ -127,25 +190,34 @@ class ApiPaletteRepository implements PaletteRepository {
       imagePath: apiPalette.image ?? 'assets/images/placeholder.jpeg',
       colors: colors,
       createdAt: apiPalette.createdAt,
-      paintSelections:
-          apiPalette.palettesPaints
-              .map((paint) {
-                if (paint.paint != null) {
-                  return PaintSelection(
-                    paintId: paint.paint!.code,
-                    paintName: paint.paint!.name,
-                    paintBrand: paint.paint!.set,
-                    brandAvatar: paint.paint!.set[0],
-                    matchPercentage: 100,
-                    colorHex: paint.paint!.hex,
-                    paintColorHex: paint.paint!.hex,
-                    paintBrandId: paint.brandId,
-                  );
-                }
-                return null;
-              })
-              .whereType<PaintSelection>()
-              .toList(),
+      totalPaints: apiPalette.totalPaints,
+      createdAtText: apiPalette.createdAtText,
+      paintSelections: apiPalette.palettesPaints.map((paint) {
+        if (paint.paint != null) {
+          return PaintSelection(
+            paintId: paint.paint!.code,
+            paintName: paint.paint!.name,
+            paintBrand: paint.paint!.set,
+            brandAvatar: paint.paint!.set[0],
+            matchPercentage: 100,
+            colorHex: paint.paint!.hex,
+            paintColorHex: paint.paint!.hex,
+            paintBrandId: paint.brandId,
+          );
+        } else if (paint.imageColorPicks != null) {
+          return PaintSelection(
+            paintId: paint.paintId,
+            paintName: 'Color from image',
+            paintBrand: 'Image',
+            brandAvatar: 'I',
+            matchPercentage: 100,
+            colorHex: paint.imageColorPicks!.hexColor,
+            paintColorHex: paint.imageColorPicks!.hexColor,
+            paintBrandId: paint.brandId,
+          );
+        }
+        return null;
+      }).whereType<PaintSelection>().toList(),
     );
 
     print('🎨 Converted Palette:');
@@ -153,9 +225,9 @@ class ApiPaletteRepository implements PaletteRepository {
     print('  - Name: ${convertedPalette.name}');
     print('  - Image Path: ${convertedPalette.imagePath}');
     print('  - Number of colors: ${convertedPalette.colors.length}');
-    print(
-      '  - Number of paint selections: ${convertedPalette.paintSelections?.length ?? 0}',
-    );
+    print('  - Number of paint selections: ${convertedPalette.paintSelections?.length ?? 0}');
+    print('  - Total Paints: ${convertedPalette.totalPaints}');
+    print('  - Created At Text: ${convertedPalette.createdAtText}');
 
     return convertedPalette;
   }

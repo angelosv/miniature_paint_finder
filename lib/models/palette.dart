@@ -20,6 +20,12 @@ class Palette {
   /// Optional list of selected paints matching the colors in this palette
   final List<PaintSelection>? paintSelections;
 
+  /// Total number of paints in the palette
+  final int totalPaints;
+
+  /// Formatted creation date text
+  final String? createdAtText;
+
   Palette({
     required this.id,
     required this.name,
@@ -27,6 +33,8 @@ class Palette {
     required this.colors,
     required this.createdAt,
     this.paintSelections,
+    this.totalPaints = 0,
+    this.createdAtText,
   });
 
   /// Convert color to hex string
@@ -49,6 +57,8 @@ class Palette {
       'createdAt': createdAt.toIso8601String(),
       'paintSelections':
           paintSelections?.map((selection) => selection.toJson()).toList(),
+      'totalPaints': totalPaints,
+      'createdAtText': createdAtText,
     };
   }
 
@@ -69,6 +79,8 @@ class Palette {
                   .map((item) => PaintSelection.fromJson(item))
                   .toList()
               : null,
+      totalPaints: json['totalPaints'] ?? 0,
+      createdAtText: json['createdAtText'],
     );
   }
 }
@@ -133,7 +145,7 @@ class PaintSelection {
       brandAvatar: json['brandAvatar'],
       matchPercentage: json['matchPercentage'],
       paintColorHex: json['paintColorHex'],
-      paintBrandId: json['paintBrandId'] ?? '',
+      paintBrandId: json['paintBrandId'],
     );
   }
 

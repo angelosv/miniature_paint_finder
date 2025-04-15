@@ -698,8 +698,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget _buildPaletteCard(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final hasPaletteSwatch = palette.colors.isNotEmpty;
-    final hasSelections =
-        palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
+    final hasSelections = palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
     final bool hasImage = palette.imagePath.startsWith('http');
 
     return Hero(
@@ -721,7 +720,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Palette image or color swatch
               ClipRRect(
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
@@ -733,27 +731,24 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     SizedBox(
                       height: 120,
                       width: double.infinity,
-                      child:
-                          hasImage
-                              ? Image.network(
-                                palette.imagePath,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  print(
-                                    '❌ Error loading network image: $error',
-                                  );
-                                  return _buildFallbackContent(
-                                    isDarkMode,
-                                    hasPaletteSwatch,
-                                    palette,
-                                  );
-                                },
-                              )
-                              : _buildFallbackContent(
-                                isDarkMode,
-                                hasPaletteSwatch,
-                                palette,
-                              ),
+                      child: hasImage
+                          ? Image.network(
+                              palette.imagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                print('❌ Error loading network image: $error');
+                                return _buildFallbackContent(
+                                  isDarkMode,
+                                  hasPaletteSwatch,
+                                  palette,
+                                );
+                              },
+                            )
+                          : _buildFallbackContent(
+                              isDarkMode,
+                              hasPaletteSwatch,
+                              palette,
+                            ),
                     ),
 
                     // Badge overlays
@@ -802,9 +797,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).primaryColor.withOpacity(0.8),
+                            color: Theme.of(context).primaryColor.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -817,7 +810,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '${palette.paintSelections!.length} Paints',
+                                '${palette.totalPaints} Paints',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -852,11 +845,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                       const SizedBox(height: 4),
                       // Date created
                       Text(
-                        _formatDate(palette.createdAt),
+                        palette.createdAtText ?? _formatDate(palette.createdAt),
                         style: TextStyle(
                           fontSize: 12,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                       const Spacer(),
@@ -869,10 +861,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[800]
-                                      : Colors.grey[200],
+                              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -881,10 +870,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                 Icon(
                                   Icons.palette,
                                   size: 14,
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
+                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -892,10 +878,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                                   ),
                                 ),
                               ],
@@ -910,10 +893,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               child: Icon(
                                 Icons.delete_outline,
                                 size: 18,
-                                color:
-                                    isDarkMode
-                                        ? Colors.red[300]
-                                        : Colors.red[400],
+                                color: isDarkMode ? Colors.red[300] : Colors.red[400],
                               ),
                             ),
                           ),
@@ -930,31 +910,16 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
   }
 
-  Widget _buildFallbackContent(
-    bool isDarkMode,
-    bool hasPaletteSwatch,
-    Palette palette,
-  ) {
+  Widget _buildFallbackContent(bool isDarkMode, bool hasPaletteSwatch, Palette palette) {
     if (hasPaletteSwatch) {
-      return Stack(
-        children: [
-          // Fondo con placeholder
-          Image.asset(
-            'assets/images/placeholder.jpeg',
-            fit: BoxFit.cover,
-            height: 120,
-            width: double.infinity,
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: palette.colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          // Grid de colores con transparencia
-          GridView.count(
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            children:
-                palette.colors
-                    .map((color) => Container(color: color.withOpacity(0.6)))
-                    .toList(),
-          ),
-        ],
+        ),
       );
     } else {
       return Container(
@@ -963,7 +928,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
           child: Icon(
             Icons.palette_outlined,
             size: 40,
-            color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
           ),
         ),
       );
@@ -974,18 +939,18 @@ class _PaletteScreenState extends State<PaletteScreen> {
     final now = DateTime.now();
     final difference = now.difference(date);
 
-    if (difference.inDays < 1) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        if (difference.inMinutes == 0) {
+          return 'Just now';
+        }
+        return '${difference.inMinutes}m ago';
+      }
+      return '${difference.inHours}h ago';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+      return '${difference.inDays}d ago';
     } else {
-      final months = (difference.inDays / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'} ago';
+      return '${date.day}/${date.month}/${date.year}';
     }
   }
 

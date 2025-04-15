@@ -366,12 +366,14 @@ class _PaintListTabState extends State<PaintListTab> {
                       final palette = recentPalettes[index];
                       return PaletteCard(
                         palette: palette,
-                        onTap: () {
-                          // Abrir el modal de paleta cuando se toca
+                        onTap: () async {
+
+                          print('🎨 Pinturas en la paleta: ${palette}');
                           showPaletteModal(
                             context,
                             palette.name,
                             palette.paintSelections ?? [],
+                            imagePath: palette.imagePath,
                           );
                         },
                       );

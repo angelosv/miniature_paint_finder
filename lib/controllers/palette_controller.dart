@@ -125,6 +125,8 @@ class PaletteController extends ChangeNotifier {
         imagePath: imagePath,
         colors: colors,
         createdAt: DateTime.now(),
+        totalPaints: colors.length,
+        createdAtText: 'Just now',
       );
 
       final createdPalette = await _repository.create(palette);

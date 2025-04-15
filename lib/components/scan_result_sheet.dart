@@ -273,7 +273,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         print('🎨 Agregando 1 pintura a la paleta: ${_selectedPalette!.id}');
         await paletteService.addPaintsToPalette(
           _selectedPalette!.id,
-          [ { "paint_id": widget.paint.id } ],
+          [ { "paint_id": widget.paint.id, "brand_id": widget.paint.brandId } ],
           token,
         );
 
