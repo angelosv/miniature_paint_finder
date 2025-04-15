@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
   google_fonts: ^4.0.4
   provider: ^6.0.5
-  shared_preferences: ^2.2.0
+  shared_preferences: ^2.5.3
   image_picker: ^1.0.4
   # flutter_barcode_scanner: ^2.0.0  # Commenting out as it's not compatible with newer Flutter/Android versions
   http: ^1.1.0

@@ -43,6 +43,7 @@ class PaintBrand {
         '_seconds': updatedAt.millisecondsSinceEpoch ~/ 1000,
         '_nanoseconds': 0,
       },
+      'paintCount': paintCount,
     };
   }
 }

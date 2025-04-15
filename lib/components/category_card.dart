@@ -16,6 +16,9 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Log info about this card
+    print('🃏 CategoryCard - Title: $title, Count: $count');
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -36,22 +39,21 @@ class CategoryCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (count > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  count.toString(),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: count > 0 ? Colors.white : Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  color: color,
+                  fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
                 ),
               ),
+            ),
           ],
         ),
       ),

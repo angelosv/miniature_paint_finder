@@ -30,6 +30,8 @@ import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:flutter/services.dart';
+import 'dart:math';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -87,7 +89,9 @@ class _PaintListTabState extends State<PaintListTab> {
   @override
   void initState() {
     super.initState();
-    _loadPaintBrands();
+    // Forzar una carga fresca desde la API la primera vez
+    _refreshPaintBrands();
+
     // Verificar si hay argumentos para crear una paleta automáticamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForPaletteCreationArguments();
@@ -367,7 +371,6 @@ class _PaintListTabState extends State<PaintListTab> {
                       return PaletteCard(
                         palette: palette,
                         onTap: () async {
-
                           print('🎨 Pinturas en la paleta: ${palette}');
                           showPaletteModal(
                             context,
@@ -386,36 +389,60 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // Sección de Categorías
-            Text('Categories', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Paints', style: Theme.of(context).textTheme.titleMedium),
+                TextButton(
+                  onPressed: () => _showAllCategoriesModal(context),
+                  child: Text('See all'),
+                ),
+              ],
+            ),
 
             const SizedBox(height: 12),
 
-            GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 2.5,
-              ),
-              itemCount: _paintBrands.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                final brand = _paintBrands[index];
-                return CategoryCard(
-                  title: brand['name'] as String,
-                  count: brand['paintCount'] as int,
-                  color: brand['color'] as Color,
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/library',
-                      arguments: {'brandName': brand['id']},
+            _paintBrands.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 2.5,
+                  ),
+                  itemCount: _paintBrands.length > 6 ? 6 : _paintBrands.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    final brand = _paintBrands[index];
+                    final paintCount = brand['paintCount'] as int;
+
+                    // Log para cada tarjeta de categoría que se muestra
+                    if (index < 8) {
+                      // Limitar logs a las primeras 8 categorías
+                      print(
+                        '🏷️ Mostrando categoría: ${brand['name']}, Contador: $paintCount',
+                      );
+                    }
+
+                    return CategoryCard(
+                      title: brand['name'] as String,
+                      count: paintCount,
+                      color: brand['color'] as Color,
+                      onTap: () {
+                        print(
+                          '👆 Usuario seleccionó categoría: ${brand['name']} (${brand['id']}) con $paintCount pinturas',
+                        );
+                        Navigator.pushNamed(
+                          context,
+                          '/library',
+                          arguments: {'brandName': brand['id']},
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
 
             const SizedBox(height: 24),
 
@@ -2680,29 +2707,61 @@ class _PaintListTabState extends State<PaintListTab> {
   }
 
   Future<void> _loadPaintBrands() async {
+    print('🔄 Iniciando carga de marcas de pinturas en PaintListTab...');
     try {
+      print('📱 Llamando a PaintBrandService.getPaintBrands()');
       final brands = await _paintBrandService.getPaintBrands();
+      print('✅ Recibidas ${brands.length} marcas de pinturas del servicio');
+
+      final mappedBrands =
+          brands
+              .map(
+                (brand) => {
+                  'id': brand.id,
+                  'name': brand.name,
+                  'logoUrl': brand.logoUrl,
+                  'selected': false,
+                  'color': _getBrandColor(brand.name),
+                  'paintCount': brand.paintCount,
+                },
+              )
+              .toList();
+
+      print('🎨 Mapped brands para UI:');
+      for (var i = 0; i < min(5, mappedBrands.length); i++) {
+        final brand = mappedBrands[i];
+        print(
+          '  • ${brand['name']}: ${brand['paintCount']} paints, ID: ${brand['id']}',
+        );
+      }
+
+      // Ordenar por contador (descendente)
+      mappedBrands.sort(
+        (a, b) => (b['paintCount'] as int).compareTo(a['paintCount'] as int),
+      );
+      print('📋 Marcas ordenadas por cantidad de pinturas (descendente)');
+
       setState(() {
-        _paintBrands =
-            brands
-                .map(
-                  (brand) => {
-                    'id': brand.id,
-                    'name': brand.name,
-                    'logoUrl': brand.logoUrl,
-                    'selected': false,
-                    'color': _getBrandColor(brand.name),
-                    'paintCount': brand.paintCount,
-                  },
-                )
-                .toList();
+        _paintBrands = mappedBrands;
+
+        // Log del total de pinturas que se mostrarán en la UI
+        final totalPaints = _paintBrands.fold(
+          0,
+          (sum, brand) => sum + (brand['paintCount'] as int),
+        );
+        print('🔢 Total de pinturas en todas las marcas: $totalPaints');
+        print(
+          '🎭 Mostrando ${_paintBrands.length} marcas en la sección de categorías',
+        );
       });
     } catch (e) {
-      print('Error loading paint brands: $e');
+      print('❌ Error cargando marcas de pinturas: $e');
+      print('⚠️ Usando datos de fallback para las marcas');
       // Fallback a marcas por defecto en caso de error
       setState(() {
         _paintBrands = [
           {
+            'id': 'citadel',
             'name': 'Citadel',
             'color': AppTheme.primaryBlue,
             'selected': false,
@@ -2710,6 +2769,7 @@ class _PaintListTabState extends State<PaintListTab> {
             'paintCount': 0,
           },
           {
+            'id': 'vallejo',
             'name': 'Vallejo',
             'color': AppTheme.pinkColor,
             'selected': false,
@@ -2717,6 +2777,7 @@ class _PaintListTabState extends State<PaintListTab> {
             'paintCount': 0,
           },
           {
+            'id': 'army_painter',
             'name': 'Army Painter',
             'color': AppTheme.purpleColor,
             'selected': false,
@@ -2724,6 +2785,7 @@ class _PaintListTabState extends State<PaintListTab> {
             'paintCount': 0,
           },
           {
+            'id': 'scale75',
             'name': 'Scale75',
             'color': AppTheme.orangeColor,
             'selected': false,
@@ -2796,6 +2858,169 @@ class _PaintListTabState extends State<PaintListTab> {
         return const Color(0xFFD50000); // Rojo vibrante
       default:
         return AppTheme.marineBlue; // Color por defecto
+    }
+  }
+
+  // Nuevo método para mostrar todas las categorías en un modal
+  void _showAllCategoriesModal(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header con título y botón de cierre
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'All Paint Brands',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+
+                  // Información de actualización
+                  Row(
+                    children: [
+                      Text(
+                        'Showing all ${_paintBrands.length} paint brands',
+                        style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text(
+                          'Refresh',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _refreshPaintBrands();
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Divisor
+                  Divider(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                  ),
+
+                  // Lista de todas las categorías
+                  Expanded(
+                    child: GridView.builder(
+                      controller: scrollController,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 2.5,
+                          ),
+                      itemCount: _paintBrands.length,
+                      itemBuilder: (context, index) {
+                        final brand = _paintBrands[index];
+                        final paintCount = brand['paintCount'] as int;
+
+                        return CategoryCard(
+                          title: brand['name'] as String,
+                          count: paintCount,
+                          color: brand['color'] as Color,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.pushNamed(
+                              context,
+                              '/library',
+                              arguments: {'brandName': brand['id']},
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Método para forzar la actualización de las marcas
+  Future<void> _refreshPaintBrands() async {
+    setState(() {
+      _paintBrands = []; // Vaciar para mostrar el cargador
+    });
+
+    try {
+      final brands = await _paintBrandService.refreshPaintBrands();
+
+      print('✅ Marcas actualizadas correctamente: ${brands.length} marcas');
+
+      final mappedBrands =
+          brands
+              .map(
+                (brand) => {
+                  'id': brand.id,
+                  'name': brand.name,
+                  'logoUrl': brand.logoUrl,
+                  'selected': false,
+                  'color': _getBrandColor(brand.name),
+                  'paintCount': brand.paintCount,
+                },
+              )
+              .toList();
+
+      setState(() {
+        _paintBrands = mappedBrands;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Categories refreshed successfully'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('❌ Error al actualizar marcas: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating categories: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 }
