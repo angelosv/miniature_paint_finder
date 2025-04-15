@@ -368,10 +368,11 @@ class _PaintListTabState extends State<PaintListTab> {
                     itemCount: recentPalettes.length,
                     itemBuilder: (context, index) {
                       final palette = recentPalettes[index];
+                      print('🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintCode}');
+                      print('🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintBarcode}');
                       return PaletteCard(
                         palette: palette,
                         onTap: () async {
-                          print('🎨 Pinturas en la paleta: ${palette}');
                           showPaletteModal(
                             context,
                             palette.name,
@@ -2343,7 +2344,6 @@ class _PaintListTabState extends State<PaintListTab> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        // Simular 3 paletas donde se usa esta pintura
         const paletteCount = 3;
 
         return Container(

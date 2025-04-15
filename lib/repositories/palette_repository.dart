@@ -203,6 +203,8 @@ class ApiPaletteRepository implements PaletteRepository {
             colorHex: paint.paint!.hex,
             paintColorHex: paint.paint!.hex,
             paintBrandId: paint.brandId,
+            paintBarcode: paint.paint?.barcode ?? '',
+            paintCode: paint.paint?.code ?? '',
           );
         } else if (paint.imageColorPicks != null) {
           return PaintSelection(
@@ -214,6 +216,8 @@ class ApiPaletteRepository implements PaletteRepository {
             colorHex: paint.imageColorPicks!.hexColor,
             paintColorHex: paint.imageColorPicks!.hexColor,
             paintBrandId: paint.brandId,
+            paintBarcode: paint.paint?.barcode ?? '',
+            paintCode: paint.paint?.code ?? '',
           );
         }
         return null;

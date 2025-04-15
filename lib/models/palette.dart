@@ -110,6 +110,10 @@ class PaintSelection {
 
   final String? paintBrandId;
 
+  final String? paintCode;
+
+  final String? paintBarcode;
+
   PaintSelection({
     required this.colorHex,
     required this.paintId,
@@ -119,6 +123,8 @@ class PaintSelection {
     required this.matchPercentage,
     required this.paintColorHex,
     this.paintBrandId,
+    this.paintCode,
+    this.paintBarcode,
   });
 
   /// Convert to JSON
@@ -132,6 +138,8 @@ class PaintSelection {
       'matchPercentage': matchPercentage,
       'paintColorHex': paintColorHex,
       'paintBrandId': paintBrandId ?? '',
+      'paintCode': paintCode ?? '',
+      'paintBarcode': paintBarcode ?? '',
     };
   }
 
@@ -146,6 +154,8 @@ class PaintSelection {
       matchPercentage: json['matchPercentage'],
       paintColorHex: json['paintColorHex'],
       paintBrandId: json['paintBrandId'],
+      paintCode: json['paintCode'],
+      paintBarcode: json['paintBarcode'],
     );
   }
 

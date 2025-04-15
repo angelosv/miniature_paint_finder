@@ -382,7 +382,7 @@ class PaletteModal extends StatelessWidget {
                                           ),
                                         ),
                                         child: Text(
-                                          _generateColorCode(paint.paintName),
+                                          paint.paintCode ?? '',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -424,7 +424,7 @@ class PaletteModal extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            _generateBarcode(paint.paintId),
+                                            paint.paintBarcode ?? '',
                                             style: TextStyle(
                                               fontSize: 14,
                                               color:
@@ -1064,30 +1064,6 @@ class PaletteModal extends StatelessWidget {
     } catch (e) {
       return Colors.red;
     }
-  }
-
-  /// Genera un código de color basado en el nombre de la pintura.
-  String _generateColorCode(String paintName) {
-    final nameBytes = paintName.codeUnits;
-    if (nameBytes.isEmpty) return '00-00';
-
-    final firstCode = (nameBytes[0] % 99).toString().padLeft(2, '0');
-    final secondCode =
-        nameBytes.length > 1
-            ? (nameBytes[1] % 99).toString().padLeft(2, '0')
-            : '00';
-
-    return '$firstCode-$secondCode';
-  }
-
-  /// Genera un código de barras basado en el ID de la pintura.
-  String _generateBarcode(String paintId) {
-    final numericPart = paintId.codeUnits
-        .map((unit) => unit % 10)
-        .join('')
-        .padRight(12, '0')
-        .substring(0, 12);
-    return '5${numericPart}2';
   }
 }
 
