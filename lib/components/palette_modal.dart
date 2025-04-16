@@ -92,6 +92,30 @@ class _PaletteModalState extends State<PaletteModal> {
     return "Not in Collection";
   }
 
+  String getInventoryIdFromPaintInfo(Map<String, dynamic> responseJson) {
+    if (responseJson.containsKey('data') && responseJson['data'] != null) {
+      final data = responseJson['data'];
+      if (data['inventory_id'] != null &&
+          data['inventory_id'].toString().trim().isNotEmpty) {
+        return data['inventory_id'];
+      }
+      return "";
+    }
+    return "";
+  }
+
+  String getWishlistIdFromPaintInfo(Map<String, dynamic> responseJson) {
+    if (responseJson.containsKey('data') && responseJson['data'] != null) {
+      final data = responseJson['data'];
+      if (data['wishlist_id'] != null &&
+          data['wishlist_id'].toString().trim().isNotEmpty) {
+        return data['wishlist_id'];
+      }
+      return "";
+    }
+    return "";
+  }
+
   /// Helper para obtener el estado dinámico de la pintura consultado a la API.
   Future<Map<String, dynamic>> _getPaintStatus(PaintSelection paint) async {
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
@@ -618,6 +642,8 @@ class _PaletteModalState extends State<PaletteModal> {
       paintId: paint.paintId,
       token: token ?? '',
     );
+    final String inventory_id = getInventoryIdFromPaintInfo(paintInfo);
+    final String wishlist_id = getWishlistIdFromPaintInfo(paintInfo);
     final dynamicStatus = getStatusFromPaintInfo(paintInfo);
     final bool isInInventory = dynamicStatus == "In Inventory";
     final bool isInWishlist = dynamicStatus == "In Wishlist";
@@ -737,7 +763,12 @@ class _PaletteModalState extends State<PaletteModal> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        _showInventoryUpdateDialog(context, paint);
+                        _showInventoryUpdateDialog(
+                          context,
+                          paint,
+                          isInInventory,
+                          inventory_id,
+                        );
                       },
                       icon: const Icon(Icons.inventory_2_outlined),
                       label: Text(
@@ -756,7 +787,12 @@ class _PaletteModalState extends State<PaletteModal> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        _showWishlistDialog(context, paint);
+                        _showWishlistDialog(
+                          context,
+                          paint,
+                          isInWishlist,
+                          wishlist_id,
+                        );
                       },
                       icon: const Icon(Icons.favorite_border),
                       label: Text(
@@ -780,15 +816,22 @@ class _PaletteModalState extends State<PaletteModal> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const InventoryScreen(),
+                        builder:
+                            (context) =>
+                                isInInventory
+                                    ? const InventoryScreen()
+                                    : const WishlistScreen(),
                       ),
                     ).then((_) {
-                      // Actualizar el estado cuando regrese de la pantalla de inventario
                       _refreshState();
                     });
                   },
-                  icon: const Icon(Icons.inventory_2),
-                  label: const Text("View in Inventory"),
+                  icon: Icon(
+                    isInInventory ? Icons.inventory_2 : Icons.favorite_border,
+                  ),
+                  label: Text(
+                    isInInventory ? "View in Inventory" : "View in Wishlist",
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isDarkMode ? Colors.orange : Colors.blue,
                     foregroundColor: Colors.white,
@@ -803,7 +846,12 @@ class _PaletteModalState extends State<PaletteModal> {
     );
   }
 
-  void _showInventoryUpdateDialog(BuildContext context, PaintSelection paint) {
+  void _showInventoryUpdateDialog(
+    BuildContext context,
+    PaintSelection paint,
+    bool isInInventory,
+    String inventoryId,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     int quantity = 1;
 
@@ -813,7 +861,9 @@ class _PaletteModalState extends State<PaletteModal> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Update Inventory'),
+              title: Text(
+                isInInventory ? 'Update Inventory' : 'Add to Inventory',
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -911,7 +961,6 @@ class _PaletteModalState extends State<PaletteModal> {
                     final scaffoldMessenger = ScaffoldMessenger.of(context);
                     final paintService = PaintService();
 
-                    // Convertir PaintSelection a Paint para la API
                     final String hexColor =
                         paint.paintColorHex.startsWith('#')
                             ? paint.paintColorHex.substring(1)
@@ -935,7 +984,6 @@ class _PaletteModalState extends State<PaletteModal> {
                       isTransparent: false,
                     );
 
-                    // Mostrar loading
                     scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Row(
@@ -947,7 +995,7 @@ class _PaletteModalState extends State<PaletteModal> {
                               strokeWidth: 2,
                             ),
                             SizedBox(width: 16),
-                            Text('Updating inventory...'),
+                            Text('Saving inventory...'),
                           ],
                         ),
                         duration: Duration(seconds: 10),
@@ -956,14 +1004,12 @@ class _PaletteModalState extends State<PaletteModal> {
                     );
 
                     try {
-                      final firebaseUser = FirebaseAuth.instance.currentUser;
-                      if (firebaseUser == null) {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) {
                         scaffoldMessenger.hideCurrentSnackBar();
                         scaffoldMessenger.showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'You need to be logged in to update inventory',
-                            ),
+                            content: Text('You need to be logged in'),
                             backgroundColor: Colors.red,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -971,24 +1017,30 @@ class _PaletteModalState extends State<PaletteModal> {
                         return;
                       }
 
-                      final userId = firebaseUser.uid;
-                      // Llamamos a la API para actualizar el inventario
-                      final result = await paintService.addToInventory(
-                        paintObj,
-                        quantity,
-                      );
+                      bool result = false;
+
+                      if (isInInventory && inventoryId.isNotEmpty) {
+                        result = await paintService.updateInventory(
+                          paintObj,
+                          quantity,
+                          inventoryId: inventoryId,
+                        );
+                      } else {
+                        result = await paintService.addToInventory(
+                          paintObj,
+                          quantity,
+                        );
+                      }
 
                       scaffoldMessenger.hideCurrentSnackBar();
 
-                      // El método addToInventory devuelve true si la operación fue exitosa
-                      if (result == true) {
-                        // Forzar la actualización del estado para reflejar el cambio en la UI
+                      if (result) {
                         _refreshState();
-
+                        final action = isInInventory ? 'Updated' : 'Added';
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Updated ${paint.paintName} quantity to $quantity',
+                              '$action ${paint.paintName} quantity to $quantity',
                             ),
                             backgroundColor: Colors.green,
                             behavior: SnackBarBehavior.floating,
@@ -1010,7 +1062,7 @@ class _PaletteModalState extends State<PaletteModal> {
                       } else {
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
-                            content: Text('Error updating inventory'),
+                            content: Text('Error saving inventory'),
                             backgroundColor: Colors.red,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -1027,7 +1079,7 @@ class _PaletteModalState extends State<PaletteModal> {
                       );
                     }
                   },
-                  child: const Text('Save'),
+                  child: Text(isInInventory ? 'Update' : 'Add'),
                 ),
               ],
             );
@@ -1038,13 +1090,15 @@ class _PaletteModalState extends State<PaletteModal> {
   }
 
   // Método para mostrar el diálogo de wishlist
-  void _showWishlistDialog(BuildContext context, PaintSelection paint) {
-    // Referencia al ScaffoldMessenger para mostrar SnackBars
+  void _showWishlistDialog(
+    BuildContext context,
+    PaintSelection paint,
+    bool isInWishlist,
+    String wishlist_id,
+  ) {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    // Instancia de PaintService para hacer la llamada directa a la API
     final paintService = PaintService();
 
-    // Conversión de PaintSelection a un objeto Paint completo
     final String hexColor =
         paint.paintColorHex.startsWith('#')
             ? paint.paintColorHex.substring(1)
@@ -1069,11 +1123,10 @@ class _PaletteModalState extends State<PaletteModal> {
       isTransparent: false,
     );
 
-    print('🔍 Adding paint to wishlist: ${paintObj.toJson()}');
-
     AddToWishlistModal.show(
       context: context,
       paint: paintObj,
+      isUpdate: isInWishlist,
       onAddToWishlist: (paint, priority) async {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
@@ -1084,7 +1137,7 @@ class _PaletteModalState extends State<PaletteModal> {
                   strokeWidth: 2,
                 ),
                 SizedBox(width: 16),
-                Text('Adding to wishlist...'),
+                Text('Saving to wishlist...'),
               ],
             ),
             duration: Duration(seconds: 10),
@@ -1098,7 +1151,9 @@ class _PaletteModalState extends State<PaletteModal> {
             scaffoldMessenger.hideCurrentSnackBar();
             scaffoldMessenger.showSnackBar(
               const SnackBar(
-                content: Text('You need to be logged in to add to wishlist'),
+                content: Text(
+                  'You need to be logged in to manage your wishlist',
+                ),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
               ),
@@ -1112,24 +1167,46 @@ class _PaletteModalState extends State<PaletteModal> {
             '📤 Sending paint ${paint.id} with priority $priority and userId $userId',
           );
           print('📤 Paint details: ${paint.toJson()}');
+          // 👉 Lógica diferenciada entre add y update
+          Map<String, dynamic> result = {};
 
-          final result = await paintService.addToWishlistDirect(
-            paint,
-            priority,
-            userId,
-          );
+          if (isInWishlist) {
+            // Suponiendo que tienes una forma de recuperar el wishlistId:
+            final wishlistId = wishlist_id; // <--- ajusta esto según tu modelo
+            final bool isPriority = priority > 0;
+            final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+            final success = await paintService.updateWishlistPriority(
+              paint.id,
+              wishlistId,
+              isPriority,
+              token as String,
+              priority,
+            );
+
+            result = {
+              'success': success,
+              'updated': true,
+              'priority': priority,
+              'alreadyExists': true,
+            };
+          } else {
+            result = await paintService.addToWishlistDirect(
+              paint,
+              priority,
+              userId,
+            );
+          }
 
           scaffoldMessenger.hideCurrentSnackBar();
           print('✅ Complete API Wishlist result: $result');
 
           if (result['success'] == true) {
             final priorityText = _getPriorityText(priority);
-            final String message =
+            final message =
                 result['alreadyExists'] == true
-                    ? '${paint.name} is already in your wishlist'
-                    : 'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}';
+                    ? 'Updated ${paint.name} priority to $priorityText'
+                    : 'Added ${paint.name} to wishlist with $priorityText priority';
 
-            // Forzar la actualización del estado para reflejar el cambio en la UI
             _refreshState();
 
             scaffoldMessenger.showSnackBar(
@@ -1188,7 +1265,7 @@ class _PaletteModalState extends State<PaletteModal> {
             );
           }
         } catch (e, stackTrace) {
-          print('❌ Exception adding to wishlist: $e');
+          print('❌ Exception adding or updating to wishlist: $e');
           print('❌ Stack trace: $stackTrace');
           scaffoldMessenger.hideCurrentSnackBar();
           scaffoldMessenger.showSnackBar(
