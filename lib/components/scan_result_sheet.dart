@@ -451,7 +451,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      widget.paint.category,
+                                      'Code: ${widget.paint.code}',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall?.copyWith(
