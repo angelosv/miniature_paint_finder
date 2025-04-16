@@ -7,14 +7,21 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/barcode_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
-  const BarcodeScannerScreen({Key? key}) : super(key: key);
+  const BarcodeScannerScreen({
+    Key? key,
+    this.paletteName,
+  }) : super(key: key);
+
+  /// Optional name of the palette being created
+  final String? paletteName;
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -25,6 +32,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   MobileScannerController? _scannerController;
   final BarcodeService _barcodeService = BarcodeService();
   final PaintService _paintService = PaintService();
+  final PaletteService _paletteService = PaletteService();
   final InventoryService _inventoryService = InventoryService();
 
   bool _isScanning = true;
@@ -256,8 +264,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             isInInventory: isInInventory,
             inventoryQuantity: inventoryQuantity,
             isInWishlist: isInWishlist,
-            inPalettes: inPalettes.isEmpty ? null : inPalettes,
+            inPalettes: inPalettes,
             userPalettes: userPalettes,
+            paletteName: widget.paletteName,
             onAddToInventory: (paint, quantity, note) async {
               try {
                 // Use the inventory service to add to inventory
@@ -341,8 +350,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onAddToPalette: (paint, palette) async {
-              // Use the service to add to palette
-              await _paintService.addToPalette(paint, palette);
+              final user = FirebaseAuth.instance.currentUser;
+              final token = await user?.getIdToken();
+              final _palette = await _paletteService.createPalette(palette.name, token ?? '');
+              final paletteId = _palette['id'];
+              await _paletteService.addPaintsToPalette(paletteId, [ { "paint_id": paint.id, "brand_id": paint.brandId } ], token ?? '');
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
