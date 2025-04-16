@@ -35,6 +35,12 @@ class PaintService {
   /// Servicio de marcas
   final BrandServiceManager _brandManager = BrandServiceManager();
 
+  /// Paint cache storage key
+  static const String _CACHE_KEY = 'paint_cache';
+
+  /// Last cache update timestamp key
+  static const String _LAST_CACHE_UPDATE_KEY = 'last_cache_update';
+
   /// Constructor
   PaintService() {
     _loadDemoData();
@@ -2050,4 +2056,90 @@ class PaintService {
 
   /// Completer para manejar múltiples solicitudes de carga de marcas
   Completer<bool>? _loadingBrandsCompleter;
+
+  /// Gets information about the current cache state
+  Future<Map<String, dynamic>> getCacheInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheData = prefs.getString(_CACHE_KEY);
+      final lastUpdate = prefs.getString(_LAST_CACHE_UPDATE_KEY);
+
+      List<String> details = [];
+      int count = 0;
+
+      if (cacheData != null) {
+        try {
+          final Map<String, dynamic> cache = json.decode(cacheData);
+          count = cache.length;
+
+          // Add some sample entries as details
+          cache.entries.take(10).forEach((entry) {
+            details.add(
+              '${entry.key}: ${entry.value['name']} (${entry.value['brand']})',
+            );
+          });
+
+          if (count > 10) {
+            details.add('... and ${count - 10} more paints');
+          }
+        } catch (e) {
+          details.add('Error parsing cache: $e');
+        }
+      }
+
+      return {'count': count, 'lastUpdated': lastUpdate, 'details': details};
+    } catch (e) {
+      print('Error getting cache info: $e');
+      return {
+        'count': 0,
+        'lastUpdated': null,
+        'details': ['Error: $e'],
+      };
+    }
+  }
+
+  /// Clears the paint cache
+  Future<bool> clearCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_CACHE_KEY);
+      await prefs.remove(_LAST_CACHE_UPDATE_KEY);
+      return true;
+    } catch (e) {
+      print('Error clearing cache: $e');
+      return false;
+    }
+  }
+
+  /// Loads all paints into the cache
+  Future<bool> loadAllPaintsToCache() async {
+    try {
+      // Get all paints (this would be replaced with actual API call in production)
+      final samplePaints = SampleData.getPaints();
+
+      // Convert to a map for cache storage
+      final Map<String, dynamic> cacheData = {};
+      for (final paint in samplePaints) {
+        cacheData[paint.id] = {
+          'name': paint.name,
+          'brand': paint.brand,
+          'hex': paint.hex,
+          'code': paint.code,
+        };
+      }
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_CACHE_KEY, json.encode(cacheData));
+      await prefs.setString(
+        _LAST_CACHE_UPDATE_KEY,
+        DateTime.now().toIso8601String(),
+      );
+
+      return true;
+    } catch (e) {
+      print('Error loading paints to cache: $e');
+      return false;
+    }
+  }
 }
