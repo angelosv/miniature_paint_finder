@@ -75,6 +75,9 @@ class ScanResultSheet extends StatefulWidget {
 }
 
 class _ScanResultSheetState extends State<ScanResultSheet> {
+  String _newPaletteName = "";
+  bool isCreatingPaletteInView = false;
+
   bool _isPriority = false;
   int _quantity = 1;
   String? _note;
@@ -870,67 +873,115 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             enabled: false,
             decoration: InputDecoration(
               labelText: 'Palette Name',
-              //hintText: widget.paletteName,
               border: const OutlineInputBorder(),
             ),
           )
         else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Select palette:'),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(8),
+          if (!isCreatingPaletteInView)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Select palette:'),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButton<Map<String, dynamic>>(
+                    value: _selectedPalette != null 
+                      ? _palettes.firstWhere(
+                          (palette) => palette['id'] == _selectedPalette!.id,
+                          orElse: () => _palettes.first,
+                        )
+                      : _palettes.first,
+                    isExpanded: true,
+                    underline: Container(),
+                    items: _palettes.map((palette) {
+                      return DropdownMenuItem<Map<String, dynamic>>(
+                        value: palette,
+                        child: Text(palette['name']),
+                      );
+                    }).toList(),
+                    onChanged: (Map<String, dynamic>? value) {
+                      if (value != null) {
+                        print('🎨 Paleta seleccionada: ${value['id']}');
+                        print('🎨 Paleta seleccionada: ${value['name']}');
+                        setState(() {
+                          _selectedPalette = Palette(
+                            id: value['id'],
+                            name: value['name'],
+                            imagePath: 'assets/images/placeholder.jpg',
+                            colors: [],
+                            createdAt: DateTime.now(),
+                          );
+                        });
+                      }
+                    },
+                  ),
                 ),
-                child: DropdownButton<Map<String, dynamic>>(
-                  value: _selectedPalette != null 
-                    ? _palettes.firstWhere(
-                        (palette) => palette['id'] == _selectedPalette!.id,
-                        orElse: () => _palettes.first,
-                      )
-                    : _palettes.first,
-                  isExpanded: true,
-                  underline: Container(),
-                  items: _palettes.map((palette) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: palette,
-                      child: Text(palette['name']),
-                    );
-                  }).toList(),
-                  onChanged: (Map<String, dynamic>? value) {
-                    if (value != null) {
-                      print('🎨 Paleta seleccionada: ${value['id']}');
-                      print('🎨 Paleta seleccionada: ${value['name']}');
-                      setState(() {
-                        _selectedPalette = Palette(
-                          id: value['id'],
-                          name: value['name'],
-                          imagePath: 'assets/images/placeholder.jpg',
-                          colors: [],
-                          createdAt: DateTime.now(),
-                        );
-                      });
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          
+              ],
+            ),
+
         const SizedBox(height: 16),
 
-        if (!isCreatingPalette)
+        if (isCreatingPaletteInView) ...[
+          TextField(
+            decoration: InputDecoration(
+              labelText: 'Palette name',
+              hintText: 'Enter a name for your palette',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _newPaletteName = value;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
           TextButton.icon(
             onPressed: () {
-              // TODO: Logic to create a new palette
-              // This would typically navigate to a palette creation screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Create new palette (pending)')),
-              );
+              setState(() {
+                isCreatingPaletteInView = false;
+              });
+            },
+            icon: Icon(
+              Icons.arrow_back_ios_new_outlined,
+              color:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.primaryBlue
+                      : Colors.white,
+            ),
+            label: Text(
+              'Choose existing palette',
+              style: TextStyle(
+                color:
+                    Theme.of(context).brightness == Brightness.dark
+                        ? AppTheme.primaryBlue
+                        : Colors.white,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              backgroundColor:
+                  Theme.of(context).brightness == Brightness.dark
+                      ? AppTheme.marineOrange
+                      : AppTheme.primaryBlue,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+        if (!isCreatingPalette && !isCreatingPaletteInView)
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                isCreatingPaletteInView = true;
+              });
             },
             icon: Icon(
               Icons.add,
@@ -959,6 +1010,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               ),
             ),
           ),
+        
         const SizedBox(height: 16),
 
         // Action buttons
@@ -977,7 +1029,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: isCreatingPalette ? _createPalette : _addToPalette,
+                onPressed: (isCreatingPalette || isCreatingPaletteInView) ? _createPalette : _addToPalette,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
@@ -992,27 +1044,27 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   }
 
   void _createPalette() {
-    if (widget.paletteName != null) {
-      // Create a new palette with the scanned paint
-      print('_createPalette widget.paletteName: ${widget.paletteName}');
-      print('_createPalette widget.paint.hex: ${widget.paint.hex}');
-      print('_createPalette paint.id: ${widget.paint.id}');
-      print('_createPalette paint.name: ${widget.paint.name}');
+    String _name = isCreatingPaletteInView ? _newPaletteName : (widget.paletteName ?? "");
+    print('_createPalette widget.paletteName: ${widget.paletteName}');
+    print('_createPalette _newPaletteName: ${_newPaletteName}');
+    print('_createPalette _name: ${_name}');
+    print('_createPalette widget.paint.hex: ${widget.paint.hex}');
+    print('_createPalette paint.id: ${widget.paint.id}');
+    print('_createPalette paint.name: ${widget.paint.name}');
 
-      final newPalette = Palette(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: widget.paletteName!,
-        colors: [_getColorFromHex(widget.paint.hex)],
-        createdAt: DateTime.now(),
-        imagePath: '',
-      );
+    final newPalette = Palette(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: _name,
+      colors: [_getColorFromHex(widget.paint.hex)],
+      createdAt: DateTime.now(),
+      imagePath: '',
+    );
       
-      widget.onAddToPalette(widget.paint, newPalette);
-      setState(() {
-        _isAddingToPalette = false;
-      });
-      _showSuccessSnackbar('Palette created successfully');
-    }
+    widget.onAddToPalette(widget.paint, newPalette);
+    setState(() {
+      _isAddingToPalette = false;
+    });
+    _showSuccessSnackbar('Palette created successfully');
   }
 
   Color _getColorFromHex(String hex) {

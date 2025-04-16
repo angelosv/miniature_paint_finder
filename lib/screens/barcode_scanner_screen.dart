@@ -12,6 +12,7 @@ import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/screens/palette_screen.dart';
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
@@ -365,8 +366,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 );
               }
 
-              Navigator.pop(context);
-              Navigator.pop(context, paint);
+              // Navigator.pop(context);
+              // Navigator.pop(context, paint);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const PaletteScreen()),
+                (Route<dynamic> route) => false, // elimina todo lo anterior
+              );
             },
             onFindEquivalents: (paint) async {
               // Close the modal first
