@@ -7,7 +7,6 @@ import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
-import 'package:miniature_paint_finder/screens/debug_cache_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 
 /// A shared drawer widget to be used across all screens for consistent navigation
@@ -118,11 +117,6 @@ class _SharedDrawerState extends State<SharedDrawer>
 
     // Settings and help items
     final List<Map<String, dynamic>> bottomDrawerItems = [
-      {
-        'icon': Icons.bug_report_outlined,
-        'text': 'Debug Cache',
-        'screen': 'debug_cache',
-      },
       {
         'icon': Icons.person_outline,
         'text': 'Profile & Settings',
@@ -459,18 +453,6 @@ class _SharedDrawerState extends State<SharedDrawer>
               pageBuilder:
                   (context, animation, secondaryAnimation) =>
                       const BarcodeScannerScreen(),
-              transitionsBuilder: _buildTransition,
-              transitionDuration: const Duration(milliseconds: 300),
-            ),
-          );
-          break;
-        case 'debug_cache':
-          // Navigate to the debug cache screen
-          Navigator.of(context).push(
-            PageRouteBuilder(
-              pageBuilder:
-                  (context, animation, secondaryAnimation) =>
-                      const DebugCacheScreen(),
               transitionsBuilder: _buildTransition,
               transitionDuration: const Duration(milliseconds: 300),
             ),

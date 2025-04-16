@@ -22,6 +22,7 @@ import 'package:miniature_paint_finder/models/user.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/image_cache_service.dart';
 
 /// App entry point
 void main() async {
@@ -36,6 +37,20 @@ void main() async {
     print('Firebase initialization error: $e');
     // Continuamos con la app incluso si Firebase falla
   }
+
+  // Initialize image cache management
+  final imageCacheService = ImageCacheService();
+  await imageCacheService.clearCacheIfNeeded();
+  // Configurar límites globales de la caché de imágenes con valores más agresivos
+  imageCacheService.configureImageCache(
+    maxSizeBytes: 20 * 1024 * 1024, // 20 MB - valor más restrictivo
+    maxImages: 50,
+  );
+
+  // Configure Flutter's image cache directly as well
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 20 * 1024 * 1024;
+  PaintingBinding.instance.imageCache.maximumSize = 50;
+  debugPrint('🔧 Flutter image cache configured with restrictive limits');
 
   // Initialize services
   final IAuthService authService = AuthService();

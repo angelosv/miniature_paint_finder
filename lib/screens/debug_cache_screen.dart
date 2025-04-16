@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/image_cache_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
@@ -17,14 +18,18 @@ class _DebugCacheScreenState extends State<DebugCacheScreen> {
   bool _isCheckingCache = false;
   bool _isClearingCache = false;
   bool _isLoadingAllPaints = false;
+  bool _isClearingImageCache = false;
   int _cachedPaintsCount = 0;
   String _lastUpdated = '';
+  String _imageCacheSize = 'Desconocido';
   List<String> _cacheInfo = [];
+  final ImageCacheService _imageCacheService = ImageCacheService();
 
   @override
   void initState() {
     super.initState();
     _checkCache();
+    _checkImageCache();
   }
 
   Future<void> _checkCache() async {
@@ -47,6 +52,41 @@ class _DebugCacheScreenState extends State<DebugCacheScreen> {
       setState(() {
         _isCheckingCache = false;
         _cacheInfo = ['Error checking cache: $e'];
+      });
+    }
+  }
+
+  Future<void> _checkImageCache() async {
+    try {
+      final size = await _imageCacheService.getCacheSize();
+      setState(() {
+        _imageCacheSize = size;
+      });
+    } catch (e) {
+      setState(() {
+        _imageCacheSize = 'Error: $e';
+      });
+    }
+  }
+
+  Future<void> _clearImageCache() async {
+    setState(() {
+      _isClearingImageCache = true;
+    });
+
+    try {
+      await _imageCacheService.clearCache();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image cache cleared successfully')),
+      );
+      await _checkImageCache();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error clearing image cache: $e')));
+    } finally {
+      setState(() {
+        _isClearingImageCache = false;
       });
     }
   }
@@ -154,6 +194,7 @@ class _DebugCacheScreenState extends State<DebugCacheScreen> {
                         '$_cachedPaintsCount items',
                       ),
                       _buildInfoRow('Last updated:', _lastUpdated),
+                      _buildInfoRow('Image cache:', _imageCacheSize),
                     ],
                   ),
                 ),
@@ -185,6 +226,22 @@ class _DebugCacheScreenState extends State<DebugCacheScreen> {
                         _isLoadingAllPaints ? null : _loadAllPaintsToCache,
                     isLoading: _isLoadingAllPaints,
                     color: Colors.green,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Image cache button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.image_not_supported_outlined,
+                    label: 'Clear Image Cache',
+                    onPressed: _isClearingImageCache ? null : _clearImageCache,
+                    isLoading: _isClearingImageCache,
+                    color: Colors.orange,
                   ),
                 ],
               ),

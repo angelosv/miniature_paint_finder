@@ -17,6 +17,9 @@ import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/services/image_upload_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:miniature_paint_finder/services/image_cache_service.dart';
 
 /// Screen that displays all user palettes
 class PaletteScreen extends StatefulWidget {
@@ -25,6 +28,27 @@ class PaletteScreen extends StatefulWidget {
 
   @override
   State<PaletteScreen> createState() => _PaletteScreenState();
+}
+
+/// Custom cache manager específico para paletas
+class PaletteCacheManager extends CacheManager {
+  static const key = 'paletteImageCache';
+
+  static final PaletteCacheManager _instance = PaletteCacheManager._();
+  factory PaletteCacheManager() {
+    return _instance;
+  }
+
+  PaletteCacheManager._()
+    : super(
+        Config(
+          key,
+          stalePeriod: const Duration(days: 7),
+          maxNrOfCacheObjects: 100,
+          repo: JsonCacheInfoRepository(databaseName: key),
+          fileService: HttpFileService(),
+        ),
+      );
 }
 
 class _PaletteScreenState extends State<PaletteScreen> {
@@ -39,7 +63,26 @@ class _PaletteScreenState extends State<PaletteScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Ensure we get a fresh load of palettes when screen initializes
       context.read<PaletteController>().loadPalettes();
+
+      // Precarga las imágenes para mejorar la experiencia
+      _precacheImages();
     });
+  }
+
+  /// Precarga las imágenes de paletas para acelerar la renderización
+  void _precacheImages() async {
+    final palettes = _paletteController.palettes;
+    final imageCacheService = ImageCacheService();
+
+    for (final palette in palettes) {
+      if (palette.imagePath.startsWith('http')) {
+        imageCacheService.preloadImage(
+          palette.imagePath,
+          context,
+          cacheKey: 'palette_${palette.id}_card',
+        );
+      }
+    }
   }
 
   void _showCreatePaletteOptions() {
@@ -332,7 +375,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
         'paletteInfo': {
           'isCreatingPalette': true,
           'paletteName': paletteName,
-          'source': 'palette_screen'
+          'source': 'palette_screen',
         },
       },
     );
@@ -702,7 +745,8 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget _buildPaletteCard(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final hasPaletteSwatch = palette.colors.isNotEmpty;
-    final hasSelections = palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
+    final hasSelections =
+        palette.paintSelections != null && palette.paintSelections!.isNotEmpty;
     final bool hasImage = palette.imagePath.startsWith('http');
 
     return Hero(
@@ -731,28 +775,56 @@ class _PaletteScreenState extends State<PaletteScreen> {
                 ),
                 child: Stack(
                   children: [
-                    // Background image or color grid
-                    SizedBox(
-                      height: 120,
-                      width: double.infinity,
-                      child: hasImage
-                          ? Image.network(
-                              palette.imagePath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                print('❌ Error loading network image: $error');
-                                return _buildFallbackContent(
-                                  isDarkMode,
-                                  hasPaletteSwatch,
-                                  palette,
-                                );
-                              },
-                            )
-                          : _buildFallbackContent(
-                              isDarkMode,
-                              hasPaletteSwatch,
-                              palette,
-                            ),
+                    // Background image or color grid - AQUÍ ES EL PROBLEM PRINCIPAL
+                    AspectRatio(
+                      aspectRatio: 16 / 9, // Mantener aspect ratio constante
+                      child:
+                          hasImage
+                              ? CachedNetworkImage(
+                                cacheManager: PaletteCacheManager(),
+                                imageUrl: palette.imagePath,
+                                cacheKey: 'palette_${palette.id}_card',
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fadeInDuration: const Duration(
+                                  milliseconds: 200,
+                                ),
+                                fadeOutDuration: const Duration(
+                                  milliseconds: 200,
+                                ),
+                                placeholder:
+                                    (context, url) => Container(
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[800]
+                                              : Colors.grey[200],
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color:
+                                              isDarkMode
+                                                  ? Colors.orange
+                                                  : Colors.blue,
+                                        ),
+                                      ),
+                                    ),
+                                errorWidget: (context, error, stackTrace) {
+                                  print(
+                                    '❌ Error loading network image: $error',
+                                  );
+                                  return _buildFallbackContent(
+                                    isDarkMode,
+                                    hasPaletteSwatch,
+                                    palette,
+                                  );
+                                },
+                              )
+                              : _buildFallbackContent(
+                                isDarkMode,
+                                hasPaletteSwatch,
+                                palette,
+                              ),
                     ),
 
                     // Badge overlays
@@ -801,7 +873,9 @@ class _PaletteScreenState extends State<PaletteScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.8),
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.8),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -852,7 +926,8 @@ class _PaletteScreenState extends State<PaletteScreen> {
                         palette.createdAtText ?? _formatDate(palette.createdAt),
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                       const Spacer(),
@@ -865,7 +940,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200],
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -874,7 +952,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                 Icon(
                                   Icons.palette,
                                   size: 14,
-                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -882,7 +963,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
                                   ),
                                 ),
                               ],
@@ -897,7 +981,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                               child: Icon(
                                 Icons.delete_outline,
                                 size: 18,
-                                color: isDarkMode ? Colors.red[300] : Colors.red[400],
+                                color:
+                                    isDarkMode
+                                        ? Colors.red[300]
+                                        : Colors.red[400],
                               ),
                             ),
                           ),
@@ -914,7 +1001,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
   }
 
-  Widget _buildFallbackContent(bool isDarkMode, bool hasPaletteSwatch, Palette palette) {
+  Widget _buildFallbackContent(
+    bool isDarkMode,
+    bool hasPaletteSwatch,
+    Palette palette,
+  ) {
     if (hasPaletteSwatch) {
       return Container(
         decoration: BoxDecoration(
@@ -926,13 +1017,16 @@ class _PaletteScreenState extends State<PaletteScreen> {
         ),
       );
     } else {
-      return Container(
-        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-        child: Center(
-          child: Icon(
-            Icons.palette_outlined,
-            size: 40,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+          child: Center(
+            child: Icon(
+              Icons.palette_outlined,
+              size: 40,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
           ),
         ),
       );
