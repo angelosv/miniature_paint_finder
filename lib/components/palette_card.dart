@@ -44,46 +44,43 @@ class PaletteCard extends StatelessWidget {
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(ResponsiveGuidelines.radiusL),
               ),
-              child: RepaintBoundary(
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child:
-                      palette.imagePath.startsWith('http')
-                          ? CachedNetworkImage(
-                            key: ValueKey('palette_${palette.id}_image'),
-                            cacheManager: PaletteCacheManager(),
-                            imageUrl: palette.imagePath,
-                            fit: BoxFit.cover,
-                            fadeInDuration: const Duration(milliseconds: 200),
-                            fadeOutDuration: const Duration(milliseconds: 200),
-                            cacheKey: 'palette_${palette.id}_thumbnail',
-                            placeholder:
-                                (context, url) => Container(
-                                  color: Colors.grey[300],
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color:
-                                          Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.orange
-                                              : Colors.blue,
-                                    ),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child:
+                    palette.imagePath.startsWith('http')
+                        ? CachedNetworkImage(
+                          cacheManager: PaletteCacheManager(),
+                          imageUrl: palette.imagePath,
+                          fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 200),
+                          fadeOutDuration: const Duration(milliseconds: 200),
+                          cacheKey: 'palette_${palette.id}_thumbnail',
+                          placeholder:
+                              (context, url) => Container(
+                                color: Colors.grey[300],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.orange
+                                            : Colors.blue,
                                   ),
                                 ),
-                            errorWidget: (context, error, stackTrace) {
-                              print('❌ Error loading network image: $error');
-                              return _buildFallbackImage(context);
-                            },
-                          )
-                          : Image.asset(
-                            palette.imagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildFallbackImage(context);
-                            },
-                          ),
-                ),
+                              ),
+                          errorWidget: (context, error, stackTrace) {
+                            print('❌ Error loading network image: $error');
+                            return _buildFallbackImage(context);
+                          },
+                        )
+                        : Image.asset(
+                          palette.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildFallbackImage(context);
+                          },
+                        ),
               ),
             ),
 
