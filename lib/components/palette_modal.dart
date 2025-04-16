@@ -11,7 +11,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 
-class PaletteModal extends StatelessWidget {
+/// Modal para mostrar los detalles de una paleta de colores
+class PaletteModal extends StatefulWidget {
   final String paletteName;
   final List<PaintSelection> paints;
   final String? imagePath;
@@ -22,6 +23,20 @@ class PaletteModal extends StatelessWidget {
     required this.paints,
     this.imagePath,
   }) : super(key: key);
+
+  @override
+  State<PaletteModal> createState() => _PaletteModalState();
+}
+
+class _PaletteModalState extends State<PaletteModal> {
+  // Trigger para forzar la reconstrucción
+  int _refreshCounter = 0;
+
+  void _refreshState() {
+    setState(() {
+      _refreshCounter++;
+    });
+  }
 
   /// Llama al endpoint de la API para obtener la información de la pintura.
   /// El endpoint es: https://paints-api.reachu.io/api/paint/paint-info/{brand}/{paintId}
@@ -102,9 +117,10 @@ class PaletteModal extends StatelessWidget {
         children: [
           Stack(
             children: [
-              if (imagePath != null && imagePath!.startsWith('http'))
+              if (widget.imagePath != null &&
+                  widget.imagePath!.startsWith('http'))
                 Image.network(
-                  imagePath!,
+                  widget.imagePath!,
                   width: double.infinity,
                   height: 150,
                   fit: BoxFit.cover,
@@ -138,7 +154,7 @@ class PaletteModal extends StatelessWidget {
                 )
               else
                 Image.asset(
-                  imagePath ?? 'assets/images/placeholder.jpeg',
+                  widget.imagePath ?? 'assets/images/placeholder.jpeg',
                   width: double.infinity,
                   height: 150,
                   fit: BoxFit.cover,
@@ -192,7 +208,7 @@ class PaletteModal extends StatelessWidget {
                 left: 24,
                 right: 24,
                 child: Text(
-                  paletteName,
+                  widget.paletteName,
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -205,7 +221,7 @@ class PaletteModal extends StatelessWidget {
           ),
           Expanded(
             child:
-                paints.isEmpty
+                widget.paints.isEmpty
                     ? Center(
                       child: Text(
                         'No paints in this palette',
@@ -219,9 +235,9 @@ class PaletteModal extends StatelessWidget {
                         horizontal: 24,
                         vertical: 16,
                       ),
-                      itemCount: paints.length,
+                      itemCount: widget.paints.length,
                       itemBuilder: (context, index) {
-                        final paint = paints[index];
+                        final paint = widget.paints[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
@@ -766,7 +782,10 @@ class PaletteModal extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => const InventoryScreen(),
                       ),
-                    );
+                    ).then((_) {
+                      // Actualizar el estado cuando regrese de la pantalla de inventario
+                      _refreshState();
+                    });
                   },
                   icon: const Icon(Icons.inventory_2),
                   label: const Text("View in Inventory"),
@@ -798,26 +817,74 @@ class PaletteModal extends StatelessWidget {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${paint.paintName} will be added to your inventory.'),
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _getColorFromHex(paint.paintColorHex),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              paint.paintName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              paint.paintBrand,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Quantity: '),
-                      const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () {
-                          if (quantity > 1) {
-                            setState(() {
-                              quantity--;
-                            });
-                          }
-                        },
+                        onPressed:
+                            quantity > 1
+                                ? () {
+                                  setState(() {
+                                    quantity--;
+                                  });
+                                }
+                                : null,
                       ),
-                      Text(
-                        '$quantity',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '$quantity',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline),
@@ -833,35 +900,134 @@ class PaletteModal extends StatelessWidget {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Added $quantity ${paint.paintName} to inventory',
-                        ),
-                        backgroundColor:
-                            isDarkMode ? Colors.orange : Colors.blue,
-                        action: SnackBarAction(
-                          label: 'VIEW',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const InventoryScreen(),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    final paintService = PaintService();
+
+                    // Convertir PaintSelection a Paint para la API
+                    final String hexColor =
+                        paint.paintColorHex.startsWith('#')
+                            ? paint.paintColorHex.substring(1)
+                            : paint.paintColorHex;
+                    final r = int.parse(hexColor.substring(0, 2), radix: 16);
+                    final g = int.parse(hexColor.substring(2, 4), radix: 16);
+                    final b = int.parse(hexColor.substring(4, 6), radix: 16);
+
+                    final Paint paintObj = Paint(
+                      id: paint.paintId,
+                      name: paint.paintName,
+                      brand: paint.paintBrand,
+                      hex: paint.paintColorHex,
+                      set: "Palette Paint",
+                      code: paint.paintId,
+                      r: r,
+                      g: g,
+                      b: b,
+                      category: "Palette",
+                      isMetallic: false,
+                      isTransparent: false,
+                    );
+
+                    // Mostrar loading
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
                               ),
-                            );
-                          },
+                              strokeWidth: 2,
+                            ),
+                            SizedBox(width: 16),
+                            Text('Updating inventory...'),
+                          ],
                         ),
+                        duration: Duration(seconds: 10),
+                        behavior: SnackBarBehavior.floating,
                       ),
                     );
+
+                    try {
+                      final firebaseUser = FirebaseAuth.instance.currentUser;
+                      if (firebaseUser == null) {
+                        scaffoldMessenger.hideCurrentSnackBar();
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'You need to be logged in to update inventory',
+                            ),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final userId = firebaseUser.uid;
+                      // Llamamos a la API para actualizar el inventario
+                      final result = await paintService.addToInventory(
+                        paintObj,
+                        quantity,
+                      );
+
+                      scaffoldMessenger.hideCurrentSnackBar();
+
+                      // El método addToInventory devuelve true si la operación fue exitosa
+                      if (result == true) {
+                        // Forzar la actualización del estado para reflejar el cambio en la UI
+                        _refreshState();
+
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Updated ${paint.paintName} quantity to $quantity',
+                            ),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                            action: SnackBarAction(
+                              label: 'VIEW',
+                              textColor: Colors.white,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => const InventoryScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      } else {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Error updating inventory'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      scaffoldMessenger.hideCurrentSnackBar();
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   },
-                  child: const Text('Confirm'),
+                  child: const Text('Save'),
                 ),
               ],
             );
@@ -871,7 +1037,7 @@ class PaletteModal extends StatelessWidget {
     );
   }
 
-  // Diálogo para añadir a wishlist
+  // Método para mostrar el diálogo de wishlist
   void _showWishlistDialog(BuildContext context, PaintSelection paint) {
     // Referencia al ScaffoldMessenger para mostrar SnackBars
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -962,6 +1128,9 @@ class PaletteModal extends StatelessWidget {
                 result['alreadyExists'] == true
                     ? '${paint.name} is already in your wishlist'
                     : 'Added ${paint.name} to wishlist${priority > 0 ? " with $priorityText priority" : ""}';
+
+            // Forzar la actualización del estado para reflejar el cambio en la UI
+            _refreshState();
 
             scaffoldMessenger.showSnackBar(
               SnackBar(
