@@ -7,7 +7,7 @@ class PaintApiService {
   static const String baseUrl = 'https://paints-api.reachu.io/api';
 
   // Flag para habilitar logs detallados
-  final bool _enableDetailedLogs = true;
+  final bool _enableDetailedLogs = false;
 
   // Método para imprimir logs
   void _log(String message) {
