@@ -152,7 +152,7 @@ class ImageCacheService {
       );
 
       // Usar la función de Flutter para precarga
-      await Flutter.precacheImage(provider, context);
+      await precacheImage(provider, context);
       debugPrint('✅ Imagen precargada: $imageUrl');
     } catch (e) {
       debugPrint('⚠️ Error al precargar imagen: $e');
