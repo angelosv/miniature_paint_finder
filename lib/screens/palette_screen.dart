@@ -307,7 +307,9 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const BarcodeScannerScreen(),
+                        builder: (context) => BarcodeScannerScreen(
+                          paletteName: nameController.text.trim(),
+                        ),
                       ),
                     );
                   },
@@ -583,13 +585,12 @@ class _PaletteScreenState extends State<PaletteScreen> {
       selectedIndex: 3, // Índice 3 para My Palettes en el menú inferior
       body: _buildBody(context, isDarkMode),
       drawer: const SharedDrawer(currentScreen: 'palettes'),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePaletteOptions,
         backgroundColor:
             isDarkMode ? AppTheme.marineOrange : Theme.of(context).primaryColor,
         foregroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Create Palette'),
+        child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

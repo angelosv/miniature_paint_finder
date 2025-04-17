@@ -7,11 +7,13 @@ import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 class AddToWishlistModal extends StatefulWidget {
   final Paint paint;
   final Function(Paint paint, int priority) onAddToWishlist;
+  final bool isUpdate; // 👈 nuevo campo
 
   const AddToWishlistModal({
     super.key,
     required this.paint,
     required this.onAddToWishlist,
+    this.isUpdate = false, // default
   });
 
   // Método estático para mostrar el modal
@@ -19,6 +21,7 @@ class AddToWishlistModal extends StatefulWidget {
     required BuildContext context,
     required Paint paint,
     required Function(Paint paint, int priority) onAddToWishlist,
+    bool isUpdate = false, //
   }) {
     // Crear una nueva instancia del widget cada vez que se muestra el modal
     // para asegurar que tenga un estado fresco
@@ -32,6 +35,7 @@ class AddToWishlistModal extends StatefulWidget {
                 UniqueKey(), // Añadir una key única para forzar la recreación del widget
             paint: paint,
             onAddToWishlist: onAddToWishlist,
+            isUpdate: isUpdate, //
           ),
     );
   }
@@ -54,6 +58,8 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Paint paint = widget.paint;
+    final bool isUpdate = widget.isUpdate;
+
     final Color paintColor = Color(
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
@@ -90,7 +96,7 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
 
             // Título del modal
             Text(
-              'Add to Wishlist',
+              isUpdate ? "Update Wishlist" : "Add to Wishlist",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -240,7 +246,9 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Add to Wishlist'),
+                    child: Text(
+                      isUpdate ? "Update Wishlist" : "Add to Wishlist",
+                    ),
                   ),
                 ),
               ],

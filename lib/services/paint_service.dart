@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
@@ -134,45 +135,126 @@ class PaintService {
     String? note,
     InventoryEntryType type = InventoryEntryType.new_paint,
   }) async {
-    // Simulamos una operación asíncrona
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      print('\n🔄 addToInventory → usando API real');
 
-    _inventory[paint.id] = {
-      'quantity': quantity,
-      'note': note,
-      'addedAt': DateTime.now(),
-      'type': type.toString(),
-    };
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ No hay usuario autenticado');
+        return false;
+      }
 
-    return true;
+      final token = await user.getIdToken();
+      final brandId = _determineBrandIdForPaint(paint);
+
+      final url = Uri.parse('https://paints-api.reachu.io/api/inventory');
+
+      final body = {
+        'brand_id': brandId,
+        'paint_id': paint.id,
+        'quantity': quantity,
+        'notes': note ?? '',
+      };
+
+      print('📤 POST → $url');
+      print('📦 Body: $body');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _inventory[paint.id] = {
+          'quantity': quantity,
+          'note': note,
+          'addedAt': DateTime.now(),
+          'type': InventoryEntryType.new_paint.toString(),
+        };
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('❌ Error en addToInventory: $e');
+      return false;
+    }
   }
 
   /// Actualiza una pintura en el inventario
   Future<bool> updateInventory(
     Paint paint,
     int quantity, {
+    required String inventoryId,
     String? note,
     InventoryEntryType? type,
   }) async {
-    // Simulamos una operación asíncrona
-    await Future.delayed(const Duration(milliseconds: 300));
+    try {
+      print('\n🔄 updateInventory → usando API real');
 
-    if (!_inventory.containsKey(paint.id)) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ No hay usuario autenticado');
+        return false;
+      }
+
+      final token = await user.getIdToken();
+      final url = Uri.parse(
+        'https://paints-api.reachu.io/api/inventory/$inventoryId',
+      );
+
+      final Map<String, dynamic> body = {'quantity': quantity};
+
+      if (note != null && note.trim().isNotEmpty) {
+        body['notes'] = note;
+      }
+
+      print('📤 PUT → $url');
+      print('📦 Body: $body');
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // 🧠 Actualización local
+        _inventory[paint.id] ??= {};
+        final entry = _inventory[paint.id]!;
+
+        entry['quantity'] = quantity;
+        entry['updatedAt'] = DateTime.now();
+
+        if (note != null && note.trim().isNotEmpty) {
+          entry['note'] = note;
+        }
+
+        if (type != null) {
+          entry['type'] = type.toString();
+        }
+
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print('❌ Error en updateInventory: $e');
       return false;
     }
-
-    final entry = _inventory[paint.id]!;
-    entry['quantity'] = quantity;
-
-    if (note != null) {
-      entry['note'] = note;
-    }
-
-    if (type != null) {
-      entry['type'] = type.toString();
-    }
-
-    return true;
   }
 
   /// Agrega una pintura a la wishlist
