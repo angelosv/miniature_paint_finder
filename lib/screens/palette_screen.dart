@@ -1065,33 +1065,15 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   // Método para abrir la búsqueda en la biblioteca de pinturas
   void _openPaintLibrarySearch(String paletteName) {
-    // Por ahora, mostramos un diálogo informativo de que esta función está en desarrollo
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Coming Soon'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This feature will allow you to search for paints in the library to add to your palette "$paletteName".',
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Available in the next update!',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+    Navigator.pushNamed(
+      context,
+      '/library',
+      arguments: {
+        'paletteInfo': {
+          'isCreatingPalette': true,
+          'paletteName': paletteName,
+        }
+      },
     );
   }
 }

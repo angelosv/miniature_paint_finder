@@ -82,9 +82,7 @@ class Paint {
 
   /// Create a Paint object from JSON data
   factory Paint.fromJson(Map<String, dynamic> json) {
-    print('🔍 JSON recibido para Paint: $json'); // Debug log
     final brandId = json['brandId']?.toString();
-    print('🔍 brandId extraído: $brandId'); // Debug log
 
     return Paint(
       id: json['id'] as String? ?? '',

@@ -9,6 +9,9 @@ import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
+import 'package:miniature_paint_finder/screens/palette_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -17,20 +20,33 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
+
 class _LibraryScreenState extends State<LibraryScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late InventoryService _inventoryService;
   bool _argsProcessed = false;
+  String? _paletteName = null;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args =
-          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args == null || !args.containsKey('brandName')) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        if(args.containsKey('paletteInfo')) {
+          final _paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
+          _paletteName = _paletteInfo['paletteName'];
+          print('initState Palette name: $_paletteName');
+        }
+        if (args.containsKey('brandName')) {
+          final String brandName = args['brandName'];
+          context.read<PaintLibraryController>().filterByBrand(brandName);
+        } else {
+            context.read<PaintLibraryController>().loadPaints();
+        }
+      } else {
         context.read<PaintLibraryController>().loadPaints();
       }
     });
@@ -41,11 +57,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_argsProcessed) {
-      final args =
-          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args != null && args.containsKey('brandName')) {
-        final String brandName = args['brandName'];
-        context.read<PaintLibraryController>().filterByBrand(brandName);
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        if (args.containsKey('brandName')) {
+          final String brandName = args['brandName'];
+          context.read<PaintLibraryController>().filterByBrand(brandName);
+        } else if (args.containsKey('paletteInfo')) {
+          final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
+          if (paletteInfo['isCreatingPalette'] == true) {
+            // Cargar todas las pinturas cuando estamos creando una paleta
+            context.read<PaintLibraryController>().loadPaints();
+          }
+        }
       }
       _argsProcessed = true;
     }
@@ -263,7 +286,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       color: mainColor,
                       onAddToWishlist: controller.toggleWishlist,
                       onAddToInventory: _addToInventory,
+                      onAddToPalette: _handleAddToPalette,
                       isInWishlist: isInWishlist,
+                      paletteName: _paletteName,
                     );
                   },
                 ),
@@ -660,6 +685,62 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to add paint to inventory'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleAddToPalette(String paletteName, String paintId, String brandId) async {
+    print('=== Iniciando _handleAddToPalette ===');
+
+    try {
+      final paletteService = PaletteService();
+      final user = FirebaseAuth.instance.currentUser;
+      
+      if (user == null) {
+        print('Error: Usuario no autenticado');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please sign in to create palettes'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final token = await user.getIdToken() ?? "";
+
+      final palette = await paletteService.createPalette(paletteName, token);
+      await paletteService.addPaintsToPalette(
+        palette['id'],
+        [ { "paint_id": paintId, "brand_id": brandId } ],
+        token,
+      );
+
+      if (mounted) {
+        print('Pintura agregada exitosamente');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'New palette created and paint added',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const PaletteScreen()),
+          (Route<dynamic> route) => false, // elimina todo lo anterior
+        );
+      }
+    } catch (e) {
+      print('Error en _handleAddToPalette: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

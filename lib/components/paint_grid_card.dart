@@ -13,7 +13,9 @@ class PaintGridCard extends StatelessWidget {
   final Color color;
   final Function(String)? onAddToWishlist;
   final Function(String)? onAddToInventory;
+  final Function(String, String, String)? onAddToPalette;
   final bool isInWishlist;
+  final String? paletteName;
 
   const PaintGridCard({
     super.key,
@@ -21,7 +23,9 @@ class PaintGridCard extends StatelessWidget {
     required this.color,
     this.onAddToWishlist,
     this.onAddToInventory,
+    this.onAddToPalette,
     this.isInWishlist = false,
+    this.paletteName,
   });
 
   // Helper para obtener el color de la pintura
@@ -412,10 +416,16 @@ class PaintGridCard extends StatelessWidget {
                   icon: Icons.add_to_photos_outlined,
                   label: 'Add to Palette',
                   onTap: () {
-                    Navigator.pop(context);
-                    _showPaletteSelector(context);
+                    if (paletteName != null) {
+                      print("****** paint_grid_card Palette name: $paletteName");
+                      _showCreateModal(context);
+                    } else {
+                      Navigator.pop(context);
+                      _showPaletteSelector(context);
+                    }
                   },
                   isOutlined: true,
+                  paletteName: paletteName,
                 ),
 
                 const SizedBox(height: 8),
@@ -756,6 +766,74 @@ class PaintGridCard extends StatelessWidget {
       },
     );
   }
+
+  void _showCreateModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              margin: const EdgeInsets.only(bottom: 16),
+            ),
+            
+            Text(
+              'Create New Palette',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            
+            const SizedBox(height: 16),
+            
+            TextFormField(
+              initialValue: paletteName ?? 'Enter a name for your new palette',
+              enabled: false,
+              decoration: InputDecoration(
+                labelText: 'Palette Name',
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            ElevatedButton(
+              onPressed: () {
+                print("****** save palette: $paletteName");
+                print("****** save palette: ${paint.id}");        
+                print("****** save palette: ${paint.brandId}");            
+              
+                Navigator.pop(context);
+                onAddToPalette!(paletteName ?? "", paint.id ?? "", paint.brandId ?? "");
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Create'),
+            ),
+            
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // Helper widget for the action buttons in the modal
@@ -765,6 +843,7 @@ class PaintActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool isOutlined;
   final Color? color;
+  final String? paletteName;
 
   const PaintActionButton({
     super.key,
@@ -773,6 +852,7 @@ class PaintActionButton extends StatelessWidget {
     required this.onTap,
     this.isOutlined = false,
     this.color,
+    this.paletteName,
   });
 
   @override
