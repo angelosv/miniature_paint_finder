@@ -13,6 +13,7 @@ import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
@@ -105,10 +106,22 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 ? ClipOval(
                   child: FittedBox(
                     fit: BoxFit.contain,
-                    child: Image.network(
-                      logoUrl,
-                      // No se especifica ancho y alto para dejar que el FittedBox haga su trabajo
-                      errorBuilder: (ctx, err, stack) {
+                    child: CachedNetworkImage(
+                      imageUrl: logoUrl,
+                      fit: BoxFit.contain,
+                      cacheKey: 'brand_logo_${brandId}',
+                      placeholder:
+                          (context, url) => Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: isDarkMode ? Colors.orange : Colors.blue,
+                              ),
+                            ),
+                          ),
+                      errorWidget: (ctx, url, err) {
                         print('⚠️ Image load error for $brandId: $err');
                         return Text(
                           brandName.isNotEmpty
@@ -137,7 +150,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   /// _togglePriority:
-  /// Calcula el nuevo valor de prioridad (0 a 5), donde 0 indica “sin prioridad” y 1 a 5 indica que el ítem es prioritario.
+  /// Calcula el nuevo valor de prioridad (0 a 5), donde 0 indica "sin prioridad" y 1 a 5 indica que el ítem es prioritario.
   Future<void> _togglePriority(
     String paintId,
     bool currentPriority,
@@ -351,8 +364,686 @@ class _WishlistScreenState extends State<WishlistScreen> {
         if (controller.isEmpty) {
           return _buildEmptyState();
         }
-        return _buildWishlistContent(controller.wishlistItems);
+        return Column(
+          children: [
+            // Barra de búsqueda
+            _buildSearchBar(controller),
+            // Filtros activos
+            _buildActiveFilters(controller),
+            // Barra de filtro y ordenamiento
+            _buildFilterAndSortBar(controller),
+            // Contenido de la wishlist
+            Expanded(child: _buildWishlistContent(controller.wishlistItems)),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildSearchBar(WishlistController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final searchController = TextEditingController(
+      text: controller.searchQuery,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: TextField(
+        controller: searchController,
+        decoration: InputDecoration(
+          hintText: 'Search paints...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon:
+              controller.searchQuery.isNotEmpty
+                  ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      searchController.clear();
+                      controller.setSearchQuery('');
+                    },
+                  )
+                  : null,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          filled: true,
+          fillColor:
+              isDarkMode ? AppTheme.darkSurface : Theme.of(context).cardColor,
+        ),
+        onChanged: (value) => controller.setSearchQuery(value),
+      ),
+    );
+  }
+
+  Widget _buildActiveFilters(WishlistController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Si no hay filtros activos, no mostramos esta sección
+    if (controller.selectedBrand == null &&
+        controller.selectedPalette == null &&
+        controller.selectedPriority == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Filtro de marca
+            if (controller.selectedBrand != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text(controller.selectedBrand!),
+                  onDeleted: () => controller.setBrandFilter(null),
+                  backgroundColor:
+                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
+                  deleteIconColor:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: Icon(
+                    Icons.business,
+                    size: 16,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+
+            // Filtro de paleta
+            if (controller.selectedPalette != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text(controller.selectedPalette!),
+                  onDeleted: () => controller.setPaletteFilter(null),
+                  backgroundColor:
+                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
+                  deleteIconColor:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: Icon(
+                    Icons.palette,
+                    size: 16,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+
+            // Filtro de prioridad
+            if (controller.selectedPriority != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  label: Text('Priority: ${controller.selectedPriority}'),
+                  onDeleted: () => controller.setPriorityFilter(null),
+                  backgroundColor:
+                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
+                  deleteIconColor:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: Icon(
+                    Icons.star,
+                    size: 16,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+
+            // Botón para limpiar todos los filtros
+            TextButton.icon(
+              onPressed: controller.clearFilters,
+              icon: Icon(
+                Icons.clear_all,
+                size: 16,
+                color:
+                    isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+              ),
+              label: Text(
+                'Clear filters',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterAndSortBar(WishlistController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        children: [
+          // Botón de filtro
+          OutlinedButton.icon(
+            onPressed: () => _showFilterDialog(controller),
+            icon: const Icon(Icons.filter_list, size: 18),
+            label: const Text('Filter'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              visualDensity: VisualDensity.compact,
+              foregroundColor:
+                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Botón de ordenamiento
+          OutlinedButton.icon(
+            onPressed: () => _showSortDialog(controller),
+            icon: const Icon(Icons.sort, size: 18),
+            label: const Text('Sort'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              visualDensity: VisualDensity.compact,
+              foregroundColor:
+                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+            ),
+          ),
+
+          const Spacer(),
+
+          // Indicador de total de pinturas
+          Text(
+            '${controller.wishlistItems.length} paints',
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog(WishlistController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Obtener listas de filtros disponibles
+    final brands = controller.getAvailableBrands();
+    final palettes = controller.getAvailablePalettes();
+    final priorities = controller.getAvailablePriorities();
+
+    // Si no hay datos para filtrar, mostramos un mensaje
+    if (brands.isEmpty && palettes.isEmpty && priorities.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No filters available'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setState) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag handle
+                      Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[600]
+                                    : Colors.grey.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          margin: const EdgeInsets.only(bottom: 20),
+                        ),
+                      ),
+
+                      // Título
+                      Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Filter Wishlist',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Filtro por marca
+                      if (brands.isNotEmpty) ...[
+                        Text(
+                          'Brand',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...brands.map(
+                              (brand) => ChoiceChip(
+                                label: Text(brand),
+                                selected: controller.selectedBrand == brand,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      controller.setBrandFilter(brand);
+                                    } else {
+                                      controller.setBrandFilter(null);
+                                    }
+                                  });
+                                },
+                                backgroundColor:
+                                    isDarkMode
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
+                                selectedColor:
+                                    isDarkMode
+                                        ? AppTheme.marineOrange.withOpacity(0.3)
+                                        : AppTheme.primaryBlue.withOpacity(0.2),
+                                labelStyle: TextStyle(
+                                  color:
+                                      controller.selectedBrand == brand
+                                          ? isDarkMode
+                                              ? AppTheme.marineOrange
+                                              : AppTheme.primaryBlue
+                                          : isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Filtro por paleta
+                      if (palettes.isNotEmpty) ...[
+                        Text(
+                          'Palette',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...palettes.map(
+                              (palette) => ChoiceChip(
+                                label: Text(palette),
+                                selected: controller.selectedPalette == palette,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      controller.setPaletteFilter(palette);
+                                    } else {
+                                      controller.setPaletteFilter(null);
+                                    }
+                                  });
+                                },
+                                backgroundColor:
+                                    isDarkMode
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
+                                selectedColor:
+                                    isDarkMode
+                                        ? AppTheme.marineOrange.withOpacity(0.3)
+                                        : AppTheme.primaryBlue.withOpacity(0.2),
+                                labelStyle: TextStyle(
+                                  color:
+                                      controller.selectedPalette == palette
+                                          ? isDarkMode
+                                              ? AppTheme.marineOrange
+                                              : AppTheme.primaryBlue
+                                          : isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Filtro por prioridad
+                      if (priorities.isNotEmpty) ...[
+                        Text(
+                          'Priority',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...priorities.map(
+                              (priority) => ChoiceChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(
+                                    priority,
+                                    (index) => Icon(
+                                      Icons.star,
+                                      size: 16,
+                                      color:
+                                          controller.selectedPriority ==
+                                                  priority
+                                              ? isDarkMode
+                                                  ? AppTheme.marineOrange
+                                                  : AppTheme.primaryBlue
+                                              : isDarkMode
+                                              ? Colors.white
+                                              : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                selected:
+                                    controller.selectedPriority == priority,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      controller.setPriorityFilter(priority);
+                                    } else {
+                                      controller.setPriorityFilter(null);
+                                    }
+                                  });
+                                },
+                                backgroundColor:
+                                    isDarkMode
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
+                                selectedColor:
+                                    isDarkMode
+                                        ? AppTheme.marineOrange.withOpacity(0.3)
+                                        : AppTheme.primaryBlue.withOpacity(0.2),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Botones de acción
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              controller.clearFilters();
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Clear All'),
+                          ),
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Apply'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  isDarkMode
+                                      ? AppTheme.marineOrange
+                                      : AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+    );
+  }
+
+  void _showSortDialog(WishlistController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Opciones de ordenamiento
+    final sortOptions = {
+      'date': 'Date Added',
+      'name': 'Paint Name',
+      'brand': 'Brand',
+      'priority': 'Priority',
+    };
+
+    String tempSortBy = controller.sortBy;
+    bool tempSortAscending = controller.sortAscending;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setState) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Drag handle
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color:
+                              isDarkMode
+                                  ? Colors.grey[600]
+                                  : Colors.grey.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 20),
+                      ),
+                    ),
+
+                    // Título
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Sort Wishlist',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Opciones de ordenamiento
+                    Text(
+                      'Sort by',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    ...sortOptions.entries.map(
+                      (entry) => RadioListTile<String>(
+                        title: Text(entry.value),
+                        value: entry.key,
+                        groupValue: tempSortBy,
+                        onChanged: (value) {
+                          setState(() {
+                            tempSortBy = value!;
+                          });
+                        },
+                        activeColor:
+                            isDarkMode
+                                ? AppTheme.marineOrange
+                                : AppTheme.primaryBlue,
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Dirección de ordenamiento
+                    Text(
+                      'Direction',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    RadioListTile<bool>(
+                      title: Text(
+                        tempSortBy == 'date'
+                            ? 'Newest First'
+                            : 'Ascending (A-Z)',
+                      ),
+                      value: false,
+                      groupValue: tempSortAscending,
+                      onChanged: (value) {
+                        setState(() {
+                          tempSortAscending = value!;
+                        });
+                      },
+                      activeColor:
+                          isDarkMode
+                              ? AppTheme.marineOrange
+                              : AppTheme.primaryBlue,
+                    ),
+
+                    RadioListTile<bool>(
+                      title: Text(
+                        tempSortBy == 'date'
+                            ? 'Oldest First'
+                            : 'Descending (Z-A)',
+                      ),
+                      value: true,
+                      groupValue: tempSortAscending,
+                      onChanged: (value) {
+                        setState(() {
+                          tempSortAscending = value!;
+                        });
+                      },
+                      activeColor:
+                          isDarkMode
+                              ? AppTheme.marineOrange
+                              : AppTheme.primaryBlue,
+                    ),
+
+                    // Botones de acción
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            controller.setSorting(
+                              tempSortBy,
+                              tempSortAscending,
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Apply'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                isDarkMode
+                                    ? AppTheme.marineOrange
+                                    : AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
     );
   }
 

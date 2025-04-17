@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:miniature_paint_finder/screens/palette_screen.dart';
 
 class PaletteCard extends StatelessWidget {
   final Palette palette;
@@ -42,25 +44,43 @@ class PaletteCard extends StatelessWidget {
               borderRadius: BorderRadius.vertical(
                 top: Radius.circular(ResponsiveGuidelines.radiusL),
               ),
-              child: SizedBox(
-                height: 120.h,
-                width: double.infinity,
-                child: palette.imagePath.startsWith('http')
-                    ? Image.network(
-                        palette.imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          print('❌ Error loading network image: $error');
-                          return _buildFallbackImage(context);
-                        },
-                      )
-                    : Image.asset(
-                        palette.imagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildFallbackImage(context);
-                        },
-                      ),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child:
+                    palette.imagePath.startsWith('http')
+                        ? CachedNetworkImage(
+                          cacheManager: PaletteCacheManager(),
+                          imageUrl: palette.imagePath,
+                          fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 200),
+                          fadeOutDuration: const Duration(milliseconds: 200),
+                          cacheKey: 'palette_${palette.id}_thumbnail',
+                          placeholder:
+                              (context, url) => Container(
+                                color: Colors.grey[300],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.orange
+                                            : Colors.blue,
+                                  ),
+                                ),
+                              ),
+                          errorWidget: (context, error, stackTrace) {
+                            print('❌ Error loading network image: $error');
+                            return _buildFallbackImage(context);
+                          },
+                        )
+                        : Image.asset(
+                          palette.imagePath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildFallbackImage(context);
+                          },
+                        ),
               ),
             ),
 
@@ -140,26 +160,30 @@ class PaletteCard extends StatelessWidget {
   }
 
   Widget _buildFallbackImage(BuildContext context) {
-    return Container(
-      color: AppTheme.marineBlue.withOpacity(0.1),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.image_not_supported_outlined,
-              size: 36.r,
-              color: Colors.grey[400],
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'No image available',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: ResponsiveGuidelines.bodySmall,
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        color: AppTheme.marineBlue.withOpacity(0.1),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.image_not_supported_outlined,
+                size: 36.r,
+                color: Colors.grey[400],
               ),
-            ),
-          ],
+              SizedBox(height: 8.h),
+              Text(
+                'No image available',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: ResponsiveGuidelines.bodySmall,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

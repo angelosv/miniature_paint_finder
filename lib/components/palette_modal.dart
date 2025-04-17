@@ -10,6 +10,9 @@ import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:miniature_paint_finder/services/image_cache_service.dart';
 
 /// Modal para mostrar los detalles de una paleta de colores
 class PaletteModal extends StatefulWidget {
@@ -31,6 +34,25 @@ class PaletteModal extends StatefulWidget {
 class _PaletteModalState extends State<PaletteModal> {
   // Trigger para forzar la reconstrucción
   int _refreshCounter = 0;
+
+  // Precargar imagen al inicializar
+  @override
+  void initState() {
+    super.initState();
+    _precacheHeaderImage();
+  }
+
+  // Precarga la imagen del encabezado para mejorar la experiencia
+  void _precacheHeaderImage() {
+    if (widget.imagePath != null && widget.imagePath!.startsWith('http')) {
+      final imageCacheService = ImageCacheService();
+      imageCacheService.preloadImage(
+        widget.imagePath!,
+        context,
+        cacheKey: 'palette_modal_${widget.paletteName}',
+      );
+    }
+  }
 
   void _refreshState() {
     setState(() {
@@ -143,30 +165,26 @@ class _PaletteModalState extends State<PaletteModal> {
             children: [
               if (widget.imagePath != null &&
                   widget.imagePath!.startsWith('http'))
-                Image.network(
-                  widget.imagePath!,
+                CachedNetworkImage(
+                  cacheManager: PaletteCacheManager(),
+                  imageUrl: widget.imagePath!,
                   width: double.infinity,
                   height: 150,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: double.infinity,
-                      height: 150,
-                      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          value:
-                              loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                          color: isDarkMode ? Colors.orange : Colors.blue,
+                  fadeInDuration: const Duration(milliseconds: 200),
+                  cacheKey: 'palette_modal_${widget.paletteName}',
+                  placeholder:
+                      (context, loadingProgress) => Container(
+                        width: double.infinity,
+                        height: 150,
+                        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: isDarkMode ? Colors.orange : Colors.blue,
+                          ),
                         ),
                       ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
+                  errorWidget: (context, error, stackTrace) {
                     print('❌ Error loading network image: $error');
                     return Image.asset(
                       'assets/images/placeholder.jpeg',

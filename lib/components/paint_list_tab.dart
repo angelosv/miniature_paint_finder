@@ -368,8 +368,12 @@ class _PaintListTabState extends State<PaintListTab> {
                     itemCount: recentPalettes.length,
                     itemBuilder: (context, index) {
                       final palette = recentPalettes[index];
-                      print('🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintCode}');
-                      print('🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintBarcode}');
+                      print(
+                        '🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintCode}',
+                      );
+                      print(
+                        '🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintBarcode}',
+                      );
                       return PaletteCard(
                         palette: palette,
                         onTap: () async {
@@ -1285,33 +1289,38 @@ class _PaintListTabState extends State<PaintListTab> {
 
                                                 // Si venimos de crear una paleta desde otra pantalla,
                                                 // asegurarnos de usar el nombre correcto
-                                                final paletteName = _isCreatingPaletteFromExternal && _pendingPaletteName != null
-                                                    ? _pendingPaletteName!
-                                                    : _paletteNameController.text;
+                                                final paletteName =
+                                                    _isCreatingPaletteFromExternal &&
+                                                            _pendingPaletteName !=
+                                                                null
+                                                        ? _pendingPaletteName!
+                                                        : _paletteNameController
+                                                            .text;
 
-                                                final paintsToSend = modalColorList
-                                                    .where(
-                                                      (c) =>
-                                                          c['paintName'] !=
-                                                          null,
-                                                    )
-                                                    .map(
-                                                      (c) => {
-                                                        'id': c['paintId'],
-                                                        'brand_id':
-                                                            c['brandId'],
-                                                        'hex': c['hexCode'],
-                                                        'name':
-                                                            c['paintName'],
-                                                        'brand':
-                                                            c['paintBrand'],
-                                                        'colorCode':
-                                                            c['colorCode'],
-                                                        'barcode':
-                                                            c['barcode'],
-                                                      },
-                                                    )
-                                                    .toList();
+                                                final paintsToSend =
+                                                    modalColorList
+                                                        .where(
+                                                          (c) =>
+                                                              c['paintName'] !=
+                                                              null,
+                                                        )
+                                                        .map(
+                                                          (c) => {
+                                                            'id': c['paintId'],
+                                                            'brand_id':
+                                                                c['brandId'],
+                                                            'hex': c['hexCode'],
+                                                            'name':
+                                                                c['paintName'],
+                                                            'brand':
+                                                                c['paintBrand'],
+                                                            'colorCode':
+                                                                c['colorCode'],
+                                                            'barcode':
+                                                                c['barcode'],
+                                                          },
+                                                        )
+                                                        .toList();
 
                                                 debugPrint(
                                                   '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
@@ -1341,8 +1350,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                 await _colorSearchService
                                                     .saveColorSearch(
                                                       token: token,
-                                                      name:
-                                                          paletteName,
+                                                      name: paletteName,
                                                       paints: paintsToSend,
                                                       imagePath:
                                                           _uploadedImageUrl ??
@@ -2116,7 +2124,7 @@ class _PaintListTabState extends State<PaintListTab> {
           // Almacenar el nombre de la paleta pendiente
           _pendingPaletteName = paletteInfo['paletteName'] as String;
           _isCreatingPaletteFromExternal = true;
-          
+
           // Actualizar el controlador del nombre de la paleta
           _paletteNameController.text = _pendingPaletteName!;
 
