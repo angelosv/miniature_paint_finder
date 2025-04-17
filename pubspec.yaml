@@ -47,7 +47,6 @@ dependencies:
   firebase_auth: ^5.5.1
   google_sign_in: ^6.3.0
   uuid: ^3.0.7
-  intl: ^0.18.1
   permission_handler: ^10.4.0
   cached_network_image: ^3.2.3
   flutter_cache_manager: ^3.3.1
