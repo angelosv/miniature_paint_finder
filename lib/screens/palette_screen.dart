@@ -1009,12 +1009,22 @@ class _PaletteScreenState extends State<PaletteScreen> {
   ) {
     if (hasPaletteSwatch) {
       return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: palette.colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        width: 200,
+        height: 200,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/images/placeholder.jpeg', fit: BoxFit.cover),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: palette.colors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     } else {
