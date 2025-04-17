@@ -89,7 +89,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Paint Library',
-      selectedIndex: 3,
+      selectedIndex: -1,
       body: _buildBody(context, isDarkMode, controller),
       drawer: const SharedDrawer(currentScreen: 'library'),
     );
