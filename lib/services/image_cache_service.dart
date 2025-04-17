@@ -18,7 +18,7 @@ class ImageCacheService {
   /// Clave para almacenar la última limpieza de caché
   static const String _lastCacheClearKey = 'last_image_cache_clear';
 
-  /// Flag para debbugging
+  /// Flag para debugging
   static const bool _debugMode = true;
 
   /// Limpia la caché de imágenes si es necesario
@@ -151,8 +151,8 @@ class ImageCacheService {
         maxHeight: height,
       );
 
-      // Usamos la función global de Flutter para precarga de imágenes
-      await precacheImage(provider, context);
+      // Usar la función de Flutter para precarga
+      await Flutter.precacheImage(provider, context);
       debugPrint('✅ Imagen precargada: $imageUrl');
     } catch (e) {
       debugPrint('⚠️ Error al precargar imagen: $e');
