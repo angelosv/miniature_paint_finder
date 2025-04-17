@@ -9,12 +9,19 @@ class PaletteController extends ChangeNotifier {
   final PaletteRepository _repository;
 
   List<Palette> _palettes = [];
+  List<Palette> _filteredPalettes = [];
+
   bool _isLoading = false;
   String? _error;
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalPalettes = 0;
   int _limit = 10;
+
+  // Filtros y ordenamiento
+  String _searchQuery = '';
+  String _sortBy = 'date'; // Valores: 'date', 'name', 'paints'
+  bool _sortAscending = false; // Por defecto, los más recientes primero
 
   /// Constructor
   PaletteController(this._repository) {
@@ -23,7 +30,7 @@ class PaletteController extends ChangeNotifier {
   }
 
   /// All palettes owned by the user
-  List<Palette> get palettes => _palettes;
+  List<Palette> get palettes => _filteredPalettes;
 
   /// Whether data is currently loading
   bool get isLoading => _isLoading;
@@ -42,6 +49,12 @@ class PaletteController extends ChangeNotifier {
 
   /// Number of items per page
   int get limit => _limit;
+
+  // Getters para filtros y ordenamiento
+  String get searchQuery => _searchQuery;
+  String get sortBy => _sortBy;
+  bool get sortAscending => _sortAscending;
+  bool get isEmpty => _filteredPalettes.isEmpty;
 
   /// Load all palettes for the current user
   Future<void> loadPalettes({int? page}) async {
@@ -85,6 +98,9 @@ class PaletteController extends ChangeNotifier {
           '    - Paint Selections: ${palette.paintSelections?.length ?? 0}',
         );
       }
+
+      // Aplicar filtros y ordenamiento
+      _applyFiltersAndSort();
     } catch (e) {
       print('❌ Error loading palettes: $e');
       _error = e.toString();
@@ -92,6 +108,66 @@ class PaletteController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Aplicar filtros y ordenamiento a las paletas
+  void _applyFiltersAndSort() {
+    // Aplicar filtros
+    _filteredPalettes =
+        _palettes.where((palette) {
+          // Filtrar por búsqueda de texto
+          if (_searchQuery.isNotEmpty) {
+            final String name = palette.name.toLowerCase();
+            final String query = _searchQuery.toLowerCase();
+
+            if (!name.contains(query)) {
+              return false;
+            }
+          }
+
+          return true;
+        }).toList();
+
+    // Aplicar ordenamiento
+    _filteredPalettes.sort((a, b) {
+      int result = 0;
+
+      switch (_sortBy) {
+        case 'date':
+          result = a.createdAt.compareTo(b.createdAt);
+          break;
+        case 'name':
+          result = a.name.compareTo(b.name);
+          break;
+        case 'paints':
+          result = a.totalPaints.compareTo(b.totalPaints);
+          break;
+      }
+
+      return _sortAscending ? result : -result;
+    });
+  }
+
+  /// Establecer el filtro de búsqueda
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    _applyFiltersAndSort();
+    notifyListeners();
+  }
+
+  /// Establecer el ordenamiento
+  void setSorting(String sortBy, bool ascending) {
+    _sortBy = sortBy;
+    _sortAscending = ascending;
+    _applyFiltersAndSort();
+    notifyListeners();
+  }
+
+  /// Limpiar todos los filtros
+  void clearFilters() {
+    _searchQuery = '';
+    _applyFiltersAndSort();
+    notifyListeners();
   }
 
   /// Load next page of palettes
@@ -131,6 +207,7 @@ class PaletteController extends ChangeNotifier {
 
       final createdPalette = await _repository.create(palette);
       _palettes.add(createdPalette);
+      _applyFiltersAndSort();
       notifyListeners();
       return createdPalette;
     } catch (e) {
@@ -152,6 +229,7 @@ class PaletteController extends ChangeNotifier {
       final success = await _repository.delete(paletteId);
       if (success) {
         _palettes.removeWhere((palette) => palette.id == paletteId);
+        _applyFiltersAndSort();
         notifyListeners();
       }
       return success;
