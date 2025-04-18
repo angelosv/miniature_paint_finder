@@ -1001,7 +1001,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-        childAspectRatio: 0.8,
+        childAspectRatio: 0.95,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -1015,10 +1015,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
 
   Widget _buildPaletteCard(Palette palette) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final colorIndicatorSize = MediaQuery.of(context).size.width * 0.08;
+    final colorCircleSize = MediaQuery.of(context).size.width * 0.05;
 
     return Card(
-      elevation: 3,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -1122,7 +1122,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
                         ],
                       ),
                       Text(
-                        palette.createdAtText,
+                        palette.createdAtText ?? '',
                         style: TextStyle(
                           fontSize: 12,
                           color:
@@ -1133,55 +1133,73 @@ class _PaletteScreenState extends State<PaletteScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Muestra de colores
+                  // Muestra de colores circulares y solapados
                   SizedBox(
-                    height: colorIndicatorSize,
-                    child: Row(
-                      children: [
-                        for (int i = 0; i < palette.colors.length && i < 5; i++)
-                          Expanded(
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 2),
-                              decoration: BoxDecoration(
-                                color: palette.colors[i],
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color:
-                                      isDarkMode
-                                          ? Colors.white24
-                                          : Colors.black12,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (palette.colors.length > 5)
-                          Expanded(
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 2),
-                              decoration: BoxDecoration(
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '+${palette.colors.length - 5}',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                    height: colorCircleSize,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Stack(
+                        children: [
+                          for (
+                            int i = 0;
+                            i < palette.colors.length && i < 5;
+                            i++
+                          )
+                            Positioned(
+                              left: i * (colorCircleSize * 0.65),
+                              child: Container(
+                                width: colorCircleSize,
+                                height: colorCircleSize,
+                                decoration: BoxDecoration(
+                                  color: palette.colors[i],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
                                     color:
                                         isDarkMode
-                                            ? Colors.white70
-                                            : Colors.black87,
+                                            ? Colors.grey[800]!
+                                            : Colors.white,
+                                    width: 1,
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                          if (palette.colors.length > 5)
+                            Positioned(
+                              left: 5 * (colorCircleSize * 0.65),
+                              child: Container(
+                                width: colorCircleSize,
+                                height: colorCircleSize,
+                                decoration: BoxDecoration(
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[800]
+                                          : Colors.grey[200],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[700]!
+                                            : Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '+${palette.colors.length - 5}',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.white70
+                                              : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

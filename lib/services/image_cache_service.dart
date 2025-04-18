@@ -151,9 +151,8 @@ class ImageCacheService {
         maxHeight: height,
       );
 
-      // Usar la función de Flutter para precarga
+      // Usar la función precacheImage directamente
       await precacheImage(provider, context);
-      debugPrint('✅ Imagen precargada: $imageUrl');
     } catch (e) {
       debugPrint('⚠️ Error al precargar imagen: $e');
     }
