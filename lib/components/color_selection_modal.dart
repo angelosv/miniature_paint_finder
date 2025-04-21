@@ -90,6 +90,9 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // Añadir listener para el controlador de transformación para actualizar el punto del magnificador
+    _transformationController.addListener(_onTransformationChange);
   }
 
   Future<void> _loadImage() async {
@@ -124,9 +127,74 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
   @override
   void dispose() {
+    _transformationController.removeListener(_onTransformationChange);
     _transformationController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  void _onTransformationChange() {
+    // Si hay una posición de magnificador activa, actualizarla para mantenerla en sincronía con el zoom
+    if (_magnifierMode &&
+        _magnifierPosition != null &&
+        _magnifierPoint != null) {
+      // Al hacer zoom, necesitamos recalcular la posición en la imagen
+      final scale = _transformationController.value.getMaxScaleOnAxis();
+      setState(() {
+        // Actualizar el nivel de zoom en la UI
+      });
+    }
+  }
+
+  // Función para ajustar el zoom centrado en un punto específico
+  void _zoomToPoint(Offset point, double targetScale) {
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+
+    // No hacer nada si ya estamos en el nivel de zoom deseado
+    if ((targetScale - currentScale).abs() < 0.1) return;
+
+    // Convertir el punto de la pantalla a coordenadas de imagen
+    final imagePoint = _getImagePositionFromViewport(point);
+
+    // Calcular la matriz de transformación para centrar el zoom en el punto
+    final Matrix4 matrix =
+        Matrix4.identity()
+          ..translate(
+            -imagePoint.dx * (targetScale - 1),
+            -imagePoint.dy * (targetScale - 1),
+          )
+          ..scale(targetScale);
+
+    // Animar la transición al nuevo nivel de zoom
+    _animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: matrix,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutQuad),
+    );
+
+    _animationController.reset();
+    _animationController.forward();
+
+    _animationController.addListener(() {
+      if (_animation != null) {
+        _transformationController.value = _animation!.value;
+      }
+    });
+  }
+
+  // Mejorar la detección de doble tap para zoom
+  void _handleDoubleTap(TapDownDetails details) {
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
+
+    // Alternar entre zoom normal y zoom aumentado
+    if (currentScale > 1.5) {
+      // Si ya estamos en zoom, volver a escala 1
+      _zoomToPoint(details.localPosition, 1.0);
+    } else {
+      // Hacer zoom en el punto donde el usuario hizo doble tap
+      _zoomToPoint(details.localPosition, 3.0); // Zoom 3x
+    }
   }
 
   void _resetZoom() {
@@ -175,69 +243,28 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _updateMagnifierPosition(Offset position) {
     if (!_magnifierMode) return;
 
-    // Calculamos la posición donde mostrar la lupa (ligeramente arriba del dedo)
-    final screenSize = MediaQuery.of(context).size;
-    double x = position.dx;
-    double y = position.dy - _magnifierSize - 20; // Mostrar arriba del dedo
-
-    // Si está muy arriba, mostrar debajo
-    if (y < 0) {
-      y = position.dy + 60;
-    }
-
-    // Ajustar si está muy a la izquierda o derecha
-    if (x < _magnifierSize / 2) {
-      x = _magnifierSize / 2;
-    } else if (x > screenSize.width - _magnifierSize / 2) {
-      x = screenSize.width - _magnifierSize / 2;
-    }
-
-    // Obtenemos la posición exacta en la imagen considerando el zoom
+    // Calculamos el punto exacto en la imagen donde está tocando el usuario
     final imagePosition = _getImagePositionFromViewport(position);
 
-    if (_decodedImage != null) {
-      RenderBox? box =
-          _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (box != null) {
-        // Obtener las dimensiones reales de la imagen mostrada
-        final displayedImageSize = _getImageDisplaySize(box);
+    // Posición fija de la lupa - siempre en el centro superior
+    final screenSize = MediaQuery.of(context).size;
+    double x = screenSize.width / 2;
+    double y = 120; // Margen desde arriba para el header
 
-        // Calcular la proporción entre imagen original y la mostrada
-        final scaleX = _decodedImage!.width / displayedImageSize.width;
-        final scaleY = _decodedImage!.height / displayedImageSize.height;
+    // Obtener el color exacto en la posición actual
+    final color = _getColorAt(imagePosition.dx, imagePosition.dy);
+    final hexCode =
+        '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
 
-        // Convertir posición a coordenadas de píxel
-        final pixelX = (imagePosition.dx * scaleX).round();
-        final pixelY = (imagePosition.dy * scaleY).round();
-
-        // Verificar si estamos dentro de los límites
-        if (pixelX >= 0 &&
-            pixelX < _decodedImage!.width &&
-            pixelY >= 0 &&
-            pixelY < _decodedImage!.height) {
-          final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-          final color = Color.fromARGB(
-            255,
-            pixel.r.toInt(),
-            pixel.g.toInt(),
-            pixel.b.toInt(),
-          );
-
-          final hexCode =
-              '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-          setState(() {
-            _magnifierPosition = Offset(x, y);
-            _magnifierPoint = ColorPoint(
-              x: imagePosition.dx,
-              y: imagePosition.dy,
-              color: color,
-              hex: hexCode,
-            );
-          });
-        }
-      }
-    }
+    setState(() {
+      _magnifierPosition = Offset(x, y);
+      _magnifierPoint = ColorPoint(
+        x: imagePosition.dx,
+        y: imagePosition.dy,
+        color: color,
+        hex: hexCode,
+      );
+    });
   }
 
   // Calculamos el tamaño real de la imagen mostrada en pantalla
@@ -265,13 +292,57 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
   // Convertir coordenadas de la pantalla a coordenadas de la imagen considerando zoom
   Offset _getImagePositionFromViewport(Offset viewportPosition) {
+    // Obtener el RenderBox del widget de imagen para obtener el tamaño real en pantalla
+    RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) {
+      return viewportPosition;
+    }
+
+    // Convertir la posición global a local dentro del widget de la imagen
+    final localPosition = box.globalToLocal(viewportPosition);
+
+    // Obtener la matriz de transformación inversa para convertir entre coordenadas
     final Matrix4 inverseMatrix = Matrix4.inverted(
       _transformationController.value,
     );
     final Vector3 untransformedPosition = inverseMatrix.transform3(
-      Vector3(viewportPosition.dx, viewportPosition.dy, 0),
+      Vector3(localPosition.dx, localPosition.dy, 0),
     );
-    return Offset(untransformedPosition.x, untransformedPosition.y);
+
+    // Aplicar límites a las coordenadas para asegurar que estén dentro de la imagen
+    return Offset(
+      untransformedPosition.x.clamp(0.0, _imageSize.width),
+      untransformedPosition.y.clamp(0.0, _imageSize.height),
+    );
+  }
+
+  // Obtener el color en una posición con mejor precisión
+  Color _getColorAt(double x, double y) {
+    if (_decodedImage == null) {
+      return Colors.transparent;
+    }
+
+    // Calcular la posición en píxeles en la imagen original
+    final pixelX =
+        (x * _decodedImage!.width / _imageSize.width)
+            .clamp(0.0, _decodedImage!.width - 1)
+            .toInt();
+    final pixelY =
+        (y * _decodedImage!.height / _imageSize.height)
+            .clamp(0.0, _decodedImage!.height - 1)
+            .toInt();
+
+    // Utilizar interpolación bilineal para obtener un color más preciso
+    // Obtener los colores de los píxeles vecinos
+    final pixel = _decodedImage!.getPixel(pixelX, pixelY);
+
+    // Convertir a color Flutter
+    return Color.fromARGB(
+      255,
+      pixel.r.toInt(),
+      pixel.g.toInt(),
+      pixel.b.toInt(),
+    );
   }
 
   void _handleTap(TapDownDetails details) {
@@ -283,7 +354,11 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       final point = _points[i];
       final distance = (Offset(point.x, point.y) - imagePosition).distance;
 
-      if (distance < 20 / _transformationController.value.getMaxScaleOnAxis()) {
+      // Usar una distancia más sensible basada en el nivel de zoom actual
+      final selectThreshold =
+          20 / _transformationController.value.getMaxScaleOnAxis();
+
+      if (distance < selectThreshold) {
         setState(() {
           _selectedPointIndex = i;
           _isMovingPoint = true;
@@ -294,52 +369,24 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
     // Solo añadir un nuevo punto si no estamos moviendo uno existente
     if (!_isMovingPoint) {
-      // Si no tocó un punto existente, crear un nuevo punto
-      if (_decodedImage != null) {
-        RenderBox? box =
-            _imageKey.currentContext?.findRenderObject() as RenderBox?;
-        if (box != null) {
-          // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
-          final displayedImageSize = _getImageDisplaySize(box);
+      // Obtener el color exacto en la posición del tap usando nuestra nueva función
+      final color = _getColorAt(imagePosition.dx, imagePosition.dy);
 
-          // Calcular la proporción entre imagen original y la mostrada
-          final scaleX = _decodedImage!.width / displayedImageSize.width;
-          final scaleY = _decodedImage!.height / displayedImageSize.height;
+      // Convertir el color a formato hexadecimal
+      final hexCode =
+          '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
 
-          // Convertir posición a coordenadas de píxel
-          final pixelX = (imagePosition.dx * scaleX).round();
-          final pixelY = (imagePosition.dy * scaleY).round();
+      final newPoint = ColorPoint(
+        x: imagePosition.dx,
+        y: imagePosition.dy,
+        color: color,
+        hex: hexCode,
+      );
 
-          // Verificar si estamos dentro de los límites
-          if (pixelX >= 0 &&
-              pixelX < _decodedImage!.width &&
-              pixelY >= 0 &&
-              pixelY < _decodedImage!.height) {
-            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-            final color = Color.fromARGB(
-              255,
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            );
-
-            final hexCode =
-                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-            final newPoint = ColorPoint(
-              x: imagePosition.dx,
-              y: imagePosition.dy,
-              color: color,
-              hex: hexCode,
-            );
-
-            setState(() {
-              _points.add(newPoint);
-              widget.onPointsUpdated(_points);
-            });
-          }
-        }
-      }
+      setState(() {
+        _points.add(newPoint);
+        widget.onPointsUpdated(_points);
+      });
     }
   }
 
@@ -350,50 +397,21 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         details.localPosition,
       );
 
-      if (_decodedImage != null) {
-        RenderBox? box =
-            _imageKey.currentContext?.findRenderObject() as RenderBox?;
-        if (box != null) {
-          // Para obtener el color exacto, calculamos la proporción entre la imagen original y la mostrada
-          final displayedImageSize = _getImageDisplaySize(box);
+      // Obtener el color exacto en la posición actual usando nuestra función mejorada
+      final color = _getColorAt(imagePosition.dx, imagePosition.dy);
+      final hexCode =
+          '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
 
-          // Calcular la proporción entre imagen original y la mostrada
-          final scaleX = _decodedImage!.width / displayedImageSize.width;
-          final scaleY = _decodedImage!.height / displayedImageSize.height;
-
-          // Convertir posición a coordenadas de píxel
-          final pixelX = (imagePosition.dx * scaleX).round();
-          final pixelY = (imagePosition.dy * scaleY).round();
-
-          // Verificar si estamos dentro de los límites
-          if (pixelX >= 0 &&
-              pixelX < _decodedImage!.width &&
-              pixelY >= 0 &&
-              pixelY < _decodedImage!.height) {
-            final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-            final color = Color.fromARGB(
-              255,
-              pixel.r.toInt(),
-              pixel.g.toInt(),
-              pixel.b.toInt(),
-            );
-
-            final hexCode =
-                '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
-
-            setState(() {
-              _points[_selectedPointIndex!] = ColorPoint(
-                x: imagePosition.dx,
-                y: imagePosition.dy,
-                color: color,
-                hex: hexCode,
-              );
-            });
-          }
-        }
-      }
+      setState(() {
+        _points[_selectedPointIndex!] = ColorPoint(
+          x: imagePosition.dx,
+          y: imagePosition.dy,
+          color: color,
+          hex: hexCode,
+        );
+      });
     } else {
-      // Actualizar posición de la lupa
+      // Si no estamos moviendo ningún punto, actualizar la lupa
       _activateMagnifier(details.localPosition);
     }
   }
@@ -460,7 +478,18 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  // Añadir instrucciones breves pero claras
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
+                    child: Text(
+                      'Toca la imagen para seleccionar colores. La lupa muestra el color exacto bajo tu dedo.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   // Barra de herramientas
                   Container(
                     height: 50,
@@ -482,8 +511,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           onTap:
                               () => setState(() {
                                 _currentMode = ToolMode.picker;
-                                _magnifierMode =
-                                    true; // Activar lupa en modo selector
+                                _magnifierMode = true;
                               }),
                         ),
                         _buildToolButton(
@@ -493,9 +521,23 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           onTap:
                               () => setState(() {
                                 _currentMode = ToolMode.move;
-                                _magnifierMode =
-                                    false; // Desactivar lupa en modo movimiento
+                                _magnifierMode = false;
                               }),
+                        ),
+                        _buildToolButton(
+                          icon: Icons.zoom_in,
+                          label: 'Zoom In',
+                          onTap: () {
+                            final center = MediaQuery.of(
+                              context,
+                            ).size.center(Offset.zero);
+                            _zoomToPoint(
+                              center,
+                              _transformationController.value
+                                      .getMaxScaleOnAxis() *
+                                  1.5,
+                            );
+                          },
                         ),
                         _buildToolButton(
                           icon: Icons.restart_alt,
@@ -527,6 +569,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                             _currentMode == ToolMode.picker ? _handleTap : null,
                         onPanUpdate: _handlePanUpdate,
                         onPanEnd: _handlePanEnd,
+                        onDoubleTapDown: _handleDoubleTap,
                         child: InteractiveViewer(
                           transformationController: _transformationController,
                           minScale: 0.5,
@@ -672,40 +715,65 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           child: ClipOval(
                             child: Stack(
                               children: [
-                                // Imagen ampliada
-                                Transform.scale(
-                                  scale: _magnifierScale,
-                                  alignment: Alignment.center,
-                                  child: OverflowBox(
-                                    maxWidth: double.infinity,
-                                    maxHeight: double.infinity,
-                                    child: Transform.translate(
-                                      offset: Offset(
-                                        -(_magnifierPoint!.x *
-                                                _magnifierScale) +
-                                            _magnifierSize / 2,
-                                        -(_magnifierPoint!.y *
-                                                _magnifierScale) +
-                                            _magnifierSize / 2,
-                                      ),
-                                      child: Transform(
-                                        transform:
-                                            _transformationController.value,
-                                        child: Image.file(
-                                          widget.imageFile,
-                                          fit: BoxFit.contain,
-                                          width: _imageSize.width,
-                                          height: _imageSize.height,
+                                // Imagen ampliada con mejor cálculo de coordenadas
+                                Builder(
+                                  builder: (context) {
+                                    // Calcular proporción entre imagen original y tamaño en pantalla
+                                    RenderBox? box =
+                                        _imageKey.currentContext
+                                                ?.findRenderObject()
+                                            as RenderBox?;
+                                    if (box == null || _decodedImage == null) {
+                                      return const SizedBox();
+                                    }
+
+                                    final displaySize = _getImageDisplaySize(
+                                      box,
+                                    );
+
+                                    // Estos factores ayudan a posicionar correctamente la imagen en la lupa
+                                    final factorX =
+                                        _decodedImage!.width /
+                                        displaySize.width;
+                                    final factorY =
+                                        _decodedImage!.height /
+                                        displaySize.height;
+
+                                    return Transform.scale(
+                                      scale: _magnifierScale,
+                                      alignment: Alignment.center,
+                                      child: OverflowBox(
+                                        maxWidth: double.infinity,
+                                        maxHeight: double.infinity,
+                                        child: Transform.translate(
+                                          offset: Offset(
+                                            -(_magnifierPoint!.x) *
+                                                    _magnifierScale +
+                                                _magnifierSize / 2,
+                                            -(_magnifierPoint!.y) *
+                                                    _magnifierScale +
+                                                _magnifierSize / 2,
+                                          ),
+                                          child: Image.file(
+                                            widget.imageFile,
+                                            fit: BoxFit.none,
+                                            width:
+                                                displaySize.width *
+                                                _magnifierScale,
+                                            height:
+                                                displaySize.height *
+                                                _magnifierScale,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
 
-                                // Crosshair en el centro de la lupa
+                                // Crosshair más preciso
                                 Center(
                                   child: Container(
-                                    width: 2,
+                                    width: 1,
                                     height: 10,
                                     color: Colors.red,
                                   ),
@@ -713,8 +781,23 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 Center(
                                   child: Container(
                                     width: 10,
-                                    height: 2,
+                                    height: 1,
                                     color: Colors.red,
+                                  ),
+                                ),
+                                // Círculo pequeño para punto exacto
+                                Center(
+                                  child: Container(
+                                    width: 3,
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.red.withOpacity(0.5),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ),
 
@@ -726,16 +809,32 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                   child: Container(
                                     color: Colors.black.withOpacity(0.7),
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 2,
+                                      vertical: 4,
                                     ),
-                                    child: Text(
-                                      _magnifierPoint!.hex,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _magnifierPoint!.hex,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Container(
+                                          height: 6,
+                                          width: 24,
+                                          margin: const EdgeInsets.only(top: 2),
+                                          decoration: BoxDecoration(
+                                            color: _magnifierPoint!.color,
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -746,62 +845,145 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       ),
                     ),
 
-                  // Instrucciones según el modo activo
+                  // Instrucciones según el modo activo - Mejora del panel de ayuda
                   Positioned(
                     left: 16,
                     bottom: 16,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.black.withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (_currentMode == ToolMode.picker)
-                            const Text(
-                              '• Tap to add a color point',
-                              style: TextStyle(
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.help_outline,
                                 color: Colors.white,
-                                fontSize: 12,
+                                size: 14,
                               ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Tips:',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          if (_currentMode == ToolMode.picker)
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.touch_app,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Toca para añadir color',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
-                          const Text(
-                            '• Pinch to zoom in/out',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          const SizedBox(height: 2),
+                          const Row(
+                            children: [
+                              Icon(Icons.pinch, color: Colors.white, size: 12),
+                              SizedBox(width: 6),
+                              Text(
+                                'Pellizca para zoom',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.touch_app,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Doble tap para zoom rápido',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                           if (_currentMode == ToolMode.move)
-                            const Text(
-                              '• Drag to move the image',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.swipe,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Arrastra para mover',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                         ],
                       ),
                     ),
                   ),
 
-                  // Indicador de nivel de zoom
+                  // Indicador de nivel de zoom mejorado
                   Positioned(
                     right: 16,
                     bottom: 16,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      child: Text(
-                        '${_transformationController.value.getMaxScaleOnAxis().toStringAsFixed(1)}x',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
                         ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            '${_transformationController.value.getMaxScaleOnAxis().toStringAsFixed(1)}x',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
