@@ -122,7 +122,7 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
       AddToWishlistModal.show(
         context: context,
         paint: widget.paint,
-        onAddToWishlist: (paint, priority) async {
+        onAddToWishlist: (paint, priority, _) async {
           final scaffoldMessenger = ScaffoldMessenger.of(context);
           final paintService = PaintService();
 

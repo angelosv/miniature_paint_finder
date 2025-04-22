@@ -451,7 +451,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     paletteCount: m.count,
                     paletteInfo: m.paletteInfo,
                     inInventory: m.inInventory,
-                    inWhitelist: m.inWhitelist,
+                    inWishlist: m.inWhitelist,
                     inventoryId: m.inventoryId,
                     wishlistId: m.wishlistId,
                     onTap:
@@ -2529,7 +2529,7 @@ class _PaintListTabState extends State<PaintListTab> {
     AddToWishlistModal.show(
       context: context,
       paint: paint,
-      onAddToWishlist: (paint, priority) async {
+      onAddToWishlist: (paint, priority, _) async {
         final scaffoldMessenger = ScaffoldMessenger.of(context);
         final paintService = PaintService();
 

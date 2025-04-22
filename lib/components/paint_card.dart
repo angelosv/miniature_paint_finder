@@ -19,7 +19,7 @@ class PaintCard extends StatefulWidget {
   final Function(Paint, List<PaletteInfo> paletteInfo)? onTap;
   final List<PaletteInfo> paletteInfo;
   final bool inInventory;
-  final bool inWhitelist;
+  final bool inWishlist;
   final String? inventoryId;
   final String? wishlistId;
 
@@ -30,7 +30,7 @@ class PaintCard extends StatefulWidget {
     this.onTap,
     this.paletteInfo = const [],
     this.inInventory = false,
-    this.inWhitelist = false,
+    this.inWishlist = false,
     this.inventoryId,
     this.wishlistId,
   });
@@ -41,15 +41,23 @@ class PaintCard extends StatefulWidget {
 
 class _PaintCardState extends State<PaintCard> {
   final InventoryService _inventoryService = InventoryService();
+  final PaintService _paintService = PaintService();
+
   final BrandServiceManager _brandManager = BrandServiceManager();
   late bool _inInventory;
   String? _inventoryId;
+
+  late bool _inWishlist;
+  String? _wishlistId;
 
   @override
   void initState() {
     super.initState();
     _inInventory = widget.inInventory;
     _inventoryId = widget.inventoryId;
+
+    _inWishlist = widget.inWishlist;
+    _wishlistId = widget.wishlistId;
   }
 
   @override
@@ -213,6 +221,12 @@ class _PaintCardState extends State<PaintCard> {
                           }
 
                           // ─── ACTUALIZAR ESTADO LOCAL ───
+
+                          setState(() {
+                            _inWishlist = false;
+                            _wishlistId = "";
+                          });
+
                           setState(() {
                             _inInventory = true;
                             _inventoryId = newId;
@@ -268,121 +282,87 @@ class _PaintCardState extends State<PaintCard> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // Mostrar el nuevo modal de wishlist
                       AddToWishlistModal.show(
                         context: context,
                         paint: widget.paint,
-                        onAddToWishlist: (paint, priority) async {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          final paintService = PaintService();
+                        isUpdate: _inWishlist,
+                        wishlistId: _wishlistId,
+                        onAddToWishlist: (
+                          paint,
+                          priority,
+                          existingWishlistId,
+                        ) async {
+                          String? newId = existingWishlistId;
+                          final user = FirebaseAuth.instance.currentUser!;
+                          final token = await user.getIdToken();
 
-                          // Show loading indicator
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Row(
-                                children: [
-                                  CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                    strokeWidth: 2,
-                                  ),
-                                  SizedBox(width: 16),
-                                  Text('Adding to wishlist...'),
-                                ],
+                          if (existingWishlistId != null) {
+                            // ─── ACTUALIZAR EXISTENTE ───
+                            bool success = await _paintService
+                                .updateWishlistPriority(
+                                  paint.id,
+                                  existingWishlistId,
+                                  priority > 0,
+                                  token as String,
+                                  priority,
+                                );
+                            if (!success) {
+                              return null;
+                            }
+                          } else {
+                            // ─── AÑADIR NUEVO ───
+                            final result = await _paintService
+                                .addToWishlistDirect(paint, priority, user.uid);
+                            if (result['success'] == true) {
+                              newId = result['id']?.toString();
+                            } else {
+                              return null;
+                            }
+                          }
+
+                          // ─── LIMPIAR ESTADO DE INVENTARIO ───
+                          setState(() {
+                            _inInventory = false;
+                            _inventoryId = null;
+                          });
+
+                          // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
+                          setState(() {
+                            _inWishlist = true;
+                            _wishlistId = newId;
+                          });
+
+                          // ─── MOSTRAR SNACKBAR ───
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                existingWishlistId != null
+                                    ? 'Wishlist updated'
+                                    : 'Added ${paint.name} to wishlist',
                               ),
-                              duration: Duration(seconds: 10),
-                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.pink,
+                              action: SnackBarAction(
+                                label: 'VIEW',
+                                textColor: Colors.white,
+                                onPressed:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const WishlistScreen(),
+                                      ),
+                                    ),
+                              ),
                             ),
                           );
 
-                          try {
-                            // Get current Firebase user
-                            final firebaseUser =
-                                FirebaseAuth.instance.currentUser;
-                            if (firebaseUser == null) {
-                              // Show error if not logged in
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'You need to be logged in to add to wishlist',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                              return;
-                            }
-
-                            final userId = firebaseUser.uid;
-
-                            // Call API directly
-                            final result = await paintService
-                                .addToWishlistDirect(paint, priority, userId);
-
-                            scaffoldMessenger.hideCurrentSnackBar();
-
-                            if (result['success'] == true) {
-                              // Determine the correct message based on if the paint was already in the wishlist
-                              final String message =
-                                  result['alreadyExists'] == true
-                                      ? '${paint.name} is already in your wishlist'
-                                      : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
-
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(message),
-                                  backgroundColor:
-                                      isDarkMode
-                                          ? Colors.pinkAccent
-                                          : Colors.pink,
-                                  action: SnackBarAction(
-                                    label: 'VIEW',
-                                    textColor: Colors.white,
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) =>
-                                                  const WishlistScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            } else {
-                              // Show error with details
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: ${result['message']}'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            scaffoldMessenger.hideCurrentSnackBar();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                                duration: const Duration(seconds: 5),
-                              ),
-                            );
-                          }
+                          // igual que en inventario, no devolvemos nada
+                          return null;
                         },
                       );
                     },
                     icon: const Icon(Icons.favorite_border, size: 16),
-                    label: const Text(
-                      'Add to Wishlist',
+                    label: Text(
+                      _inWishlist ? 'Update Wishlist' : 'Add to Wishlist',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -571,6 +551,11 @@ class _PaintCardState extends State<PaintCard> {
 
                             // ─── ACTUALIZAR ESTADO LOCAL ───
                             setState(() {
+                              _inWishlist = false;
+                              _wishlistId = "";
+                            });
+
+                            setState(() {
                               _inInventory = true;
                               _inventoryId = newId;
                             });
@@ -626,123 +611,93 @@ class _PaintCardState extends State<PaintCard> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-
-                        // Mostrar el nuevo modal de wishlist
                         AddToWishlistModal.show(
                           context: context,
                           paint: paint,
-                          onAddToWishlist: (paint, priority) async {
-                            final scaffoldMessenger = ScaffoldMessenger.of(
-                              context,
-                            );
-                            final paintService = PaintService();
+                          isUpdate: _inWishlist,
+                          wishlistId: _wishlistId,
+                          onAddToWishlist: (
+                            paint,
+                            priority,
+                            existingWishlistId,
+                          ) async {
+                            String? newId = existingWishlistId;
+                            final user = FirebaseAuth.instance.currentUser!;
+                            final token = await user.getIdToken();
 
-                            // Show loading indicator
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Row(
-                                  children: [
-                                    CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                      strokeWidth: 2,
-                                    ),
-                                    SizedBox(width: 16),
-                                    Text('Adding to wishlist...'),
-                                  ],
+                            if (existingWishlistId != null) {
+                              // ─── ACTUALIZAR EXISTENTE ───
+                              bool success = await _paintService
+                                  .updateWishlistPriority(
+                                    paint.id,
+                                    existingWishlistId,
+                                    priority > 0,
+                                    token as String,
+                                    priority,
+                                  );
+                              if (!success) {
+                                return null;
+                              }
+                            } else {
+                              // ─── AÑADIR NUEVO ───
+                              final result = await _paintService
+                                  .addToWishlistDirect(
+                                    paint,
+                                    priority,
+                                    user.uid,
+                                  );
+                              if (result['success'] == true) {
+                                newId = result['id']?.toString();
+                              } else {
+                                return null;
+                              }
+                            }
+
+                            // ─── LIMPIAR ESTADO DE INVENTARIO ───
+                            setState(() {
+                              _inInventory = false;
+                              _inventoryId = null;
+                            });
+
+                            // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
+                            setState(() {
+                              _inWishlist = true;
+                              _wishlistId = newId;
+                            });
+
+                            // ─── MOSTRAR SNACKBAR ───
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  existingWishlistId != null
+                                      ? 'Wishlist updated'
+                                      : 'Added ${paint.name} to wishlist',
                                 ),
-                                duration: Duration(seconds: 10),
-                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.pink,
+                                action: SnackBarAction(
+                                  label: 'VIEW',
+                                  textColor: Colors.white,
+                                  onPressed:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => const WishlistScreen(),
+                                        ),
+                                      ),
+                                ),
                               ),
                             );
 
-                            try {
-                              // Get current Firebase user
-                              final firebaseUser =
-                                  FirebaseAuth.instance.currentUser;
-                              if (firebaseUser == null) {
-                                // Show error if not logged in
-                                scaffoldMessenger.hideCurrentSnackBar();
-                                scaffoldMessenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'You need to be logged in to add to wishlist',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final userId = firebaseUser.uid;
-
-                              // Call API directly
-                              final result = await paintService
-                                  .addToWishlistDirect(paint, priority, userId);
-
-                              scaffoldMessenger.hideCurrentSnackBar();
-
-                              if (result['success'] == true) {
-                                // Determine the correct message based on if the paint was already in the wishlist
-                                final String message =
-                                    result['alreadyExists'] == true
-                                        ? '${paint.name} is already in your wishlist'
-                                        : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
-
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(message),
-                                    backgroundColor:
-                                        isDarkMode
-                                            ? Colors.pinkAccent
-                                            : Colors.pink,
-                                    action: SnackBarAction(
-                                      label: 'VIEW',
-                                      textColor: Colors.white,
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) =>
-                                                    const WishlistScreen(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                // Show error with details
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Error: ${result['message']}',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 5),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
+                            // igual que en inventario, no devolvemos nada
+                            return null;
                           },
                         );
                       },
                       icon: const Icon(Icons.favorite_border),
-                      label: const Text('Add to Wishlist'),
+                      label: Text(
+                        _inWishlist ? 'Update Wishlist' : 'Add to Wishlist',
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.redAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),

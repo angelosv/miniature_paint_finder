@@ -417,7 +417,9 @@ class PaintGridCard extends StatelessWidget {
                   label: 'Add to Palette',
                   onTap: () {
                     if (paletteName != null) {
-                      print("****** paint_grid_card Palette name: $paletteName");
+                      print(
+                        "****** paint_grid_card Palette name: $paletteName",
+                      );
                       _showCreateModal(context);
                     } else {
                       Navigator.pop(context);
@@ -639,7 +641,7 @@ class PaintGridCard extends StatelessWidget {
     AddToWishlistModal.show(
       context: context,
       paint: paint,
-      onAddToWishlist: (paint, priority) async {
+      onAddToWishlist: (paint, priority, _) async {
         // Mostrar loading
         scaffoldMessenger.showSnackBar(
           const SnackBar(
@@ -772,66 +774,72 @@ class PaintGridCard extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 16),
+                ),
+
+                Text(
+                  'Create New Palette',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  initialValue:
+                      paletteName ?? 'Enter a name for your new palette',
+                  enabled: false,
+                  decoration: InputDecoration(
+                    labelText: 'Palette Name',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                ElevatedButton(
+                  onPressed: () {
+                    print("****** save palette: $paletteName");
+                    print("****** save palette: ${paint.id}");
+                    print("****** save palette: ${paint.brandId}");
+
+                    Navigator.pop(context);
+                    onAddToPalette!(
+                      paletteName ?? "",
+                      paint.id ?? "",
+                      paint.brandId ?? "",
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: const Text('Create'),
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              margin: const EdgeInsets.only(bottom: 16),
-            ),
-            
-            Text(
-              'Create New Palette',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            TextFormField(
-              initialValue: paletteName ?? 'Enter a name for your new palette',
-              enabled: false,
-              decoration: InputDecoration(
-                labelText: 'Palette Name',
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            ElevatedButton(
-              onPressed: () {
-                print("****** save palette: $paletteName");
-                print("****** save palette: ${paint.id}");        
-                print("****** save palette: ${paint.brandId}");            
-              
-                Navigator.pop(context);
-                onAddToPalette!(paletteName ?? "", paint.id ?? "", paint.brandId ?? "");
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Create'),
-            ),
-            
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
     );
   }
 }

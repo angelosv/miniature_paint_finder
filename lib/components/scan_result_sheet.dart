@@ -163,11 +163,11 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     AddToWishlistModal.show(
       context: context,
       paint: widget.paint,
-      onAddToWishlist: (paint, priority) async {
+      onAddToWishlist: (paint, priority, _) async {
         print('🔍 Iniciando proceso de añadir a wishlist');
         print('📦 Datos de la pintura: ${paint.toJson()}');
         print('🎯 Prioridad seleccionada: $priority');
-        
+
         try {
           // Obtener el usuario actual de Firebase
           final firebaseUser = FirebaseAuth.instance.currentUser;
@@ -176,7 +176,9 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Necesitas iniciar sesión para añadir a wishlist'),
+                  content: Text(
+                    'Necesitas iniciar sesión para añadir a wishlist',
+                  ),
                   backgroundColor: Colors.red,
                   duration: Duration(seconds: 3),
                 ),
@@ -190,7 +192,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
           // Crear instancia del servicio
           final paintService = PaintService();
-          
+
           print('📤 Llamando a addToWishlistDirect...');
           final result = await paintService.addToWishlistDirect(
             paint,
@@ -256,7 +258,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       print('🎨 Iniciando proceso de añadir pintura a paleta');
       print('📦 Datos de la pintura: ${widget.paint.toJson()}');
       print('🎯 Paleta seleccionada: ${_selectedPalette!.toJson()}');
-      
+
       try {
         // Obtener el usuario actual de Firebase
         final firebaseUser = FirebaseAuth.instance.currentUser;
@@ -276,23 +278,23 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
         final token = await firebaseUser.getIdToken() ?? '';
         print('🔑 Token de usuario obtenido');
-        
+
         final paletteService = PaletteService();
-        
+
         print('📤 Llamando a addPaintsToPalette...');
         print('🎨 Agregando 1 pintura a la paleta: ${_selectedPalette!.id}');
-        await paletteService.addPaintsToPalette(
-          _selectedPalette!.id,
-          [ { "paint_id": widget.paint.id, "brand_id": widget.paint.brandId } ],
-          token,
-        );
+        await paletteService.addPaintsToPalette(_selectedPalette!.id, [
+          {"paint_id": widget.paint.id, "brand_id": widget.paint.brandId},
+        ], token);
 
         print('✅ Pintura añadida a paleta exitosamente');
         widget.onAddToPalette(widget.paint, _selectedPalette!);
         setState(() {
           _isAddingToPalette = false;
         });
-        _showSuccessSnackbar('Paint added to palette ${_selectedPalette!.name}');
+        _showSuccessSnackbar(
+          'Paint added to palette ${_selectedPalette!.name}',
+        );
       } catch (e) {
         print('❌ Error al añadir a paleta: $e');
         if (mounted) {
@@ -412,15 +414,17 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
                                       widget.paint.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(fontWeight: FontWeight.bold),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -529,7 +533,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                   ),
                                   Text(
                                     'Quantity: ${widget.inventoryQuantity}',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
@@ -555,7 +560,11 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 24),
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 24,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -876,53 +885,54 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               border: const OutlineInputBorder(),
             ),
           )
-        else
-          if (!isCreatingPaletteInView)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Select palette:'),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<Map<String, dynamic>>(
-                    value: _selectedPalette != null 
-                      ? _palettes.firstWhere(
-                          (palette) => palette['id'] == _selectedPalette!.id,
-                          orElse: () => _palettes.first,
-                        )
-                      : _palettes.first,
-                    isExpanded: true,
-                    underline: Container(),
-                    items: _palettes.map((palette) {
-                      return DropdownMenuItem<Map<String, dynamic>>(
-                        value: palette,
-                        child: Text(palette['name']),
-                      );
-                    }).toList(),
-                    onChanged: (Map<String, dynamic>? value) {
-                      if (value != null) {
-                        print('🎨 Paleta seleccionada: ${value['id']}');
-                        print('🎨 Paleta seleccionada: ${value['name']}');
-                        setState(() {
-                          _selectedPalette = Palette(
-                            id: value['id'],
-                            name: value['name'],
-                            imagePath: 'assets/images/placeholder.jpg',
-                            colors: [],
-                            createdAt: DateTime.now(),
-                          );
-                        });
-                      }
-                    },
-                  ),
+        else if (!isCreatingPaletteInView)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select palette:'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
-            ),
+                child: DropdownButton<Map<String, dynamic>>(
+                  value:
+                      _selectedPalette != null
+                          ? _palettes.firstWhere(
+                            (palette) => palette['id'] == _selectedPalette!.id,
+                            orElse: () => _palettes.first,
+                          )
+                          : _palettes.first,
+                  isExpanded: true,
+                  underline: Container(),
+                  items:
+                      _palettes.map((palette) {
+                        return DropdownMenuItem<Map<String, dynamic>>(
+                          value: palette,
+                          child: Text(palette['name']),
+                        );
+                      }).toList(),
+                  onChanged: (Map<String, dynamic>? value) {
+                    if (value != null) {
+                      print('🎨 Paleta seleccionada: ${value['id']}');
+                      print('🎨 Paleta seleccionada: ${value['name']}');
+                      setState(() {
+                        _selectedPalette = Palette(
+                          id: value['id'],
+                          name: value['name'],
+                          imagePath: 'assets/images/placeholder.jpg',
+                          colors: [],
+                          createdAt: DateTime.now(),
+                        );
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
 
         const SizedBox(height: 16),
 
@@ -1010,7 +1020,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               ),
             ),
           ),
-        
+
         const SizedBox(height: 16),
 
         // Action buttons
@@ -1029,7 +1039,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: (isCreatingPalette || isCreatingPaletteInView) ? _createPalette : _addToPalette,
+                onPressed:
+                    (isCreatingPalette || isCreatingPaletteInView)
+                        ? _createPalette
+                        : _addToPalette,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
@@ -1044,7 +1057,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   }
 
   void _createPalette() {
-    String _name = isCreatingPaletteInView ? _newPaletteName : (widget.paletteName ?? "");
+    String _name =
+        isCreatingPaletteInView ? _newPaletteName : (widget.paletteName ?? "");
     print('_createPalette widget.paletteName: ${widget.paletteName}');
     print('_createPalette _newPaletteName: ${_newPaletteName}');
     print('_createPalette _name: ${_name}');
@@ -1059,7 +1073,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
       createdAt: DateTime.now(),
       imagePath: '',
     );
-      
+
     widget.onAddToPalette(widget.paint, newPalette);
     setState(() {
       _isAddingToPalette = false;
