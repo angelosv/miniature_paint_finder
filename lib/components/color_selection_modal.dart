@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:math'; // Importar para sqrt y pow
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart' hide Colors;
@@ -76,6 +77,11 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   bool _showMagnifier = true;
   Offset? _magnifierPosition;
   double _magnifierSize = 120.0;
+  double _magnificationFactor = 2.5;
+
+  // Para el seguimiento preciso de los pixeles
+  int _exactPixelX = 0;
+  int _exactPixelY = 0;
 
   // Para mover los puntos existentes
   int? _selectedPointIndex;
@@ -106,7 +112,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         });
       }
     } catch (e) {
-      print('Error cargando imagen: $e');
+      print('Error loading image: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -120,6 +126,67 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return null;
 
+    // Convertir la posición local a posición relativa dentro del RenderBox
+    final Offset position = box.globalToLocal(box.localToGlobal(localPosition));
+
+    // Si la posición está fuera de los límites del box, retornar null
+    if (!box.paintBounds.contains(position)) return null;
+
+    // Obtener las dimensiones reales de la imagen visualizada (después del escalado del InteractiveViewer)
+    final Rect displayRect = Rect.fromLTWH(
+      0,
+      0,
+      box.size.width,
+      box.size.height,
+    );
+
+    // Calcular la posición relativa en la imagen (0.0 - 1.0)
+    final double relX = (position.dx - displayRect.left) / displayRect.width;
+    final double relY = (position.dy - displayRect.top) / displayRect.height;
+
+    // Convertir coordenadas relativas a las coordenadas absolutas de la imagen original
+    // Considerar la transformación actual para el zoom y el desplazamiento
+    final Matrix4 matrix = _transformationController.value;
+    final Matrix4 inverseMatrix = Matrix4.inverted(matrix);
+    final Vector3 untransformedPoint = inverseMatrix.transform3(
+      Vector3(position.dx, position.dy, 0),
+    );
+
+    // Calcular las coordenadas exactas del pixel basadas en la posición transformada
+    _exactPixelX =
+        (untransformedPoint.x / box.size.width * _decodedImage!.width).round();
+    _exactPixelY =
+        (untransformedPoint.y / box.size.height * _decodedImage!.height)
+            .round();
+
+    // Verificar que las coordenadas estén dentro de los límites de la imagen
+    if (_exactPixelX >= 0 &&
+        _exactPixelX < _decodedImage!.width &&
+        _exactPixelY >= 0 &&
+        _exactPixelY < _decodedImage!.height) {
+      print('Pixel seleccionado en: ($_exactPixelX, $_exactPixelY)');
+
+      // Obtener el color del pixel
+      final pixel = _decodedImage!.getPixel(_exactPixelX, _exactPixelY);
+      return Color.fromARGB(
+        255,
+        pixel.r.toInt(),
+        pixel.g.toInt(),
+        pixel.b.toInt(),
+      );
+    }
+
+    return null;
+  }
+
+  // Calcular exactamente dónde está el pixel
+  Offset _calculateExactPixelPosition(Offset touchPosition) {
+    if (_decodedImage == null) return touchPosition;
+
+    // Obtener el RenderBox de la imagen
+    RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return touchPosition;
+
     // Obtener tamaño real de la imagen mostrada
     final boxSize = box.size;
 
@@ -132,52 +199,57 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       _transformationController.value,
     );
     final Vector3 untransformedPosition = inverseMatrix.transform3(
-      Vector3(localPosition.dx, localPosition.dy, 0),
+      Vector3(touchPosition.dx, touchPosition.dy, 0),
     );
 
-    // Calcular el pixel correspondiente en la imagen original
+    // Calcular y registrar las coordenadas exactas
     final int pixelX = (untransformedPosition.x * scaleX).round();
     final int pixelY = (untransformedPosition.y * scaleY).round();
+    print('Exact coordinates: ($pixelX, $pixelY)');
 
-    // Verificar que las coordenadas estén dentro de la imagen
-    if (pixelX >= 0 &&
-        pixelX < _decodedImage!.width &&
-        pixelY >= 0 &&
-        pixelY < _decodedImage!.height) {
-      // Obtener el color del pixel
-      final pixel = _decodedImage!.getPixel(pixelX, pixelY);
-      return Color.fromARGB(
-        255,
-        pixel.r.toInt(),
-        pixel.g.toInt(),
-        pixel.b.toInt(),
-      );
-    }
-
-    return null;
+    // Esta es la posición exacta del pixel en la imagen
+    return Offset(untransformedPosition.x, untransformedPosition.y);
   }
 
   // Manejar el toque en la imagen
   void _handleImageTap(TapDownDetails details) {
     if (_isLoading || _decodedImage == null) return;
-    if (_currentMode != ToolMode.picker) return;
+
+    print('Tap detected at: ${details.localPosition}');
+
+    // Verificar primero si estamos tocando un punto existente
+    _checkTapOnExistingPoint(details.localPosition);
+
+    // Si hemos seleccionado un punto existente, no continuamos con la creación de uno nuevo
+    if (_selectedPointIndex != null) {
+      // Actualizar la lupa pero no crear un nuevo punto
+      final Color? color = _getPixelColor(details.localPosition);
+      if (color != null) {
+        setState(() {
+          _lastTapPosition = details.localPosition;
+        });
+        _updateMagnifier(details.localPosition);
+      }
+      return;
+    }
+
+    // Obtener el color del pixel (esto también guarda _exactPixelX y _exactPixelY)
+    final Color? color = _getPixelColor(details.localPosition);
+    if (color == null) {
+      print(
+        'No se pudo obtener el color en la posición: ${details.localPosition}',
+      );
+      return;
+    }
+
+    print(
+      'Color obtained: ${color.toString()} in pixel ($_exactPixelX, $_exactPixelY)',
+    );
 
     // Guardar la posición del toque
     setState(() {
       _lastTapPosition = details.localPosition;
     });
-
-    // Verificar si estamos tocando un punto existente para moverlo
-    _checkTapOnExistingPoint(details.localPosition);
-
-    if (_selectedPointIndex != null) {
-      // Ya tenemos un punto seleccionado, no continuamos
-      return;
-    }
-
-    // Obtener el color del pixel
-    final Color? color = _getPixelColor(details.localPosition);
-    if (color == null) return;
 
     // Convertir a hexadecimal
     final String hexCode =
@@ -191,41 +263,31 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
     // Si no estamos arrastrando, añadir el punto
     if (!_isDragging) {
-      // Calcular coordenadas originales para guardar
-      RenderBox? box =
-          _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (box != null) {
-        final boxSize = box.size;
-        final Matrix4 inverseMatrix = Matrix4.inverted(
-          _transformationController.value,
-        );
-        final Vector3 untransformedPosition = inverseMatrix.transform3(
-          Vector3(details.localPosition.dx, details.localPosition.dy, 0),
-        );
+      // Crear el punto usando las coordenadas exactas del pixel
+      final double pixelToImageX = _exactPixelX.toDouble();
+      final double pixelToImageY = _exactPixelY.toDouble();
 
-        // Calcular la posición relativa (0-1) y luego convertir a coordenadas absolutas
-        final double relativeX = untransformedPosition.x / boxSize.width;
-        final double relativeY = untransformedPosition.y / boxSize.height;
+      print(
+        'Adding point at pixel coordinates: ($_exactPixelX, $_exactPixelY)',
+      );
 
-        final double imageX = relativeX * _imageSize.width;
-        final double imageY = relativeY * _imageSize.height;
+      // Crear el punto
+      final newPoint = ColorPoint(
+        x: pixelToImageX,
+        y: pixelToImageY,
+        color: color,
+        hex: hexCode,
+        pixelX: _exactPixelX,
+        pixelY: _exactPixelY,
+      );
 
-        // Crear el punto
-        final newPoint = ColorPoint(
-          x: imageX,
-          y: imageY,
-          color: color,
-          hex: hexCode,
-        );
+      // Añadir a la lista
+      setState(() {
+        _points.add(newPoint);
+      });
 
-        // Añadir a la lista
-        setState(() {
-          _points.add(newPoint);
-        });
-
-        // Notificar al padre
-        widget.onPointsUpdated(_points);
-      }
+      // Notificar al padre
+      widget.onPointsUpdated(_points);
     }
 
     // Actualizar la posición de la lupa
@@ -237,30 +299,28 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
 
-    // Convertir coordenadas considerando zoom
-    final Matrix4 inverseMatrix = Matrix4.inverted(
-      _transformationController.value,
-    );
-    final Vector3 untransformedPosition = inverseMatrix.transform3(
-      Vector3(touchPosition.dx, touchPosition.dy, 0),
-    );
+    // Obtener el pixel exacto donde tocamos
+    final Color? color = _getPixelColor(touchPosition);
+    if (color == null) return;
+
+    // Ahora tenemos _exactPixelX y _exactPixelY con las coordenadas exactas del pixel
+
+    // Aumentar el radio de detección para facilitar la selección
+    final double detectionRadius =
+        10.0; // Aumentado para hacer más fácil seleccionar puntos existentes
 
     // Verificar cada punto
     for (int i = 0; i < _points.length; i++) {
       final point = _points[i];
 
-      // Convertir coordenadas del punto al espacio de la pantalla
-      final double screenX = (point.x / _imageSize.width) * box.size.width;
-      final double screenY = (point.y / _imageSize.height) * box.size.height;
+      // Comparar las coordenadas de pixel (más preciso)
+      final distance = sqrt(
+        pow(point.pixelX - _exactPixelX, 2) +
+            pow(point.pixelY - _exactPixelY, 2),
+      );
 
-      // Calcular distancia entre el toque y el punto
-      final distance =
-          (Offset(screenX, screenY) -
-                  Offset(untransformedPosition.x, untransformedPosition.y))
-              .distance;
-
-      // Si estamos cerca del punto (ajustar este valor según necesidad)
-      if (distance < 20) {
+      // Si estamos cerca del punto, seleccionarlo
+      if (distance < detectionRadius) {
         setState(() {
           _selectedPointIndex = i;
           _isMovingExistingPoint = true;
@@ -282,19 +342,21 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _updateMagnifier(Offset touchPosition) {
     if (!_showMagnifier) return;
 
-    // Color bajo el toque
+    // Color bajo el toque (esto actualiza _exactPixelX y _exactPixelY)
     final Color? color = _getPixelColor(touchPosition);
     if (color == null) return;
 
-    // Posicionar la lupa en la esquina superior derecha
+    // Posicionar la lupa en la esquina superior
     final screenSize = MediaQuery.of(context).size;
     final lupaPosition = Offset(
       screenSize.width - _magnifierSize / 2 - 20,
       _magnifierSize / 2 + 20,
     );
 
+    // Actualizar el estado con las coordenadas precisas
     setState(() {
       _magnifierPosition = lupaPosition;
+      _lastTapPosition = touchPosition;
       _selectedColor = color;
       _selectedHex =
           '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
@@ -305,18 +367,22 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _handlePanStart(DragStartDetails details) {
     _isDragging = true;
 
-    // Verificar si tocamos un punto existente
+    // Verificar primero si estamos tocando un punto existente
     _checkTapOnExistingPoint(details.localPosition);
 
-    // Si no estamos moviendo un punto existente, simular un toque inicial
-    if (!_isMovingExistingPoint) {
-      _handleImageTap(
-        TapDownDetails(
-          globalPosition: details.globalPosition,
-          localPosition: details.localPosition,
-        ),
-      );
+    // Si estamos moviendo un punto existente, solo configuramos el estado para el arrastre
+    if (_isMovingExistingPoint && _selectedPointIndex != null) {
+      // No necesitamos hacer nada más, ya tenemos el punto seleccionado
+      return;
     }
+
+    // Si no estamos moviendo un punto existente, simular un toque inicial para crear uno nuevo
+    _handleImageTap(
+      TapDownDetails(
+        globalPosition: details.globalPosition,
+        localPosition: details.localPosition,
+      ),
+    );
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
@@ -329,43 +395,25 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
     // Si estamos moviendo un punto existente
     if (_isMovingExistingPoint && _selectedPointIndex != null) {
-      // Calcular nuevas coordenadas
-      RenderBox? box =
-          _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (box != null) {
-        final boxSize = box.size;
-        final Matrix4 inverseMatrix = Matrix4.inverted(
-          _transformationController.value,
-        );
-        final Vector3 untransformedPosition = inverseMatrix.transform3(
-          Vector3(details.localPosition.dx, details.localPosition.dy, 0),
-        );
+      // Obtener el color del pixel (actualiza _exactPixelX y _exactPixelY)
+      final Color? color = _getPixelColor(details.localPosition);
+      if (color != null) {
+        final String hexCode =
+            '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
 
-        // Calcular la posición relativa y convertir a coordenadas absolutas
-        final double relativeX = untransformedPosition.x / boxSize.width;
-        final double relativeY = untransformedPosition.y / boxSize.height;
-
-        final double imageX = relativeX * _imageSize.width;
-        final double imageY = relativeY * _imageSize.height;
-
-        // Obtener el color del pixel
-        final Color? color = _getPixelColor(details.localPosition);
-        if (color != null) {
-          final String hexCode =
-              '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
-
-          // Actualizar el punto existente
-          setState(() {
-            _points[_selectedPointIndex!] = ColorPoint(
-              x: imageX,
-              y: imageY,
-              color: color,
-              hex: hexCode,
-            );
-            _selectedColor = color;
-            _selectedHex = hexCode;
-          });
-        }
+        // Actualizar el punto existente con las coordenadas exactas de pixel
+        setState(() {
+          _points[_selectedPointIndex!] = ColorPoint(
+            x: _exactPixelX.toDouble(),
+            y: _exactPixelY.toDouble(),
+            color: color,
+            hex: hexCode,
+            pixelX: _exactPixelX,
+            pixelY: _exactPixelY,
+          );
+          _selectedColor = color;
+          _selectedHex = hexCode;
+        });
       }
     } else {
       // Obtener el color del pixel si no estamos moviendo un punto
@@ -387,53 +435,50 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     // Si estábamos moviendo un punto existente, notificar cambios
     if (_isMovingExistingPoint && _selectedPointIndex != null) {
       widget.onPointsUpdated(_points);
+
+      // No borrar completamente la selección para permitir continuar el desplazamiento
+      setState(() {
+        _isDragging = false;
+        _isMovingExistingPoint = false;
+        // Mantenemos _selectedPointIndex para recordar cuál fue el último punto seleccionado
+      });
     }
     // Si no estamos moviendo un punto existente, añadir uno nuevo
     else if (_isDragging && _selectedColor != Colors.transparent) {
-      // Calcular coordenadas originales para guardar
-      RenderBox? box =
-          _imageKey.currentContext?.findRenderObject() as RenderBox?;
-      if (box != null && _lastTapPosition != null) {
-        final boxSize = box.size;
-        final Matrix4 inverseMatrix = Matrix4.inverted(
-          _transformationController.value,
-        );
-        final Vector3 untransformedPosition = inverseMatrix.transform3(
-          Vector3(_lastTapPosition!.dx, _lastTapPosition!.dy, 0),
-        );
+      // Crear el punto usando las coordenadas exactas de pixel
+      final newPoint = ColorPoint(
+        x: _exactPixelX.toDouble(),
+        y: _exactPixelY.toDouble(),
+        color: _selectedColor,
+        hex: _selectedHex,
+        pixelX: _exactPixelX,
+        pixelY: _exactPixelY,
+      );
 
-        // Calcular la posición relativa (0-1) y luego convertir a coordenadas absolutas
-        final double relativeX = untransformedPosition.x / boxSize.width;
-        final double relativeY = untransformedPosition.y / boxSize.height;
+      // Añadir a la lista
+      setState(() {
+        _points.add(newPoint);
+        _selectedPointIndex = _points.length - 1;
+      });
 
-        final double imageX = relativeX * _imageSize.width;
-        final double imageY = relativeY * _imageSize.height;
+      // Notificar al padre
+      widget.onPointsUpdated(_points);
 
-        // Crear el punto
-        final newPoint = ColorPoint(
-          x: imageX,
-          y: imageY,
-          color: _selectedColor,
-          hex: _selectedHex,
-        );
-
-        // Añadir a la lista
-        setState(() {
-          _points.add(newPoint);
-        });
-
-        // Notificar al padre
-        widget.onPointsUpdated(_points);
-      }
+      // Resetear solo el estado de arrastre pero mantener la selección
+      setState(() {
+        _isDragging = false;
+        _isMovingExistingPoint = false;
+        // No reseteamos _lastTapPosition ni _selectedPointIndex para permitir continuar
+      });
+    } else {
+      // Si simplemente tocamos sin hacer nada específico
+      setState(() {
+        _isDragging = false;
+        _isMovingExistingPoint = false;
+        _lastTapPosition = null;
+        // Podemos dejar _selectedPointIndex para recordar el último punto seleccionado
+      });
     }
-
-    // Resetear el estado
-    setState(() {
-      _isDragging = false;
-      _isMovingExistingPoint = false;
-      _selectedPointIndex = null;
-      _lastTapPosition = null;
-    });
   }
 
   @override
@@ -448,7 +493,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.95,
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -456,59 +501,26 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       child: SafeArea(
         child: Column(
           children: [
-            // Cabecera
+            // Cabecera simplificada
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Selector de Color',
+                    'Color Selector',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   TextButton.icon(
                     icon: const Icon(Icons.close),
-                    label: const Text('Cerrar'),
+                    label: const Text('Close'),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
 
-            // Barra de herramientas
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  _buildToolButton(
-                    icon: Icons.colorize,
-                    label: 'Seleccionar Color',
-                    isActive: _currentMode == ToolMode.picker,
-                    onTap: () => setState(() => _currentMode = ToolMode.picker),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildToolButton(
-                    icon: Icons.pan_tool,
-                    label: 'Mover',
-                    isActive: _currentMode == ToolMode.move,
-                    onTap: () => setState(() => _currentMode = ToolMode.move),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildToolButton(
-                    icon: Icons.restart_alt,
-                    label: 'Resetear',
-                    onTap:
-                        () => setState(
-                          () =>
-                              _transformationController.value =
-                                  Matrix4.identity(),
-                        ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Área de la imagen
+            // Área de la imagen (ahora sin barra de herramientas)
             Expanded(
               child: Stack(
                 children: [
@@ -524,7 +536,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                           transformationController: _transformationController,
                           minScale: 0.5,
                           maxScale: 5.0,
-                          panEnabled: _currentMode == ToolMode.move,
+                          panEnabled: true,
                           scaleEnabled: true,
                           child: Stack(
                             key: _imageKey,
@@ -543,46 +555,94 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 final index = entry.key;
                                 final point = entry.value;
 
-                                // Calcular posición relativa para mostrar en la UI
-                                final relativeX = point.x / _imageSize.width;
-                                final relativeY = point.y / _imageSize.height;
+                                // Convertir las coordenadas de pixel a las de pantalla considerando el zoom
+                                RenderBox? box =
+                                    _imageKey.currentContext?.findRenderObject()
+                                        as RenderBox?;
+                                if (box == null) {
+                                  return Container(); // Si no hay context, devolver un widget vacío
+                                }
+
+                                // Calcular la relación entre la imagen y la pantalla
+                                final double scaleX =
+                                    box.size.width / _imageSize.width;
+                                final double scaleY =
+                                    box.size.height / _imageSize.height;
+
+                                // Calcular la posición exacta en la pantalla considerando la transformación
+                                // Esto garantiza que los puntos se posicionen correctamente incluso con zoom
+                                final Matrix4 transform =
+                                    _transformationController.value;
+                                final Vector3 position = transform.transform3(
+                                  Vector3(
+                                    point.pixelX.toDouble() *
+                                        (box.size.width / _decodedImage!.width),
+                                    point.pixelY.toDouble() *
+                                        (box.size.height /
+                                            _decodedImage!.height),
+                                    0,
+                                  ),
+                                );
+
+                                // Tamaño del punto para centrarlo correctamente
+                                final bool isPointSelected =
+                                    _selectedPointIndex == index;
+                                final double pointSize =
+                                    isPointSelected ? 30.0 : 24.0;
 
                                 return Positioned(
                                   left:
-                                      relativeX *
-                                          MediaQuery.of(context).size.width -
-                                      15,
+                                      position.x -
+                                      (pointSize / 2), // Centrado exacto
                                   top:
-                                      relativeY *
-                                          MediaQuery.of(context).size.height -
-                                      15,
-                                  child: Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: point.color.withOpacity(0.8),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color:
-                                            _isLightColor(point.color)
-                                                ? Colors.black
-                                                : Colors.white,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: TextStyle(
-                                          color:
-                                              _isLightColor(point.color)
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
+                                      position.y -
+                                      (pointSize / 2), // Centrado exacto
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      // Al tocar un punto, lo seleccionamos para poder moverlo después
+                                      setState(() {
+                                        _selectedPointIndex = index;
+                                        _selectedColor = point.color;
+                                        _selectedHex = point.hex;
+                                      });
+                                    },
+                                    onPanStart: (details) {
+                                      // Activar el modo de movimiento al arrastrar un punto
+                                      setState(() {
+                                        _selectedPointIndex = index;
+                                        _isMovingExistingPoint = true;
+                                        _isDragging = true;
+                                        _selectedColor = point.color;
+                                        _selectedHex = point.hex;
+                                      });
+                                    },
+                                    onPanUpdate: (details) {
+                                      if (_selectedPointIndex != index) return;
+
+                                      // Actualizar posición mientras arrastramos
+                                      RenderBox? box =
+                                          _imageKey.currentContext
+                                                  ?.findRenderObject()
+                                              as RenderBox?;
+                                      if (box != null) {
+                                        // Convertir la posición global a local
+                                        final Offset localPosition = box
+                                            .globalToLocal(
+                                              details.globalPosition,
+                                            );
+
+                                        _handlePanUpdate(
+                                          DragUpdateDetails(
+                                            globalPosition:
+                                                details.globalPosition,
+                                            localPosition: localPosition,
+                                            delta: details.delta,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    onPanEnd: _handlePanEnd,
+                                    child: _buildColorPoint(point, index),
                                   ),
                                 );
                               }).toList(),
@@ -594,43 +654,37 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                   // Indicador de selección
                   if (_lastTapPosition != null)
                     Positioned(
-                      left: _lastTapPosition!.dx - 15,
-                      top: _lastTapPosition!.dy - 15,
+                      left: _lastTapPosition!.dx - 5, // Exactamente 5px
+                      top: _lastTapPosition!.dy - 5, // Exactamente 5px
                       child: Container(
-                        width: 30,
-                        height: 30,
+                        width: 10, // 10px total (5px de radio)
+                        height: 10, // 10px total (5px de radio)
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.red, width: 2),
+                          border: Border.all(color: Colors.red, width: 1.5),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: _selectedColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1,
-                                ),
-                              ),
+                        child: Center(
+                          child: Container(
+                            width:
+                                2, // Punto central mínimo para precisión exacta
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
 
-                  // Lupa en esquina
+                  // Lupa en esquina superior
                   if (_showMagnifier &&
                       _magnifierPosition != null &&
                       _selectedColor != Colors.transparent)
                     Positioned(
                       left: _magnifierPosition!.dx - _magnifierSize / 2,
-                      top: _magnifierPosition!.dy - _magnifierSize / 2,
+                      top: 20,
                       child: Container(
                         width: _magnifierSize,
                         height: _magnifierSize,
@@ -651,12 +705,17 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                         ),
                         child: Stack(
                           children: [
-                            // Color sólido
+                            // Color magnificado
                             ClipOval(
-                              child: Container(
-                                width: _magnifierSize,
-                                height: _magnifierSize,
-                                color: _selectedColor,
+                              child: CustomPaint(
+                                painter: MagnifierPainter(
+                                  image: _decodedImage,
+                                  pixelX: _exactPixelX,
+                                  pixelY: _exactPixelY,
+                                  zoom: _magnificationFactor,
+                                  color: _selectedColor,
+                                ),
+                                size: Size(_magnifierSize, _magnifierSize),
                               ),
                             ),
 
@@ -682,7 +741,25 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                               ),
                             ),
 
-                            // Información del color
+                            // Círculo indicador
+                            Center(
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        _isLightColor(_selectedColor)
+                                            ? Colors.black
+                                            : Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Información del color y coordenadas
                             Positioned(
                               bottom: 0,
                               left: 0,
@@ -700,6 +777,15 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                         color: Colors.white,
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'x: $_exactPixelX, y: $_exactPixelY',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
                                       ),
                                     ),
                                   ],
@@ -724,7 +810,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                       onPressed:
                           () =>
                               setState(() => _showMagnifier = !_showMagnifier),
-                      tooltip: _showMagnifier ? 'Ocultar lupa' : 'Mostrar lupa',
+                      tooltip:
+                          _showMagnifier ? 'Hide Magnifier' : 'Show Magnifier',
                       color: Colors.black.withOpacity(0.5),
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white.withOpacity(0.7),
@@ -751,19 +838,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Colores Seleccionados (${_points.length})',
+                        'Selected Colors (${_points.length})',
                         style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          widget.onPointsUpdated(_points);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Aplicar'),
                       ),
                     ],
                   ),
@@ -774,7 +850,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                         _points.isEmpty
                             ? const Center(
                               child: Text(
-                                'Aún no hay colores seleccionados',
+                                'No colors selected yet',
                                 style: TextStyle(fontStyle: FontStyle.italic),
                               ),
                             )
@@ -783,70 +859,126 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                               itemCount: _points.length,
                               itemBuilder: (context, index) {
                                 final point = _points[index];
-                                return Container(
-                                  width: 60,
-                                  height: 60,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: point.color,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color:
-                                          isDarkMode
-                                              ? Colors.grey[700]!
-                                              : Colors.grey[300]!,
-                                    ),
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Text(
-                                        '${index + 1}',
-                                        style: TextStyle(
-                                          color:
-                                              _isLightColor(point.color)
-                                                  ? Colors.black
-                                                  : Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                final bool isSelected =
+                                    _selectedPointIndex == index;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedPointIndex = index;
+                                      _selectedColor = point.color;
+                                      _selectedHex = point.hex;
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 60,
+                                    height: 60,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: point.color,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color:
+                                            isSelected
+                                                ? Colors.yellow.withOpacity(0.8)
+                                                : (isDarkMode
+                                                    ? Colors.grey[700]!
+                                                    : Colors.grey[300]!),
+                                        width: isSelected ? 2.5 : 1.0,
                                       ),
-                                      Positioned(
-                                        top: 2,
-                                        right: 2,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _points.removeAt(index);
-                                              widget.onPointsUpdated(_points);
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.all(2),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  _isLightColor(point.color)
-                                                      ? Colors.black
-                                                          .withOpacity(0.5)
-                                                      : Colors.white
-                                                          .withOpacity(0.5),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.close,
-                                              size: 10,
-                                              color:
-                                                  _isLightColor(point.color)
-                                                      ? Colors.white
-                                                      : Colors.black,
+                                    ),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Text(
+                                          '${index + 1}',
+                                          style: TextStyle(
+                                            color:
+                                                _isLightColor(point.color)
+                                                    ? Colors.black
+                                                    : Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 2,
+                                          right: 2,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                // Si estamos eliminando el punto seleccionado, limpiamos la selección
+                                                if (_selectedPointIndex ==
+                                                    index) {
+                                                  _selectedPointIndex = null;
+                                                }
+                                                // Si eliminamos un punto con índice menor al seleccionado, ajustamos el índice
+                                                else if (_selectedPointIndex !=
+                                                        null &&
+                                                    _selectedPointIndex! >
+                                                        index) {
+                                                  _selectedPointIndex =
+                                                      _selectedPointIndex! - 1;
+                                                }
+
+                                                _points.removeAt(index);
+                                                widget.onPointsUpdated(_points);
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _isLightColor(point.color)
+                                                        ? Colors.black
+                                                            .withOpacity(0.5)
+                                                        : Colors.white
+                                                            .withOpacity(0.5),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.close,
+                                                size: 10,
+                                                color:
+                                                    _isLightColor(point.color)
+                                                        ? Colors.white
+                                                        : Colors.black,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
                             ),
+                  ),
+
+                  // Botón de Apply a ancho completo
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onPointsUpdated(_points);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apply',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -895,6 +1027,52 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
             255 >
         0.5;
   }
+
+  Widget _buildColorPoint(ColorPoint point, int index) {
+    final bool isSelected = _selectedPointIndex == index;
+    final double size =
+        isSelected
+            ? 30.0
+            : 24.0; // Puntos más grandes para facilitar su selección
+    final double borderWidth = isSelected ? 2.5 : 1.5;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: point.color.withOpacity(0.8),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color:
+              isSelected
+                  ? Colors.yellow
+                  : (_isLightColor(point.color) ? Colors.black : Colors.white),
+          width: borderWidth,
+        ),
+        boxShadow:
+            isSelected
+                ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 3,
+                    spreadRadius: 1,
+                  ),
+                ]
+                : null,
+      ),
+      child: Center(
+        child: Text(
+          '${index + 1}',
+          style: TextStyle(
+            color: _isLightColor(point.color) ? Colors.black : Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize:
+                isSelected ? 14 : 12, // Texto más grande para mejor visibilidad
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ColorPoint {
@@ -902,11 +1080,125 @@ class ColorPoint {
   final double y;
   final Color color;
   final String hex;
+  final int pixelX; // Añadido para guardar la coordenada exacta del pixel
+  final int pixelY;
 
   ColorPoint({
     required this.x,
     required this.y,
     required this.color,
     required this.hex,
+    this.pixelX = 0, // Valor por defecto para compatibilidad
+    this.pixelY = 0,
   });
+}
+
+// Añadir esta clase para la visualización en la lupa
+class MagnifierPainter extends CustomPainter {
+  final img.Image? image;
+  final int pixelX;
+  final int pixelY;
+  final double zoom;
+  final Color color;
+
+  MagnifierPainter({
+    this.image,
+    required this.pixelX,
+    required this.pixelY,
+    required this.zoom,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (image == null) {
+      // Si no hay imagen, simplemente muestra el color seleccionado
+      final paint = Paint()..color = color;
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+      return;
+    }
+
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+
+    // Primero dibujar el fondo
+    final backgroundPaint = Paint()..color = Colors.grey.withOpacity(0.3);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      backgroundPaint,
+    );
+
+    // Dibujar los píxeles ampliados alrededor del punto seleccionado
+    final pixelSize = zoom * 5.0; // Tamaño de cada pixel en la lupa
+    final pixelsToShow = (size.width / pixelSize).floor() / 2;
+
+    for (int y = -pixelsToShow.floor(); y <= pixelsToShow.floor(); y++) {
+      for (int x = -pixelsToShow.floor(); x <= pixelsToShow.floor(); x++) {
+        final currentPixelX = pixelX + x;
+        final currentPixelY = pixelY + y;
+
+        // Verificar que estemos dentro de los límites de la imagen
+        if (currentPixelX >= 0 &&
+            currentPixelX < image!.width &&
+            currentPixelY >= 0 &&
+            currentPixelY < image!.height) {
+          // Obtener el color del pixel actual
+          final pixel = image!.getPixel(currentPixelX, currentPixelY);
+          final pixelColor = Color.fromARGB(
+            255,
+            pixel.r.toInt(),
+            pixel.g.toInt(),
+            pixel.b.toInt(),
+          );
+
+          // Dibujar el pixel ampliado
+          final pixelPaint = Paint()..color = pixelColor;
+          final pixelRect = Rect.fromLTWH(
+            centerX + (x * pixelSize) - pixelSize / 2,
+            centerY + (y * pixelSize) - pixelSize / 2,
+            pixelSize,
+            pixelSize,
+          );
+
+          canvas.drawRect(pixelRect, pixelPaint);
+
+          // Dibujar el borde del pixel
+          final borderPaint =
+              Paint()
+                ..color = Colors.black.withOpacity(0.3)
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 0.5;
+          canvas.drawRect(pixelRect, borderPaint);
+        }
+      }
+    }
+
+    // Destacar el pixel central (seleccionado)
+    final selectedPixelRect = Rect.fromLTWH(
+      centerX - pixelSize / 2,
+      centerY - pixelSize / 2,
+      pixelSize,
+      pixelSize,
+    );
+
+    // Borde del pixel seleccionado - más destacado
+    final selectedBorderPaint =
+        Paint()
+          ..color = Colors.red
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+    canvas.drawRect(selectedPixelRect, selectedBorderPaint);
+
+    // Dibujar un punto en el centro exacto del píxel para mayor precisión
+    final centerPoint = Paint()..color = Colors.red;
+    canvas.drawCircle(Offset(centerX, centerY), 2.0, centerPoint);
+  }
+
+  @override
+  bool shouldRepaint(MagnifierPainter oldDelegate) {
+    return oldDelegate.pixelX != pixelX ||
+        oldDelegate.pixelY != pixelY ||
+        oldDelegate.zoom != zoom ||
+        oldDelegate.color != color;
+  }
 }
