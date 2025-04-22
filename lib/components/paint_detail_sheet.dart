@@ -94,7 +94,7 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
     AddToInventoryModal.show(
       context: context,
       paint: widget.paint,
-      onAddToInventory: (paint, quantity, notes) {
+      onAddToInventory: (paint, quantity, notes, _) {
         if (widget.isInInventory) {
           widget.onUpdateInventory(paint, quantity, notes);
           _showSuccessSnackbar('Inventory updated');

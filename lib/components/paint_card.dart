@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
@@ -13,13 +14,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 class PaintCard extends StatelessWidget {
   final Paint paint;
   final int paletteCount;
-  final Function(Paint)? onTap;
+  final Function(Paint, List<PaletteInfo> paletteInfo)? onTap;
+  final List<PaletteInfo> paletteInfo;
+  final bool inInventory;
+  final bool inWhitelist;
+  final String? inventoryId;
+  final String? wishlistId;
 
   const PaintCard({
     super.key,
     required this.paint,
     this.paletteCount = 0,
     this.onTap,
+    this.paletteInfo = const [],
+    this.inInventory = false,
+    this.inWhitelist = false,
+    this.inventoryId,
+    this.wishlistId,
   });
 
   @override
@@ -40,7 +51,7 @@ class PaintCard extends StatelessWidget {
             ),
             onTap: () {
               if (onTap != null) {
-                onTap!(paint);
+                onTap!(paint, paletteInfo);
               } else {
                 // Si no hay onTap personalizado, abre el modal de inventario
                 _showPaintInventoryModal(context, paint);
@@ -142,7 +153,7 @@ class PaintCard extends StatelessWidget {
                       AddToInventoryModal.show(
                         context: context,
                         paint: paint,
-                        onAddToInventory: (paint, quantity, notes) {
+                        onAddToInventory: (paint, quantity, notes, _) {
                           // Mostrar confirmación con SnackBar
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -462,7 +473,7 @@ class PaintCard extends StatelessWidget {
                         AddToInventoryModal.show(
                           context: context,
                           paint: paint,
-                          onAddToInventory: (paint, quantity, notes) {
+                          onAddToInventory: (paint, quantity, notes, _) {
                             // Mostrar confirmación con SnackBar
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
