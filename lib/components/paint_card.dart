@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
+import 'package:miniature_paint_finder/services/brand_service_manager.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
@@ -11,7 +13,7 @@ import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class PaintCard extends StatelessWidget {
+class PaintCard extends StatefulWidget {
   final Paint paint;
   final int paletteCount;
   final Function(Paint, List<PaletteInfo> paletteInfo)? onTap;
@@ -34,6 +36,23 @@ class PaintCard extends StatelessWidget {
   });
 
   @override
+  _PaintCardState createState() => _PaintCardState();
+}
+
+class _PaintCardState extends State<PaintCard> {
+  final InventoryService _inventoryService = InventoryService();
+  final BrandServiceManager _brandManager = BrandServiceManager();
+  late bool _inInventory;
+  String? _inventoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    _inInventory = widget.inInventory;
+    _inventoryId = widget.inventoryId;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
@@ -50,11 +69,11 @@ class PaintCard extends StatelessWidget {
               topRight: Radius.circular(AppDimensions.radiusL),
             ),
             onTap: () {
-              if (onTap != null) {
-                onTap!(paint, paletteInfo);
+              if (widget.onTap != null) {
+                widget.onTap!(widget.paint, widget.paletteInfo);
               } else {
                 // Si no hay onTap personalizado, abre el modal de inventario
-                _showPaintInventoryModal(context, paint);
+                _showPaintInventoryModal(context, widget.paint);
               }
             },
             child: Padding(
@@ -66,7 +85,7 @@ class PaintCard extends StatelessWidget {
                     height: AppDimensions.iconXXL,
                     decoration: BoxDecoration(
                       color: Color(
-                        int.parse(paint.hex.substring(1, 7), radix: 16) +
+                        int.parse(widget.paint.hex.substring(1, 7), radix: 16) +
                             0xFF000000,
                       ),
                       borderRadius: BorderRadius.circular(
@@ -79,17 +98,17 @@ class PaintCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(paint.name, style: textTheme.titleSmall),
+                        Text(widget.paint.name, style: textTheme.titleSmall),
                         const SizedBox(height: AppDimensions.marginXS),
                         Row(
                           children: [
                             Text(
-                              paint.brand,
+                              widget.paint.brand,
                               style: textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.secondary,
                               ),
                             ),
-                            if (paletteCount > 0) ...[
+                            if (widget.paletteCount > 0) ...[
                               const SizedBox(width: AppDimensions.marginS),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -110,7 +129,7 @@ class PaintCard extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  'Used in $paletteCount palettes',
+                                  'Used in ${widget.paletteCount} palettes',
                                   style: textTheme.bodySmall?.copyWith(
                                     color:
                                         isDarkMode
@@ -152,13 +171,60 @@ class PaintCard extends StatelessWidget {
                       // Mostrar el nuevo modal de inventario
                       AddToInventoryModal.show(
                         context: context,
-                        paint: paint,
-                        onAddToInventory: (paint, quantity, notes, _) {
-                          // Mostrar confirmación con SnackBar
+                        paint: widget.paint,
+                        inventoryId: _inventoryId,
+                        initialQuantity: 1,
+                        initialNotes: null,
+                        onAddToInventory: (
+                          paint,
+                          quantity,
+                          notes,
+                          inventoryId,
+                        ) async {
+                          String? newId = inventoryId;
+
+                          if (inventoryId != null) {
+                            // ─── ACTUALIZAR EXISTENTE ───
+                            bool success = await _inventoryService
+                                .updateInventoryRecord(
+                                  inventoryId,
+                                  quantity,
+                                  notes as String,
+                                );
+
+                            if (!success) {
+                              return null;
+                            }
+                          } else {
+                            final brandId = _brandManager
+                                .determineBrandIdForPaint(paint);
+                            final inventoryId = await _inventoryService
+                                .addInventoryRecordReturningId(
+                                  brandId: brandId,
+                                  paintId: paint.id,
+                                  quantity: quantity,
+                                  notes: notes as String,
+                                );
+                            if (inventoryId != null) {
+                              newId = inventoryId;
+                            } else {
+                              return null;
+                            }
+                          }
+
+                          // ─── ACTUALIZAR ESTADO LOCAL ───
+                          setState(() {
+                            _inInventory = true;
+                            _inventoryId = newId;
+                          });
+
+                          // ─── MOSTRAR SNACKBAR ───
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Added $quantity ${paint.name} to inventory',
+                                inventoryId != null
+                                    ? 'Inventory updated'
+                                    : 'Added $quantity ${paint.name} to inventory',
                               ),
                               backgroundColor:
                                   isDarkMode
@@ -167,15 +233,13 @@ class PaintCard extends StatelessWidget {
                               action: SnackBarAction(
                                 label: 'VIEW',
                                 textColor: Colors.white,
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => const InventoryScreen(),
+                                onPressed:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const InventoryScreen(),
+                                      ),
                                     ),
-                                  );
-                                },
                               ),
                             ),
                           );
@@ -183,8 +247,8 @@ class PaintCard extends StatelessWidget {
                       );
                     },
                     icon: const Icon(Icons.inventory_2_outlined, size: 16),
-                    label: const Text(
-                      'Update Inventory',
+                    label: Text(
+                      _inInventory ? 'Update Inventory' : 'Add to Inventory',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -207,7 +271,7 @@ class PaintCard extends StatelessWidget {
                       // Mostrar el nuevo modal de wishlist
                       AddToWishlistModal.show(
                         context: context,
-                        paint: paint,
+                        paint: widget.paint,
                         onAddToWishlist: (paint, priority) async {
                           final scaffoldMessenger = ScaffoldMessenger.of(
                             context,
@@ -425,7 +489,7 @@ class PaintCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Used in $paletteCount palettes',
+                          'Used in ${widget.paletteCount} palettes',
                           style: TextStyle(
                             color:
                                 isDarkMode
@@ -468,17 +532,56 @@ class PaintCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-
-                        // Mostrar el nuevo modal de inventario
                         AddToInventoryModal.show(
                           context: context,
                           paint: paint,
-                          onAddToInventory: (paint, quantity, notes, _) {
-                            // Mostrar confirmación con SnackBar
+                          inventoryId: _inventoryId,
+                          initialQuantity: 1,
+                          initialNotes: null,
+                          onAddToInventory: (
+                            paint,
+                            quantity,
+                            notes,
+                            inventoryId,
+                          ) async {
+                            String? newId = inventoryId;
+
+                            if (inventoryId != null) {
+                              // ─── ACTUALIZAR EXISTENTE ───
+                              bool success = await _inventoryService
+                                  .updateStockFromApi(inventoryId, quantity);
+
+                              if (!success) {
+                                return null;
+                              }
+                            } else {
+                              final inventoryId = await _inventoryService
+                                  .addInventoryRecordReturningId(
+                                    brandId: paint.brandId as String,
+                                    paintId: paint.id,
+                                    quantity: quantity,
+                                    notes: notes as String,
+                                  );
+                              if (inventoryId != null) {
+                                newId = inventoryId;
+                              } else {
+                                return null;
+                              }
+                            }
+
+                            // ─── ACTUALIZAR ESTADO LOCAL ───
+                            setState(() {
+                              _inInventory = true;
+                              _inventoryId = newId;
+                            });
+
+                            // ─── MOSTRAR SNACKBAR ───
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Added $quantity ${paint.name} to inventory',
+                                  inventoryId != null
+                                      ? 'Inventory updated'
+                                      : 'Added $quantity ${paint.name} to inventory',
                                 ),
                                 backgroundColor:
                                     isDarkMode
@@ -487,16 +590,14 @@ class PaintCard extends StatelessWidget {
                                 action: SnackBarAction(
                                   label: 'VIEW',
                                   textColor: Colors.white,
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) =>
-                                                const InventoryScreen(),
+                                  onPressed:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => const InventoryScreen(),
+                                        ),
                                       ),
-                                    );
-                                  },
                                 ),
                               ),
                             );
@@ -504,7 +605,10 @@ class PaintCard extends StatelessWidget {
                         );
                       },
                       icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('Update Inventory'),
+                      label: Text(
+                        _inInventory ? 'Update Inventory' : 'Add to Inventory',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor:
                             isDarkMode
@@ -693,7 +797,7 @@ class PaintCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimensions.radiusXS),
       ),
       child: Text(
-        paint.category,
+        widget.paint.category,
         style: const TextStyle(
           fontSize: 10,
           color: AppTheme.marineBlue,

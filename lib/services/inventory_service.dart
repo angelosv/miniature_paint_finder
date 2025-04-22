@@ -198,6 +198,68 @@ class InventoryService {
     }
   }
 
+  /// Actualiza cantidad y notas de un registro de inventario vía API.
+  /// Devuelve true si la actualización fue exitosa, false en caso contrario.
+  Future<bool> updateInventoryRecord(
+    String inventoryId,
+    int quantity,
+    String? notes,
+  ) async {
+    try {
+      print('\n🔄 ACTUALIZANDO INVENTARIO');
+      print('🔄 ID de inventario: $inventoryId');
+      print('🔄 Nueva cantidad: $quantity');
+      print('🔄 Notas: "${notes ?? ''}"');
+
+      // 1. Obtener token de Firebase
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('❌ No hay usuario autenticado');
+        return false;
+      }
+      final token = await user.getIdToken();
+      if (token == null) {
+        print('❌ No se pudo obtener token');
+        return false;
+      }
+
+      // 2. Construir URL y body
+      final url = Uri.parse(
+        'https://paints-api.reachu.io/api/inventory/$inventoryId',
+      );
+      final body = {'quantity': quantity, if (notes != null) 'notes': notes};
+      print('🔄 PUT $url');
+      print('🔄 Body: $body');
+
+      // 3. Enviar request
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('📥 Status: ${response.statusCode}');
+      if (response.body.isNotEmpty) {
+        print('📋 Response body: ${response.body}');
+      }
+
+      // 4. Comprobar éxito
+      if (response.statusCode == 200) {
+        print('✅ Inventario actualizado correctamente');
+        return true;
+      } else {
+        print('❌ Error API: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Excepción al actualizar inventario: $e');
+      return false;
+    }
+  }
+
   /// Updates the notes for a paint item.
   ///
   /// Returns true if the update was successful, false otherwise.
@@ -509,6 +571,46 @@ class InventoryService {
     } catch (e) {
       print('❌ Error al añadir registro de inventario: $e');
       return false;
+    }
+  }
+
+  Future<String?> addInventoryRecordReturningId({
+    required String brandId,
+    required String paintId,
+    required int quantity,
+    String? notes,
+  }) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      final token = await user.getIdToken();
+
+      final url = Uri.parse('https://paints-api.reachu.io/api/inventory');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'brand_id': brandId,
+          'paint_id': paintId,
+          'quantity': quantity,
+          'notes': notes ?? '',
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        // Si el JSON tiene campo 'id', lo devolvemos; si no, null
+        return data['data']?['id']?.toString();
+      }
+
+      // error de servidor
+      return null;
+    } catch (e) {
+      print('Error en addInventoryRecordReturningId: $e');
+      return null;
     }
   }
 
