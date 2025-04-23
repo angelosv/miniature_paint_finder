@@ -42,13 +42,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
         }
         if (args.containsKey('brandName')) {
           final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(brandName);
+          context.read<PaintLibraryController>().filterByBrand(brandName, false);
         } else {
             context.read<PaintLibraryController>().loadPaints();
         }
       } else {
         context.read<PaintLibraryController>().loadPaints();
       }
+      context.read<PaintLibraryController>().loadBrands();
+      context.read<PaintLibraryController>().loadCategories();
     });
     _inventoryService = InventoryService();
   }
@@ -61,7 +63,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (args != null) {
         if (args.containsKey('brandName')) {
           final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(brandName);
+          context.read<PaintLibraryController>().filterByBrand(brandName, false);
         } else if (args.containsKey('paletteInfo')) {
           final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
           if (paletteInfo['isCreatingPalette'] == true) {
@@ -311,14 +313,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
           if (controller.selectedBrand != 'All')
             _buildFilterChip(
               label: controller.selectedBrand,
-              onRemove: () => controller.filterByBrand('All'),
+              onRemove: () => controller.filterByBrand('All', true),
               isDarkMode: isDarkMode,
               icon: Icons.business,
             ),
           if (controller.selectedCategory != 'All')
             _buildFilterChip(
               label: controller.selectedCategory,
-              onRemove: () => controller.filterByCategory('All'),
+              onRemove: () => controller.filterByCategory('All', true),
               isDarkMode: isDarkMode,
               icon: Icons.category,
             ),
@@ -530,14 +532,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       value: controller.selectedBrand,
                       items:
                           controller.availableBrands.map((brand) {
-                            return DropdownMenuItem<String>(
-                              value: brand,
-                              child: Text(brand),
-                            );
-                          }).toList(),
+                        return DropdownMenuItem<String>(
+                          value: brand,
+                          child: Text(brand),
+                        );
+                      }).toList(),
                       onChanged: (value) {
-                        if (value != null) {
-                          controller.filterByBrand(value);
+                        if (value != null) {   
+                          setModalState(() {
+                            controller.filterByBrand(value, false);
+                          });
                         }
                       },
                       icon: Icon(
@@ -582,7 +586,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           }).toList(),
                       onChanged: (value) {
                         if (value != null) {
-                          controller.filterByCategory(value);
+                          setModalState(() {
+                            controller.filterByCategory(value, false);
+                          });
                         }
                       },
                       icon: Icon(
@@ -624,6 +630,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
+                            controller.applyFilters();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor:

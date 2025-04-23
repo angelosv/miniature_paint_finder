@@ -36,6 +36,7 @@ class PaintApiService {
   }
 
   Future<Map<String, dynamic>> getPaints({
+    String? category,
     String? brandId,
     String? name,
     String? code,
@@ -44,7 +45,8 @@ class PaintApiService {
     int? page,
   }) async {
     final queryParams = {
-      if (brandId != null) 'brandId': brandId,
+      if (category != null && category != 'All') 'category': category,
+      if (brandId != null && brandId != 'All' && brandId != '') 'brandId': brandId,
       if (name != null) 'name': name,
       if (code != null) 'code': code,
       if (hex != null) 'hex': hex,
@@ -56,7 +58,7 @@ class PaintApiService {
       '$baseUrl/paint',
     ).replace(queryParameters: queryParams);
 
-    _log('📤 GET Request: $uri');
+    print('📤 GET Request: $uri');
     final stopwatch = Stopwatch()..start();
 
     try {
@@ -70,12 +72,12 @@ class PaintApiService {
         final data = json.decode(response.body);
 
         // Log completo para inspección
-        _logJson('Respuesta', data);
+        //_logJson('Respuesta', data);
 
         // Log detallado de la primera pintura si existe
         if (data['paints'] != null && (data['paints'] as List).isNotEmpty) {
           final firstPaintJson = (data['paints'] as List)[0];
-          _logJson('Ejemplo de pintura', firstPaintJson);
+          // _logJson('Ejemplo de pintura', firstPaintJson);
 
           // Log específico para campos relacionados con imágenes
           if (firstPaintJson.containsKey('imageUrl')) {
@@ -151,6 +153,27 @@ class PaintApiService {
       } else {
         _log('❌ Error ${response.statusCode}: ${response.body}');
         throw Exception('Error al cargar las marcas: ${response.statusCode}');
+      }
+    } catch (e) {
+      _log('🔴 Exception: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    final uri = Uri.parse('$baseUrl/paint/category');
+    final stopwatch = Stopwatch()..start();
+    try {
+      final response = await http.get(uri);
+      stopwatch.stop();
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decoded = json.decode(response.body);
+        final List<dynamic> data = decoded['data'];
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        _log('❌ Error ${response.statusCode}: ${response.body}');
+        throw Exception('Error al cargar las categorias: ${response.statusCode}');
       }
     } catch (e) {
       _log('🔴 Exception: ${e.toString()}');

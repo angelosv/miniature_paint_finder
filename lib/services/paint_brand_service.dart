@@ -27,7 +27,7 @@ class PaintBrandService {
         );
 
         // Log response body
-        print('📊 Raw API Response: ${response.body}');
+        // print('📊 Raw API Response: ${response.body}');
 
         final List<dynamic> data = json.decode(response.body);
         print('🏭 Found ${data.length} paint brands in the response');
@@ -36,19 +36,19 @@ class PaintBrandService {
         final brands =
             data.map((json) {
               final brand = PaintBrand.fromJson(json);
-              print(
-                '🎨 Brand: ${brand.name}, Paint Count: ${brand.paintCount}, ID: ${brand.id}',
-              );
+              // print(
+                // '🎨 Brand: ${brand.name}, Paint Count: ${brand.paintCount}, ID: ${brand.id}',
+              // );
               return brand;
             }).toList();
 
         // Sort brands by paintCount (descending)
         brands.sort((a, b) => b.paintCount.compareTo(a.paintCount));
 
-        print('📋 Brands sorted by paint count (descending)');
-        for (var brand in brands.take(5)) {
-          print('  • ${brand.name}: ${brand.paintCount} paints');
-        }
+        // print('📋 Brands sorted by paint count (descending)');
+        // for (var brand in brands.take(5)) {
+          // print('  • ${brand.name}: ${brand.paintCount} paints');
+        // }
 
         // Calculate total paints
         final totalPaints = brands.fold(
