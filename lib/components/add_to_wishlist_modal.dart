@@ -6,21 +6,25 @@ import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 
 class AddToWishlistModal extends StatefulWidget {
   final Paint paint;
-  final Function(Paint paint, int priority) onAddToWishlist;
+  final Function(Paint paint, int priority, String? wishlistId) onAddToWishlist;
   final bool isUpdate; // 👈 nuevo campo
+  final String? wishlistId;
 
   const AddToWishlistModal({
     super.key,
     required this.paint,
     required this.onAddToWishlist,
     this.isUpdate = false, // default
+    this.wishlistId,
   });
 
   // Método estático para mostrar el modal
   static Future<void> show({
     required BuildContext context,
     required Paint paint,
-    required Function(Paint paint, int priority) onAddToWishlist,
+    String? wishlistId,
+    required Function(Paint paint, int priority, String? wishlistId)
+    onAddToWishlist,
     bool isUpdate = false, //
   }) {
     // Crear una nueva instancia del widget cada vez que se muestra el modal
@@ -36,6 +40,7 @@ class AddToWishlistModal extends StatefulWidget {
             paint: paint,
             onAddToWishlist: onAddToWishlist,
             isUpdate: isUpdate, //
+            wishlistId: wishlistId,
           ),
     );
   }
@@ -235,7 +240,11 @@ class _AddToWishlistModalState extends State<AddToWishlistModal> {
                       Navigator.pop(context);
                       // Ahora el componente padre se encargará de hacer la llamada a la API
                       // y mostrar mensajes de éxito o error
-                      widget.onAddToWishlist(widget.paint, _selectedPriority);
+                      widget.onAddToWishlist(
+                        widget.paint,
+                        _selectedPriority,
+                        widget.wishlistId,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:

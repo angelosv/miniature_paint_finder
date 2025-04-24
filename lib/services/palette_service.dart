@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:miniature_paint_finder/models/most_used_paint.dart';
 
 class PaletteService {
   static const String baseUrl = 'https://paints-api.reachu.io/api';
 
-  Future<Map<String, dynamic>> uploadImage(String imagePath, String token) async {
+  Future<Map<String, dynamic>> uploadImage(
+    String imagePath,
+    String token,
+  ) async {
     debugPrint('🖼️ Subiendo imagen: $imagePath');
     final url = Uri.parse('$baseUrl/image/upload');
 
@@ -26,7 +30,9 @@ class PaletteService {
       throw Exception(responseData['message'] ?? 'Error uploading image');
     }
 
-    debugPrint('✅ Imagen subida exitosamente con ID: ${responseData['data']['id']}');
+    debugPrint(
+      '✅ Imagen subida exitosamente con ID: ${responseData['data']['id']}',
+    );
     return responseData['data'];
   }
 
@@ -51,11 +57,17 @@ class PaletteService {
       throw Exception(responseData['message'] ?? 'Error creating palette');
     }
 
-    debugPrint('✅ Paleta creada exitosamente con ID: ${responseData['data']['id']}');
+    debugPrint(
+      '✅ Paleta creada exitosamente con ID: ${responseData['data']['id']}',
+    );
     return responseData['data'];
   }
 
-  Future<List<Map<String, dynamic>>> getImagePicks(String imageId, String token, List<Map<String, dynamic>> colorData) async {
+  Future<List<Map<String, dynamic>>> getImagePicks(
+    String imageId,
+    String token,
+    List<Map<String, dynamic>> colorData,
+  ) async {
     debugPrint('🔍 Creando picks para la imagen: $imageId');
     final url = Uri.parse('$baseUrl/image/$imageId/picks');
     debugPrint('🌐 URL de picks: $url');
@@ -96,7 +108,9 @@ class PaletteService {
     return picks;
   }
 
-  Future<List<Map<String, dynamic>>> getAllPalettesNamesAndIds(String token) async {
+  Future<List<Map<String, dynamic>>> getAllPalettesNamesAndIds(
+    String token,
+  ) async {
     final url = Uri.parse('$baseUrl/palettes/simple-list');
     debugPrint('🌐 URL de getAllPalettesNameAndId: $url');
 
@@ -121,12 +135,11 @@ class PaletteService {
     }
 
     final palettes = List<Map<String, dynamic>>.from(responseData['data']);
-    
+
     // Convertir los datos al formato esperado por el selector
-    return palettes.map((palette) => {
-      'id': palette['id'],
-      'name': palette['name'],
-    }).toList();
+    return palettes
+        .map((palette) => {'id': palette['id'], 'name': palette['name']})
+        .toList();
   }
 
   Future<void> addPaintsToPalette(
@@ -134,7 +147,9 @@ class PaletteService {
     List<Map<String, dynamic>> paints,
     String token,
   ) async {
-    debugPrint('🎨 Agregando ${paints.length} pinturas a la paleta: $paletteId');
+    debugPrint(
+      '🎨 Agregando ${paints.length} pinturas a la paleta: $paletteId',
+    );
     debugPrint('📤 Datos a enviar: ${jsonEncode(paints)}');
     final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
@@ -152,9 +167,42 @@ class PaletteService {
 
     if (responseData['executed'] == false) {
       debugPrint('❌ Error al agregar pinturas: ${responseData['message']}');
-      throw Exception(responseData['message'] ?? 'Error adding paints to palette');
+      throw Exception(
+        responseData['message'] ?? 'Error adding paints to palette',
+      );
     }
 
     debugPrint('✅ Pinturas agregadas exitosamente');
   }
-} 
+
+  /// Obtiene la lista de pinturas más usadas en todas las paletas
+  Future<List<MostUsedPaint>> getMostUsedPaints(String token) async {
+    debugPrint('📊 Fetching most-used paints');
+    final url = Uri.parse('$baseUrl/palettes/most-used-paints');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    debugPrint('📤 Response (${response.statusCode}): ${response.body}');
+    final responseData = jsonDecode(response.body);
+
+    if (responseData['executed'] != true) {
+      final msg = responseData['message'] ?? 'Error fetching most-used paints';
+      debugPrint('❌ $msg');
+      throw Exception(msg);
+    }
+
+    final List<dynamic> rawList = responseData['data'] as List<dynamic>;
+    final paints =
+        rawList
+            .map((e) => MostUsedPaint.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+    debugPrint('✅ Retrieved ${paints.length} most-used paints');
+    return paints;
+  }
+}

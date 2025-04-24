@@ -501,6 +501,7 @@ class PaintService {
                 createdAt['_seconds'] * 1000,
               ),
               'brand': item['brand'],
+              'palettes': item['palettes'],
             });
 
             processedCount++;

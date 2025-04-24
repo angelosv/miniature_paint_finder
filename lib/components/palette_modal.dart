@@ -1145,7 +1145,7 @@ class _PaletteModalState extends State<PaletteModal> {
       context: context,
       paint: paintObj,
       isUpdate: isInWishlist,
-      onAddToWishlist: (paint, priority) async {
+      onAddToWishlist: (paint, priority, _) async {
         scaffoldMessenger.showSnackBar(
           const SnackBar(
             content: Row(

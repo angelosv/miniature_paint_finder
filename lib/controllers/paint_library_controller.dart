@@ -15,6 +15,7 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Lista de marcas únicas disponibles
   List<Map<String, dynamic>> _brands = [];
+  List<Map<String, dynamic>> _categories = [];
 
   /// Conjunto de IDs de pinturas en la lista de deseos
   Set<String> _wishlist = {};
@@ -57,7 +58,15 @@ class PaintLibraryController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedBrand => _selectedBrand;
+  set selectedBrand(String value) {
+    _selectedBrand = value;
+    notifyListeners();
+  }
   String get selectedCategory => _selectedCategory;
+  set selectedCategory(String value) {
+    _selectedCategory = value;
+    notifyListeners();
+  }
   Color? get selectedColor => _selectedColor;
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
@@ -74,10 +83,7 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Lista de categorías únicas disponibles
   List<String> get availableCategories {
-    final categories =
-        _allPaints.map((paint) => paint.category).toSet().toList();
-    categories.sort();
-    return ['All', ...categories];
+    return _availableCategories;
   }
 
   /// Verificar si una pintura está en la wishlist
@@ -86,7 +92,7 @@ class PaintLibraryController extends ChangeNotifier {
   /// Cargar todas las pinturas
   Future<void> loadPaints() async {
     print(
-      'Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery',
+      'Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery, Category: $_selectedCategory',
     );
     _isLoading = true;
     _hasError = false;
@@ -94,11 +100,22 @@ class PaintLibraryController extends ChangeNotifier {
     notifyListeners();
 
     try {
+
+      String brandId = '';
+      if (_selectedBrand != 'All') {
+        final matchingBrand = _brands.firstWhere(
+          (brand) => brand['name'] == _selectedBrand,
+          orElse: () => <String, dynamic>{},
+        );
+        brandId = matchingBrand['id'] as String;
+      }
+      print('*********brandId: $brandId');
       final result = await _apiService.getPaints(
         page: _currentPage,
         limit: _pageSize,
-        brandId: _selectedBrand == 'All' ? null : _selectedBrand,
+        brandId: brandId,
         name: _searchQuery.isNotEmpty ? _searchQuery : null,
+        category: _selectedCategory == 'All' ? null : _selectedCategory,
       );
 
       print(
@@ -110,8 +127,6 @@ class PaintLibraryController extends ChangeNotifier {
       _currentPage = result['currentPage'] as int;
       _totalPages = result['totalPages'] as int;
       _totalPaints = result['totalPaints'] as int;
-
-      await _loadBrands();
     } catch (e) {
       print('Error loading paints: $e');
       _hasError = true;
@@ -130,34 +145,36 @@ class PaintLibraryController extends ChangeNotifier {
   }
 
   /// Establecer el filtro de marca recibiendo el nombre de la marca y obteniendo su id.
-  void filterByBrand(String brandName) {
+  void filterByBrand(String brandName, bool reset) {
+    print('*********filterByBrand: $brandName');
     if (brandName == 'All') {
       _selectedBrand = 'All';
     } else {
-      final matchingBrand = _brands.firstWhere(
-        (brand) => brand['name'] == brandName,
-        orElse: () => <String, dynamic>{},
-      );
-      if (matchingBrand.isNotEmpty) {
-        _selectedBrand = matchingBrand['id'] as String;
-      } else {
         _selectedBrand = brandName;
-      }
+    }
+    print('*********_selectedBrand: $_selectedBrand');
+    if (reset) {
+      _currentPage = 1;
+      loadPaints();
     }
     _currentPage = 1;
-    loadPaints();
+    notifyListeners();
   }
 
   /// Establecer el filtro de categoría
-  void filterByCategory(String category) {
+  void filterByCategory(String category, bool reset) {
     _selectedCategory = category;
-    _applyFilters();
+    if (reset) {
+      _currentPage = 1;
+      loadPaints();
+    }
+    notifyListeners();
   }
 
   /// Establecer el filtro de color
   void filterByColor(Color? color) {
     _selectedColor = color;
-    _applyFilters();
+    applyFilters();
   }
 
   /// Restablecer todos los filtros
@@ -166,20 +183,13 @@ class PaintLibraryController extends ChangeNotifier {
     _selectedBrand = 'All';
     _selectedCategory = 'All';
     _selectedColor = null;
-    _applyFilters();
+    applyFilters();
   }
 
   /// Aplicar todos los filtros actuales a la lista de pinturas
-  void _applyFilters() {
-    _filteredPaints =
-        _allPaints.where((paint) {
-          if (_selectedCategory != 'All' &&
-              paint.category != _selectedCategory) {
-            return false;
-          }
-          return true;
-        }).toList();
-    notifyListeners();
+  void applyFilters() {
+    _currentPage = 1;
+    loadPaints();
   }
 
   /// Cambiar a una página específica
@@ -208,14 +218,6 @@ class PaintLibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Cargar datos iniciales
-  void init() {
-    loadPaints();
-
-    // Aquí se podría cargar la wishlist de preferencias o API
-    // _loadWishlist();
-  }
-
   /// Guardar los datos persistentes al cerrar
   void dispose() {
     // Aquí se podrían guardar las preferencias como la wishlist
@@ -223,7 +225,7 @@ class PaintLibraryController extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> _loadBrands() async {
+  Future<void> loadBrands() async {
     try {
       final brands = await _apiService.getBrands();
       _brands = brands;
@@ -231,6 +233,19 @@ class PaintLibraryController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Error al cargar las marcas: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCategories() async {
+    try {
+      final categories = await _apiService.getCategories();
+      _categories = categories;
+      _availableCategories = ['All', ...categories.map((c) => c['name'] as String)];
+      notifyListeners();
+    } catch (e) {
+      _availableCategories = ['All'];
+      _errorMessage = 'Error al cargar las categorias: $e';
       notifyListeners();
     }
   }

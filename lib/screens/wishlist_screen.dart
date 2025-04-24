@@ -1116,7 +1116,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
           }),
         );
 
-        final palettes = _paintService.getPalettesContainingPaint(paint.id);
+        final List<String> palettes = List<String>.from(
+          item["palettes"] as List,
+        );
 
         final card = Card(
           elevation: 0,
@@ -1360,7 +1362,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   /// Build palette chips, limiting to 3 initially with a "View more" option.
-  Widget _buildPaletteChips(List<Palette> palettes, bool isDarkMode) {
+  Widget _buildPaletteChips(List<String> palettes, bool isDarkMode) {
     // State for expanded view.
     bool isExpanded = false;
     final chipColor =
@@ -1383,7 +1385,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               spacing: 4,
               runSpacing: 4,
               children: [
-                ...displayPalettes.map((palette) {
+                ...displayPalettes.map((_palette) {
                   return Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,
@@ -1395,7 +1397,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       border: Border.all(color: borderColor),
                     ),
                     child: Text(
-                      palette.name,
+                      _palette,
                       style: TextStyle(
                         color: textColor,
                         fontSize: 11,
@@ -1482,7 +1484,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     Paint paint,
     int currentPriority,
     String _id,
-    List<Palette> palettes,
+    List<String> palettes,
     Map<String, dynamic> brand,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -1811,7 +1813,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  Widget _buildPalettesSection(List<Palette> palettes, bool isDarkMode) {
+  Widget _buildPalettesSection(List<String> palettes, bool isDarkMode) {
     final demoPalettes = [
       {'name': 'Space Marines', 'color': const Color(0xFFD8BFD8)},
       {'name': 'Imperial Guard', 'color': const Color(0xFFD8BFD8)},
@@ -1872,7 +1874,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
               ...displayPalettes
                   .take(2)
                   .map(
-                    (palette) => _buildPaletteChip(palette.name, isDarkMode),
+                    (palette) =>
+                        _buildPaletteChip(palette.toString(), isDarkMode),
                   ),
               if (displayPalettes.length > 2)
                 _buildMorePalettesChip(

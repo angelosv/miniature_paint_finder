@@ -9,8 +9,10 @@ import 'package:miniature_paint_finder/components/palette_card.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/components/palette_skeleton.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
+import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
@@ -60,6 +62,10 @@ class PaintListTab extends StatefulWidget {
 }
 
 class _PaintListTabState extends State<PaintListTab> {
+  List<MostUsedPaint>? _mostUsedPaints;
+  bool _isLoadingMostUsed = false;
+  String? _mostUsedError;
+
   final Map<int, List<dynamic>> _matchingPaints = {};
   final Map<int, int> _currentPages = {};
   final Map<int, int> _totalPages = {};
@@ -72,6 +78,7 @@ class _PaintListTabState extends State<PaintListTab> {
   final ImagePicker _picker = ImagePicker();
   Color _selectedColor = Colors.white;
   final PaintBrandService _paintBrandService = PaintBrandService();
+  final PaletteService _paletteService = PaletteService();
 
   // Track both colors and selected matching paints
   List<Map<String, dynamic>> _pickedColors = [];
@@ -91,6 +98,7 @@ class _PaintListTabState extends State<PaintListTab> {
     super.initState();
     // Forzar una carga fresca desde la API la primera vez
     _refreshPaintBrands();
+    _loadMostUsedPaints();
 
     // Verificar si hay argumentos para crear una paleta automáticamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -178,8 +186,6 @@ class _PaintListTabState extends State<PaintListTab> {
 
   @override
   Widget build(BuildContext context) {
-    final paints = SampleData.getPaints();
-
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -197,28 +203,23 @@ class _PaintListTabState extends State<PaintListTab> {
       child:
           _showColorPicker
               ? _buildSearchStepsView(context)
-              : _buildHomeView(context, paints),
+              : _buildHomeView(context),
     );
   }
 
-  // Vista principal cuando no se está en modo búsqueda
-  Widget _buildHomeView(BuildContext context, List<Paint> paints) {
+  /// Vista principal cuando no se está en modo búsqueda
+  Widget _buildHomeView(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tarjeta de acción para búsqueda con un diseño más moderno
+            // === Botón de inicio de búsqueda ===
             GestureDetector(
               onTap: () {
-                // Si ya estamos creando una paleta desde otra pantalla, usamos ese nombre
-                // Si no, simplemente activamos el modo de búsqueda
                 setState(() {
                   _showColorPicker = true;
-
-                  // Si venimos de crear una paleta desde otra pantalla,
-                  // establecemos el nombre en el controlador
                   if (_isCreatingPaletteFromExternal &&
                       _pendingPaletteName != null) {
                     _paletteNameController.text = _pendingPaletteName!;
@@ -315,17 +316,17 @@ class _PaintListTabState extends State<PaintListTab> {
 
             const SizedBox(height: 24),
 
-            // Barcode Scanner Card
+            // === Barcode Scanner ===
             const BarcodeScannerCard(),
 
             const SizedBox(height: 24),
 
-            // Promoción de Warhammer 40,000: Paints + Tools Set
+            // === Promoción ===
             _buildPromotionCard(context),
 
             const SizedBox(height: 24),
 
-            // Sección de Recent Palettes y resto del contenido original
+            // === Recent Palettes ===
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -334,56 +335,34 @@ class _PaintListTabState extends State<PaintListTab> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
-                  onPressed: () {
-                    // Navegar a la pantalla de paletas
-                    Navigator.pushNamed(context, '/palettes');
-                  },
+                  onPressed: () => Navigator.pushNamed(context, '/palettes'),
                   child: const Text('See all'),
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Lista horizontal de paletas
             Consumer<PaletteController>(
               builder: (context, paletteController, child) {
-                final recentPalettes =
-                    paletteController.palettes.take(10).toList();
-
-                // Si está cargando, mostrar skeleton
-                if (paletteController.isLoading) {
+                final recent = paletteController.palettes.take(10).toList();
+                if (paletteController.isLoading || recent.isEmpty) {
                   return const PaletteSkeletonList(count: 3);
                 }
-
-                // Si no hay paletas, mostrar skeleton
-                if (recentPalettes.isEmpty) {
-                  return const PaletteSkeletonList(count: 3);
-                }
-
                 return SizedBox(
                   height: 220,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: recentPalettes.length,
-                    itemBuilder: (context, index) {
-                      final palette = recentPalettes[index];
-                      print(
-                        '🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintCode}',
-                      );
-                      print(
-                        '🎨 Pinturas en la paleta***: ${palette.paintSelections?[0].paintBarcode}',
-                      );
+                    itemCount: recent.length,
+                    itemBuilder: (_, i) {
+                      final p = recent[i];
                       return PaletteCard(
-                        palette: palette,
-                        onTap: () async {
-                          showPaletteModal(
-                            context,
-                            palette.name,
-                            palette.paintSelections ?? [],
-                            imagePath: palette.imagePath,
-                          );
-                        },
+                        palette: p,
+                        onTap:
+                            () => showPaletteModal(
+                              context,
+                              p.name,
+                              p.paintSelections ?? [],
+                              imagePath: p.imagePath,
+                            ),
                       );
                     },
                   ),
@@ -393,20 +372,18 @@ class _PaintListTabState extends State<PaintListTab> {
 
             const SizedBox(height: 24),
 
-            // Sección de Categorías
+            // === Categorías ===
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Paints', style: Theme.of(context).textTheme.titleMedium),
                 TextButton(
                   onPressed: () => _showAllCategoriesModal(context),
-                  child: Text('See all'),
+                  child: const Text('See all'),
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             _paintBrands.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
@@ -419,30 +396,17 @@ class _PaintListTabState extends State<PaintListTab> {
                   itemCount: _paintBrands.length > 6 ? 6 : _paintBrands.length,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    final brand = _paintBrands[index];
-                    final paintCount = brand['paintCount'] as int;
-
-                    // Log para cada tarjeta de categoría que se muestra
-                    if (index < 8) {
-                      // Limitar logs a las primeras 8 categorías
-                      print(
-                        '🏷️ Mostrando categoría: ${brand['name']}, Contador: $paintCount',
-                      );
-                    }
-
+                  itemBuilder: (ctx, idx) {
+                    final b = _paintBrands[idx];
                     return CategoryCard(
-                      title: brand['name'] as String,
-                      count: paintCount,
-                      color: brand['color'] as Color,
+                      title: b['name'] as String,
+                      count: b['paintCount'] as int,
+                      color: b['color'] as Color,
                       onTap: () {
-                        print(
-                          '👆 Usuario seleccionó categoría: ${brand['name']} (${brand['id']}) con $paintCount pinturas',
-                        );
                         Navigator.pushNamed(
                           context,
                           '/library',
-                          arguments: {'brandName': brand['id']},
+                          arguments: {'brandName': b['id']},
                         );
                       },
                     );
@@ -451,28 +415,50 @@ class _PaintListTabState extends State<PaintListTab> {
 
             const SizedBox(height: 24),
 
-            // Lista de todas las pinturas
+            // === Most Used Paints ===
             Text(
               'Your most used paints',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-
             const SizedBox(height: 12),
-
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: paints.length > 10 ? 10 : paints.length,
-              itemBuilder: (context, index) {
-                final paint = paints[index];
-                return PaintCard(
-                  paint: paint,
-                  paletteCount:
-                      3, // Demo count, in real app this would come from the paint model
-                  onTap: (paint) => _showPaintDetailsModal(context, paint),
-                );
-              },
-            ),
+            if (_isLoadingMostUsed)
+              const Center(child: CircularProgressIndicator())
+            else if (_mostUsedError != null)
+              Center(child: Text('Error: $_mostUsedError'))
+            else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
+              const Center(child: Text('No paints found.'))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _mostUsedPaints!.length,
+                itemBuilder: (ctx, i) {
+                  final m = _mostUsedPaints![i];
+                  // Convertimos MostUsedPaint → Paint para usar PaintCard
+                  final paint = Paint.fromHex(
+                    id: m.paintId,
+                    name: m.paint.name,
+                    brand: m.brand.name,
+                    hex: m.paint.hex,
+                    set: m.paint.set,
+                    code: m.paint.code,
+                    category: m.paint.set,
+                    isMetallic: false,
+                    isTransparent: false,
+                  );
+                  return PaintCard(
+                    paint: paint,
+                    paletteCount: m.count,
+                    paletteInfo: m.paletteInfo,
+                    inInventory: m.inInventory,
+                    inWishlist: m.inWhitelist,
+                    inventoryId: m.inventoryId,
+                    wishlistId: m.wishlistId,
+                    onTap:
+                        (p, pInfo) => _showPaintDetailsModal(context, p, pInfo),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -2355,84 +2341,168 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
-  // Add this new method for showing paint details
-  void _showPaintDetailsModal(BuildContext context, Paint paint) {
+  // Add this new method for showing paint details, ahora usando paletteInfo real
+  void _showPaintDetailsModal(
+    BuildContext context,
+    Paint paint,
+    List<PaletteInfo> paletteInfo,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        const paletteCount = 3;
-
+      builder: (_) {
+        final count = paletteInfo.length;
         return Container(
           decoration: BoxDecoration(
             color: isDarkMode ? const Color(0xFF1E2229) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header con título y botón de cierre
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Paint Details',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // → Encabezado
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Paint Details',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.close,
-                        color: isDarkMode ? Colors.white : Colors.black54,
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: isDarkMode ? Colors.white : Colors.black54,
+                        ),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      onPressed: () => Navigator.pop(context),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+                  Divider(
+                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // → Nombre y marca
+                  Text(
+                    paint.name,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black,
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                  Text(
+                    paint.brand,
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
 
-              // Separador
-              Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300]),
+                  const SizedBox(height: 24),
+                  // → Color code
+                  Row(
+                    children: [
+                      Text(
+                        'Color Code:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        paint.hex,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
 
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Nombre de la pintura y marca
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const SizedBox(height: 32),
+                  // → Conteo real
+                  Text(
+                    'Used in $count palette${count == 1 ? '' : 's'}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  // → Si no hay paletas
+                  if (count == 0)
+                    Center(
+                      child: Text(
+                        'This paint hasn’t been used in any palette yet.',
+                        style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    )
+                  else
+                    // → Iteramos lista real
+                    for (final info in paletteInfo)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
                           children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Color(
+                                  int.parse(paint.hex.substring(1), radix: 16) |
+                                      0xFF000000,
+                                ).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.palette, size: 20),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    paint.name,
+                                    info.name,
                                     style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
                                       color:
                                           isDarkMode
                                               ? Colors.white
-                                              : Colors.black,
+                                              : Colors.black87,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    paint.brand,
+                                    '${info.createdAt.year}-'
+                                    '${info.createdAt.month.toString().padLeft(2, '0')}-'
+                                    '${info.createdAt.day.toString().padLeft(2, '0')}',
                                     style: TextStyle(
-                                      fontSize: 20,
+                                      fontSize: 14,
                                       color:
                                           isDarkMode
                                               ? Colors.grey[400]
@@ -2442,149 +2512,12 @@ class _PaintListTabState extends State<PaintListTab> {
                                 ],
                               ),
                             ),
-                            // Botón de wishlist
-                            IconButton(
-                              icon: Icon(
-                                Icons.favorite_border,
-                                color:
-                                    isDarkMode
-                                        ? AppTheme.marineOrange
-                                        : AppTheme.primaryBlue,
-                                size: 28,
-                              ),
-                              onPressed: () {
-                                // Cerrar este modal primero
-                                Navigator.pop(context);
-
-                                // Importamos y usamos el nuevo modal
-                                _showAddToWishlistModal(context, paint);
-                              },
-                            ),
                           ],
                         ),
-
-                        const SizedBox(height: 32),
-
-                        // Código de color
-                        Row(
-                          children: [
-                            Text(
-                              'Color Code:',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[400]
-                                        : Colors.grey[700],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              paint.hex,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDarkMode ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // Título de uso en paletas
-                        Text(
-                          'Used in $paletteCount palettes',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Lista de paletas
-                        ...List.generate(
-                          paletteCount,
-                          (index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Row(
-                              children: [
-                                // Icono de paleta con color de fondo
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Color(
-                                      int.parse(
-                                            paint.hex.substring(1, 7),
-                                            radix: 16,
-                                          ) +
-                                          0xFF000000,
-                                    ).withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.palette,
-                                      color: Color(
-                                        int.parse(
-                                              paint.hex.substring(1, 7),
-                                              radix: 16,
-                                            ) +
-                                            0xFF000000,
-                                      ),
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(width: 16),
-
-                                // Nombre y fecha de la paleta
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Palette ${index + 1}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Created on ${DateTime.now().subtract(Duration(days: index + 1)).year}-'
-                                        '${DateTime.now().subtract(Duration(days: index + 1)).month.toString().padLeft(2, '0')}-'
-                                        '${DateTime.now().subtract(Duration(days: index + 1)).day.toString().padLeft(2, '0')}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.grey[400]
-                                                  : Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -2596,7 +2529,7 @@ class _PaintListTabState extends State<PaintListTab> {
     AddToWishlistModal.show(
       context: context,
       paint: paint,
-      onAddToWishlist: (paint, priority) async {
+      onAddToWishlist: (paint, priority, _) async {
         final scaffoldMessenger = ScaffoldMessenger.of(context);
         final paintService = PaintService();
 
@@ -2701,7 +2634,7 @@ class _PaintListTabState extends State<PaintListTab> {
     AddToInventoryModal.show(
       context: context,
       paint: paint,
-      onAddToInventory: (paint, quantity, notes) {
+      onAddToInventory: (paint, quantity, notes, _) {
         // Aquí manejamos la lógica para añadir al inventario
         // Por ahora solo mostramos un mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3041,6 +2974,23 @@ class _PaintListTabState extends State<PaintListTab> {
           duration: const Duration(seconds: 3),
         ),
       );
+    }
+  }
+
+  Future<void> _loadMostUsedPaints() async {
+    setState(() {
+      _isLoadingMostUsed = true;
+      _mostUsedError = null;
+    });
+    try {
+      final token = await FirebaseAuth.instance.currentUser!.getIdToken();
+      _mostUsedPaints = await _paletteService.getMostUsedPaints(
+        token as String,
+      );
+    } catch (e) {
+      _mostUsedError = e.toString();
+    } finally {
+      setState(() => _isLoadingMostUsed = false);
     }
   }
 }

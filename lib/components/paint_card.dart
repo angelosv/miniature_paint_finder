@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
+import 'package:miniature_paint_finder/services/brand_service_manager.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
@@ -10,17 +13,52 @@ import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class PaintCard extends StatelessWidget {
+class PaintCard extends StatefulWidget {
   final Paint paint;
   final int paletteCount;
-  final Function(Paint)? onTap;
+  final Function(Paint, List<PaletteInfo> paletteInfo)? onTap;
+  final List<PaletteInfo> paletteInfo;
+  final bool inInventory;
+  final bool inWishlist;
+  final String? inventoryId;
+  final String? wishlistId;
 
   const PaintCard({
     super.key,
     required this.paint,
     this.paletteCount = 0,
     this.onTap,
+    this.paletteInfo = const [],
+    this.inInventory = false,
+    this.inWishlist = false,
+    this.inventoryId,
+    this.wishlistId,
   });
+
+  @override
+  _PaintCardState createState() => _PaintCardState();
+}
+
+class _PaintCardState extends State<PaintCard> {
+  final InventoryService _inventoryService = InventoryService();
+  final PaintService _paintService = PaintService();
+
+  final BrandServiceManager _brandManager = BrandServiceManager();
+  late bool _inInventory;
+  String? _inventoryId;
+
+  late bool _inWishlist;
+  String? _wishlistId;
+
+  @override
+  void initState() {
+    super.initState();
+    _inInventory = widget.inInventory;
+    _inventoryId = widget.inventoryId;
+
+    _inWishlist = widget.inWishlist;
+    _wishlistId = widget.wishlistId;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,11 +77,11 @@ class PaintCard extends StatelessWidget {
               topRight: Radius.circular(AppDimensions.radiusL),
             ),
             onTap: () {
-              if (onTap != null) {
-                onTap!(paint);
+              if (widget.onTap != null) {
+                widget.onTap!(widget.paint, widget.paletteInfo);
               } else {
                 // Si no hay onTap personalizado, abre el modal de inventario
-                _showPaintInventoryModal(context, paint);
+                _showPaintInventoryModal(context, widget.paint);
               }
             },
             child: Padding(
@@ -55,7 +93,7 @@ class PaintCard extends StatelessWidget {
                     height: AppDimensions.iconXXL,
                     decoration: BoxDecoration(
                       color: Color(
-                        int.parse(paint.hex.substring(1, 7), radix: 16) +
+                        int.parse(widget.paint.hex.substring(1, 7), radix: 16) +
                             0xFF000000,
                       ),
                       borderRadius: BorderRadius.circular(
@@ -68,17 +106,17 @@ class PaintCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(paint.name, style: textTheme.titleSmall),
+                        Text(widget.paint.name, style: textTheme.titleSmall),
                         const SizedBox(height: AppDimensions.marginXS),
                         Row(
                           children: [
                             Text(
-                              paint.brand,
+                              widget.paint.brand,
                               style: textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.secondary,
                               ),
                             ),
-                            if (paletteCount > 0) ...[
+                            if (widget.paletteCount > 0) ...[
                               const SizedBox(width: AppDimensions.marginS),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -99,7 +137,7 @@ class PaintCard extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  'Used in $paletteCount palettes',
+                                  'Used in ${widget.paletteCount} palettes',
                                   style: textTheme.bodySmall?.copyWith(
                                     color:
                                         isDarkMode
@@ -141,13 +179,66 @@ class PaintCard extends StatelessWidget {
                       // Mostrar el nuevo modal de inventario
                       AddToInventoryModal.show(
                         context: context,
-                        paint: paint,
-                        onAddToInventory: (paint, quantity, notes) {
-                          // Mostrar confirmación con SnackBar
+                        paint: widget.paint,
+                        inventoryId: _inventoryId,
+                        initialQuantity: 1,
+                        initialNotes: null,
+                        onAddToInventory: (
+                          paint,
+                          quantity,
+                          notes,
+                          inventoryId,
+                        ) async {
+                          String? newId = inventoryId;
+
+                          if (inventoryId != null) {
+                            // ─── ACTUALIZAR EXISTENTE ───
+                            bool success = await _inventoryService
+                                .updateInventoryRecord(
+                                  inventoryId,
+                                  quantity,
+                                  notes as String,
+                                );
+
+                            if (!success) {
+                              return null;
+                            }
+                          } else {
+                            final brandId = _brandManager
+                                .determineBrandIdForPaint(paint);
+                            final inventoryId = await _inventoryService
+                                .addInventoryRecordReturningId(
+                                  brandId: brandId,
+                                  paintId: paint.id,
+                                  quantity: quantity,
+                                  notes: notes as String,
+                                );
+                            if (inventoryId != null) {
+                              newId = inventoryId;
+                            } else {
+                              return null;
+                            }
+                          }
+
+                          // ─── ACTUALIZAR ESTADO LOCAL ───
+
+                          setState(() {
+                            _inWishlist = false;
+                            _wishlistId = "";
+                          });
+
+                          setState(() {
+                            _inInventory = true;
+                            _inventoryId = newId;
+                          });
+
+                          // ─── MOSTRAR SNACKBAR ───
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Added $quantity ${paint.name} to inventory',
+                                inventoryId != null
+                                    ? 'Inventory updated'
+                                    : 'Added $quantity ${paint.name} to inventory',
                               ),
                               backgroundColor:
                                   isDarkMode
@@ -156,15 +247,13 @@ class PaintCard extends StatelessWidget {
                               action: SnackBarAction(
                                 label: 'VIEW',
                                 textColor: Colors.white,
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => const InventoryScreen(),
+                                onPressed:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const InventoryScreen(),
+                                      ),
                                     ),
-                                  );
-                                },
                               ),
                             ),
                           );
@@ -172,8 +261,8 @@ class PaintCard extends StatelessWidget {
                       );
                     },
                     icon: const Icon(Icons.inventory_2_outlined, size: 16),
-                    label: const Text(
-                      'Update Inventory',
+                    label: Text(
+                      _inInventory ? 'Update Inventory' : 'Add to Inventory',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -193,121 +282,87 @@ class PaintCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      // Mostrar el nuevo modal de wishlist
                       AddToWishlistModal.show(
                         context: context,
-                        paint: paint,
-                        onAddToWishlist: (paint, priority) async {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          final paintService = PaintService();
+                        paint: widget.paint,
+                        isUpdate: _inWishlist,
+                        wishlistId: _wishlistId,
+                        onAddToWishlist: (
+                          paint,
+                          priority,
+                          existingWishlistId,
+                        ) async {
+                          String? newId = existingWishlistId;
+                          final user = FirebaseAuth.instance.currentUser!;
+                          final token = await user.getIdToken();
 
-                          // Show loading indicator
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Row(
-                                children: [
-                                  CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                    strokeWidth: 2,
-                                  ),
-                                  SizedBox(width: 16),
-                                  Text('Adding to wishlist...'),
-                                ],
+                          if (existingWishlistId != null) {
+                            // ─── ACTUALIZAR EXISTENTE ───
+                            bool success = await _paintService
+                                .updateWishlistPriority(
+                                  paint.id,
+                                  existingWishlistId,
+                                  priority > 0,
+                                  token as String,
+                                  priority,
+                                );
+                            if (!success) {
+                              return null;
+                            }
+                          } else {
+                            // ─── AÑADIR NUEVO ───
+                            final result = await _paintService
+                                .addToWishlistDirect(paint, priority, user.uid);
+                            if (result['success'] == true) {
+                              newId = result['id']?.toString();
+                            } else {
+                              return null;
+                            }
+                          }
+
+                          // ─── LIMPIAR ESTADO DE INVENTARIO ───
+                          setState(() {
+                            _inInventory = false;
+                            _inventoryId = null;
+                          });
+
+                          // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
+                          setState(() {
+                            _inWishlist = true;
+                            _wishlistId = newId;
+                          });
+
+                          // ─── MOSTRAR SNACKBAR ───
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                existingWishlistId != null
+                                    ? 'Wishlist updated'
+                                    : 'Added ${paint.name} to wishlist',
                               ),
-                              duration: Duration(seconds: 10),
-                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.pink,
+                              action: SnackBarAction(
+                                label: 'VIEW',
+                                textColor: Colors.white,
+                                onPressed:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const WishlistScreen(),
+                                      ),
+                                    ),
+                              ),
                             ),
                           );
 
-                          try {
-                            // Get current Firebase user
-                            final firebaseUser =
-                                FirebaseAuth.instance.currentUser;
-                            if (firebaseUser == null) {
-                              // Show error if not logged in
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'You need to be logged in to add to wishlist',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                              return;
-                            }
-
-                            final userId = firebaseUser.uid;
-
-                            // Call API directly
-                            final result = await paintService
-                                .addToWishlistDirect(paint, priority, userId);
-
-                            scaffoldMessenger.hideCurrentSnackBar();
-
-                            if (result['success'] == true) {
-                              // Determine the correct message based on if the paint was already in the wishlist
-                              final String message =
-                                  result['alreadyExists'] == true
-                                      ? '${paint.name} is already in your wishlist'
-                                      : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
-
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(message),
-                                  backgroundColor:
-                                      isDarkMode
-                                          ? Colors.pinkAccent
-                                          : Colors.pink,
-                                  action: SnackBarAction(
-                                    label: 'VIEW',
-                                    textColor: Colors.white,
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) =>
-                                                  const WishlistScreen(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              );
-                            } else {
-                              // Show error with details
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: ${result['message']}'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            scaffoldMessenger.hideCurrentSnackBar();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                                duration: const Duration(seconds: 5),
-                              ),
-                            );
-                          }
+                          // igual que en inventario, no devolvemos nada
+                          return null;
                         },
                       );
                     },
                     icon: const Icon(Icons.favorite_border, size: 16),
-                    label: const Text(
-                      'Add to Wishlist',
+                    label: Text(
+                      _inWishlist ? 'Update Wishlist' : 'Add to Wishlist',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -414,7 +469,7 @@ class PaintCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Used in $paletteCount palettes',
+                          'Used in ${widget.paletteCount} palettes',
                           style: TextStyle(
                             color:
                                 isDarkMode
@@ -457,17 +512,61 @@ class PaintCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-
-                        // Mostrar el nuevo modal de inventario
                         AddToInventoryModal.show(
                           context: context,
                           paint: paint,
-                          onAddToInventory: (paint, quantity, notes) {
-                            // Mostrar confirmación con SnackBar
+                          inventoryId: _inventoryId,
+                          initialQuantity: 1,
+                          initialNotes: null,
+                          onAddToInventory: (
+                            paint,
+                            quantity,
+                            notes,
+                            inventoryId,
+                          ) async {
+                            String? newId = inventoryId;
+
+                            if (inventoryId != null) {
+                              // ─── ACTUALIZAR EXISTENTE ───
+                              bool success = await _inventoryService
+                                  .updateStockFromApi(inventoryId, quantity);
+
+                              if (!success) {
+                                return null;
+                              }
+                            } else {
+                              final inventoryId = await _inventoryService
+                                  .addInventoryRecordReturningId(
+                                    brandId: paint.brandId as String,
+                                    paintId: paint.id,
+                                    quantity: quantity,
+                                    notes: notes as String,
+                                  );
+                              if (inventoryId != null) {
+                                newId = inventoryId;
+                              } else {
+                                return null;
+                              }
+                            }
+
+                            // ─── ACTUALIZAR ESTADO LOCAL ───
+                            setState(() {
+                              _inWishlist = false;
+                              _wishlistId = "";
+                            });
+
+                            setState(() {
+                              _inInventory = true;
+                              _inventoryId = newId;
+                            });
+
+                            // ─── MOSTRAR SNACKBAR ───
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Added $quantity ${paint.name} to inventory',
+                                  inventoryId != null
+                                      ? 'Inventory updated'
+                                      : 'Added $quantity ${paint.name} to inventory',
                                 ),
                                 backgroundColor:
                                     isDarkMode
@@ -476,16 +575,14 @@ class PaintCard extends StatelessWidget {
                                 action: SnackBarAction(
                                   label: 'VIEW',
                                   textColor: Colors.white,
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) =>
-                                                const InventoryScreen(),
+                                  onPressed:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => const InventoryScreen(),
+                                        ),
                                       ),
-                                    );
-                                  },
                                 ),
                               ),
                             );
@@ -493,7 +590,10 @@ class PaintCard extends StatelessWidget {
                         );
                       },
                       icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('Update Inventory'),
+                      label: Text(
+                        _inInventory ? 'Update Inventory' : 'Add to Inventory',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor:
                             isDarkMode
@@ -511,123 +611,93 @@ class PaintCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-
-                        // Mostrar el nuevo modal de wishlist
                         AddToWishlistModal.show(
                           context: context,
                           paint: paint,
-                          onAddToWishlist: (paint, priority) async {
-                            final scaffoldMessenger = ScaffoldMessenger.of(
-                              context,
-                            );
-                            final paintService = PaintService();
+                          isUpdate: _inWishlist,
+                          wishlistId: _wishlistId,
+                          onAddToWishlist: (
+                            paint,
+                            priority,
+                            existingWishlistId,
+                          ) async {
+                            String? newId = existingWishlistId;
+                            final user = FirebaseAuth.instance.currentUser!;
+                            final token = await user.getIdToken();
 
-                            // Show loading indicator
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Row(
-                                  children: [
-                                    CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                      strokeWidth: 2,
-                                    ),
-                                    SizedBox(width: 16),
-                                    Text('Adding to wishlist...'),
-                                  ],
+                            if (existingWishlistId != null) {
+                              // ─── ACTUALIZAR EXISTENTE ───
+                              bool success = await _paintService
+                                  .updateWishlistPriority(
+                                    paint.id,
+                                    existingWishlistId,
+                                    priority > 0,
+                                    token as String,
+                                    priority,
+                                  );
+                              if (!success) {
+                                return null;
+                              }
+                            } else {
+                              // ─── AÑADIR NUEVO ───
+                              final result = await _paintService
+                                  .addToWishlistDirect(
+                                    paint,
+                                    priority,
+                                    user.uid,
+                                  );
+                              if (result['success'] == true) {
+                                newId = result['id']?.toString();
+                              } else {
+                                return null;
+                              }
+                            }
+
+                            // ─── LIMPIAR ESTADO DE INVENTARIO ───
+                            setState(() {
+                              _inInventory = false;
+                              _inventoryId = null;
+                            });
+
+                            // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
+                            setState(() {
+                              _inWishlist = true;
+                              _wishlistId = newId;
+                            });
+
+                            // ─── MOSTRAR SNACKBAR ───
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  existingWishlistId != null
+                                      ? 'Wishlist updated'
+                                      : 'Added ${paint.name} to wishlist',
                                 ),
-                                duration: Duration(seconds: 10),
-                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.pink,
+                                action: SnackBarAction(
+                                  label: 'VIEW',
+                                  textColor: Colors.white,
+                                  onPressed:
+                                      () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => const WishlistScreen(),
+                                        ),
+                                      ),
+                                ),
                               ),
                             );
 
-                            try {
-                              // Get current Firebase user
-                              final firebaseUser =
-                                  FirebaseAuth.instance.currentUser;
-                              if (firebaseUser == null) {
-                                // Show error if not logged in
-                                scaffoldMessenger.hideCurrentSnackBar();
-                                scaffoldMessenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'You need to be logged in to add to wishlist',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final userId = firebaseUser.uid;
-
-                              // Call API directly
-                              final result = await paintService
-                                  .addToWishlistDirect(paint, priority, userId);
-
-                              scaffoldMessenger.hideCurrentSnackBar();
-
-                              if (result['success'] == true) {
-                                // Determine the correct message based on if the paint was already in the wishlist
-                                final String message =
-                                    result['alreadyExists'] == true
-                                        ? '${paint.name} is already in your wishlist'
-                                        : 'Added ${paint.name} to wishlist${priority > 0 ? " with ${_getPriorityText(priority)} priority" : ""}';
-
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(message),
-                                    backgroundColor:
-                                        isDarkMode
-                                            ? Colors.pinkAccent
-                                            : Colors.pink,
-                                    action: SnackBarAction(
-                                      label: 'VIEW',
-                                      textColor: Colors.white,
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) =>
-                                                    const WishlistScreen(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                // Show error with details
-                                scaffoldMessenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Error: ${result['message']}',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 5),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
+                            // igual que en inventario, no devolvemos nada
+                            return null;
                           },
                         );
                       },
                       icon: const Icon(Icons.favorite_border),
-                      label: const Text('Add to Wishlist'),
+                      label: Text(
+                        _inWishlist ? 'Update Wishlist' : 'Add to Wishlist',
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.redAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -682,7 +752,7 @@ class PaintCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimensions.radiusXS),
       ),
       child: Text(
-        paint.category,
+        widget.paint.category,
         style: const TextStyle(
           fontSize: 10,
           color: AppTheme.marineBlue,

@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 
 class AddToInventoryModal extends StatefulWidget {
   final Paint paint;
-  final Function(Paint paint, int quantity, String? notes) onAddToInventory;
+  final Function(Paint paint, int quantity, String? notes, String? inventoryId)
+  onAddToInventory;
+  final String? inventoryId;
+  final int? initialQuantity;
+  final String? initialNotes;
 
   const AddToInventoryModal({
     super.key,
     required this.paint,
     required this.onAddToInventory,
+    this.inventoryId,
+    this.initialQuantity = 1,
+    this.initialNotes,
   });
 
-  // Método estático para mostrar el modal
   static Future<void> show({
     required BuildContext context,
     required Paint paint,
-    required Function(Paint paint, int quantity, String? notes)
+    String? inventoryId,
+    int initialQuantity = 1,
+    String? initialNotes,
+    required Function(
+      Paint paint,
+      int quantity,
+      String? notes,
+      String? inventoryId,
+    )
     onAddToInventory,
   }) {
     return showModalBottomSheet(
@@ -25,8 +38,11 @@ class AddToInventoryModal extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder:
-          (context) => AddToInventoryModal(
+          (_) => AddToInventoryModal(
             paint: paint,
+            inventoryId: inventoryId,
+            initialQuantity: initialQuantity,
+            initialNotes: initialNotes,
             onAddToInventory: onAddToInventory,
           ),
     );
@@ -37,8 +53,15 @@ class AddToInventoryModal extends StatefulWidget {
 }
 
 class _AddToInventoryModalState extends State<AddToInventoryModal> {
-  int _quantity = 1;
-  final TextEditingController _notesController = TextEditingController();
+  late int _quantity;
+  late TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = widget.initialQuantity as int;
+    _notesController = TextEditingController(text: widget.initialNotes ?? '');
+  }
 
   @override
   void dispose() {
@@ -49,10 +72,11 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Paint paint = widget.paint;
-    final Color paintColor = Color(
-      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
+    final paint = widget.paint;
+    final paintColor = Color(
+      int.parse(paint.hex.substring(1), radix: 16) | 0xFF000000,
     );
+    final isUpdate = widget.inventoryId != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -62,12 +86,16 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
           topRight: Radius.circular(20),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16 + MediaQuery.of(context).viewInsets.bottom,
+        24,
+        16,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Container(
               width: 40,
@@ -79,10 +107,8 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Título del modal
           Text(
-            'Update Inventory',
+            isUpdate ? 'Update Inventory' : 'Add to Inventory',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -90,11 +116,8 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // Detalles de la pintura
           Row(
             children: [
-              // Swatch de color
               Container(
                 width: 60,
                 height: 60,
@@ -105,8 +128,6 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Nombre y marca
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,8 +154,6 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Selector de cantidad
           Text(
             'Quantity',
             style: TextStyle(
@@ -144,7 +163,6 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
             ),
           ),
           const SizedBox(height: 16),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -152,23 +170,15 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
                 icon: Icon(
                   Icons.remove_circle,
                   color:
-                      isDarkMode
-                          ? (_quantity > 1
+                      _quantity > 1
+                          ? (isDarkMode
                               ? AppTheme.drawerOrange
-                              : Colors.grey[700])
-                          : (_quantity > 1
-                              ? AppTheme.primaryBlue
-                              : Colors.grey[400]),
+                              : AppTheme.primaryBlue)
+                          : Colors.grey,
                   size: 36,
                 ),
                 onPressed:
-                    _quantity > 1
-                        ? () {
-                          setState(() {
-                            _quantity--;
-                          });
-                        }
-                        : null,
+                    _quantity > 1 ? () => setState(() => _quantity--) : null,
               ),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -196,18 +206,11 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
                       isDarkMode ? AppTheme.drawerOrange : AppTheme.primaryBlue,
                   size: 36,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _quantity++;
-                  });
-                },
+                onPressed: () => setState(() => _quantity++),
               ),
             ],
           ),
-
           const SizedBox(height: 24),
-
-          // Campo de notas opcional
           TextField(
             controller: _notesController,
             decoration: InputDecoration(
@@ -215,17 +218,13 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              hintText: 'Add any notes about this paint...',
+              hintText: 'Any notes?',
             ),
             maxLines: 2,
           ),
-
           const SizedBox(height: 24),
-
-          // Botones de acción
           Row(
             children: [
-              // Botón de cancelar
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
@@ -239,32 +238,32 @@ class _AddToInventoryModalState extends State<AddToInventoryModal> {
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Botón de confirmar
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(context);
-                    widget.onAddToInventory(
+                    await widget.onAddToInventory(
                       widget.paint,
                       _quantity,
                       _notesController.text.isNotEmpty
                           ? _notesController.text
                           : null,
+                      widget.inventoryId,
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        isDarkMode
-                            ? AppTheme.drawerOrange
-                            : AppTheme.primaryBlue,
+                        isUpdate ? AppTheme.drawerOrange : AppTheme.primaryBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Add to Inventory'),
+                  child: Text(
+                    isUpdate ? 'Update' : 'Add',
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ],

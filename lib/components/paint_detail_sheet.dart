@@ -94,7 +94,7 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
     AddToInventoryModal.show(
       context: context,
       paint: widget.paint,
-      onAddToInventory: (paint, quantity, notes) {
+      onAddToInventory: (paint, quantity, notes, _) {
         if (widget.isInInventory) {
           widget.onUpdateInventory(paint, quantity, notes);
           _showSuccessSnackbar('Inventory updated');
@@ -122,7 +122,7 @@ class _PaintDetailSheetState extends State<PaintDetailSheet> {
       AddToWishlistModal.show(
         context: context,
         paint: widget.paint,
-        onAddToWishlist: (paint, priority) async {
+        onAddToWishlist: (paint, priority, _) async {
           final scaffoldMessenger = ScaffoldMessenger.of(context);
           final paintService = PaintService();
 
