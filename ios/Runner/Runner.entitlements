@@ -2,13 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Comentado para permitir desarrollo local sin equipo de Apple Developer -->
-	<!--
+	<!-- Apple Sign In activado -->
 	<key>com.apple.developer.applesignin</key>
 	<array>
 		<string>Default</string>
 	</array>
-	-->
 	
 	<!-- Application identifier para instalación -->
 	<key>application-identifier</key>
