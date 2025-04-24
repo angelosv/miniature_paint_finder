@@ -961,7 +961,10 @@ class _PaintListTabState extends State<PaintListTab> {
                                 isDarkMode
                                     ? Colors.grey[800]
                                     : Colors.grey[100],
-                            prefixIcon: const Icon(Icons.palette),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                           ),
                           style: TextStyle(
                             color: isDarkMode ? Colors.white : null,
@@ -969,6 +972,16 @@ class _PaintListTabState extends State<PaintListTab> {
                         ),
                       ),
 
+                      const SizedBox(height: 10),
+                      Text(
+                        'Tap any color card to find matching paints',
+                        style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       Expanded(
                         child: Stack(
@@ -982,232 +995,208 @@ class _PaintListTabState extends State<PaintListTab> {
                                 final color = colorData['color'] as Color;
                                 final hexCode = colorData['hexCode'] as String;
 
-                                // Diseño común de las tarjetas siempre simple como en la imagen
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(
-                                      color:
-                                          isDarkMode
-                                              ? Colors.grey[700]!
-                                              : Colors.grey[300]!,
-                                      width: 1,
+                                // Diseño común de las tarjetas, ahora toda la tarjeta es seleccionable
+                                return GestureDetector(
+                                  onTap: () async {
+                                    final result = await _selectPaint(
+                                      context,
+                                      colorData,
+                                    );
+                                    if (result != null && context.mounted) {
+                                      // Si hay un resultado, actualizar el estado
+                                      setModalState(() {
+                                        modalColorList[index] = result;
+                                      });
+
+                                      // También actualizar el estado general
+                                      setState(() {
+                                        _pickedColors = List.from(
+                                          modalColorList,
+                                        );
+                                      });
+                                    }
+                                  },
+                                  child: Card(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[700]!
+                                                : Colors.grey[300]!,
+                                        width: 1,
+                                      ),
                                     ),
-                                  ),
-                                  color:
-                                      isDarkMode
-                                          ? Colors.grey[850]
-                                          : Colors.white,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        // Color swatch
-                                        Container(
-                                          width: 50,
-                                          height: 50,
-                                          decoration: BoxDecoration(
-                                            color: color,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[850]
+                                            : Colors.white,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          // Color swatch
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: color,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 16),
+                                          const SizedBox(width: 16),
 
-                                        // Color info
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Color Point ${index + 1}',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color:
-                                                      isDarkMode
-                                                          ? Colors.white
-                                                          : Colors.black,
+                                          // Color info
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Color Point ${index + 1}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color:
+                                                        isDarkMode
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                hexCode,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color:
-                                                      isDarkMode
-                                                          ? Colors.grey[400]
-                                                          : Colors.grey[600],
+                                                Text(
+                                                  hexCode,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color:
+                                                        isDarkMode
+                                                            ? Colors.grey[400]
+                                                            : Colors.grey[600],
+                                                  ),
                                                 ),
-                                              ),
 
-                                              // Show selected paint info if available
-                                              if (colorData['paintName'] !=
-                                                  null)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 8.0,
-                                                      ),
-                                                  child: Row(
-                                                    children: [
-                                                      Container(
-                                                        width: 20,
-                                                        height: 20,
-                                                        decoration: BoxDecoration(
-                                                          color:
-                                                              isDarkMode
-                                                                  ? Colors
-                                                                      .grey[800]
-                                                                  : Colors
-                                                                      .grey[200],
-                                                          shape:
-                                                              BoxShape.circle,
+                                                // Show selected paint info if available
+                                                if (colorData['paintName'] !=
+                                                    null)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 8.0,
                                                         ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            colorData['brandAvatar']
-                                                                as String,
-                                                            style: TextStyle(
-                                                              fontSize: 10,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              color:
-                                                                  isDarkMode
-                                                                      ? Colors
-                                                                          .white
-                                                                      : Colors
-                                                                          .black,
-                                                            ),
+                                                    child: Row(
+                                                      children: [
+                                                        Container(
+                                                          width: 20,
+                                                          height: 20,
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                isDarkMode
+                                                                    ? Colors
+                                                                        .grey[800]
+                                                                    : Colors
+                                                                        .grey[200],
+                                                            shape:
+                                                                BoxShape.circle,
                                                           ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        "${colorData['paintName']}",
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color:
-                                                              isDarkMode
-                                                                  ? Colors.white
-                                                                  : Colors
-                                                                      .black,
-                                                        ),
-                                                      ),
-
-                                                      // Add match percentage
-                                                      if (colorData['matchPercentage'] !=
-                                                          null)
-                                                        Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                left: 8.0,
-                                                              ),
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal: 6,
-                                                                  vertical: 2,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color: _getMatchColor(
-                                                                colorData['matchPercentage']
-                                                                    as int,
-                                                              ).withOpacity(
-                                                                0.2,
-                                                              ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    8,
-                                                                  ),
-                                                            ),
+                                                          child: Center(
                                                             child: Text(
-                                                              '${colorData['matchPercentage']}%',
+                                                              colorData['brandAvatar']
+                                                                  as String,
                                                               style: TextStyle(
                                                                 fontSize: 10,
-                                                                color: _getMatchColor(
-                                                                  colorData['matchPercentage']
-                                                                      as int,
-                                                                ),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
+                                                                color:
+                                                                    isDarkMode
+                                                                        ? Colors
+                                                                            .white
+                                                                        : Colors
+                                                                            .black,
                                                               ),
                                                             ),
                                                           ),
                                                         ),
-                                                    ],
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        Text(
+                                                          "${colorData['paintName']}",
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            color:
+                                                                isDarkMode
+                                                                    ? Colors
+                                                                        .white
+                                                                    : Colors
+                                                                        .black,
+                                                          ),
+                                                        ),
 
-                                        // Find button
-                                        SizedBox(
-                                          width: 60,
-                                          height: 60,
-                                          child: ElevatedButton(
-                                            onPressed: () async {
-                                              final result = await _selectPaint(
-                                                context,
-                                                colorData,
-                                              );
-                                              if (result != null &&
-                                                  context.mounted) {
-                                                // Si hay un resultado, actualizar el estado
-                                                setModalState(() {
-                                                  modalColorList[index] =
-                                                      result;
-                                                });
-
-                                                // También actualizar el estado general
-                                                setState(() {
-                                                  _pickedColors = List.from(
-                                                    modalColorList,
-                                                  );
-                                                });
-                                              }
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  AppTheme.marineBlue,
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                            ),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const Icon(
-                                                  Icons.color_lens,
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                const Text(
-                                                  'Find',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
+                                                        // Add match percentage
+                                                        if (colorData['matchPercentage'] !=
+                                                            null)
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  left: 8.0,
+                                                                ),
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        6,
+                                                                    vertical: 2,
+                                                                  ),
+                                                              decoration: BoxDecoration(
+                                                                color: _getMatchColor(
+                                                                  colorData['matchPercentage']
+                                                                      as int,
+                                                                ).withOpacity(
+                                                                  0.2,
+                                                                ),
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      8,
+                                                                    ),
+                                                              ),
+                                                              child: Text(
+                                                                '${colorData['matchPercentage']}%',
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  color: _getMatchColor(
+                                                                    colorData['matchPercentage']
+                                                                        as int,
+                                                                  ),
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
                                               ],
                                             ),
                                           ),
-                                        ),
-                                      ],
+
+                                          // Indicador de acción
+                                          Icon(
+                                            Icons.search,
+                                            color: AppTheme.marineBlue,
+                                            size: 24,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
@@ -2452,7 +2441,7 @@ class _PaintListTabState extends State<PaintListTab> {
                   if (count == 0)
                     Center(
                       child: Text(
-                        'This paint hasn’t been used in any palette yet.',
+                        'This paint hasn\'t been used in any palette yet.',
                         style: TextStyle(
                           color:
                               isDarkMode ? Colors.grey[400] : Colors.grey[600],
