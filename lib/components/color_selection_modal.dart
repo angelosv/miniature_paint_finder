@@ -126,40 +126,40 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return null;
 
-    // Convertir la posición local a posición relativa dentro del RenderBox
-    final Offset position = box.globalToLocal(box.localToGlobal(localPosition));
+    // Obtener el tamaño real de la imagen mostrada (respetando aspect ratio)
+    final Size displaySize = _getDisplayedImageSize(box);
 
-    // Si la posición está fuera de los límites del box, retornar null
-    if (!box.paintBounds.contains(position)) return null;
+    // Calcular offset de centrado de la imagen en el contenedor
+    final double offsetX = (box.size.width - displaySize.width) / 2;
+    final double offsetY = (box.size.height - displaySize.height) / 2;
 
-    // Obtener las dimensiones reales de la imagen visualizada (después del escalado del InteractiveViewer)
-    final Rect displayRect = Rect.fromLTWH(
-      0,
-      0,
-      box.size.width,
-      box.size.height,
+    // Convertir coordenadas considerando el zoom actual
+    final Matrix4 inverseMatrix = Matrix4.inverted(
+      _transformationController.value,
     );
-
-    // Calcular la posición relativa en la imagen (0.0 - 1.0)
-    final double relX = (position.dx - displayRect.left) / displayRect.width;
-    final double relY = (position.dy - displayRect.top) / displayRect.height;
-
-    // Convertir coordenadas relativas a las coordenadas absolutas de la imagen original
-    // Considerar la transformación actual para el zoom y el desplazamiento
-    final Matrix4 matrix = _transformationController.value;
-    final Matrix4 inverseMatrix = Matrix4.inverted(matrix);
     final Vector3 untransformedPoint = inverseMatrix.transform3(
-      Vector3(position.dx, position.dy, 0),
+      Vector3(localPosition.dx, localPosition.dy, 0),
     );
 
-    // Calcular las coordenadas exactas del pixel basadas en la posición transformada
-    _exactPixelX =
-        (untransformedPoint.x / box.size.width * _decodedImage!.width).round();
-    _exactPixelY =
-        (untransformedPoint.y / box.size.height * _decodedImage!.height)
-            .round();
+    // Ajustar por el offset de centrado
+    final double adjustedX = untransformedPoint.x - offsetX;
+    final double adjustedY = untransformedPoint.y - offsetY;
 
-    // Verificar que las coordenadas estén dentro de los límites de la imagen
+    // Verificar si está dentro de los límites de la imagen mostrada
+    if (adjustedX < 0 ||
+        adjustedX >= displaySize.width ||
+        adjustedY < 0 ||
+        adjustedY >= displaySize.height) {
+      return null;
+    }
+
+    // Convertir a coordenadas de la imagen original
+    _exactPixelX =
+        (adjustedX / displaySize.width * _decodedImage!.width).round();
+    _exactPixelY =
+        (adjustedY / displaySize.height * _decodedImage!.height).round();
+
+    // Verificar que las coordenadas estén dentro de los límites de la imagen original
     if (_exactPixelX >= 0 &&
         _exactPixelX < _decodedImage!.width &&
         _exactPixelY >= 0 &&
@@ -187,12 +187,12 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return touchPosition;
 
-    // Obtener tamaño real de la imagen mostrada
-    final boxSize = box.size;
+    // Obtener el tamaño real de la imagen mostrada (respetando aspect ratio)
+    final Size displaySize = _getDisplayedImageSize(box);
 
-    // Calcular la relación entre el tamaño de la imagen original y la mostrada
-    final double scaleX = _decodedImage!.width / boxSize.width;
-    final double scaleY = _decodedImage!.height / boxSize.height;
+    // Calcular offset de centrado de la imagen en el contenedor
+    final double offsetX = (box.size.width - displaySize.width) / 2;
+    final double offsetY = (box.size.height - displaySize.height) / 2;
 
     // Convertir coordenadas considerando el zoom actual
     final Matrix4 inverseMatrix = Matrix4.inverted(
@@ -202,12 +202,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       Vector3(touchPosition.dx, touchPosition.dy, 0),
     );
 
-    // Calcular y registrar las coordenadas exactas
-    final int pixelX = (untransformedPosition.x * scaleX).round();
-    final int pixelY = (untransformedPosition.y * scaleY).round();
-    print('Exact coordinates: ($pixelX, $pixelY)');
-
-    // Esta es la posición exacta del pixel en la imagen
+    // Devolvemos la posición ajustada por offset
     return Offset(untransformedPosition.x, untransformedPosition.y);
   }
 
@@ -227,6 +222,27 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       if (color != null) {
         setState(() {
           _lastTapPosition = details.localPosition;
+          _selectedColor = color;
+          final String hexCode =
+              '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
+          _selectedHex = hexCode;
+        });
+        _updateMagnifier(details.localPosition);
+      }
+      return;
+    }
+
+    // Si estamos en modo mover, no crear puntos nuevos
+    if (_currentMode == ToolMode.move) {
+      // Solo actualizar la lupa y el color seleccionado
+      final Color? color = _getPixelColor(details.localPosition);
+      if (color != null) {
+        setState(() {
+          _lastTapPosition = details.localPosition;
+          _selectedColor = color;
+          final String hexCode =
+              '#${color.value.toRadixString(16).substring(2).padLeft(6, '0').toUpperCase()}';
+          _selectedHex = hexCode;
         });
         _updateMagnifier(details.localPosition);
       }
@@ -261,40 +277,72 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       _selectedHex = hexCode;
     });
 
-    // Si no estamos arrastrando, añadir el punto
-    if (!_isDragging) {
-      // Crear el punto usando las coordenadas exactas del pixel
-      final double pixelToImageX = _exactPixelX.toDouble();
-      final double pixelToImageY = _exactPixelY.toDouble();
+    // Si no estamos arrastrando, añadir el punto (solo en modo picker)
+    if (!_isDragging && _currentMode == ToolMode.picker) {
+      // Verificar si ya existe un punto muy cercano para evitar duplicados
+      bool pointAlreadyExists = false;
+      for (final point in _points) {
+        final distance = sqrt(
+          pow(point.pixelX - _exactPixelX, 2) +
+              pow(point.pixelY - _exactPixelY, 2),
+        );
 
-      print(
-        'Adding point at pixel coordinates: ($_exactPixelX, $_exactPixelY)',
-      );
+        // Si ya hay un punto muy cercano, no añadir uno nuevo
+        if (distance < 10.0) {
+          // Umbral más generoso para evitar duplicados
+          pointAlreadyExists = true;
+          // Seleccionar el punto existente en su lugar
+          for (int i = 0; i < _points.length; i++) {
+            if (_points[i].pixelX == point.pixelX &&
+                _points[i].pixelY == point.pixelY) {
+              setState(() {
+                _selectedPointIndex = i;
+                _isMovingExistingPoint = true;
+              });
+              break;
+            }
+          }
+          break;
+        }
+      }
 
-      // Crear el punto
-      final newPoint = ColorPoint(
-        x: pixelToImageX,
-        y: pixelToImageY,
-        color: color,
-        hex: hexCode,
-        pixelX: _exactPixelX,
-        pixelY: _exactPixelY,
-      );
+      // Solo añadir punto si no existe uno cercano
+      if (!pointAlreadyExists) {
+        // Crear el punto usando las coordenadas exactas del pixel
+        final double pixelToImageX = _exactPixelX.toDouble();
+        final double pixelToImageY = _exactPixelY.toDouble();
 
-      // Añadir a la lista
-      setState(() {
-        _points.add(newPoint);
-      });
+        print(
+          'Adding point at pixel coordinates: ($_exactPixelX, $_exactPixelY)',
+        );
 
-      // Notificar al padre
-      widget.onPointsUpdated(_points);
+        // Crear el punto
+        final newPoint = ColorPoint(
+          x: pixelToImageX,
+          y: pixelToImageY,
+          color: color,
+          hex: hexCode,
+          pixelX: _exactPixelX,
+          pixelY: _exactPixelY,
+        );
+
+        // Añadir a la lista
+        setState(() {
+          _points.add(newPoint);
+          _selectedPointIndex =
+              _points.length - 1; // Seleccionar el nuevo punto
+        });
+
+        // Notificar al padre
+        widget.onPointsUpdated(_points);
+      }
     }
 
     // Actualizar la posición de la lupa
     _updateMagnifier(details.localPosition);
   }
 
-  // Verificar si tocamos un punto existente
+  // Verificar si tocamos un punto existente con mayor prioridad y un radio de detección más generoso
   void _checkTapOnExistingPoint(Offset touchPosition) {
     RenderBox? box = _imageKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
@@ -305,9 +353,17 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
 
     // Ahora tenemos _exactPixelX y _exactPixelY con las coordenadas exactas del pixel
 
-    // Aumentar el radio de detección para facilitar la selección
-    final double detectionRadius =
-        10.0; // Aumentado para hacer más fácil seleccionar puntos existentes
+    // Aumentar el radio de detección para facilitar la selección de puntos existentes
+    // Radio adaptativo basado en el nivel de zoom actual
+    final double zoomLevel =
+        _transformationController.value.getMaxScaleOnAxis();
+    final double detectionRadius = max(
+      20.0, // Aumentamos el radio mínimo para facilitar la selección
+      40.0 / zoomLevel,
+    ); // Radio mayor para facilitar la selección
+
+    // Ordenar los puntos por distancia para seleccionar el más cercano si hay varios
+    List<MapEntry<int, double>> pointsWithDistance = [];
 
     // Verificar cada punto
     for (int i = 0; i < _points.length; i++) {
@@ -319,16 +375,30 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
             pow(point.pixelY - _exactPixelY, 2),
       );
 
-      // Si estamos cerca del punto, seleccionarlo
+      // Si estamos dentro del radio de detección, guardarlo en la lista
       if (distance < detectionRadius) {
-        setState(() {
-          _selectedPointIndex = i;
-          _isMovingExistingPoint = true;
-          _selectedColor = point.color;
-          _selectedHex = point.hex;
-        });
-        return;
+        pointsWithDistance.add(MapEntry(i, distance));
       }
+    }
+
+    // Ordenar por distancia (el más cercano primero)
+    pointsWithDistance.sort((a, b) => a.value.compareTo(b.value));
+
+    // Si encontramos algún punto cercano, seleccionar el más cercano
+    if (pointsWithDistance.isNotEmpty) {
+      final closestPointIndex = pointsWithDistance.first.key;
+      final point = _points[closestPointIndex];
+
+      setState(() {
+        _selectedPointIndex = closestPointIndex;
+        _isMovingExistingPoint = true;
+        _selectedColor = point.color;
+        _selectedHex = point.hex;
+
+        // Actualizar la posición para mostrar exactamente dónde está el punto existente
+        _lastTapPosition = touchPosition;
+      });
+      return;
     }
 
     // No se encontró ningún punto bajo el toque
@@ -367,7 +437,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _handlePanStart(DragStartDetails details) {
     _isDragging = true;
 
-    // Verificar primero si estamos tocando un punto existente
+    // Verificar primero si estamos tocando un punto existente con mayor prioridad
     _checkTapOnExistingPoint(details.localPosition);
 
     // Si estamos moviendo un punto existente, solo configuramos el estado para el arrastre
@@ -416,7 +486,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         });
       }
     } else {
-      // Obtener el color del pixel si no estamos moviendo un punto
+      // Solo actualizar la visualización para previsualizar el posible nuevo punto
+      // pero NO crear un punto nuevo durante el arrastre
       final Color? color = _getPixelColor(details.localPosition);
       if (color != null) {
         setState(() {
@@ -427,7 +498,7 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
       }
     }
 
-    // Actualizar la lupa
+    // Actualizar la posición de la lupa
     _updateMagnifier(details.localPosition);
   }
 
@@ -443,26 +514,48 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         // Mantenemos _selectedPointIndex para recordar cuál fue el último punto seleccionado
       });
     }
-    // Si no estamos moviendo un punto existente, añadir uno nuevo
-    else if (_isDragging && _selectedColor != Colors.transparent) {
-      // Crear el punto usando las coordenadas exactas de pixel
-      final newPoint = ColorPoint(
-        x: _exactPixelX.toDouble(),
-        y: _exactPixelY.toDouble(),
-        color: _selectedColor,
-        hex: _selectedHex,
-        pixelX: _exactPixelX,
-        pixelY: _exactPixelY,
-      );
+    // Si no estamos moviendo un punto existente y estamos en modo de selección, añadir nuevo punto
+    else if (_isDragging &&
+        _selectedColor != Colors.transparent &&
+        !_isMovingExistingPoint &&
+        _currentMode == ToolMode.picker) {
+      // Solo crear puntos nuevos en modo picker
+      // Verificar si ya existe un punto muy cercano para evitar duplicados
+      bool pointAlreadyExists = false;
+      for (final point in _points) {
+        final distance = sqrt(
+          pow(point.pixelX - _exactPixelX, 2) +
+              pow(point.pixelY - _exactPixelY, 2),
+        );
 
-      // Añadir a la lista
-      setState(() {
-        _points.add(newPoint);
-        _selectedPointIndex = _points.length - 1;
-      });
+        // Si ya hay un punto muy cercano, no añadir uno nuevo
+        if (distance < 5.0) {
+          pointAlreadyExists = true;
+          break;
+        }
+      }
 
-      // Notificar al padre
-      widget.onPointsUpdated(_points);
+      // Solo crear un punto nuevo si no existe uno muy cercano
+      if (!pointAlreadyExists) {
+        // Crear el punto usando las coordenadas exactas de pixel
+        final newPoint = ColorPoint(
+          x: _exactPixelX.toDouble(),
+          y: _exactPixelY.toDouble(),
+          color: _selectedColor,
+          hex: _selectedHex,
+          pixelX: _exactPixelX,
+          pixelY: _exactPixelY,
+        );
+
+        // Añadir a la lista
+        setState(() {
+          _points.add(newPoint);
+          _selectedPointIndex = _points.length - 1;
+        });
+
+        // Notificar al padre
+        widget.onPointsUpdated(_points);
+      }
 
       // Resetear solo el estado de arrastre pero mantener la selección
       setState(() {
@@ -555,51 +648,57 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                 final index = entry.key;
                                 final point = entry.value;
 
-                                // Convertir las coordenadas de pixel a las de pantalla considerando el zoom
-                                RenderBox? box =
+                                final RenderBox? box =
                                     _imageKey.currentContext?.findRenderObject()
                                         as RenderBox?;
-                                if (box == null) {
-                                  return Container(); // Si no hay context, devolver un widget vacío
-                                }
+                                if (box == null || _decodedImage == null)
+                                  return const SizedBox.shrink();
 
-                                // Calcular la relación entre la imagen y la pantalla
-                                final double scaleX =
-                                    box.size.width / _imageSize.width;
-                                final double scaleY =
-                                    box.size.height / _imageSize.height;
-
-                                // Calcular la posición exacta en la pantalla considerando la transformación
-                                // Esto garantiza que los puntos se posicionen correctamente incluso con zoom
-                                final Matrix4 transform =
-                                    _transformationController.value;
-                                final Vector3 position = transform.transform3(
-                                  Vector3(
-                                    point.pixelX.toDouble() *
-                                        (box.size.width / _decodedImage!.width),
-                                    point.pixelY.toDouble() *
-                                        (box.size.height /
-                                            _decodedImage!.height),
-                                    0,
-                                  ),
+                                // Obtener el tamaño real de la imagen mostrada (respetando aspect ratio)
+                                final Size displaySize = _getDisplayedImageSize(
+                                  box,
                                 );
 
-                                // Tamaño del punto para centrarlo correctamente
-                                final bool isPointSelected =
+                                // Calcular offset de centrado de la imagen en el contenedor
+                                final double offsetX =
+                                    (box.size.width - displaySize.width) / 2;
+                                final double offsetY =
+                                    (box.size.height - displaySize.height) / 2;
+
+                                // Primero, convertir las coordenadas de píxel a coordenadas de imagen mostrada
+                                final double imageToScreenX =
+                                    point.pixelX /
+                                        _decodedImage!.width *
+                                        displaySize.width +
+                                    offsetX;
+                                final double imageToScreenY =
+                                    point.pixelY /
+                                        _decodedImage!.height *
+                                        displaySize.height +
+                                    offsetY;
+
+                                // Aplicar la transformación (zoom/pan) actual
+                                final Matrix4 transform =
+                                    _transformationController.value;
+                                final Vector3 transformed = transform
+                                    .transform3(
+                                      Vector3(
+                                        imageToScreenX,
+                                        imageToScreenY,
+                                        0,
+                                      ),
+                                    );
+
+                                final bool isSelected =
                                     _selectedPointIndex == index;
                                 final double pointSize =
-                                    isPointSelected ? 30.0 : 24.0;
+                                    isSelected ? 30.0 : 24.0;
 
                                 return Positioned(
-                                  left:
-                                      position.x -
-                                      (pointSize / 2), // Centrado exacto
-                                  top:
-                                      position.y -
-                                      (pointSize / 2), // Centrado exacto
+                                  left: transformed.x - (pointSize / 2),
+                                  top: transformed.y - (pointSize / 2),
                                   child: GestureDetector(
                                     onTap: () {
-                                      // Al tocar un punto, lo seleccionamos para poder moverlo después
                                       setState(() {
                                         _selectedPointIndex = index;
                                         _selectedColor = point.color;
@@ -607,7 +706,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                       });
                                     },
                                     onPanStart: (details) {
-                                      // Activar el modo de movimiento al arrastrar un punto
                                       setState(() {
                                         _selectedPointIndex = index;
                                         _isMovingExistingPoint = true;
@@ -619,30 +717,62 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
                                     onPanUpdate: (details) {
                                       if (_selectedPointIndex != index) return;
 
-                                      // Actualizar posición mientras arrastramos
-                                      RenderBox? box =
-                                          _imageKey.currentContext
-                                                  ?.findRenderObject()
-                                              as RenderBox?;
-                                      if (box != null) {
-                                        // Convertir la posición global a local
-                                        final Offset localPosition = box
-                                            .globalToLocal(
+                                      final Offset local = box.globalToLocal(
+                                        details.globalPosition,
+                                      );
+                                      _handlePanUpdate(
+                                        DragUpdateDetails(
+                                          globalPosition:
                                               details.globalPosition,
-                                            );
-
-                                        _handlePanUpdate(
-                                          DragUpdateDetails(
-                                            globalPosition:
-                                                details.globalPosition,
-                                            localPosition: localPosition,
-                                            delta: details.delta,
-                                          ),
-                                        );
-                                      }
+                                          localPosition: local,
+                                          delta: details.delta,
+                                        ),
+                                      );
                                     },
                                     onPanEnd: _handlePanEnd,
-                                    child: _buildColorPoint(point, index),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 150,
+                                      ),
+                                      width: pointSize,
+                                      height: pointSize,
+                                      decoration: BoxDecoration(
+                                        color: point.color.withOpacity(0.8),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color:
+                                              isSelected
+                                                  ? Colors.yellow
+                                                  : (_isLightColor(point.color)
+                                                      ? Colors.black
+                                                      : Colors.white),
+                                          width: isSelected ? 2.5 : 1.5,
+                                        ),
+                                        boxShadow:
+                                            isSelected
+                                                ? [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.3),
+                                                    blurRadius: 4,
+                                                    spreadRadius: 1,
+                                                  ),
+                                                ]
+                                                : null,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: TextStyle(
+                                          color:
+                                              _isLightColor(point.color)
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: isSelected ? 14 : 12,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -1072,6 +1202,30 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         ),
       ),
     );
+  }
+
+  Size _getDisplayedImageSize(RenderBox box) {
+    if (_imageSize == Size.zero) return box.size;
+
+    // Calcular relación de aspecto
+    final double aspectRatio = _imageSize.width / _imageSize.height;
+    final double boxWidth = box.size.width;
+    final double boxHeight = box.size.height;
+
+    double width, height;
+
+    // Si la imagen es más ancha que alta (en proporción)
+    if (aspectRatio > boxWidth / boxHeight) {
+      // La anchura limita, ajustar a la anchura del contenedor
+      width = boxWidth;
+      height = boxWidth / aspectRatio;
+    } else {
+      // La altura limita, ajustar a la altura del contenedor
+      height = boxHeight;
+      width = boxHeight * aspectRatio;
+    }
+
+    return Size(width, height);
   }
 }
 
