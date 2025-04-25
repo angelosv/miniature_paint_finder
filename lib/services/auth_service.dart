@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -498,65 +499,96 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithApple() async {
     try {
-      // Constante para desactivar Sign in with Apple en desarrollo sin cuenta de Apple Developer
-      const bool disableForDevelopment = false;
+      print('Starting Apple Sign In process v2');
 
-      if (disableForDevelopment) {
+      // Generate nonce for Apple sign-in
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      print('Generated secure nonce: ${nonce.substring(0, 10)}...');
+
+      // Request credential from Apple
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      print('Received credential from Apple');
+      print(
+        'Authorization code available: ${appleCredential.authorizationCode != null}',
+      );
+      print(
+        'Identity token available: ${appleCredential.identityToken != null}',
+      );
+
+      if (appleCredential.identityToken == null) {
+        print('Error: Apple returned null identity token');
         throw AuthException(
-          AuthErrorCode.platformNotSupported,
-          'Sign in with Apple desactivado para desarrollo local. ' +
-              'Cambiar constante disableForDevelopment a false cuando sea necesario.',
+          AuthErrorCode.unknown,
+          'Apple sign in failed: No identity token returned',
         );
       }
 
-      if (kIsWeb) {
-        // Web implementation
-        try {
-          await firebase.FirebaseAuth.instance.signInWithPopup(
-            firebase.AppleAuthProvider(),
-          );
-        } catch (e) {
-          // If popup fails, try redirect
-          await firebase.FirebaseAuth.instance.signInWithRedirect(
-            firebase.AppleAuthProvider(),
-          );
+      // Extract Apple provided details
+      final givenName = appleCredential.givenName;
+      final familyName = appleCredential.familyName;
+      final email = appleCredential.email;
+
+      print(
+        'Got data from Apple - Name: ${givenName ?? "null"} ${familyName ?? "null"}, Email: ${email ?? "null"}',
+      );
+
+      // Directly creating auth credential for Firebase
+      final credential = firebase.OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken!,
+        accessToken: appleCredential.authorizationCode,
+        rawNonce: rawNonce,
+      );
+
+      print('Created Firebase credential, attempting sign in');
+
+      // Sign in with Firebase
+      final userCredential = await firebase.FirebaseAuth.instance
+          .signInWithCredential(credential);
+
+      print('Firebase sign in successful: ${userCredential.user?.uid}');
+
+      // Get or update display name
+      String displayName = 'User';
+      // Use name from Apple credential if available
+      if (givenName != null || familyName != null) {
+        final parts =
+            [
+              givenName ?? '',
+              familyName ?? '',
+            ].where((name) => name.isNotEmpty).toList();
+
+        if (parts.isNotEmpty) {
+          displayName = parts.join(' ');
+
+          // Update Firebase user profile if needed
+          if (userCredential.user != null &&
+              (userCredential.user!.displayName == null ||
+                  userCredential.user!.displayName!.isEmpty)) {
+            await userCredential.user!.updateDisplayName(displayName);
+            print('Updated Firebase user display name to: $displayName');
+          }
         }
-      } else {
-        // Mobile implementation
-        // Generate nonce for Apple sign-in
-        final rawNonce = _generateNonce();
-        final nonce = _sha256ofString(rawNonce);
-
-        // Request credential from Apple
-        final appleCredential = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
-          nonce: nonce,
-        );
-
-        // Create OAuthCredential
-        final oauthCredential = firebase.OAuthProvider('apple.com').credential(
-          idToken: appleCredential.identityToken!,
-          rawNonce: rawNonce,
-        );
-
-        // Sign in with Firebase
-        await firebase.FirebaseAuth.instance.signInWithCredential(
-          oauthCredential,
-        );
+      }
+      // Use existing Firebase display name as fallback
+      else if (userCredential.user?.displayName != null &&
+          userCredential.user!.displayName!.isNotEmpty) {
+        displayName = userCredential.user!.displayName!;
       }
 
-      // Update user display name if needed
-      await _updateDisplayNameIfNeeded();
-
-      // Convertir el usuario de Firebase a nuestro modelo de User
-      final firebaseUser = firebase.FirebaseAuth.instance.currentUser!;
+      // Create User model
       _currentUser = User(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? 'User',
-        email: firebaseUser.email ?? '',
+        id: userCredential.user!.uid,
+        name: displayName,
+        email: userCredential.user!.email ?? email ?? '',
         createdAt: DateTime.now(),
         lastLoginAt: DateTime.now(),
         authProvider: 'apple',
@@ -564,10 +596,14 @@ class AuthService implements IAuthService {
 
       _authStateController.add(_currentUser);
 
+      print('Apple sign in completed successfully');
       return _currentUser!;
     } catch (e) {
       print('Apple Sign In Error: $e');
       if (e is SignInWithAppleAuthorizationException) {
+        print(
+          'SignInWithAppleAuthorizationException: ${e.code} - ${e.message}',
+        );
         if (e.code == AuthorizationErrorCode.canceled) {
           throw AuthException(
             AuthErrorCode.cancelled,
@@ -576,9 +612,12 @@ class AuthService implements IAuthService {
         } else {
           throw AuthException(
             AuthErrorCode.unknown,
-            'Apple sign in failed: ${e.message}',
+            'Apple sign in error: ${e.code} - ${e.message}',
           );
         }
+      } else if (e is firebase.FirebaseAuthException) {
+        print('Firebase Auth Error: ${e.code} - ${e.message}');
+        throw AuthException(e.code, 'Firebase auth error: ${e.message}');
       } else if (e is AuthException) {
         rethrow;
       } else {
@@ -659,10 +698,10 @@ class AuthService implements IAuthService {
       case AuthProvider.google:
         return true; // Disponible en todas las plataformas
       case AuthProvider.apple:
-        // Sólo disponible en iOS, macOS y web
-        return kIsWeb;
+        // Solo disponible en iOS, no en web ni macOS
+        return defaultTargetPlatform == TargetPlatform.iOS;
       case AuthProvider.phone:
-        return false; // No disponible en todas las plataformas
+        return false; // No disponible en ninguna plataforma
       case AuthProvider.custom:
         return true;
     }
@@ -698,22 +737,15 @@ class AuthService implements IAuthService {
     }
   }
 
-  String _createNonce() {
-    // Este método genera un nonce seguro criptográficamente
-    const charset =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
-    final random = DateTime.now().millisecondsSinceEpoch;
-
-    return List.generate(32, (_) => charset[random % charset.length]).join();
-  }
-
   String _generateNonce() {
     // Este método genera un nonce seguro criptográficamente
     const charset =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
-    final random = DateTime.now().millisecondsSinceEpoch;
-
-    return List.generate(32, (_) => charset[random % charset.length]).join();
+    final random = Random.secure();
+    return List.generate(
+      32,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   String _sha256ofString(String input) {

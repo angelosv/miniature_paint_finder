@@ -322,9 +322,10 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === Promoción ===
-            _buildPromotionCard(context),
+            // Commenting out the promotion card as requested
+            // _buildPromotionCard(context),
 
-            const SizedBox(height: 24),
+            // const SizedBox(height: 24),
 
             // === Recent Palettes ===
             Row(

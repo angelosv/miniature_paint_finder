@@ -66,9 +66,7 @@ class _AuthScreenState extends State<AuthScreen>
         false; // Cambiado a false para habilitar en esta rama
 
     return !forceDisableAppleSignIn &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.macOS ||
-            kIsWeb);
+        (defaultTargetPlatform == TargetPlatform.iOS);
   }
 
   // Nuevo método para manejar el inicio de sesión con Apple
@@ -726,7 +724,7 @@ class _AuthScreenState extends State<AuthScreen>
     final features = [
       'Track your paint collection and never buy duplicates',
       'Find matching colors with **AI-powered image recognition** - 100% Free',
-      'Create and share custom paint palettes',
+      'Create custom paint palettes',
       'Scan barcodes for quick paint lookup',
     ];
 
@@ -894,21 +892,20 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.phone_android,
-                      label: 'Continue with Phone',
-                      color: Colors.green.shade600,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const PhoneAuthScreen(),
-                          ),
-                        );
-                      },
-                      height: buttonHeight,
-                    ),
-
+                    // SizedBox(height: buttonSpacing),
+                    // _buildAuthButton(
+                    //   icon: Icons.phone_android,
+                    //   label: 'Continue with Phone',
+                    //   color: Colors.green.shade600,
+                    //   onPressed: () {
+                    //     Navigator.of(context).push(
+                    //       MaterialPageRoute(
+                    //         builder: (context) => const PhoneAuthScreen(),
+                    //       ),
+                    //     );
+                    //   },
+                    //   height: buttonHeight,
+                    // ),
                     SizedBox(
                       height:
                           isVerySmallScreen ? 20 : (isSmallScreen ? 24 : 32),
@@ -1072,21 +1069,20 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.phone_android,
-                      label: 'Continue with Phone',
-                      color: Colors.green.shade600,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const PhoneAuthScreen(),
-                          ),
-                        );
-                      },
-                      height: buttonHeight,
-                    ),
-
+                    // SizedBox(height: buttonSpacing),
+                    // _buildAuthButton(
+                    //   icon: Icons.phone_android,
+                    //   label: 'Continue with Phone',
+                    //   color: Colors.green.shade600,
+                    //   onPressed: () {
+                    //     Navigator.of(context).push(
+                    //       MaterialPageRoute(
+                    //         builder: (context) => const PhoneAuthScreen(),
+                    //       ),
+                    //     );
+                    //   },
+                    //   height: buttonHeight,
+                    // ),
                     SizedBox(
                       height:
                           isVerySmallScreen ? 16 : (isSmallScreen ? 20 : 32),
