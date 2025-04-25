@@ -1350,7 +1350,7 @@ class _PaintListTabState extends State<PaintListTab> {
 
                                                   // Cerrar el modal primero
                                                   Navigator.pop(context);
-
+                                                  // ** ACAAAAAA
                                                   // Usar un post-frame callback para mostrar el snackbar y resetear
                                                   WidgetsBinding.instance
                                                       .addPostFrameCallback((
@@ -1376,6 +1376,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                                             () {
                                                               if (mounted) {
                                                                 _reset();
+                                                                // Refrescar el widget de paletas recientes
+                                                                context.read<PaletteController>().loadPalettes();
                                                               }
                                                             },
                                                           );
