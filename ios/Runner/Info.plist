@@ -37,6 +37,14 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>com.googleusercontent.apps.377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
 				<string>com.angelovs.miniaturePaintFinder</string>
 			</array>
 		</dict>
