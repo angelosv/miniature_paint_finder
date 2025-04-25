@@ -200,15 +200,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // Look up the paint by barcode
     try {
       print('🔍 Searching for paint with barcode: $code');
-      final Paint? paint = await _barcodeService.findPaintByBarcode(code);
+      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code);
 
       if (mounted) {
         setState(() {
           _isSearching = false;
-          _foundPaint = paint;
-          _isScanning = false; // Stop scanning after finding a paint
+          _isScanning = false; // Stop scanning after finding paints
 
-          if (paint == null) {
+          if (paints == null || paints.isEmpty) {
             _errorMessage = 'No paint found for this barcode';
             // Automatically clear error and restart scanning after 3 seconds if no paint found
             Future.delayed(const Duration(seconds: 3), () {
@@ -216,11 +215,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 _resetScanner();
               }
             });
+          } else if (paints.length == 1) {
+            // Si solo hay una pintura, mostrarla directamente
+            _foundPaint = paints[0];
+            _showScanResultSheet(_foundPaint!);
           } else {
-            print('✅ Found paint: ${paint.name} (${paint.brand}) (${paint.brandId})');
-            print('- paint: ${jsonEncode(paint)}');
-            // Show result sheet when paint is found
-            _showScanResultSheet(paint);
+            // Si hay múltiples pinturas, mostrar diálogo de selección
+            _showPaintSelectionDialog(paints);
           }
         });
       }
@@ -239,6 +240,53 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         });
       }
     }
+  }
+
+  void _showPaintSelectionDialog(List<Paint> paints) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Paint'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: paints.length,
+              itemBuilder: (context, index) {
+                final paint = paints[index];
+                return ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(int.parse(paint.hex.substring(1), radix: 16) + 0xFF000000),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  title: Text(paint.name),
+                  subtitle: Text('${paint.brand} - ${paint.code}'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _foundPaint = paint;
+                    _showScanResultSheet(paint);
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _resetScanner();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Show the scan result bottom sheet
