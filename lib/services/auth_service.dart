@@ -745,8 +745,8 @@ class AuthService implements IAuthService {
       case AuthProvider.google:
         return true; // Disponible en todas las plataformas
       case AuthProvider.apple:
-        // Solo disponible en iOS, no en web ni macOS
-        return defaultTargetPlatform == TargetPlatform.iOS;
+        // Deshabilitar Apple Sign-In en esta rama
+        return false;
       case AuthProvider.phone:
         return false; // No disponible en ninguna plataforma
       case AuthProvider.custom:
