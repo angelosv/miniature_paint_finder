@@ -15,6 +15,7 @@ import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/guest_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -81,6 +82,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
             context.read<PaintLibraryController>().loadPaints();
           }
         }
+
+        // Check if we should show the palettes promo modal
+        if (args.containsKey('showPalettesPromo') &&
+            args['showPalettesPromo'] == true) {
+          // Show the promo modal after a short delay to allow the screen to render
+          final authService = Provider.of<IAuthService>(context, listen: false);
+          if (authService.isGuestUser) {
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
+              }
+            });
+          }
+        }
       }
       _argsProcessed = true;
     }
@@ -98,6 +113,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final controller = context.watch<PaintLibraryController>();
     final authService = Provider.of<IAuthService>(context, listen: false);
+    final isGuestUser = authService.isGuestUser;
 
     // Apply guest mode wrapper to protect restricted features
     return AppScaffold(
@@ -111,6 +127,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: _buildBody(context, isDarkMode, controller),
       ),
       drawer: const SharedDrawer(currentScreen: 'library'),
+      // Mostrar botón flotante promocional para invitados
+      floatingActionButton: isGuestUser ? _buildPromoButton() : null,
     );
   }
 
@@ -321,17 +339,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // Add to inventory with guest check
-  void _addToInventory(Paint paint) async {
+  Future<void> _addToInventory(Paint paint) async {
     final authService = Provider.of<IAuthService>(context, listen: false);
 
-    // If guest user, check authorization
     if (authService.isGuestUser) {
-      bool canProceed = await AuthUtils.checkFeatureAccess(
-        context,
-        requireAuth: true,
-      );
-
-      if (!canProceed) return;
+      GuestPromoModal.showForRestrictedFeature(context, 'Inventory');
+      return;
     }
 
     try {
@@ -354,21 +367,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // Handle adding to palette with guest check
-  void _handleAddToPalette(
+  Future<void> _handleAddToPalette(
     String paletteName,
     String paintId,
     String brandId,
   ) async {
     final authService = Provider.of<IAuthService>(context, listen: false);
 
-    // If guest user, check authorization
     if (authService.isGuestUser) {
-      bool canProceed = await AuthUtils.checkFeatureAccess(
-        context,
-        requireAuth: true,
-      );
-
-      if (!canProceed) return;
+      GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
+      return;
     }
 
     // Process adding to palette
@@ -820,6 +828,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         );
       },
+    );
+  }
+
+  // Botón flotante para mostrar el modal promocional
+  Widget _buildPromoButton() {
+    return FloatingActionButton.extended(
+      onPressed:
+          () => GuestPromoModal.showForRestrictedFeature(context, 'Premium'),
+      icon: Icon(Icons.star, color: Colors.black87),
+      label: Text(
+        '¡Regístrate Gratis!',
+        style: TextStyle(color: Colors.black87),
+      ),
+      backgroundColor: AppTheme.marineGold,
     );
   }
 }

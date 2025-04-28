@@ -34,6 +34,7 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -336,7 +337,23 @@ class _PaintListTabState extends State<PaintListTab> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/palettes'),
+                  onPressed: () {
+                    // Check if user is a guest
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    final isGuestUser =
+                        currentUser == null || currentUser.isAnonymous;
+
+                    if (isGuestUser) {
+                      // Show guest promo modal
+                      GuestPromoModal.showForRestrictedFeature(
+                        context,
+                        'Palettes',
+                      );
+                    } else {
+                      // Navigate to palettes screen
+                      Navigator.pushNamed(context, '/palettes');
+                    }
+                  },
                   child: const Text('See all'),
                 ),
               ],
@@ -357,13 +374,28 @@ class _PaintListTabState extends State<PaintListTab> {
                       final p = recent[i];
                       return PaletteCard(
                         palette: p,
-                        onTap:
-                            () => showPaletteModal(
+                        onTap: () {
+                          // Check if user is a guest
+                          final currentUser = FirebaseAuth.instance.currentUser;
+                          final isGuestUser =
+                              currentUser == null || currentUser.isAnonymous;
+
+                          if (isGuestUser) {
+                            // Show guest promo modal
+                            GuestPromoModal.showForRestrictedFeature(
+                              context,
+                              'Palettes',
+                            );
+                          } else {
+                            // Show palette modal
+                            showPaletteModal(
                               context,
                               p.name,
                               p.paintSelections ?? [],
                               imagePath: p.imagePath,
-                            ),
+                            );
+                          }
+                        },
                       );
                     },
                   ),
@@ -404,10 +436,14 @@ class _PaintListTabState extends State<PaintListTab> {
                       count: b['paintCount'] as int,
                       color: b['color'] as Color,
                       onTap: () {
+                        // First navigate to the library screen
                         Navigator.pushNamed(
                           context,
                           '/library',
-                          arguments: {'brandName': b['id']},
+                          arguments: {
+                            'brandName': b['id'],
+                            'showPalettesPromo': true,
+                          },
                         );
                       },
                     );
@@ -417,49 +453,7 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === Most Used Paints ===
-            Text(
-              'Your most used paints',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            if (_isLoadingMostUsed)
-              const Center(child: CircularProgressIndicator())
-            else if (_mostUsedError != null)
-              Center(child: Text('Error: $_mostUsedError'))
-            else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
-              const Center(child: Text('No paints found.'))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _mostUsedPaints!.length,
-                itemBuilder: (ctx, i) {
-                  final m = _mostUsedPaints![i];
-                  // Convertimos MostUsedPaint → Paint para usar PaintCard
-                  final paint = Paint.fromHex(
-                    id: m.paintId,
-                    name: m.paint.name,
-                    brand: m.brand.name,
-                    hex: m.paint.hex,
-                    set: m.paint.set,
-                    code: m.paint.code,
-                    category: m.paint.set,
-                    isMetallic: false,
-                    isTransparent: false,
-                  );
-                  return PaintCard(
-                    paint: paint,
-                    paletteCount: m.count,
-                    paletteInfo: m.paletteInfo,
-                    inInventory: m.inInventory,
-                    inWishlist: m.inWhitelist,
-                    inventoryId: m.inventoryId,
-                    wishlistId: m.wishlistId,
-                    onTap:
-                        (p, pInfo) => _showPaintDetailsModal(context, p, pInfo),
-                  );
-                },
-              ),
+            _buildMostUsedPaintsSection(context),
           ],
         ),
       ),
@@ -3288,8 +3282,22 @@ class _PaintListTabState extends State<PaintListTab> {
       _isLoadingMostUsed = true;
       _mostUsedError = null;
     });
+
+    // Check if user is a guest
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    if (isGuestUser) {
+      // For guest users, don't try to load data
+      setState(() {
+        _isLoadingMostUsed = false;
+        _mostUsedPaints = null; // Keep it null to show the guest UI
+      });
+      return;
+    }
+
     try {
-      final token = await FirebaseAuth.instance.currentUser!.getIdToken();
+      final token = await currentUser!.getIdToken();
       _mostUsedPaints = await _paletteService.getMostUsedPaints(
         token as String,
       );
@@ -3298,5 +3306,123 @@ class _PaintListTabState extends State<PaintListTab> {
     } finally {
       setState(() => _isLoadingMostUsed = false);
     }
+  }
+
+  // Build Most Used Paints section with guest user handling
+  Widget _buildMostUsedPaintsSection(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your most used paints',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+
+        if (isGuestUser)
+          // Guest user UI
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 48,
+                  color:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Track your most used paints',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create a free account to see which paints you use most across your palettes',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    // Navigate to registration screen
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/',
+                      (route) => false,
+                      arguments: {'showRegistration': true},
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.marineBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Text('Sign Up - It\'s Free!'),
+                ),
+              ],
+            ),
+          )
+        else if (_isLoadingMostUsed)
+          const Center(child: CircularProgressIndicator())
+        else if (_mostUsedError != null)
+          Center(child: Text('Error: $_mostUsedError'))
+        else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
+          const Center(child: Text('No paints found.'))
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _mostUsedPaints!.length,
+            itemBuilder: (ctx, i) {
+              final m = _mostUsedPaints![i];
+              // Convertimos MostUsedPaint → Paint para usar PaintCard
+              final paint = Paint.fromHex(
+                id: m.paintId,
+                name: m.paint.name,
+                brand: m.brand.name,
+                hex: m.paint.hex,
+                set: m.paint.set,
+                code: m.paint.code,
+                category: m.paint.set,
+                isMetallic: false,
+                isTransparent: false,
+              );
+              return PaintCard(
+                paint: paint,
+                paletteCount: m.count,
+                paletteInfo: m.paletteInfo,
+                inInventory: m.inInventory,
+                inWishlist: m.inWhitelist,
+                inventoryId: m.inventoryId,
+                wishlistId: m.wishlistId,
+                onTap: (p, pInfo) => _showPaintDetailsModal(context, p, pInfo),
+              );
+            },
+          ),
+      ],
+    );
   }
 }

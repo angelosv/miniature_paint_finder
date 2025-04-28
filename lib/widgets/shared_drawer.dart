@@ -10,6 +10,7 @@ import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:provider/provider.dart';
 
 /// A shared drawer widget to be used across all screens for consistent navigation
@@ -88,32 +89,27 @@ class _SharedDrawerState extends State<SharedDrawer>
 
   // Show dialog for authentication required
   void _showAuthRequiredDialog(String screen) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Sign in Required'),
-            content: const Text(
-              'You need to sign in to access this feature. Would you like to sign in now?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // Navigate to auth screen
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/', (route) => false);
-                },
-                child: const Text('Sign In'),
-              ),
-            ],
-          ),
-    );
+    // Get feature name based on screen identifier
+    String featureName;
+    switch (screen) {
+      case 'inventory':
+        featureName = 'Inventory';
+        break;
+      case 'wishlist':
+        featureName = 'Wishlist';
+        break;
+      case 'palettes':
+        featureName = 'Palettes';
+        break;
+      case 'profile_settings':
+        featureName = 'Profile';
+        break;
+      default:
+        featureName = 'Premium Features';
+    }
+
+    // Use the GuestPromoModal instead of the custom AlertDialog
+    GuestPromoModal.showForRestrictedFeature(context, featureName);
   }
 
   @override
@@ -202,12 +198,6 @@ class _SharedDrawerState extends State<SharedDrawer>
         'icon': Icons.person_outline,
         'text': isGuestUser ? 'Sign In' : 'Profile & Settings',
         'screen': isGuestUser ? 'auth' : 'profile_settings',
-        'restricted': false,
-      },
-      {
-        'icon': Icons.help_outline,
-        'text': 'Help & Feedback',
-        'screen': 'help',
         'restricted': false,
       },
     ];
@@ -675,7 +665,11 @@ class _SharedDrawerState extends State<SharedDrawer>
           break;
         case 'auth':
           // Navigate to auth screen
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/',
+            (route) => false,
+            arguments: {'showRegistration': true},
+          );
           break;
         case 'help':
           // TODO: Implement help screen
