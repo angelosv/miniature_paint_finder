@@ -8,8 +8,9 @@ import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+// import 'package:sign_in_with_apple/sign_in_with_apple.dart'; // Disabled in this branch
 import 'package:crypto/crypto.dart';
+import 'package:miniature_paint_finder/services/auth_stubs.dart'; // Using stub implementation
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -515,132 +516,12 @@ class AuthService implements IAuthService {
   /// Sign in with Apple
   @override
   Future<User> signInWithApple() async {
-    try {
-      print('Starting Apple Sign In process v2');
-
-      // Generate nonce for Apple sign-in
-      final rawNonce = _generateNonce();
-      final nonce = _sha256ofString(rawNonce);
-
-      print('Generated secure nonce: ${nonce.substring(0, 10)}...');
-
-      // Request credential from Apple
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-        nonce: nonce,
-      );
-
-      print('Received credential from Apple');
-      print(
-        'Authorization code available: ${appleCredential.authorizationCode != null}',
-      );
-      print(
-        'Identity token available: ${appleCredential.identityToken != null}',
-      );
-
-      if (appleCredential.identityToken == null) {
-        print('Error: Apple returned null identity token');
-        throw AuthException(
-          AuthErrorCode.unknown,
-          'Apple sign in failed: No identity token returned',
-        );
-      }
-
-      // Extract Apple provided details
-      final givenName = appleCredential.givenName;
-      final familyName = appleCredential.familyName;
-      final email = appleCredential.email;
-
-      print(
-        'Got data from Apple - Name: ${givenName ?? "null"} ${familyName ?? "null"}, Email: ${email ?? "null"}',
-      );
-
-      // Directly creating auth credential for Firebase
-      final credential = firebase.OAuthProvider("apple.com").credential(
-        idToken: appleCredential.identityToken!,
-        accessToken: appleCredential.authorizationCode,
-        rawNonce: rawNonce,
-      );
-
-      print('Created Firebase credential, attempting sign in');
-
-      // Sign in with Firebase
-      final userCredential = await firebase.FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      print('Firebase sign in successful: ${userCredential.user?.uid}');
-
-      // Get or update display name
-      String displayName = 'User';
-      // Use name from Apple credential if available
-      if (givenName != null || familyName != null) {
-        final parts =
-            [
-              givenName ?? '',
-              familyName ?? '',
-            ].where((name) => name.isNotEmpty).toList();
-
-        if (parts.isNotEmpty) {
-          displayName = parts.join(' ');
-
-          // Update Firebase user profile if needed
-          if (userCredential.user != null &&
-              (userCredential.user!.displayName == null ||
-                  userCredential.user!.displayName!.isEmpty)) {
-            await userCredential.user!.updateDisplayName(displayName);
-            print('Updated Firebase user display name to: $displayName');
-          }
-        }
-      }
-      // Use existing Firebase display name as fallback
-      else if (userCredential.user?.displayName != null &&
-          userCredential.user!.displayName!.isNotEmpty) {
-        displayName = userCredential.user!.displayName!;
-      }
-
-      // Create User model
-      _currentUser = User(
-        id: userCredential.user!.uid,
-        name: displayName,
-        email: userCredential.user!.email ?? email ?? '',
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        authProvider: 'apple',
-      );
-
-      _authStateController.add(_currentUser);
-
-      print('Apple sign in completed successfully');
-      return _currentUser!;
-    } catch (e) {
-      print('Apple Sign In Error: $e');
-      if (e is SignInWithAppleAuthorizationException) {
-        print(
-          'SignInWithAppleAuthorizationException: ${e.code} - ${e.message}',
-        );
-        if (e.code == AuthorizationErrorCode.canceled) {
-          throw AuthException(
-            AuthErrorCode.cancelled,
-            'Apple sign in was cancelled',
-          );
-        } else {
-          throw AuthException(
-            AuthErrorCode.unknown,
-            'Apple sign in error: ${e.code} - ${e.message}',
-          );
-        }
-      } else if (e is firebase.FirebaseAuthException) {
-        print('Firebase Auth Error: ${e.code} - ${e.message}');
-        throw AuthException(e.code, 'Firebase auth error: ${e.message}');
-      } else if (e is AuthException) {
-        rethrow;
-      } else {
-        throw AuthException(AuthErrorCode.unknown, 'Apple sign in failed: $e');
-      }
-    }
+    // Apple Sign In is completely disabled in this branch
+    print('Apple Sign In was attempted but is disabled in this branch');
+    throw AuthException(
+      AuthErrorCode.platformNotSupported,
+      'Sign in with Apple is disabled in this build',
+    );
   }
 
   /// Sign in with custom token
