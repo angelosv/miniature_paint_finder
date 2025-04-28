@@ -8,6 +8,9 @@ import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 /// A shared drawer widget to be used across all screens for consistent navigation
 class SharedDrawer extends StatefulWidget {
@@ -45,6 +48,19 @@ class _SharedDrawerState extends State<SharedDrawer>
 
   // Function to handle when a menu item is tapped
   void _onItemTap(String screen) {
+    // Check if feature requires authentication
+    final IAuthService authService = Provider.of<IAuthService>(
+      context,
+      listen: false,
+    );
+    final bool isFeatureRestricted = _isFeatureRestricted(screen);
+
+    // If user is guest and feature is restricted, show auth prompt
+    if (authService.isGuestUser && isFeatureRestricted) {
+      _showAuthRequiredDialog(screen);
+      return;
+    }
+
     setState(() {
       _tappedItem = screen;
     });
@@ -57,9 +73,57 @@ class _SharedDrawerState extends State<SharedDrawer>
     });
   }
 
+  // Helper method to determine if a feature is restricted for guests
+  bool _isFeatureRestricted(String screen) {
+    switch (screen) {
+      case 'library':
+      case 'paint_search':
+      case 'barcode_scanner':
+      case 'home':
+        return false; // These features are accessible to guests
+      default:
+        return true; // All other features require authentication
+    }
+  }
+
+  // Show dialog for authentication required
+  void _showAuthRequiredDialog(String screen) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Sign in Required'),
+            content: const Text(
+              'You need to sign in to access this feature. Would you like to sign in now?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate to auth screen
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/', (route) => false);
+                },
+                child: const Text('Sign In'),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final IAuthService authService = Provider.of<IAuthService>(
+      context,
+      listen: false,
+    );
+    final bool isGuestUser = authService.isGuestUser;
 
     // Define colors based on theme mode
     final Color backgroundColor =
@@ -84,34 +148,45 @@ class _SharedDrawerState extends State<SharedDrawer>
         'icon': Icons.color_lens_outlined,
         'text': 'Paint Search',
         'screen': 'paint_search',
+        'restricted': false,
       },
       {
         'icon': Icons.qr_code_scanner_outlined,
         'text': 'Barcode Scanner',
         'screen': 'barcode_scanner',
+        'restricted': false,
       },
 
       // Secciones principales (separadas por un divisor visual)
-      {'icon': Icons.home_outlined, 'text': 'Home', 'screen': 'home'},
+      {
+        'icon': Icons.home_outlined,
+        'text': 'Home',
+        'screen': 'home',
+        'restricted': false,
+      },
       {
         'icon': Icons.inventory_outlined,
         'text': 'My Inventory',
         'screen': 'inventory',
+        'restricted': true,
       },
       {
         'icon': Icons.favorite_outline,
         'text': 'Wishlist',
         'screen': 'wishlist',
+        'restricted': true,
       },
       {
         'icon': Icons.grid_view_outlined,
         'text': 'Library',
         'screen': 'library',
+        'restricted': false,
       },
       {
         'icon': Icons.palette_outlined,
         'text': 'My Palettes',
         'screen': 'palettes',
+        'restricted': true,
       },
     ];
 
@@ -125,10 +200,16 @@ class _SharedDrawerState extends State<SharedDrawer>
       },*/
       {
         'icon': Icons.person_outline,
-        'text': 'Profile & Settings',
-        'screen': 'profile_settings',
+        'text': isGuestUser ? 'Sign In' : 'Profile & Settings',
+        'screen': isGuestUser ? 'auth' : 'profile_settings',
+        'restricted': false,
       },
-      {'icon': Icons.help_outline, 'text': 'Help & Feedback', 'screen': 'help'},
+      {
+        'icon': Icons.help_outline,
+        'text': 'Help & Feedback',
+        'screen': 'help',
+        'restricted': false,
+      },
     ];
 
     return Theme(
@@ -226,6 +307,46 @@ class _SharedDrawerState extends State<SharedDrawer>
                           ],
                         ),
                       ),
+
+                      // Show guest mode indicator if applicable
+                      if (isGuestUser) ...[
+                        SizedBox(height: 16.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 8.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.marineOrange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.drawerBorderRadius,
+                            ),
+                            border: Border.all(
+                              color: AppTheme.marineOrange.withOpacity(0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.person_outline,
+                                size: 16,
+                                color: AppTheme.marineOrange,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Guest Mode',
+                                style: TextStyle(
+                                  color: AppTheme.marineOrange,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -245,6 +366,8 @@ class _SharedDrawerState extends State<SharedDrawer>
                       final String screen = item['screen'];
                       final bool isActive = widget.currentScreen == screen;
                       final bool isTapped = _tappedItem == screen;
+                      final bool isItemRestricted =
+                          item['restricted'] && isGuestUser;
 
                       // Add a divider after search tools (after index 1)
                       if (index == 2) {
@@ -271,6 +394,7 @@ class _SharedDrawerState extends State<SharedDrawer>
                               isTapped,
                               accentColor,
                               textColor,
+                              isRestricted: isItemRestricted,
                               iconColor:
                                   isActive
                                       ? accentColor
@@ -300,6 +424,7 @@ class _SharedDrawerState extends State<SharedDrawer>
                         isTapped,
                         accentColor,
                         itemTextColor,
+                        isRestricted: isItemRestricted,
                         iconColor: iconColor,
                       );
                     },
@@ -331,6 +456,8 @@ class _SharedDrawerState extends State<SharedDrawer>
                         final item = bottomDrawerItems[index];
                         final String screen = item['screen'];
                         final bool isTapped = _tappedItem == screen;
+                        final bool isItemRestricted =
+                            item['restricted'] && isGuestUser;
 
                         return AnimatedBuilder(
                           animation: _animationController,
@@ -401,6 +528,14 @@ class _SharedDrawerState extends State<SharedDrawer>
                                                   .drawerItemTextStyle
                                                   .copyWith(color: textColor),
                                             ),
+                                            if (isItemRestricted) ...[
+                                              const Spacer(),
+                                              Icon(
+                                                Icons.lock_outline,
+                                                size: 16,
+                                                color: AppTheme.marineOrange,
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),
@@ -538,6 +673,10 @@ class _SharedDrawerState extends State<SharedDrawer>
             (Route<dynamic> route) => false,
           );
           break;
+        case 'auth':
+          // Navigate to auth screen
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          break;
         case 'help':
           // TODO: Implement help screen
           ScaffoldMessenger.of(context).showSnackBar(
@@ -580,6 +719,7 @@ class _SharedDrawerState extends State<SharedDrawer>
     Color accentColor,
     Color textColor, {
     required Color iconColor,
+    bool isRestricted = false,
   }) {
     return AnimatedBuilder(
       animation: _animationController,
@@ -642,6 +782,14 @@ class _SharedDrawerState extends State<SharedDrawer>
                             color: textColor,
                           ),
                         ),
+                        if (isRestricted) ...[
+                          const Spacer(),
+                          Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: AppTheme.marineOrange,
+                          ),
+                        ],
                       ],
                     ),
                   ),

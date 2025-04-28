@@ -175,6 +175,56 @@ class PaletteService {
     debugPrint('✅ Pinturas agregadas exitosamente');
   }
 
+  /// Adds a paint to a palette by its ID
+  Future<Map<String, dynamic>> addPaintToPaletteById(
+    String paletteName,
+    String userId,
+    String paintId,
+    String brandId,
+  ) async {
+    debugPrint('🎨 Adding paint to palette: $paletteName');
+    debugPrint('Paint ID: $paintId, Brand ID: $brandId');
+
+    try {
+      // First, check if the palette exists or create it
+      final url = Uri.parse('$baseUrl/palettes/add-paint');
+
+      final paintData = {
+        'palette_name': paletteName,
+        'user_id': userId,
+        'paint_id': paintId,
+        'brand_id': brandId,
+      };
+
+      debugPrint('📤 Sending data: ${jsonEncode(paintData)}');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(paintData),
+      );
+
+      debugPrint('📤 Response: ${response.body}');
+      final responseData = jsonDecode(response.body);
+
+      if (responseData['executed'] == false) {
+        debugPrint(
+          '❌ Error adding paint to palette: ${responseData['message']}',
+        );
+        return {
+          'executed': false,
+          'message': responseData['message'] ?? 'Error adding paint to palette',
+        };
+      }
+
+      debugPrint('✅ Paint added successfully to palette');
+      return {'executed': true, 'data': responseData['data'] ?? {}};
+    } catch (e) {
+      debugPrint('❌ Exception adding paint to palette: $e');
+      return {'executed': false, 'message': 'Exception: $e'};
+    }
+  }
+
   /// Obtiene la lista de pinturas más usadas en todas las paletas
   Future<List<MostUsedPaint>> getMostUsedPaints(String token) async {
     debugPrint('📊 Fetching most-used paints');

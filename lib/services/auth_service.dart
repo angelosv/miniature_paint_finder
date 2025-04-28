@@ -35,10 +35,11 @@ class AuthErrorCode {
   static const String cancelled = 'cancelled';
   static const String notImplemented = 'not-implemented';
   static const String platformNotSupported = 'platform-not-supported';
+  static const String authRequired = 'auth-required';
 }
 
 /// Authentication provider types
-enum AuthProvider { email, google, apple, phone, custom }
+enum AuthProvider { email, google, apple, phone, custom, guest }
 
 /// Abstract interface for authentication service
 abstract class IAuthService {
@@ -47,6 +48,9 @@ abstract class IAuthService {
 
   /// Current authenticated user
   User? get currentUser;
+
+  /// Check if current user is guest
+  bool get isGuestUser;
 
   /// Initialize the service
   Future<void> init();
@@ -78,6 +82,9 @@ abstract class IAuthService {
 
   /// Sign in with phone
   Future<void> signInWithPhone();
+
+  /// Continue as guest user
+  Future<User> continueAsGuest();
 
   /// Verify phone number
   Future<void> verifyPhoneNumber({
@@ -122,6 +129,9 @@ class AuthService implements IAuthService {
 
   @override
   User? get currentUser => _currentUser;
+
+  @override
+  bool get isGuestUser => _currentUser?.authProvider == 'guest';
 
   /// Service initialization
   @override
@@ -336,6 +346,13 @@ class AuthService implements IAuthService {
   @override
   Future<void> signOut() async {
     try {
+      // If guest user, just clear local state
+      if (isGuestUser) {
+        _currentUser = null;
+        _authStateController.add(null);
+        return;
+      }
+
       // Sign out from Firebase
       await firebase.FirebaseAuth.instance.signOut();
 
@@ -656,6 +673,36 @@ class AuthService implements IAuthService {
     }
   }
 
+  /// Continue as guest user
+  @override
+  Future<User> continueAsGuest() async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final random = Random().nextInt(10000);
+
+      // Create a guest user without actual Firebase authentication
+      _currentUser = User(
+        id: 'guest-$timestamp-$random',
+        name: 'Guest',
+        email: '',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'guest',
+      );
+
+      // Notify auth state change
+      _authStateController.add(_currentUser);
+
+      return _currentUser!;
+    } catch (e) {
+      print('Error creating guest user: $e');
+      throw AuthException(
+        AuthErrorCode.unknown,
+        'Failed to continue as guest: $e',
+      );
+    }
+  }
+
   /// Sign in with phone
   @override
   Future<void> signInWithPhone() async {
@@ -704,6 +751,8 @@ class AuthService implements IAuthService {
         return false; // No disponible en ninguna plataforma
       case AuthProvider.custom:
         return true;
+      case AuthProvider.guest:
+        return true; // Guest mode is available on all platforms
     }
   }
 

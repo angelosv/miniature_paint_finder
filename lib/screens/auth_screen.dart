@@ -710,6 +710,27 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                // Guest mode button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: _continueAsGuest,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.marineGold,
+                      padding: EdgeInsets.symmetric(
+                        vertical: buttonVerticalPadding * 0.6,
+                      ),
+                    ),
+                    child: Text(
+                      'Continue as Guest',
+                      style: AppTheme.buttonStyle.copyWith(
+                        color: AppTheme.marineGold,
+                        fontSize: buttonFontSize - 1,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -1717,5 +1738,38 @@ class _AuthScreenState extends State<AuthScreen>
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
+  }
+
+  // Handle guest login
+  void _continueAsGuest() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+      await authService.continueAsGuest();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error continuing as guest: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
