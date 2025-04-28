@@ -407,7 +407,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
             await _loadInventory();
           },
-          getSafeBrandId: _getSafeBrandId,
           getSafeBrandName: _getSafeBrandName,
           buildBrandLogo: _buildBrandLogo,
           formatAddedDate: _formatAddedDate,
@@ -814,7 +813,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     // Determinar el brandId correcto de forma segura
-    final String brandId = _getSafeBrandId(paint);
+    print('⚠️ _buildInventoryCard paint: ${paint.toJson()}');
+    final String brandId = paint.brandId ?? '';
 
     // Obtener el nombre oficial de forma segura
     final String officialBrandName = _getSafeBrandName(brandId, paint.brand);
@@ -1361,17 +1361,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
-  /// Determina el brand_id correcto de forma segura
-  String _getSafeBrandId(Paint paint) {
-    try {
-      return _brandManager.determineBrandIdForPaint(paint);
-    } catch (e) {
-      print('⚠️ Error determinando brand_id: $e');
-      // Retornar el nombre de la marca como fallback
-      return paint.brand;
-    }
-  }
-
   /// Obtiene el nombre oficial de una marca de forma segura
   String _getSafeBrandName(String brandId, String fallbackName) {
     try {
@@ -1542,7 +1531,6 @@ class InventoryItemModal extends StatefulWidget {
   final PaintInventoryItem item;
   final Function(int, String) onUpdate;
   final VoidCallback onAddToWishlist;
-  final String Function(Paint) getSafeBrandId;
   final String Function(String, String) getSafeBrandName;
   final Widget Function(String, String, bool) buildBrandLogo;
   final String Function(PaintInventoryItem) formatAddedDate;
@@ -1553,7 +1541,6 @@ class InventoryItemModal extends StatefulWidget {
     required this.item,
     required this.onUpdate,
     required this.onAddToWishlist,
-    required this.getSafeBrandId,
     required this.getSafeBrandName,
     required this.buildBrandLogo,
     required this.formatAddedDate,
@@ -1596,7 +1583,7 @@ class _InventoryItemModalState extends State<InventoryItemModal> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Determinar el brandId correcto de forma segura
-    final String brandId = widget.getSafeBrandId(paint);
+    final String brandId = paint.brandId ?? '';
 
     // Obtener el nombre oficial de forma segura
     final String officialBrandName = widget.getSafeBrandName(

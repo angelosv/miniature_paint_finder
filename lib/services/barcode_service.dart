@@ -11,7 +11,7 @@ class BarcodeService {
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
   /// Devuelve null si no se encuentra una pintura coincidente
-  Future<Paint?> findPaintByBarcode(String barcode) async {
+  Future<List<Paint>?> findPaintByBarcode(String barcode) async {
     if (barcode.isEmpty) {
       print('❌ Barcode is empty');
       return null;
@@ -50,37 +50,41 @@ class BarcodeService {
         final Map<String, dynamic> data = json.decode(response.body);
         
         if (data['executed'] == true && data['data'] != null && data['data'].isNotEmpty) {
-          final paintData = data['data'][0];
-          print('✅ Found paint: ${paintData['name']} (${paintData['brand']})');
+          final List<Paint> paints = [];
           
-          // Asegurarse de que las paletas vengan exactamente como la API las envía
-          final List<String> palettes = (paintData['palettes'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ?? [];
+          for (final paintData in data['data']) {
+            print('✅ Found paint: ${paintData['name']} (${paintData['brand']})');
+            
+            // Asegurarse de que las paletas vengan exactamente como la API las envía
+            final List<String> palettes = (paintData['palettes'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ?? [];
+            
+            print('📦 Palettes from API: $palettes');
+            
+            // Crear el objeto Paint con las paletas exactamente como vienen de la API
+            final paint = Paint(
+              id: paintData['id'],
+              brand: paintData['brand'],
+              brandId: paintData['brandId'],
+              name: paintData['name'],
+              code: paintData['code'],
+              set: paintData['set'],
+              r: paintData['r'],
+              g: paintData['g'],
+              b: paintData['b'],
+              hex: paintData['hex'],
+              category: paintData['category'] ?? '',
+              isMetallic: paintData['isMetallic'] ?? false,
+              isTransparent: paintData['isTransparent'] ?? false,
+              palettes: palettes, // Usar las paletas exactamente como vienen de la API
+            );
+            
+            print('🎨 Created Paint object with palettes: ${paint.palettes}');
+            paints.add(paint);
+          }
           
-          print('📦 Palettes from API: $palettes');
-          
-          // Crear el objeto Paint con las paletas exactamente como vienen de la API
-          final paint = Paint(
-            id: paintData['id'],
-            brand: paintData['brand'],
-            brandId: paintData['brandId'],
-            name: paintData['name'],
-            code: paintData['code'],
-            set: paintData['set'],
-            r: paintData['r'],
-            g: paintData['g'],
-            b: paintData['b'],
-            hex: paintData['hex'],
-            category: paintData['category'] ?? '',
-            isMetallic: paintData['isMetallic'] ?? false,
-            isTransparent: paintData['isTransparent'] ?? false,
-            palettes: palettes, // Usar las paletas exactamente como vienen de la API
-          );
-          
-          print('🎨 Created Paint object with palettes: ${paint.palettes}');
-          
-          return paint;
+          return paints;
         } else {
           print('⚠️ No paint found in API response');
           return null;

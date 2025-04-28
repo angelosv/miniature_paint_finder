@@ -659,9 +659,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _addToInventory(String paintId) async {
     final controller = context.read<PaintLibraryController>();
+    print('_addToInventory paintId: $paintId');
     final paint = controller.paginatedPaints.firstWhere((p) => p.id == paintId);
     final success = await _inventoryService.addInventoryRecord(
-      brandId: paint.brand,
+      brandId: paint.brandId ?? '',
       paintId: paint.id,
       quantity: 1,
     );
