@@ -68,6 +68,7 @@ class _PaintListTabState extends State<PaintListTab> {
   List<MostUsedPaint>? _mostUsedPaints;
   bool _isLoadingMostUsed = false;
   String? _mostUsedError;
+  bool _isProcessingSelection = false; // Nueva variable de estado
 
   final Map<int, List<dynamic>> _matchingPaints = {};
   final Map<int, int> _currentPages = {};
@@ -1069,25 +1070,41 @@ class _PaintListTabState extends State<PaintListTab> {
 
                                 // Diseño común de las tarjetas, ahora toda la tarjeta es seleccionable
                                 return GestureDetector(
-                                  onTap: () async {
-                                    final result = await _selectPaint(
-                                      context,
-                                      colorData,
-                                    );
-                                    if (result != null && context.mounted) {
-                                      // Si hay un resultado, actualizar el estado
-                                      setModalState(() {
-                                        modalColorList[index] = result;
-                                      });
-
-                                      // También actualizar el estado general
+                                  onTap: _isProcessingSelection 
+                                    ? null 
+                                    : () async {
+                                      if (_isProcessingSelection) return;
+                                      
                                       setState(() {
-                                        _pickedColors = List.from(
-                                          modalColorList,
-                                        );
+                                        _isProcessingSelection = true;
                                       });
-                                    }
-                                  },
+                                      
+                                      try {
+                                        final result = await _selectPaint(
+                                          context,
+                                          colorData,
+                                        );
+                                        if (result != null && context.mounted) {
+                                          // Si hay un resultado, actualizar el estado
+                                          setModalState(() {
+                                            modalColorList[index] = result;
+                                          });
+
+                                          // También actualizar el estado general
+                                          setState(() {
+                                            _pickedColors = List.from(
+                                              modalColorList,
+                                            );
+                                          });
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isProcessingSelection = false;
+                                          });
+                                        }
+                                      }
+                                    },
                                   child: Card(
                                     margin: const EdgeInsets.only(bottom: 16),
                                     elevation: 0,
