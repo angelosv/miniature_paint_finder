@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
   static const String baseUrl = 'https://paints-api.reachu.io/api';
@@ -11,7 +13,7 @@ class BarcodeService {
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
   /// Devuelve null si no se encuentra una pintura coincidente
-  Future<List<Paint>?> findPaintByBarcode(String barcode) async {
+  Future<List<Paint>?> findPaintByBarcode(String barcode, bool isGuestUser) async {
     if (barcode.isEmpty) {
       print('❌ Barcode is empty');
       return null;
@@ -22,15 +24,18 @@ class BarcodeService {
       final normalized = _normalizeBarcode(barcode);
       print('🔍 Searching for paint with barcode: $normalized');
 
+      String token = '';
+      if (!isGuestUser) {
       // Get Firebase token
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        print('❌ No user logged in');
-        return null;
-      }
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          print('❌ No user logged in');
+          return null;
+        }
 
-      final token = await user.getIdToken();
-      print('🔑 Got Firebase token');
+        token = await user.getIdToken() ?? '';
+        print('🔑 Got Firebase token');
+      }
 
       // Make API call to find paint by barcode
       final url = Uri.parse('$baseUrl/paint/barcode/$normalized');

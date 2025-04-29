@@ -13,6 +13,10 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
@@ -168,6 +172,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     print('Barcode detected: $code');
 
+    final authService = Provider.of<IAuthService>(context, listen: false);
+    final isGuestUser = authService.isGuestUser;
+
     // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
@@ -200,7 +207,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // Look up the paint by barcode
     try {
       print('🔍 Searching for paint with barcode: $code');
-      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code);
+      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code, isGuestUser);
 
       if (mounted) {
         setState(() {
@@ -243,6 +250,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _showPaintSelectionDialog(List<Paint> paints) {
+    final authService = Provider.of<IAuthService>(context, listen: false);
+    final isGuestUser = authService.isGuestUser;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -266,10 +275,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   title: Text(paint.name),
                   subtitle: Text('${paint.brand} - ${paint.code}'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _foundPaint = paint;
-                    _showScanResultSheet(paint);
+                  onTap: () async {
+                    if (isGuestUser) {
+                      GuestPromoModal.showForRestrictedFeature(
+                        context,
+                        'Paint Actions',
+                      );
+                    } else {
+                      Navigator.pop(context);
+                      _foundPaint = paint;
+                      _showScanResultSheet(paint);
+                    }
                   },
                 );
               },

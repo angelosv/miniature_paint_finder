@@ -8,7 +8,6 @@ class PaintMatchService {
   static const String baseUrl = 'https://paints-api.reachu.io/api';
 
   Future<Map<String, dynamic>> fetchMatchingPaints({
-    required String token,
     required String hexColor,
     required List<String> brandIds,
     int limit = 10,
@@ -23,13 +22,11 @@ class PaintMatchService {
     );
 
     print('DEBUG: PaintMatchService - URL de la petición: ${url.toString()}');
-    print('DEBUG: PaintMatchService - Token: ${token.substring(0, 10)}...');
 
     try {
       final response = await http.get(
         url,
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
