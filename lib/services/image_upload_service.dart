@@ -2,9 +2,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class ImageUploadService {
-  static const String _baseUrl = 'https://paints-api.reachu.io/api';
+  static final String _baseUrl = '${Env.apiBaseUrl}/api';
 
   Future<String> uploadImage(File imageFile) async {
     try {
@@ -15,7 +16,6 @@ class ImageUploadService {
         token = await user.getIdToken() ?? '';
       }
 
-      
       // Create multipart request
       var request = http.MultipartRequest(
         'POST',
@@ -24,10 +24,7 @@ class ImageUploadService {
 
       // Add image file
       request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          imageFile.path,
-        ),
+        await http.MultipartFile.fromPath('file', imageFile.path),
       );
 
       // Add authentication token
@@ -47,4 +44,4 @@ class ImageUploadService {
       throw Exception('Error uploading image: $e');
     }
   }
-} 
+}

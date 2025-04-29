@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 /// A service for managing paint inventory data.
 ///
@@ -135,9 +136,7 @@ class InventoryService {
         return false;
       }
 
-      final url = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory/$inventoryId',
-      );
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory/$inventoryId');
       print('🔄 URL de solicitud: $url');
 
       final requestBody = {'quantity': newStock};
@@ -224,9 +223,7 @@ class InventoryService {
       }
 
       // 2. Construir URL y body
-      final url = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory/$inventoryId',
-      );
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory/$inventoryId');
       final body = {'quantity': quantity, if (notes != null) 'notes': notes};
       print('🔄 PUT $url');
       print('🔄 Body: $body');
@@ -293,9 +290,7 @@ class InventoryService {
         return false;
       }
 
-      final url = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory/$inventoryId',
-      );
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory/$inventoryId');
       print('🔄 URL de solicitud: $url');
 
       final requestBody = {'notes': notes};
@@ -490,7 +485,7 @@ class InventoryService {
         return false;
       }
 
-      final url = Uri.parse('https://paints-api.reachu.io/api/inventory');
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory');
       print('🔄 URL de solicitud: $url');
 
       final requestBody = {
@@ -585,7 +580,7 @@ class InventoryService {
       if (user == null) return null;
       final token = await user.getIdToken();
 
-      final url = Uri.parse('https://paints-api.reachu.io/api/inventory');
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory');
       final response = await http.post(
         url,
         headers: {
@@ -659,7 +654,7 @@ class InventoryService {
       }
 
       final uri = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory',
+        '${Env.apiBaseUrl}/api/inventory',
       ).replace(queryParameters: queryParams);
       print('🔍 URL de solicitud: $uri');
 
@@ -790,9 +785,7 @@ class InventoryService {
         return false;
       }
 
-      final url = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory/$inventoryId',
-      );
+      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory/$inventoryId');
       print('🗑️ URL de solicitud: $url');
       print('🗑️ Método: DELETE');
 
@@ -870,7 +863,7 @@ class InventoryService {
 
       // Preparar la solicitud (con menos filtros para obtener más resultados)
       final uri = Uri.parse(
-        'https://paints-api.reachu.io/api/inventory',
+        '${Env.apiBaseUrl}/api/inventory',
       ).replace(queryParameters: {'limit': '10', 'page': '1'});
 
       print('🔍 URL de solicitud de prueba: $uri');

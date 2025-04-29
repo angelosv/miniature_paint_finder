@@ -3,9 +3,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaintMatchService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}/api';
 
   Future<Map<String, dynamic>> fetchMatchingPaints({
     required String hexColor,
@@ -26,9 +27,7 @@ class PaintMatchService {
     try {
       final response = await http.get(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       print(

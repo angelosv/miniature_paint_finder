@@ -3,9 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class ColorSearchService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}/api';
   final PaletteService _paletteService = PaletteService();
 
   Future<void> saveColorSearch({
@@ -30,24 +31,32 @@ class ColorSearchService {
 
       // Paso 2: Preparar y crear los picks de la imagen
       debugPrint('📤 Paso 2: Preparando datos de picks...');
-      final colorData = paints.asMap().entries.map((entry) {
-        final index = entry.key;
-        final paint = entry.value;
-        final color = Color(int.parse(paint['hex'].substring(1), radix: 16) + 0xFF000000);
-        return {
-          'index': index,
-          'hex_color': paint['hex'],
-          'r': color.red,
-          'g': color.green,
-          'b': color.blue,
-          'x_coord': '1.2', // Coordenadas de ejemplo, deberían venir de la selección del usuario
-          'y_coord': '1.1',
-        };
-      }).toList();
-      
+      final colorData =
+          paints.asMap().entries.map((entry) {
+            final index = entry.key;
+            final paint = entry.value;
+            final color = Color(
+              int.parse(paint['hex'].substring(1), radix: 16) + 0xFF000000,
+            );
+            return {
+              'index': index,
+              'hex_color': paint['hex'],
+              'r': color.red,
+              'g': color.green,
+              'b': color.blue,
+              'x_coord':
+                  '1.2', // Coordenadas de ejemplo, deberían venir de la selección del usuario
+              'y_coord': '1.1',
+            };
+          }).toList();
+
       debugPrint('🎨 Datos de colores preparados: ${jsonEncode(colorData)}');
       debugPrint('📤 Creando picks...');
-      final picks = await _paletteService.getImagePicks(imageId, token, colorData);
+      final picks = await _paletteService.getImagePicks(
+        imageId,
+        token,
+        colorData,
+      );
       debugPrint('✅ Picks creados: ${picks.length}');
       debugPrint('📦 Datos de picks: ${jsonEncode(picks)}');
 
@@ -57,7 +66,9 @@ class ColorSearchService {
       }
 
       if (picks.length != paints.length) {
-        debugPrint('⚠️ Advertencia: Número de picks (${picks.length}) no coincide con número de pinturas (${paints.length})');
+        debugPrint(
+          '⚠️ Advertencia: Número de picks (${picks.length}) no coincide con número de pinturas (${paints.length})',
+        );
         debugPrint('   Picks: ${jsonEncode(picks)}');
         debugPrint('   Pinturas: ${jsonEncode(paints)}');
       }
@@ -72,12 +83,12 @@ class ColorSearchService {
       // Paso 4: Agregar las pinturas a la paleta
       debugPrint('📤 Paso 4: Agregando pinturas a la paleta...');
       final paintsToSend = <Map<String, dynamic>>[];
-      
+
       for (var i = 0; i < paints.length; i++) {
         final paint = paints[i];
         debugPrint('🎨 Procesando pintura $i:');
         debugPrint('   Pintura: ${jsonEncode(paint)}');
-        
+
         if (i < picks.length) {
           final pick = picks[i];
           debugPrint('   Pick correspondiente: ${jsonEncode(pick)}');

@@ -1,7 +1,9 @@
+import 'package:miniature_paint_finder/utils/env.dart';
+
 /// Constantes con los endpoints de la API para la aplicación Miniature Paint Finder
 class ApiEndpoints {
   /// Base URL para todas las llamadas API
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}/api';
 
   /// Endpoints relacionados con pinturas
   static String get paints => '/paints';
