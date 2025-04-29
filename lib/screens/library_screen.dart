@@ -12,6 +12,10 @@ import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/services/guest_service.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -19,7 +23,6 @@ class LibraryScreen extends StatefulWidget {
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
-
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -33,18 +36,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
-        if(args.containsKey('paletteInfo')) {
+        if (args.containsKey('paletteInfo')) {
           final _paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
           _paletteName = _paletteInfo['paletteName'];
           print('initState Palette name: $_paletteName');
         }
         if (args.containsKey('brandName')) {
           final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(brandName, false);
+          context.read<PaintLibraryController>().filterByBrand(
+            brandName,
+            false,
+          );
         } else {
-            context.read<PaintLibraryController>().loadPaints();
+          context.read<PaintLibraryController>().loadPaints();
         }
       } else {
         context.read<PaintLibraryController>().loadPaints();
@@ -59,16 +66,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_argsProcessed) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null) {
         if (args.containsKey('brandName')) {
           final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(brandName, false);
+          context.read<PaintLibraryController>().filterByBrand(
+            brandName,
+            false,
+          );
         } else if (args.containsKey('paletteInfo')) {
           final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
           if (paletteInfo['isCreatingPalette'] == true) {
             // Cargar todas las pinturas cuando estamos creando una paleta
             context.read<PaintLibraryController>().loadPaints();
+          }
+        }
+
+        // Check if we should show the palettes promo modal
+        if (args.containsKey('showPalettesPromo') &&
+            args['showPalettesPromo'] == true) {
+          // Show the promo modal after a short delay to allow the screen to render
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final isGuestUser = currentUser == null || currentUser.isAnonymous;
+          if (isGuestUser) {
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
+              }
+            });
           }
         }
       }
@@ -87,13 +113,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final controller = context.watch<PaintLibraryController>();
+    final authService = Provider.of<IAuthService>(context, listen: false);
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    // Apply guest mode wrapper to protect restricted features
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Paint Library',
       selectedIndex: -1,
-      body: _buildBody(context, isDarkMode, controller),
+      body: GuestService.wrapScreenForGuest(
+        context: context,
+        authService: authService,
+        featureKey: 'library', // This is an accessible feature
+        child: _buildBody(context, isDarkMode, controller),
+      ),
       drawer: const SharedDrawer(currentScreen: 'library'),
+      // Mostrar botón flotante promocional para invitados
+      floatingActionButton: isGuestUser ? _buildPromoButton() : null,
     );
   }
 
@@ -255,6 +293,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildPaintGrid(bool isDarkMode, PaintLibraryController controller) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
     return controller.paginatedPaints.isEmpty
         ? const Center(child: Text('No paints found matching your filters'))
         : Padding(
@@ -298,6 +339,88 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ],
           ),
         );
+  }
+
+  // Add to inventory with guest check
+  Future<void> _addToInventory(Paint paint) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    if (isGuestUser) {
+      GuestPromoModal.showForRestrictedFeature(context, 'Inventory');
+      return;
+    }
+
+    try {
+      await _inventoryService.addPaintToInventory(paint);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added ${paint.name} to your inventory'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding paint to inventory: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Handle adding to palette with guest check
+  Future<void> _handleAddToPalette(
+    String paletteName,
+    String paintId,
+    String brandId,
+  ) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    if (isGuestUser) {
+      GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
+      return;
+    }
+
+    // Process adding to palette
+    try {
+      print("paletteName: $paletteName, paintId: $paintId, brandId: $brandId");
+      final paletteService = PaletteService();
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final result = await paletteService.addPaintToPaletteById(
+          paletteName,
+          userId,
+          paintId,
+          brandId,
+        );
+
+        if (result['executed']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paint added to palette $paletteName'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${result['message']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding paint to palette: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildActiveFiltersBar(
@@ -500,150 +623,206 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Brand',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
                         color:
-                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                            isDarkMode
+                                ? Colors.white.withOpacity(0.9)
+                                : Colors.black.withOpacity(0.8),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: controller.selectedBrand,
-                      items:
-                          controller.availableBrands.map((brand) {
-                        return DropdownMenuItem<String>(
-                          value: brand,
-                          child: Text(brand),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {   
-                          setModalState(() {
-                            controller.filterByBrand(value, false);
-                          });
-                        }
-                      },
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-                      ),
-                      underline: Container(),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Category',
-                    style: TextStyle(
-                      fontSize: 16,
+                    'By Brand',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color:
-                            isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: controller.selectedCategory,
-                      items:
-                          controller.availableCategories.map((category) {
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setModalState(() {
-                            controller.filterByCategory(value, false);
-                          });
-                        }
-                      },
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
-                      ),
-                      underline: Container(),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: const Text('All'),
+                          selected: controller.selectedBrand == 'All',
+                          onSelected: (selected) {
+                            if (selected) {
+                              controller.filterByBrand('All', false);
+                              setModalState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ...controller.availableBrands.map((brand) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(brand),
+                              selected: controller.selectedBrand == brand,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  controller.filterByBrand(brand, false);
+                                  setModalState(() {});
+                                }
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
+                  Text(
+                    'By Category',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: const Text('All'),
+                          selected: controller.selectedCategory == 'All',
+                          onSelected: (selected) {
+                            if (selected) {
+                              controller.filterByCategory('All', false);
+                              setModalState(() {});
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ...controller.availableCategories.map((category) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(category),
+                              selected: controller.selectedCategory == category,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  controller.filterByCategory(category, false);
+                                  setModalState(() {});
+                                }
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'By Color',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Color picker grid
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      // No color option
+                      GestureDetector(
+                        onTap: () {
+                          controller.filterByColor(null);
+                          setModalState(() {});
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey, width: 1),
+                            color:
+                                controller.selectedColor == null
+                                    ? Colors.grey.withOpacity(0.2)
+                                    : null,
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.not_interested, size: 20),
+                          ),
+                        ),
+                      ),
+                      // Fixed common paint colors
+                      ...[
+                        Colors.red,
+                        Colors.blue,
+                        Colors.green,
+                        Colors.yellow,
+                        Colors.purple,
+                        Colors.orange,
+                        Colors.brown,
+                        Colors.grey,
+                        Colors.black,
+                        Colors.white,
+                      ].map((color) {
+                        final isSelected = controller.selectedColor == color;
+                        return GestureDetector(
+                          onTap: () {
+                            controller.filterByColor(color);
+                            setModalState(() {});
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: color,
+                              border: Border.all(
+                                color:
+                                    isSelected
+                                        ? isDarkMode
+                                            ? Colors.white
+                                            : Colors.black
+                                        : Colors.grey.shade300,
+                                width: isSelected ? 2 : 1,
+                              ),
+                              boxShadow:
+                                  isSelected
+                                      ? [
+                                        BoxShadow(
+                                          color: color.withOpacity(0.4),
+                                          blurRadius: 8,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                      : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
+                            controller.resetFilters();
                             Navigator.pop(context);
                           },
                           style: OutlinedButton.styleFrom(
-                            foregroundColor:
-                                isDarkMode
-                                    ? Colors.grey[300]
-                                    : Colors.grey[700],
-                            side: BorderSide(
-                              color:
-                                  isDarkMode
-                                      ? Colors.grey[600]!
-                                      : Colors.grey[300]!,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('CANCEL'),
+                          child: const Text('Reset Filters'),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(context);
                             controller.applyFilters();
+                            Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isDarkMode
-                                    ? AppTheme.marineOrange
-                                    : AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('APPLY FILTERS'),
+                          child: const Text('Apply Filters'),
                         ),
                       ),
                     ],
@@ -657,102 +836,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  void _addToInventory(String paintId) async {
-    final controller = context.read<PaintLibraryController>();
-    print('_addToInventory paintId: $paintId');
-    final paint = controller.paginatedPaints.firstWhere((p) => p.id == paintId);
-    final success = await _inventoryService.addInventoryRecord(
-      brandId: paint.brandId ?? '',
-      paintId: paint.id,
-      quantity: 1,
+  // Botón flotante para mostrar el modal promocional
+  Widget _buildPromoButton() {
+    return FloatingActionButton.extended(
+      onPressed:
+          () => GuestPromoModal.showForRestrictedFeature(context, 'Premium'),
+      icon: Icon(Icons.star, color: Colors.black87),
+      label: Text(
+        '¡Regístrate Gratis!',
+        style: TextStyle(color: Colors.black87),
+      ),
+      backgroundColor: AppTheme.marineGold,
     );
-
-    if (success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added ${paint.name} to inventory'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'VIEW',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InventoryScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to add paint to inventory'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleAddToPalette(String paletteName, String paintId, String brandId) async {
-    print('=== Iniciando _handleAddToPalette ===');
-
-    try {
-      final paletteService = PaletteService();
-      final user = FirebaseAuth.instance.currentUser;
-      
-      if (user == null) {
-        print('Error: Usuario no autenticado');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please sign in to create palettes'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final token = await user.getIdToken() ?? "";
-
-      final palette = await paletteService.createPalette(paletteName, token);
-      await paletteService.addPaintsToPalette(
-        palette['id'],
-        [ { "paint_id": paintId, "brand_id": brandId } ],
-        token,
-      );
-
-      if (mounted) {
-        print('Pintura agregada exitosamente');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'New palette created and paint added',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const PaletteScreen()),
-          (Route<dynamic> route) => false, // elimina todo lo anterior
-        );
-      }
-    } catch (e) {
-      print('Error en _handleAddToPalette: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

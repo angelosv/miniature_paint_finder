@@ -63,12 +63,10 @@ class _AuthScreenState extends State<AuthScreen>
     // Condición que evalúa si la funcionalidad está disponible para el equipo de desarrollo
     // Establece esta variable como falsa para equipos sin Apple Developer
     const bool forceDisableAppleSignIn =
-        true; // Cambiar a false para habilitar en producción
+        true; // Cambiado a true para deshabilitar en esta rama
 
     return !forceDisableAppleSignIn &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.macOS ||
-            kIsWeb);
+        (defaultTargetPlatform == TargetPlatform.iOS);
   }
 
   // Nuevo método para manejar el inicio de sesión con Apple
@@ -712,6 +710,27 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                // Guest mode button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: _continueAsGuest,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.marineGold,
+                      padding: EdgeInsets.symmetric(
+                        vertical: buttonVerticalPadding * 0.6,
+                      ),
+                    ),
+                    child: Text(
+                      'Continue as Guest',
+                      style: AppTheme.buttonStyle.copyWith(
+                        color: AppTheme.marineGold,
+                        fontSize: buttonFontSize - 1,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -726,7 +745,7 @@ class _AuthScreenState extends State<AuthScreen>
     final features = [
       'Track your paint collection and never buy duplicates',
       'Find matching colors with **AI-powered image recognition** - 100% Free',
-      'Create and share custom paint palettes',
+      'Create custom paint palettes',
       'Scan barcodes for quick paint lookup',
     ];
 
@@ -894,21 +913,20 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.phone_android,
-                      label: 'Continue with Phone',
-                      color: Colors.green.shade600,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const PhoneAuthScreen(),
-                          ),
-                        );
-                      },
-                      height: buttonHeight,
-                    ),
-
+                    // SizedBox(height: buttonSpacing),
+                    // _buildAuthButton(
+                    //   icon: Icons.phone_android,
+                    //   label: 'Continue with Phone',
+                    //   color: Colors.green.shade600,
+                    //   onPressed: () {
+                    //     Navigator.of(context).push(
+                    //       MaterialPageRoute(
+                    //         builder: (context) => const PhoneAuthScreen(),
+                    //       ),
+                    //     );
+                    //   },
+                    //   height: buttonHeight,
+                    // ),
                     SizedBox(
                       height:
                           isVerySmallScreen ? 20 : (isSmallScreen ? 24 : 32),
@@ -1072,21 +1090,20 @@ class _AuthScreenState extends State<AuthScreen>
                     ),
 
                     // Show Phone login for Android (and others)
-                    SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.phone_android,
-                      label: 'Continue with Phone',
-                      color: Colors.green.shade600,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const PhoneAuthScreen(),
-                          ),
-                        );
-                      },
-                      height: buttonHeight,
-                    ),
-
+                    // SizedBox(height: buttonSpacing),
+                    // _buildAuthButton(
+                    //   icon: Icons.phone_android,
+                    //   label: 'Continue with Phone',
+                    //   color: Colors.green.shade600,
+                    //   onPressed: () {
+                    //     Navigator.of(context).push(
+                    //       MaterialPageRoute(
+                    //         builder: (context) => const PhoneAuthScreen(),
+                    //       ),
+                    //     );
+                    //   },
+                    //   height: buttonHeight,
+                    // ),
                     SizedBox(
                       height:
                           isVerySmallScreen ? 16 : (isSmallScreen ? 20 : 32),
@@ -1721,5 +1738,38 @@ class _AuthScreenState extends State<AuthScreen>
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
+  }
+
+  // Handle guest login
+  void _continueAsGuest() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+      await authService.continueAsGuest();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error continuing as guest: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }

@@ -307,9 +307,10 @@ class _PaletteScreenState extends State<PaletteScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => BarcodeScannerScreen(
-                          paletteName: nameController.text.trim(),
-                        ),
+                        builder:
+                            (context) => BarcodeScannerScreen(
+                              paletteName: nameController.text.trim(),
+                            ),
                       ),
                     );
                   },
@@ -1069,10 +1070,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
       context,
       '/library',
       arguments: {
-        'paletteInfo': {
-          'isCreatingPalette': true,
-          'paletteName': paletteName,
-        }
+        'paletteInfo': {'isCreatingPalette': true, 'paletteName': paletteName},
       },
     );
   }

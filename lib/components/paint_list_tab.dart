@@ -34,6 +34,9 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -322,9 +325,10 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === Promoción ===
-            _buildPromotionCard(context),
+            // Commenting out the promotion card as requested
+            // _buildPromotionCard(context),
 
-            const SizedBox(height: 24),
+            // const SizedBox(height: 24),
 
             // === Recent Palettes ===
             Row(
@@ -335,7 +339,23 @@ class _PaintListTabState extends State<PaintListTab> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/palettes'),
+                  onPressed: () {
+                    // Check if user is a guest
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    final isGuestUser =
+                        currentUser == null || currentUser.isAnonymous;
+
+                    if (isGuestUser) {
+                      // Show guest promo modal
+                      GuestPromoModal.showForRestrictedFeature(
+                        context,
+                        'Palettes',
+                      );
+                    } else {
+                      // Navigate to palettes screen
+                      Navigator.pushNamed(context, '/palettes');
+                    }
+                  },
                   child: const Text('See all'),
                 ),
               ],
@@ -343,30 +363,111 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 12),
             Consumer<PaletteController>(
               builder: (context, paletteController, child) {
-                final recent = paletteController.palettes.take(10).toList();
-                if (paletteController.isLoading || recent.isEmpty) {
-                  return const PaletteSkeletonList(count: 3);
+                final currentUser = FirebaseAuth.instance.currentUser;
+                final isGuestUser = currentUser == null || currentUser.isAnonymous;
+                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                // Forzar la carga de paletas si el usuario está autenticado
+                if (!isGuestUser && !paletteController.isLoading && paletteController.palettes.isEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    paletteController.loadPalettes();
+                  });
                 }
-                return SizedBox(
-                  height: 220,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: recent.length,
-                    itemBuilder: (_, i) {
-                      final p = recent[i];
-                      return PaletteCard(
-                        palette: p,
-                        onTap:
-                            () => showPaletteModal(
-                              context,
-                              p.name,
-                              p.paintSelections ?? [],
-                              imagePath: p.imagePath,
-                            ),
-                      );
-                    },
-                  ),
-                );
+
+                if(isGuestUser) {
+                  return Column(
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 48,
+                        color:
+                            isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Track your recent palettes',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create a free account to see which paints you use most across your palettes',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final authService = Provider.of<IAuthService>(context, listen: false);
+                          await authService.signOut();
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/',
+                            (route) => false,
+                            arguments: {'showRegistration': true},
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isDarkMode
+                                  ? AppTheme.marineOrange
+                                  : AppTheme.marineBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text('Sign Up - It\'s Free!'),
+                      ),
+                    ],
+                  );
+                } else {
+                  print('***call recent');
+                  final recent = paletteController.palettes.take(10).toList();
+                  print('recent $recent');
+                  if (paletteController.isLoading || recent.isEmpty) {
+                    return const PaletteSkeletonList(count: 3);
+                  }
+                  return SizedBox(
+                    height: 220,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recent.length,
+                      itemBuilder: (_, i) {
+                        final p = recent[i];
+                        return PaletteCard(
+                          palette: p,
+                          onTap: () {
+                            // Check if user is a guest
+                            final currentUser = FirebaseAuth.instance.currentUser;
+                            final isGuestUser =
+                                currentUser == null || currentUser.isAnonymous;
+
+                            if (isGuestUser) {
+                              // Show guest promo modal
+                              GuestPromoModal.showForRestrictedFeature(
+                                context,
+                                'Palettes',
+                              );
+                            } else {
+                              // Show palette modal
+                              showPaletteModal(
+                                context,
+                                p.name,
+                                p.paintSelections ?? [],
+                                imagePath: p.imagePath,
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }
               },
             ),
 
@@ -403,10 +504,14 @@ class _PaintListTabState extends State<PaintListTab> {
                       count: b['paintCount'] as int,
                       color: b['color'] as Color,
                       onTap: () {
+                        // First navigate to the library screen
                         Navigator.pushNamed(
                           context,
                           '/library',
-                          arguments: {'brandName': b['id']},
+                          arguments: {
+                            'brandName': b['id'],
+                            'showPalettesPromo': true,
+                          },
                         );
                       },
                     );
@@ -416,49 +521,7 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === Most Used Paints ===
-            Text(
-              'Your most used paints',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            if (_isLoadingMostUsed)
-              const Center(child: CircularProgressIndicator())
-            else if (_mostUsedError != null)
-              Center(child: Text('Error: $_mostUsedError'))
-            else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
-              const Center(child: Text('No paints found.'))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _mostUsedPaints!.length,
-                itemBuilder: (ctx, i) {
-                  final m = _mostUsedPaints![i];
-                  // Convertimos MostUsedPaint → Paint para usar PaintCard
-                  final paint = Paint.fromHex(
-                    id: m.paintId,
-                    name: m.paint.name,
-                    brand: m.brand.name,
-                    hex: m.paint.hex,
-                    set: m.paint.set,
-                    code: m.paint.code,
-                    category: m.paint.set,
-                    isMetallic: false,
-                    isTransparent: false,
-                  );
-                  return PaintCard(
-                    paint: paint,
-                    paletteCount: m.count,
-                    paletteInfo: m.paletteInfo,
-                    inInventory: m.inInventory,
-                    inWishlist: m.inWhitelist,
-                    inventoryId: m.inventoryId,
-                    wishlistId: m.wishlistId,
-                    onTap:
-                        (p, pInfo) => _showPaintDetailsModal(context, p, pInfo),
-                  );
-                },
-              ),
+            _buildMostUsedPaintsSection(context),
           ],
         ),
       ),
@@ -467,6 +530,8 @@ class _PaintListTabState extends State<PaintListTab> {
 
   // Vista de búsqueda con pasos
   Widget _buildSearchStepsView(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paint Search'),
@@ -682,7 +747,14 @@ class _PaintListTabState extends State<PaintListTab> {
                                     _pickedColors.isNotEmpty
                                         ? ElevatedButton.icon(
                                           onPressed: () {
-                                            _showSelectedColorsModal(context);
+                                            //if (isGuestUser) {
+                                              //GuestPromoModal.showForRestrictedFeature(
+                                                //context,
+                                                //'Find matching paints',
+                                              //);
+                                            //} else {
+                                              _showSelectedColorsModal(context);
+                                            //}                                            
                                           },
                                           icon: const Icon(Icons.search),
                                           label: const Text(
@@ -1232,181 +1304,191 @@ class _PaintListTabState extends State<PaintListTab> {
                                         _isSavingPalette
                                             ? null
                                             : () async {
-                                              if (_paletteNameController.text
-                                                  .trim()
-                                                  .isEmpty) {
-                                                ScaffoldMessenger.of(
+                                              final currentUser = FirebaseAuth.instance.currentUser;
+                                              final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+                                              if (isGuestUser) {
+                                                GuestPromoModal.showForRestrictedFeature(
                                                   context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Please enter a palette name',
-                                                    ),
-                                                  ),
+                                                  'Save Palette',
                                                 );
-                                                return;
-                                              }
-
-                                              setModalState(() {
-                                                _isSavingPalette = true;
-                                              });
-
-                                              try {
-                                                debugPrint(
-                                                  '🎨 Iniciando proceso de guardado de paleta...',
-                                                );
-                                                debugPrint(
-                                                  '📝 Nombre de la paleta: ${_paletteNameController.text}',
-                                                );
-                                                debugPrint(
-                                                  '🖼️ URL de imagen: $_uploadedImageUrl',
-                                                );
-
-                                                // Si venimos de crear una paleta desde otra pantalla,
-                                                // asegurarnos de usar el nombre correcto
-                                                final paletteName =
-                                                    _isCreatingPaletteFromExternal &&
-                                                            _pendingPaletteName !=
-                                                                null
-                                                        ? _pendingPaletteName!
-                                                        : _paletteNameController
-                                                            .text;
-
-                                                final paintsToSend =
-                                                    modalColorList
-                                                        .where(
-                                                          (c) =>
-                                                              c['paintName'] !=
-                                                              null,
-                                                        )
-                                                        .map(
-                                                          (c) => {
-                                                            'id': c['paintId'],
-                                                            'brand_id':
-                                                                c['brandId'],
-                                                            'hex': c['hexCode'],
-                                                            'name':
-                                                                c['paintName'],
-                                                            'brand':
-                                                                c['paintBrand'],
-                                                            'colorCode':
-                                                                c['colorCode'],
-                                                            'barcode':
-                                                                c['barcode'],
-                                                          },
-                                                        )
-                                                        .toList();
-
-                                                debugPrint(
-                                                  '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
-                                                );
-
-                                                final _colorSearchService =
-                                                    ColorSearchService();
-                                                final token =
-                                                    await FirebaseAuth
-                                                        .instance
-                                                        .currentUser
-                                                        ?.getIdToken();
-
-                                                if (token == null) {
-                                                  throw Exception(
-                                                    'No se encontró el token de autenticación',
-                                                  );
-                                                }
-
-                                                // Guardar una referencia al contexto actual antes de la operación asíncrona
-                                                final currentContext = context;
-                                                final scaffoldMessenger =
-                                                    ScaffoldMessenger.of(
-                                                      currentContext,
-                                                    );
-
-                                                await _colorSearchService
-                                                    .saveColorSearch(
-                                                      token: token,
-                                                      name: paletteName,
-                                                      paints: paintsToSend,
-                                                      imagePath:
-                                                          _uploadedImageUrl ??
-                                                          '',
-                                                    );
-
-                                                // Verificar si el widget sigue montado después de la operación asíncrona
-                                                if (!mounted) return;
-
-                                                // Guardar cambios en el estado general antes de cerrar
-                                                setState(() {
-                                                  _pickedColors = List.from(
-                                                    modalColorList,
-                                                  );
-                                                });
-
-                                                // Importante: Restaurar estado del modal antes de cerrarlo
-                                                if (context.mounted) {
-                                                  setModalState(() {
-                                                    _isSavingPalette = false;
-                                                  });
-
-                                                  // Cerrar el modal primero
-                                                  Navigator.pop(context);
-                                                  // ** ACAAAAAA
-                                                  // Usar un post-frame callback para mostrar el snackbar y resetear
-                                                  WidgetsBinding.instance.addPostFrameCallback((
-                                                    _,
-                                                  ) {
-                                                    // Verificar si el contexto sigue montado antes de mostrar el snackbar
-                                                    if (currentContext
-                                                        .mounted) {
-                                                      scaffoldMessenger
-                                                          .showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                'Color search "${_paletteNameController.text}" saved!',
-                                                              ),
-                                                            ),
-                                                          );
-
-                                                      // Resetear el estado después de un pequeño retraso
-                                                      Future.delayed(
-                                                        const Duration(
-                                                          milliseconds: 100,
-                                                        ),
-                                                        () {
-                                                          if (mounted) {
-                                                            _reset();
-                                                            // Refrescar el widget de paletas recientes
-                                                            context
-                                                                .read<
-                                                                  PaletteController
-                                                                >()
-                                                                .loadPalettes();
-                                                          }
-                                                        },
-                                                      );
-                                                    }
-                                                  });
-                                                }
-                                              } catch (e) {
-                                                debugPrint(
-                                                  '❌ Error al guardar la paleta: $e',
-                                                );
-                                                if (context.mounted) {
-                                                  setModalState(() {
-                                                    _isSavingPalette = false;
-                                                  });
-
+                                              } else {
+                                                if (_paletteNameController.text
+                                                    .trim()
+                                                    .isEmpty) {
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
-                                                    SnackBar(
+                                                    const SnackBar(
                                                       content: Text(
-                                                        'Error al guardar: $e',
+                                                        'Please enter a palette name',
                                                       ),
-                                                      backgroundColor:
-                                                          Colors.red,
                                                     ),
                                                   );
+                                                  return;
+                                                }
+
+                                                setModalState(() {
+                                                  _isSavingPalette = true;
+                                                });
+
+                                                try {
+                                                  debugPrint(
+                                                    '🎨 Iniciando proceso de guardado de paleta...',
+                                                  );
+                                                  debugPrint(
+                                                    '📝 Nombre de la paleta: ${_paletteNameController.text}',
+                                                  );
+                                                  debugPrint(
+                                                    '🖼️ URL de imagen: $_uploadedImageUrl',
+                                                  );
+
+                                                  // Si venimos de crear una paleta desde otra pantalla,
+                                                  // asegurarnos de usar el nombre correcto
+                                                  final paletteName =
+                                                      _isCreatingPaletteFromExternal &&
+                                                              _pendingPaletteName !=
+                                                                  null
+                                                          ? _pendingPaletteName!
+                                                          : _paletteNameController
+                                                              .text;
+
+                                                  final paintsToSend =
+                                                      modalColorList
+                                                          .where(
+                                                            (c) =>
+                                                                c['paintName'] !=
+                                                                null,
+                                                          )
+                                                          .map(
+                                                            (c) => {
+                                                              'id': c['paintId'],
+                                                              'brand_id':
+                                                                  c['brandId'],
+                                                              'hex': c['hexCode'],
+                                                              'name':
+                                                                  c['paintName'],
+                                                              'brand':
+                                                                  c['paintBrand'],
+                                                              'colorCode':
+                                                                  c['colorCode'],
+                                                              'barcode':
+                                                                  c['barcode'],
+                                                            },
+                                                          )
+                                                          .toList();
+
+                                                  debugPrint(
+                                                    '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
+                                                  );
+
+                                                  final _colorSearchService =
+                                                      ColorSearchService();
+                                                  final token =
+                                                      await FirebaseAuth
+                                                          .instance
+                                                          .currentUser
+                                                          ?.getIdToken();
+
+                                                  if (token == null) {
+                                                    throw Exception(
+                                                      'No se encontró el token de autenticación',
+                                                    );
+                                                  }
+
+                                                  // Guardar una referencia al contexto actual antes de la operación asíncrona
+                                                  final currentContext = context;
+                                                  final scaffoldMessenger =
+                                                      ScaffoldMessenger.of(
+                                                        currentContext,
+                                                      );
+
+                                                  await _colorSearchService
+                                                      .saveColorSearch(
+                                                        token: token,
+                                                        name: paletteName,
+                                                        paints: paintsToSend,
+                                                        imagePath:
+                                                            _uploadedImageUrl ??
+                                                            '',
+                                                      );
+
+                                                  // Verificar si el widget sigue montado después de la operación asíncrona
+                                                  if (!mounted) return;
+
+                                                  // Guardar cambios en el estado general antes de cerrar
+                                                  setState(() {
+                                                    _pickedColors = List.from(
+                                                      modalColorList,
+                                                    );
+                                                  });
+
+                                                  // Importante: Restaurar estado del modal antes de cerrarlo
+                                                  if (context.mounted) {
+                                                    setModalState(() {
+                                                      _isSavingPalette = false;
+                                                    });
+
+                                                    // Cerrar el modal primero
+                                                    Navigator.pop(context);
+                                                    // ** ACAAAAAA
+                                                    // Usar un post-frame callback para mostrar el snackbar y resetear
+                                                    WidgetsBinding.instance.addPostFrameCallback((
+                                                      _,
+                                                    ) {
+                                                      // Verificar si el contexto sigue montado antes de mostrar el snackbar
+                                                      if (currentContext
+                                                          .mounted) {
+                                                        scaffoldMessenger
+                                                            .showSnackBar(
+                                                              SnackBar(
+                                                                content: Text(
+                                                                  'Color search "${_paletteNameController.text}" saved!',
+                                                                ),
+                                                              ),
+                                                            );
+
+                                                        // Resetear el estado después de un pequeño retraso
+                                                        Future.delayed(
+                                                          const Duration(
+                                                            milliseconds: 100,
+                                                          ),
+                                                          () {
+                                                            if (mounted) {
+                                                              _reset();
+                                                              // Refrescar el widget de paletas recientes
+                                                              context
+                                                                  .read<
+                                                                    PaletteController
+                                                                  >()
+                                                                  .loadPalettes();
+                                                            }
+                                                          },
+                                                        );
+                                                      }
+                                                    });
+                                                  }
+                                                } catch (e) {
+                                                  debugPrint(
+                                                    '❌ Error al guardar la paleta: $e',
+                                                  );
+                                                  if (context.mounted) {
+                                                    setModalState(() {
+                                                      _isSavingPalette = false;
+                                                    });
+
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error al guardar: $e',
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ),
+                                                    );
+                                                  }
                                                 }
                                               }
                                             },
@@ -1458,16 +1540,16 @@ class _PaintListTabState extends State<PaintListTab> {
     final hexCode = colorData['hexCode'] as String;
 
     // Autenticación Firebase
-    final user = FirebaseAuth.instance.currentUser;
-    final token = await user?.getIdToken();
-    if (token == null || !context.mounted) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication required')),
-        );
-      }
-      return null;
-    }
+    // final user = FirebaseAuth.instance.currentUser;
+    // final token = await user?.getIdToken();
+    // if (token == null || !context.mounted) {
+      // if (context.mounted) {
+        // ScaffoldMessenger.of(context).showSnackBar(
+          // const SnackBar(content: Text('Authentication required')),
+        // );
+      // }
+      // return null;
+    // }
 
     // Filtrar marcas seleccionadas
     final brandIds =
@@ -1490,7 +1572,6 @@ class _PaintListTabState extends State<PaintListTab> {
     try {
       // Fetch remoto
       final data = await PaintMatchService().fetchMatchingPaints(
-        token: token,
         hexColor: cleanHex,
         brandIds: brandIds,
         page: 1,
@@ -3287,8 +3368,22 @@ class _PaintListTabState extends State<PaintListTab> {
       _isLoadingMostUsed = true;
       _mostUsedError = null;
     });
+
+    // Check if user is a guest
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    if (isGuestUser) {
+      // For guest users, don't try to load data
+      setState(() {
+        _isLoadingMostUsed = false;
+        _mostUsedPaints = null; // Keep it null to show the guest UI
+      });
+      return;
+    }
+
     try {
-      final token = await FirebaseAuth.instance.currentUser!.getIdToken();
+      final token = await currentUser!.getIdToken();
       _mostUsedPaints = await _paletteService.getMostUsedPaints(
         token as String,
       );
@@ -3297,5 +3392,124 @@ class _PaintListTabState extends State<PaintListTab> {
     } finally {
       setState(() => _isLoadingMostUsed = false);
     }
+  }
+
+  // Build Most Used Paints section with guest user handling
+  Widget _buildMostUsedPaintsSection(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your most used paints',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+
+        if (isGuestUser)
+          // Guest user UI
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 48,
+                  color:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Track your most used paints',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create a free account to see which paints you use most across your palettes',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    final authService = Provider.of<IAuthService>(context, listen: false);
+                    await authService.signOut();
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/',
+                      (route) => false,
+                      arguments: {'showRegistration': true},
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.marineBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: const Text('Sign Up - It\'s Free!'),
+                ),
+              ],
+            ),
+          )
+        else if (_isLoadingMostUsed)
+          const Center(child: CircularProgressIndicator())
+        else if (_mostUsedError != null)
+          Center(child: Text('Error: $_mostUsedError'))
+        else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
+          const Center(child: Text('No paints found.'))
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _mostUsedPaints!.length,
+            itemBuilder: (ctx, i) {
+              final m = _mostUsedPaints![i];
+              // Convertimos MostUsedPaint → Paint para usar PaintCard
+              final paint = Paint.fromHex(
+                id: m.paintId,
+                name: m.paint.name,
+                brand: m.brand.name,
+                hex: m.paint.hex,
+                set: m.paint.set,
+                code: m.paint.code,
+                category: m.paint.set,
+                isMetallic: false,
+                isTransparent: false,
+              );
+              return PaintCard(
+                paint: paint,
+                paletteCount: m.count,
+                paletteInfo: m.paletteInfo,
+                inInventory: m.inInventory,
+                inWishlist: m.inWhitelist,
+                inventoryId: m.inventoryId,
+                wishlistId: m.wishlistId,
+                onTap: (p, pInfo) => _showPaintDetailsModal(context, p, pInfo),
+              );
+            },
+          ),
+      ],
+    );
   }
 }

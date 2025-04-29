@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -8,8 +9,9 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/services/notification_service.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+// import 'package:sign_in_with_apple/sign_in_with_apple.dart'; // Disabled in this branch
 import 'package:crypto/crypto.dart';
+import 'package:miniature_paint_finder/services/auth_stubs.dart'; // Using stub implementation
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -35,10 +37,11 @@ class AuthErrorCode {
   static const String cancelled = 'cancelled';
   static const String notImplemented = 'not-implemented';
   static const String platformNotSupported = 'platform-not-supported';
+  static const String authRequired = 'auth-required';
 }
 
 /// Authentication provider types
-enum AuthProvider { email, google, apple, phone, custom }
+enum AuthProvider { email, google, apple, phone, custom, guest }
 
 /// Abstract interface for authentication service
 abstract class IAuthService {
@@ -47,6 +50,9 @@ abstract class IAuthService {
 
   /// Current authenticated user
   User? get currentUser;
+
+  /// Check if current user is guest
+  bool get isGuestUser;
 
   /// Initialize the service
   Future<void> init();
@@ -78,6 +84,9 @@ abstract class IAuthService {
 
   /// Sign in with phone
   Future<void> signInWithPhone();
+
+  /// Continue as guest user
+  Future<User> continueAsGuest();
 
   /// Verify phone number
   Future<void> verifyPhoneNumber({
@@ -122,6 +131,9 @@ class AuthService implements IAuthService {
 
   @override
   User? get currentUser => _currentUser;
+
+  @override
+  bool get isGuestUser => _currentUser?.authProvider == 'guest';
 
   /// Service initialization
   @override
@@ -343,6 +355,13 @@ class AuthService implements IAuthService {
   @override
   Future<void> signOut() async {
     try {
+      // If guest user, just clear local state
+      if (isGuestUser) {
+        _currentUser = null;
+        _authStateController.add(null);
+        return;
+      }
+
       // Sign out from Firebase
       await firebase.FirebaseAuth.instance.signOut();
 
@@ -506,95 +525,12 @@ class AuthService implements IAuthService {
   /// Sign in with Apple
   @override
   Future<User> signInWithApple() async {
-    try {
-      // Constante para desactivar Sign in with Apple en desarrollo sin cuenta de Apple Developer
-      const bool disableForDevelopment = true;
-
-      if (disableForDevelopment) {
-        throw AuthException(
-          AuthErrorCode.platformNotSupported,
-          'Sign in with Apple desactivado para desarrollo local. ' +
-              'Cambiar constante disableForDevelopment a false cuando sea necesario.',
-        );
-      }
-
-      if (kIsWeb) {
-        // Web implementation
-        try {
-          await firebase.FirebaseAuth.instance.signInWithPopup(
-            firebase.AppleAuthProvider(),
-          );
-        } catch (e) {
-          // If popup fails, try redirect
-          await firebase.FirebaseAuth.instance.signInWithRedirect(
-            firebase.AppleAuthProvider(),
-          );
-        }
-      } else {
-        // Mobile implementation
-        // Generate nonce for Apple sign-in
-        final rawNonce = _generateNonce();
-        final nonce = _sha256ofString(rawNonce);
-
-        // Request credential from Apple
-        final appleCredential = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
-          nonce: nonce,
-        );
-
-        // Create OAuthCredential
-        final oauthCredential = firebase.OAuthProvider('apple.com').credential(
-          idToken: appleCredential.identityToken!,
-          rawNonce: rawNonce,
-        );
-
-        // Sign in with Firebase
-        await firebase.FirebaseAuth.instance.signInWithCredential(
-          oauthCredential,
-        );
-      }
-
-      // Update user display name if needed
-      await _updateDisplayNameIfNeeded();
-
-      // Convertir el usuario de Firebase a nuestro modelo de User
-      final firebaseUser = firebase.FirebaseAuth.instance.currentUser!;
-      _currentUser = User(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? 'User',
-        email: firebaseUser.email ?? '',
-        createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
-        authProvider: 'apple',
-      );
-
-      _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
-
-      return _currentUser!;
-    } catch (e) {
-      print('Apple Sign In Error: $e');
-      if (e is SignInWithAppleAuthorizationException) {
-        if (e.code == AuthorizationErrorCode.canceled) {
-          throw AuthException(
-            AuthErrorCode.cancelled,
-            'Apple sign in was cancelled',
-          );
-        } else {
-          throw AuthException(
-            AuthErrorCode.unknown,
-            'Apple sign in failed: ${e.message}',
-          );
-        }
-      } else if (e is AuthException) {
-        rethrow;
-      } else {
-        throw AuthException(AuthErrorCode.unknown, 'Apple sign in failed: $e');
-      }
-    }
+    // Apple Sign In is completely disabled in this branch
+    print('Apple Sign In was attempted but is disabled in this branch');
+    throw AuthException(
+      AuthErrorCode.platformNotSupported,
+      'Sign in with Apple is disabled in this build',
+    );
   }
 
   /// Sign in with custom token
@@ -624,6 +560,36 @@ class AuthService implements IAuthService {
       throw AuthException(
         AuthErrorCode.unknown,
         'Failed to sign in with custom token: $e',
+      );
+    }
+  }
+
+  /// Continue as guest user
+  @override
+  Future<User> continueAsGuest() async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final random = Random().nextInt(10000);
+
+      // Create a guest user without actual Firebase authentication
+      _currentUser = User(
+        id: 'guest-$timestamp-$random',
+        name: 'Guest',
+        email: '',
+        createdAt: DateTime.now(),
+        lastLoginAt: DateTime.now(),
+        authProvider: 'guest',
+      );
+
+      // Notify auth state change
+      _authStateController.add(_currentUser);
+
+      return _currentUser!;
+    } catch (e) {
+      print('Error creating guest user: $e');
+      throw AuthException(
+        AuthErrorCode.unknown,
+        'Failed to continue as guest: $e',
       );
     }
   }
@@ -670,12 +636,14 @@ class AuthService implements IAuthService {
       case AuthProvider.google:
         return true; // Disponible en todas las plataformas
       case AuthProvider.apple:
-        // Sólo disponible en iOS, macOS y web
-        return kIsWeb;
+        // Deshabilitar Apple Sign-In en esta rama
+        return false;
       case AuthProvider.phone:
-        return false; // No disponible en todas las plataformas
+        return false; // No disponible en ninguna plataforma
       case AuthProvider.custom:
         return true;
+      case AuthProvider.guest:
+        return true; // Guest mode is available on all platforms
     }
   }
 
@@ -709,22 +677,15 @@ class AuthService implements IAuthService {
     }
   }
 
-  String _createNonce() {
-    // Este método genera un nonce seguro criptográficamente
-    const charset =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
-    final random = DateTime.now().millisecondsSinceEpoch;
-
-    return List.generate(32, (_) => charset[random % charset.length]).join();
-  }
-
   String _generateNonce() {
     // Este método genera un nonce seguro criptográficamente
     const charset =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._';
-    final random = DateTime.now().millisecondsSinceEpoch;
-
-    return List.generate(32, (_) => charset[random % charset.length]).join();
+    final random = Random.secure();
+    return List.generate(
+      32,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   String _sha256ofString(String input) {

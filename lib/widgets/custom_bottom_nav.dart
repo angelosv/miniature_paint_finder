@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Widget personalizado para la barra de navegación inferior
 /// Este widget se usará en todas las pantallas de la aplicación
@@ -51,6 +55,7 @@ class CustomBottomNav extends StatelessWidget {
             index: 0,
             isDarkMode: isDarkMode,
             width: itemWidth,
+            isRestricted: false,
           ),
           _buildNavItem(
             context: context,
@@ -60,6 +65,8 @@ class CustomBottomNav extends StatelessWidget {
             index: 1,
             isDarkMode: isDarkMode,
             width: itemWidth,
+            isRestricted: true,
+            featureName: 'Inventory',
           ),
           _buildNavItem(
             context: context,
@@ -69,6 +76,8 @@ class CustomBottomNav extends StatelessWidget {
             index: 2,
             isDarkMode: isDarkMode,
             width: itemWidth,
+            isRestricted: true,
+            featureName: 'Wishlist',
           ),
           _buildNavItem(
             context: context,
@@ -78,6 +87,8 @@ class CustomBottomNav extends StatelessWidget {
             index: 3, // Cambiado de 4 a 3 ya que eliminamos Library
             isDarkMode: isDarkMode,
             width: itemWidth,
+            isRestricted: true,
+            featureName: 'Palettes',
           ),
         ],
       ),
@@ -92,6 +103,8 @@ class CustomBottomNav extends StatelessWidget {
     required int index,
     required bool isDarkMode,
     required double width,
+    bool isRestricted = false,
+    String? featureName,
   }) {
     final isSelected = currentIndex == index;
 
@@ -113,6 +126,21 @@ class CustomBottomNav extends StatelessWidget {
 
     return InkWell(
       onTap: () {
+        if (isRestricted) {
+          // Check if user is a guest
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final isGuestUser = currentUser == null || currentUser.isAnonymous;
+          if (isGuestUser) {
+            // Show guest promo modal for this feature
+            GuestPromoModal.showForRestrictedFeature(
+              context,
+              featureName ?? 'Premium Features',
+            );
+            return;
+          }
+        }
+
+        // Continue with normal navigation if user is not a guest or feature is not restricted
         Future.microtask(() {
           if (context.mounted) {
             onItemSelected(index);

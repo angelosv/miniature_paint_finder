@@ -10,6 +10,10 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,8 +27,9 @@ class _HomeScreenState extends State<HomeScreen>
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _drawerAnimController;
+  bool _showPromoButton = false;
 
-  // Actualizado: solo dos pantallas ahora (eliminamos Search)
+  // Screens
   static const List<Widget> _screens = <Widget>[PaintListTab(), ProfileTab()];
 
   @override
@@ -36,9 +41,28 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 200),
     );
 
-    // Verificar si hay argumentos de navegación
+    // Check navigation arguments and guest status
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkNavigationArguments();
+      _checkPromoButtonVisibility();
+    });
+  }
+
+  void _checkPromoButtonVisibility() async {
+    if (!mounted) return;
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+    if (!isGuestUser) {
+      setState(() {
+        _showPromoButton = false;
+      });
+      return;
+    }
+
+    // Always show the promo button for guest users
+    setState(() {
+      _showPromoButton = true;
     });
   }
 
@@ -53,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     final arguments = ModalRoute.of(context)?.settings.arguments;
     if (arguments != null && arguments is Map<String, dynamic>) {
-      // Seleccionar pestaña específica si se solicita
+      // Select specific tab if requested
       if (arguments.containsKey('selectedIndex')) {
         final index = arguments['selectedIndex'] as int;
         if (index >= 0 && index < _screens.length) {
@@ -63,8 +87,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
 
-      // Pasar los argumentos a la pestaña seleccionada si es necesario
-      // Los argumentos se pasarán automáticamente a las pestañas individuales
+      // Arguments will be automatically passed to individual tabs
     }
   }
 
@@ -80,18 +103,33 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      selectedIndex: 0, // Siempre usar índice 0 para Home
+      selectedIndex: 0, // Always use index 0 for Home
       title: 'Home',
       body: _screens[_selectedIndex],
       drawer: const SharedDrawer(currentScreen: 'home'),
-      // Customizar el comportamiento solo si se agregan otras pestañas a esta pantalla
+      // Customize behavior only if other tabs are added to this screen
       onNavItemSelected: (index) {
-        // Si estamos ya en Home y el usuario toca Home, no hacemos nada
+        // If we're already on Home and user taps Home, do nothing
         if (index == 0) {
           return true;
         }
-        return false; // Dejar que AppScaffold maneje la navegación a otras pantallas
+        return false; // Let AppScaffold handle navigation to other screens
       },
+      floatingActionButton: _showPromoButton ? _buildGuestPromoButton() : null,
+    );
+  }
+
+  Widget _buildGuestPromoButton() {
+    return FloatingActionButton.extended(
+      onPressed:
+          () => GuestPromoModal.showForRestrictedFeature(
+            context,
+            'Premium Features',
+          ),
+      label: Text('Unlock More!'),
+      icon: Icon(Icons.star),
+      backgroundColor: AppTheme.marineGold,
+      foregroundColor: Colors.black87,
     );
   }
 }

@@ -13,6 +13,10 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
@@ -49,19 +53,53 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Skip permission checks entirely and directly try to initialize
-    Future.delayed(Duration.zero, () {
-      print("Directly initializing camera without permission checks");
-      _forceInitializeCamera();
-    });
+    _checkAndRequestCameraPermission();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print('App resumed, directly trying camera again');
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _forceInitializeCamera(); // Try direct initialization again
+      print('App resumed, checking camera permission again...');
+      _checkAndRequestCameraPermission();
+    }
+  }
+
+  Future<void> _checkAndRequestCameraPermission() async {
+    try {
+      final status = await Permission.camera.status;
+      if (status.isGranted) {
+        _forceInitializeCamera();
+      } else if (status.isDenied) {
+        final result = await Permission.camera.request();
+        
+        if (result.isGranted) {
+          _forceInitializeCamera();
+        } else {
+          setState(() {
+            _hasPermission = false;
+            _isPermanentlyDenied = result.isPermanentlyDenied;
+            _errorMessage = result.isPermanentlyDenied
+                ? 'Camera permission permanently denied. Please enable it in your device settings.'
+                : 'Camera permission required to scan barcodes.';
+          });
+        }
+      } else if (status.isPermanentlyDenied) {
+        setState(() {
+          _hasPermission = false;
+          _isPermanentlyDenied = true;
+          _errorMessage = 'Camera permission permanently denied. Please enable it in your device settings.';
+        });
+      } else if (status.isRestricted) {
+        setState(() {
+          _hasPermission = false;
+          _errorMessage = 'Camera access is restricted on this device.';
+        });
+      }
+    } catch (e) {
+      print('Error checking camera permission: $e');
+      setState(() {
+        _hasPermission = false;
+        _errorMessage = 'Error checking camera permission: $e';
       });
     }
   }
@@ -168,6 +206,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     print('Barcode detected: $code');
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
     // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
@@ -200,7 +241,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // Look up the paint by barcode
     try {
       print('🔍 Searching for paint with barcode: $code');
-      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code);
+      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code, isGuestUser);
 
       if (mounted) {
         setState(() {
@@ -243,6 +284,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _showPaintSelectionDialog(List<Paint> paints) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -266,10 +309,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   title: Text(paint.name),
                   subtitle: Text('${paint.brand} - ${paint.code}'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _foundPaint = paint;
-                    _showScanResultSheet(paint);
+                  onTap: () async {
+                    if (isGuestUser) {
+                      GuestPromoModal.showForRestrictedFeature(
+                        context,
+                        'Paint Actions',
+                      );
+                    } else {
+                      Navigator.pop(context);
+                      _foundPaint = paint;
+                      _showScanResultSheet(paint);
+                    }
                   },
                 );
               },
@@ -804,29 +854,29 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                   ),
 
-                if (!_hasPermission)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          _isPermanentlyDenied
-                              ? _openAppSettings
-                              : _forceInitializeCamera,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                      ),
-                      icon: Icon(
-                        _isPermanentlyDenied
-                            ? Icons.settings
-                            : Icons.camera_alt,
-                      ),
-                      label: Text(
-                        _isPermanentlyDenied
-                            ? 'Open Settings'
-                            : 'Request Camera Permission',
-                      ),
-                    ),
-                  ),
+                // if (!_hasPermission)
+                  // Expanded(
+                    // child: ElevatedButton.icon(
+                      // onPressed:
+                          // _isPermanentlyDenied
+                              // ? _openAppSettings
+                              // : _forceInitializeCamera,
+                      // style: ElevatedButton.styleFrom(
+                        // backgroundColor: AppTheme.primaryBlue,
+                        // foregroundColor: Colors.white,
+                      // ),
+                      // icon: Icon(
+                        // _isPermanentlyDenied
+                            // ? Icons.settings
+                            // : Icons.camera_alt,
+                      // ),
+                      // label: Text(
+                        // _isPermanentlyDenied
+                            // ? 'Open Settings'
+                            // : 'Request Camera Permission',
+                      // ),
+                    // ),
+                  // ),
 
                 if (_hasPermission && !_isScanning && _foundPaint == null)
                   Expanded(

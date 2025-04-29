@@ -7,26 +7,29 @@ import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/utils/auth_utils.dart';
+import 'package:provider/provider.dart';
 
 class PaintGridCard extends StatelessWidget {
   final Paint paint;
   final Color color;
-  final Function(String)? onAddToWishlist;
-  final Function(String)? onAddToInventory;
+  final Function(String) onAddToWishlist;
+  final Function(Paint) onAddToInventory;
   final Function(String, String, String)? onAddToPalette;
   final bool isInWishlist;
   final String? paletteName;
 
   const PaintGridCard({
-    super.key,
+    Key? key,
     required this.paint,
     required this.color,
-    this.onAddToWishlist,
-    this.onAddToInventory,
+    required this.onAddToWishlist,
+    required this.onAddToInventory,
     this.onAddToPalette,
     this.isInWishlist = false,
     this.paletteName,
-  });
+  }) : super(key: key);
 
   // Helper para obtener el color de la pintura
   Color _getPaintColor() {
@@ -63,6 +66,9 @@ class PaintGridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
     final paintColor = _getPaintColor();
     final colorImageUrl = _getColorImageUrl();
     final brandLogoUrl = _getBrandLogoUrl();
@@ -246,6 +252,9 @@ class PaintGridCard extends StatelessWidget {
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -415,7 +424,19 @@ class PaintGridCard extends StatelessWidget {
                 PaintActionButton(
                   icon: Icons.add_to_photos_outlined,
                   label: 'Add to Palette',
-                  onTap: () {
+                  onTap: () async {
+                    // Check if guest user needs to authenticate
+                    if (isGuestUser) {
+                      bool canProceed = await AuthUtils.checkFeatureAccess(
+                        context,
+                        requireAuth: true,
+                      );
+                      if (!canProceed) {
+                        Navigator.pop(context);
+                        return;
+                      }
+                    }
+
                     if (paletteName != null) {
                       print(
                         "****** paint_grid_card Palette name: $paletteName",
@@ -436,13 +457,23 @@ class PaintGridCard extends StatelessWidget {
                   icon: isInWishlist ? Icons.favorite : Icons.favorite_border,
                   label:
                       isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist',
-                  onTap: () {
+                  onTap: () async {
+                    // Check if guest user needs to authenticate
+                    if (isGuestUser) {
+                      bool canProceed = await AuthUtils.checkFeatureAccess(
+                        context,
+                        requireAuth: true,
+                      );
+                      if (!canProceed) {
+                        Navigator.pop(context);
+                        return;
+                      }
+                    }
+
                     Navigator.pop(context);
                     if (isInWishlist) {
                       // Si ya está en la wishlist, simplemente la eliminamos
-                      if (onAddToWishlist != null) {
-                        onAddToWishlist!(paint.id);
-                      }
+                      onAddToWishlist(paint.id);
                     } else {
                       // Si no está en la wishlist, mostramos el modal con estrellas
                       _showAddToWishlistModal(context);
@@ -457,10 +488,20 @@ class PaintGridCard extends StatelessWidget {
                 PaintActionButton(
                   icon: Icons.inventory_2_outlined,
                   label: 'Add to Inventory',
-                  onTap: () {
-                    if (onAddToInventory != null) {
-                      onAddToInventory!(paint.id);
+                  onTap: () async {
+                    // Check if guest user needs to authenticate
+                    if (isGuestUser) {
+                      bool canProceed = await AuthUtils.checkFeatureAccess(
+                        context,
+                        requireAuth: true,
+                      );
+                      if (!canProceed) {
+                        Navigator.pop(context);
+                        return;
+                      }
                     }
+
+                    onAddToInventory(paint);
                     Navigator.pop(context);
                   },
                   isOutlined: true,
@@ -698,9 +739,7 @@ class PaintGridCard extends StatelessWidget {
 
           if (result['success'] == true) {
             // Actualizar UI localmente con callback
-            if (onAddToWishlist != null) {
-              onAddToWishlist!(paint.id);
-            }
+            onAddToWishlist(paint.id);
 
             // Mostrar mensaje de éxito
             scaffoldMessenger.showSnackBar(

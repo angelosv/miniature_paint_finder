@@ -8,13 +8,13 @@ class ImageUploadService {
 
   Future<String> uploadImage(File imageFile) async {
     try {
+      String token = '';
       // Get Firebase token
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
+      if (user != null) {
+        token = await user.getIdToken() ?? '';
       }
-      
-      final token = await user.getIdToken();
+
       
       // Create multipart request
       var request = http.MultipartRequest(

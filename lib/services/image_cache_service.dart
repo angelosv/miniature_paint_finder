@@ -114,7 +114,7 @@ class ImageCacheService {
       // Log de memoria
       _logMemoryUsage('After cache configuration');
     } catch (e) {
-      debugPrint('⚠️ Error al configurar caché de imágenes: $e');
+      return;
     }
   }
 
@@ -130,7 +130,6 @@ class ImageCacheService {
 
       return '${memoryCacheSize.toStringAsFixed(2)} MB en memoria';
     } catch (e) {
-      debugPrint('⚠️ Error al obtener tamaño de caché: $e');
       return 'Desconocido';
     }
   }
@@ -164,9 +163,7 @@ class ImageCacheService {
     if (!_debugMode) return;
 
     try {
-      debugPrint('📊 MEMORY USAGE ($point):');
       // En Flutter web esto mostrará información de memoria. En apps nativas solo para debug
-      developer.log('Memory usage at $point', name: 'ImageCacheService');
     } catch (e) {
       debugPrint('⚠️ Error logging memory: $e');
     }

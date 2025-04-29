@@ -62,11 +62,13 @@ class PaintLibraryController extends ChangeNotifier {
     _selectedBrand = value;
     notifyListeners();
   }
+
   String get selectedCategory => _selectedCategory;
   set selectedCategory(String value) {
     _selectedCategory = value;
     notifyListeners();
   }
+
   Color? get selectedColor => _selectedColor;
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
@@ -100,7 +102,6 @@ class PaintLibraryController extends ChangeNotifier {
     notifyListeners();
 
     try {
-
       String brandId = '';
       if (_selectedBrand != 'All') {
         final matchingBrand = _brands.firstWhere(
@@ -150,7 +151,7 @@ class PaintLibraryController extends ChangeNotifier {
     if (brandName == 'All') {
       _selectedBrand = 'All';
     } else {
-        _selectedBrand = brandName;
+      _selectedBrand = brandName;
     }
     print('*********_selectedBrand: $_selectedBrand');
     if (reset) {
@@ -241,7 +242,10 @@ class PaintLibraryController extends ChangeNotifier {
     try {
       final categories = await _apiService.getCategories();
       _categories = categories;
-      _availableCategories = ['All', ...categories.map((c) => c['name'] as String)];
+      _availableCategories = [
+        'All',
+        ...categories.map((c) => c['name'] as String),
+      ];
       notifyListeners();
     } catch (e) {
       _availableCategories = ['All'];
