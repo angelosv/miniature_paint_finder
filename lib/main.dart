@@ -13,6 +13,7 @@ import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/services/notification_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +34,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    await NotificationService.init(); // <-- AQUÍ
+    NotificationService.listenForTokenRefresh();
   } catch (e) {
     print('Firebase initialization error: $e');
     // Continuamos con la app incluso si Firebase falla
