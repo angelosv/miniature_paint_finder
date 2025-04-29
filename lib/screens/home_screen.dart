@@ -13,6 +13,7 @@ import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,8 +51,9 @@ class _HomeScreenState extends State<HomeScreen>
   void _checkPromoButtonVisibility() async {
     if (!mounted) return;
 
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    if (!authService.isGuestUser) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+    if (!isGuestUser) {
       setState(() {
         _showPromoButton = false;
       });

@@ -87,8 +87,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (args.containsKey('showPalettesPromo') &&
             args['showPalettesPromo'] == true) {
           // Show the promo modal after a short delay to allow the screen to render
-          final authService = Provider.of<IAuthService>(context, listen: false);
-          if (authService.isGuestUser) {
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final isGuestUser = currentUser == null || currentUser.isAnonymous;
+          if (isGuestUser) {
             Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) {
                 GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
@@ -113,7 +114,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final controller = context.watch<PaintLibraryController>();
     final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
     // Apply guest mode wrapper to protect restricted features
     return AppScaffold(
@@ -290,8 +293,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildPaintGrid(bool isDarkMode, PaintLibraryController controller) {
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
     return controller.paginatedPaints.isEmpty
         ? const Center(child: Text('No paints found matching your filters'))
@@ -340,9 +343,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   // Add to inventory with guest check
   Future<void> _addToInventory(Paint paint) async {
-    final authService = Provider.of<IAuthService>(context, listen: false);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
-    if (authService.isGuestUser) {
+    if (isGuestUser) {
       GuestPromoModal.showForRestrictedFeature(context, 'Inventory');
       return;
     }
@@ -372,9 +376,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
     String paintId,
     String brandId,
   ) async {
-    final authService = Provider.of<IAuthService>(context, listen: false);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
-    if (authService.isGuestUser) {
+    if (isGuestUser) {
       GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
       return;
     }

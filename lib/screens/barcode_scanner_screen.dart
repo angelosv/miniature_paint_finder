@@ -172,8 +172,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     print('Barcode detected: $code');
 
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
     // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
@@ -250,8 +250,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _showPaintSelectionDialog(List<Paint> paints) {
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
     showDialog(
       context: context,
       builder: (BuildContext context) {

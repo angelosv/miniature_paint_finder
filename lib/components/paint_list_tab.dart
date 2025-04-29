@@ -36,6 +36,7 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -362,8 +363,8 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 12),
             Consumer<PaletteController>(
               builder: (context, paletteController, child) {
-                final authService = Provider.of<IAuthService>(context, listen: false);
-                final isGuestUser = authService.isGuestUser;
+                final currentUser = FirebaseAuth.instance.currentUser;
+                final isGuestUser = currentUser == null || currentUser.isAnonymous;
                 final isDarkMode = Theme.of(context).brightness == Brightness.dark;
                 if(isGuestUser) {
                   return Column(
@@ -393,8 +394,9 @@ class _PaintListTabState extends State<PaintListTab> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () {
-                          // Navigate to registration screen
+                        onPressed: () async {
+                          final authService = Provider.of<IAuthService>(context, listen: false);
+                          await authService.signOut();
                           Navigator.of(context).pushNamedAndRemoveUntil(
                             '/',
                             (route) => false,
@@ -417,7 +419,9 @@ class _PaintListTabState extends State<PaintListTab> {
                     ],
                   );
                 } else {
+                  print('***call recent');
                   final recent = paletteController.palettes.take(10).toList();
+                  print('recent $recent');
                   if (paletteController.isLoading || recent.isEmpty) {
                     return const PaletteSkeletonList(count: 3);
                   }
@@ -519,8 +523,8 @@ class _PaintListTabState extends State<PaintListTab> {
 
   // Vista de búsqueda con pasos
   Widget _buildSearchStepsView(BuildContext context) {
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paint Search'),
@@ -1293,8 +1297,8 @@ class _PaintListTabState extends State<PaintListTab> {
                                         _isSavingPalette
                                             ? null
                                             : () async {
-                                              final authService = Provider.of<IAuthService>(context, listen: false);
-                                              final isGuestUser = authService.isGuestUser;
+                                              final currentUser = FirebaseAuth.instance.currentUser;
+                                              final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
                                               if (isGuestUser) {
                                                 GuestPromoModal.showForRestrictedFeature(
@@ -3436,8 +3440,9 @@ class _PaintListTabState extends State<PaintListTab> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    // Navigate to registration screen
+                  onPressed: () async {
+                    final authService = Provider.of<IAuthService>(context, listen: false);
+                    await authService.signOut();
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/',
                       (route) => false,

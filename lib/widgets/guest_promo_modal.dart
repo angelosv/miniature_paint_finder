@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:provider/provider.dart';
 /// A promotional modal to encourage guest users to register
 class GuestPromoModal {
   static const String _prefDismissedKey = 'guest_promo_dismissed';
@@ -176,9 +177,11 @@ class _GuestPromoContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
                 // Navigate to registration screen
+                final authService = Provider.of<IAuthService>(context, listen: false);
+                await authService.signOut();
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   '/',
                   (route) => false,

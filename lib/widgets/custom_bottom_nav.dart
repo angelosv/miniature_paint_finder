@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Widget personalizado para la barra de navegación inferior
 /// Este widget se usará en todas las pantallas de la aplicación
@@ -127,8 +128,9 @@ class CustomBottomNav extends StatelessWidget {
       onTap: () {
         if (isRestricted) {
           // Check if user is a guest
-          final authService = Provider.of<IAuthService>(context, listen: false);
-          if (authService.isGuestUser) {
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final isGuestUser = currentUser == null || currentUser.isAnonymous;
+          if (isGuestUser) {
             // Show guest promo modal for this feature
             GuestPromoModal.showForRestrictedFeature(
               context,

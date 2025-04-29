@@ -66,8 +66,9 @@ class PaintGridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
     final paintColor = _getPaintColor();
     final colorImageUrl = _getColorImageUrl();
     final brandLogoUrl = _getBrandLogoUrl();
@@ -251,8 +252,8 @@ class PaintGridCard extends StatelessWidget {
       int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
     );
 
-    final authService = Provider.of<IAuthService>(context, listen: false);
-    final isGuestUser = authService.isGuestUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
     showModalBottomSheet(
       context: context,
