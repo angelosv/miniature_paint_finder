@@ -362,45 +362,101 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 12),
             Consumer<PaletteController>(
               builder: (context, paletteController, child) {
-                final recent = paletteController.palettes.take(10).toList();
-                if (paletteController.isLoading || recent.isEmpty) {
-                  return const PaletteSkeletonList(count: 3);
-                }
-                return SizedBox(
-                  height: 220,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: recent.length,
-                    itemBuilder: (_, i) {
-                      final p = recent[i];
-                      return PaletteCard(
-                        palette: p,
-                        onTap: () {
-                          // Check if user is a guest
-                          final currentUser = FirebaseAuth.instance.currentUser;
-                          final isGuestUser =
-                              currentUser == null || currentUser.isAnonymous;
-
-                          if (isGuestUser) {
-                            // Show guest promo modal
-                            GuestPromoModal.showForRestrictedFeature(
-                              context,
-                              'Palettes',
-                            );
-                          } else {
-                            // Show palette modal
-                            showPaletteModal(
-                              context,
-                              p.name,
-                              p.paintSelections ?? [],
-                              imagePath: p.imagePath,
-                            );
-                          }
+                final authService = Provider.of<IAuthService>(context, listen: false);
+                final isGuestUser = authService.isGuestUser;
+                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                if(isGuestUser) {
+                  return Column(
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 48,
+                        color:
+                            isDarkMode ? AppTheme.marineOrange : AppTheme.marineBlue,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Track your recent palettes',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create a free account to see which paints you use most across your palettes',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Navigate to registration screen
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/',
+                            (route) => false,
+                            arguments: {'showRegistration': true},
+                          );
                         },
-                      );
-                    },
-                  ),
-                );
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isDarkMode
+                                  ? AppTheme.marineOrange
+                                  : AppTheme.marineBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text('Sign Up - It\'s Free!'),
+                      ),
+                    ],
+                  );
+                } else {
+                  final recent = paletteController.palettes.take(10).toList();
+                  if (paletteController.isLoading || recent.isEmpty) {
+                    return const PaletteSkeletonList(count: 3);
+                  }
+                  return SizedBox(
+                    height: 220,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recent.length,
+                      itemBuilder: (_, i) {
+                        final p = recent[i];
+                        return PaletteCard(
+                          palette: p,
+                          onTap: () {
+                            // Check if user is a guest
+                            final currentUser = FirebaseAuth.instance.currentUser;
+                            final isGuestUser =
+                                currentUser == null || currentUser.isAnonymous;
+
+                            if (isGuestUser) {
+                              // Show guest promo modal
+                              GuestPromoModal.showForRestrictedFeature(
+                                context,
+                                'Palettes',
+                              );
+                            } else {
+                              // Show palette modal
+                              showPaletteModal(
+                                context,
+                                p.name,
+                                p.paintSelections ?? [],
+                                imagePath: p.imagePath,
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }
               },
             ),
 
