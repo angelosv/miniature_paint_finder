@@ -366,6 +366,13 @@ class _PaintListTabState extends State<PaintListTab> {
                 final currentUser = FirebaseAuth.instance.currentUser;
                 final isGuestUser = currentUser == null || currentUser.isAnonymous;
                 final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                // Forzar la carga de paletas si el usuario está autenticado
+                if (!isGuestUser && !paletteController.isLoading && paletteController.palettes.isEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    paletteController.loadPalettes();
+                  });
+                }
+
                 if(isGuestUser) {
                   return Column(
                     children: [
