@@ -463,7 +463,7 @@ class AuthService implements IAuthService {
       // Hacer el POST al endpoint para crear usuario
       try {
         final response = await http.post(
-          Uri.parse('${Env.apiBaseUrl}/auth/create-user'),
+          Uri.parse('${Env.apiBaseUrl}/api/auth/create-user'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'uid': userCredential.user!.uid,
