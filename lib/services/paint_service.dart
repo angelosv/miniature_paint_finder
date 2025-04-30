@@ -52,7 +52,7 @@ class PaintService {
   void _initializeBrands() {
     _brandManager.initialize().then((success) {
       if (success) {
-        print('✅ Marcas oficiales inicializadas correctamente');
+        //print('✅ Marcas oficiales inicializadas correctamente');
       } else {
         print('⚠️ No se pudieron inicializar las marcas oficiales');
       }

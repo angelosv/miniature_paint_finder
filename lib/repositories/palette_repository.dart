@@ -224,15 +224,6 @@ class ApiPaletteRepository implements PaletteRepository {
       }).whereType<PaintSelection>().toList(),
     );
 
-    print('🎨 Converted Palette:');
-    print('  - ID: ${convertedPalette.id}');
-    print('  - Name: ${convertedPalette.name}');
-    print('  - Image Path: ${convertedPalette.imagePath}');
-    print('  - Number of colors: ${convertedPalette.colors.length}');
-    print('  - Number of paint selections: ${convertedPalette.paintSelections?.length ?? 0}');
-    print('  - Total Paints: ${convertedPalette.totalPaints}');
-    print('  - Created At Text: ${convertedPalette.createdAtText}');
-
     return convertedPalette;
   }
 

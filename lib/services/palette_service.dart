@@ -204,7 +204,6 @@ class PaletteService {
         body: jsonEncode(paintData),
       );
 
-      debugPrint('📤 Response: ${response.body}');
       final responseData = jsonDecode(response.body);
 
       if (responseData['executed'] == false) {
@@ -237,7 +236,6 @@ class PaletteService {
       },
     );
 
-    debugPrint('📤 Response (${response.statusCode}): ${response.body}');
     final responseData = jsonDecode(response.body);
 
     if (responseData['executed'] != true) {
