@@ -16,9 +16,6 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Log info about this card
-    print('🃏 CategoryCard - Title: $title, Count: $count');
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
