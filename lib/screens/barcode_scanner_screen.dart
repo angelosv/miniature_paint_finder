@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
+import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
@@ -250,11 +251,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
           if (paints == null || paints.isEmpty) {
             _errorMessage = 'No paint found for this barcode';
-            // Automatically clear error and restart scanning after 3 seconds if no paint found
-            Future.delayed(const Duration(seconds: 3), () {
-              if (mounted && _errorMessage != null && _foundPaint == null) {
-                _resetScanner();
-              }
+            setState(() {
+              _isScanning = false;
             });
           } else if (paints.length == 1) {
             // Si solo hay una pintura, mostrarla directamente
@@ -870,7 +868,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             // ? Icons.settings
                             // : Icons.camera_alt,
                       // ),
-                      // label: Text(
+                    // label: Text(
                         // _isPermanentlyDenied
                             // ? 'Open Settings'
                             // : 'Request Camera Permission',
@@ -983,38 +981,84 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   Widget _buildErrorOverlay() {
-    return Positioned(
-      bottom: 20,
-      left: 20,
-      right: 20,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              _errorMessage!,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+    // return Positioned(
+      // bottom: 20,
+      // left: 20,
+      // right: 20,
+      // child: Container(
+        // padding: const EdgeInsets.all(12),
+        // decoration: BoxDecoration(
+          // color: Colors.red.withOpacity(0.8),
+          // borderRadius: BorderRadius.circular(8),
+        // ),
+        // child: Column(
+          // children: [
+            // Text(
+              // _errorMessage!,
+              // style: const TextStyle(
+                // color: Colors.white,
+                // fontWeight: FontWeight.bold,
+              // ),
+              // textAlign: TextAlign.center,
+            // ),
+            // if (_lastScannedCode != null) ...[
+              // const SizedBox(height: 8),
+              // Text(
+                // 'Code: $_lastScannedCode',
+                // style: TextStyle(
+                  // color: Colors.white.withOpacity(0.8),
+                  // fontSize: 12,
+                // ),
+              // ),
+            // ],
+          // ],
+        // ),
+        
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(12),
             ),
-            if (_lastScannedCode != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Code: $_lastScannedCode',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
-          ],
-        ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddPaintFormScreen(
+                          barcode: _lastScannedCode,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text('We couldn\'t find this paint. Help us grow the database by adding it!'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
