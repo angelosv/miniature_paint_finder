@@ -761,6 +761,7 @@ class _PaletteScreenState extends State<PaletteScreen> {
           onTap: () {
             showPaletteModal(
               context,
+              palette.id,
               palette.name,
               palette.paintSelections ?? [],
               imagePath: palette.imagePath,
