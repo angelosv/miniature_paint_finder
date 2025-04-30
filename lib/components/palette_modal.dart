@@ -62,16 +62,14 @@ class _PaletteModalState extends State<PaletteModal> {
   }
 
   /// Llama al endpoint de la API para obtener la información de la pintura.
-  /// El endpoint es: ${Env.apiBaseUrl}/api/paint/paint-info/{brand}/{paintId}
+  /// El endpoint es: ${Env.apiBaseUrl}/paint/paint-info/{brand}/{paintId}
   /// Se requieren [brand], [paintId] y un [token] válido.
   static Future<Map<String, dynamic>> fetchPaintInfo({
     required String brand,
     required String paintId,
     required String token,
   }) async {
-    final url = Uri.parse(
-      '${Env.apiBaseUrl}/api/paint/paint-info/$brand/$paintId',
-    );
+    final url = Uri.parse('${Env.apiBaseUrl}/paint/paint-info/$brand/$paintId');
     print('📤 Requesting paint info from: $url');
 
     try {

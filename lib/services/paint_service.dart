@@ -148,7 +148,7 @@ class PaintService {
       final token = await user.getIdToken();
       final brandId = _determineBrandIdForPaint(paint);
 
-      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory');
+      final url = Uri.parse('${Env.apiBaseUrl}/inventory');
 
       final body = {
         'brand_id': brandId,
@@ -207,7 +207,7 @@ class PaintService {
       }
 
       final token = await user.getIdToken();
-      final url = Uri.parse('${Env.apiBaseUrl}/api/inventory/$inventoryId');
+      final url = Uri.parse('${Env.apiBaseUrl}/inventory/$inventoryId');
 
       final Map<String, dynamic> body = {'quantity': quantity};
 
@@ -272,7 +272,7 @@ class PaintService {
     String _id,
     String token,
   ) async {
-    final baseUrl = '${Env.apiBaseUrl}/api';
+    final baseUrl = '${Env.apiBaseUrl}';
 
     final url = Uri.parse('$baseUrl/wishlist/$_id');
 
@@ -317,7 +317,7 @@ class PaintService {
     String token, [
     int priorityLevel = 0,
   ]) async {
-    final baseUrl = '${Env.apiBaseUrl}/api';
+    final baseUrl = '${Env.apiBaseUrl}';
     final url = Uri.parse('$baseUrl/wishlist/$wishlistId');
 
     // If priorityLevel is provided (0-4), use it as the priority value
@@ -365,7 +365,7 @@ class PaintService {
 
   /// Obtiene todas las pinturas de la wishlist
   Future<List<Map<String, dynamic>>> getWishlistPaints(String token) async {
-    final baseUrl = '${Env.apiBaseUrl}/api';
+    final baseUrl = '${Env.apiBaseUrl}';
     final url = Uri.parse('$baseUrl/wishlist');
 
     print('📤 GET Wishlist request: $url');
@@ -611,7 +611,7 @@ class PaintService {
     String token,
   ) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
       print('🎨 Creating new palette via API');
@@ -787,7 +787,7 @@ class PaintService {
     String token,
   ) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
 
       // 1. Primero, obtenemos los datos actuales de la paleta
       final url = Uri.parse('$baseUrl/palettes/$paletteId');
@@ -967,7 +967,7 @@ class PaintService {
     String token,
   ) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
 
       // 1. Primero, obtenemos los datos actuales de la paleta
       final getUrl = Uri.parse('$baseUrl/palettes/$paletteId');
@@ -1244,7 +1244,7 @@ class PaintService {
         '🔧 REPARACIÓN AVANZADA: Corrigiendo marcas en paleta $paletteId usando lista oficial',
       );
 
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
 
       // 1. Obtener datos de la paleta
       final getUrl = Uri.parse('$baseUrl/palettes/$paletteId');
@@ -1426,7 +1426,7 @@ class PaintService {
     String token,
   ) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
       print('🎨 Adding paint to palette via API');
@@ -1558,7 +1558,7 @@ class PaintService {
       }
 
       // Ensure we're using the correct API endpoint
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/wishlist');
 
       // Determine brand ID using our consistent helper method
@@ -1701,7 +1701,7 @@ class PaintService {
   /// Obtener datos de las paletas para diagnosticar el formato de datos
   Future<Map<String, dynamic>> getPaletteData(String token) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
       print('📤 GET Palettes request: $url');
@@ -1785,7 +1785,7 @@ class PaintService {
   /// Debug function to log palette data structure for inspection
   Future<void> debugPaletteData(String token) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
       print('🔍 DEBUG: Requesting palette data from $url');
@@ -1900,7 +1900,7 @@ class PaintService {
   /// Debug function to log wishlist data structure for inspection
   Future<void> debugWishlistData(String token) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/wishlist');
 
       print('🔎 DEBUG WISHLIST: Requesting wishlist data from $url');
@@ -2050,7 +2050,7 @@ class PaintService {
     String token,
   ) async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
       print(

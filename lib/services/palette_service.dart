@@ -5,7 +5,7 @@ import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaletteService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   Future<Map<String, dynamic>> uploadImage(
     String imagePath,

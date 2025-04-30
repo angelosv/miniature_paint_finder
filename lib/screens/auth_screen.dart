@@ -227,7 +227,7 @@ class _AuthScreenState extends State<AuthScreen>
 
         // First, make the POST request to the registration endpoint
         final response = await http.post(
-          Uri.parse('${Env.apiBaseUrl}/api/auth/register'),
+          Uri.parse('${Env.apiBaseUrl}/auth/register'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'username': _nameController.text,

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaintMatchService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   Future<Map<String, dynamic>> fetchMatchingPaints({
     required String hexColor,

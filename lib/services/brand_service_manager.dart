@@ -88,7 +88,7 @@ class BrandServiceManager {
   /// Carga las marcas desde la API
   Future<bool> _loadFromApi() async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/brand');
 
       print('🌐 BrandManager: Cargando marcas desde API');

@@ -5,7 +5,7 @@ import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PaintBrandService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
   static const String CACHE_KEY = 'paint_brands_cache';
   static const int CACHE_DURATION_HOURS = 24; // Duración de la caché en horas
 

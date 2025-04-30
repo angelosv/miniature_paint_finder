@@ -6,8 +6,8 @@ class Env {
   );
 
   static String get apiBaseUrl {
-    if (isLocal) return 'http://localhost:8000';
-    if (isQA) return 'https://api-qa.tu-dominio.com';
-    return 'https://paints-api.reachu.io';
+    if (isLocal) return 'http://localhost:8000/api';
+    if (isQA) return 'https://paints-api.reachu.io/qa-api';
+    return 'https://paints-api.reachu.io/api';
   }
 }

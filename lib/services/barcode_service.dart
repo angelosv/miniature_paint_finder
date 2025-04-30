@@ -10,7 +10,7 @@ import 'package:miniature_paint_finder/utils/auth_utils.dart';
 
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   /// Encuentra una pintura por su código de barras en la base de datos
   ///

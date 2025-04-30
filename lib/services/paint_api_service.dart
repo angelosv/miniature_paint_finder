@@ -5,7 +5,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaintApiService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   // Flag para habilitar logs detallados
   final bool _enableDetailedLogs = false;

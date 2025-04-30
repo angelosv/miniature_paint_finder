@@ -3,7 +3,7 @@ import 'package:miniature_paint_finder/utils/env.dart';
 /// Constantes con los endpoints de la API para la aplicación Miniature Paint Finder
 class ApiEndpoints {
   /// Base URL para todas las llamadas API
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   /// Endpoints relacionados con pinturas
   static String get paints => '/paints';

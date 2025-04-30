@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class ColorSearchService {
-  static final String baseUrl = '${Env.apiBaseUrl}/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
   final PaletteService _paletteService = PaletteService();
 
   Future<void> saveColorSearch({

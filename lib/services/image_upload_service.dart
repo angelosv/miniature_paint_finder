@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class ImageUploadService {
-  static final String _baseUrl = '${Env.apiBaseUrl}/api';
+  static final String _baseUrl = '${Env.apiBaseUrl}';
 
   Future<String> uploadImage(File imageFile) async {
     try {
