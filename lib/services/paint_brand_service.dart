@@ -22,15 +22,7 @@ class PaintBrandService {
       final response = await http.get(Uri.parse('$baseUrl/brand'));
 
       if (response.statusCode == 200) {
-        print(
-          '✅ Paint brands API responded with status code: ${response.statusCode}',
-        );
-
-        // Log response body
-        // print('📊 Raw API Response: ${response.body}');
-
         final List<dynamic> data = json.decode(response.body);
-        print('🏭 Found ${data.length} paint brands in the response');
 
         // Log details of each brand's paint count
         final brands =
@@ -55,7 +47,6 @@ class PaintBrandService {
           0,
           (sum, brand) => sum + brand.paintCount,
         );
-        print('🔢 Total paints across all brands: $totalPaints');
 
         // Guardar en caché para uso futuro
         _saveBrandsToCache(brands);
