@@ -41,13 +41,11 @@ class BrandServiceManager {
   Future<bool> initialize() async {
     // Si ya están cargadas, retornar éxito
     if (_isLoaded && _brands.isNotEmpty) {
-      print('✅ BrandManager: Marcas ya cargadas (${_brands.length} variantes)');
       return true;
     }
 
     // Si hay una carga en curso, esperar
     if (_loadingCompleter != null) {
-      print('⏳ BrandManager: Esperando carga en curso...');
       return await _loadingCompleter!.future;
     }
 
@@ -58,7 +56,6 @@ class BrandServiceManager {
       final bool cacheSuccess = await _loadFromCache();
       if (cacheSuccess) {
         _isLoaded = true;
-        print('✅ BrandManager: Marcas cargadas desde caché');
         _loadingCompleter!.complete(true);
         return true;
       }
@@ -68,12 +65,10 @@ class BrandServiceManager {
       if (apiSuccess) {
         await _saveToCache();
         _isLoaded = true;
-        print('✅ BrandManager: Marcas cargadas desde API');
         _loadingCompleter!.complete(true);
         return true;
       }
 
-      print('❌ BrandManager: No se pudieron cargar las marcas');
       _loadingCompleter!.complete(false);
       return false;
     } catch (e) {
@@ -91,8 +86,6 @@ class BrandServiceManager {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/brand');
 
-      print('🌐 BrandManager: Cargando marcas desde API');
-
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -104,8 +97,6 @@ class BrandServiceManager {
       }
 
       final List<dynamic> brandsList = json.decode(response.body);
-      print('📦 BrandManager: API retornó ${brandsList.length} marcas');
-
       // Limpiar datos existentes
       _brands.clear();
       _brandNames.clear();
@@ -142,9 +133,6 @@ class BrandServiceManager {
       // Agregar casos especiales
       _addSpecialCases();
 
-      print(
-        '✅ BrandManager: Procesadas ${_brands.length} variantes de ${_brandNames.length} marcas',
-      );
       return true;
     } catch (e) {
       print('❌ BrandManager: Error cargando desde API: $e');
@@ -199,7 +187,6 @@ class BrandServiceManager {
       final String? cacheData = prefs.getString(_cacheKey);
 
       if (cacheData == null || cacheData.isEmpty) {
-        print('📝 BrandManager: No hay caché disponible');
         return false;
       }
 
@@ -210,7 +197,6 @@ class BrandServiceManager {
       if (!data.containsKey('timestamp') ||
           !data.containsKey('brands') ||
           !data.containsKey('brand_names')) {
-        print('⚠️ BrandManager: Formato de caché inválido');
         return false;
       }
 
@@ -220,7 +206,6 @@ class BrandServiceManager {
       final Duration age = DateTime.now().difference(cacheTime);
 
       if (age.inHours > _cacheExpirationHours) {
-        print('⏰ BrandManager: Caché expirada (${age.inHours} horas)');
         return false;
       }
 
@@ -239,9 +224,6 @@ class BrandServiceManager {
         _brandNames[key] = value.toString();
       });
 
-      print('📚 BrandManager: Caché cargada (${_brands.length} variantes)');
-      print('📅 BrandManager: Fecha caché: ${cacheTime.toIso8601String()}');
-
       return true;
     } catch (e) {
       print('⚠️ BrandManager: Error cargando caché: $e');
@@ -253,7 +235,6 @@ class BrandServiceManager {
   Future<bool> _saveToCache() async {
     try {
       if (_brands.isEmpty || _brandNames.isEmpty) {
-        print('⚠️ BrandManager: No hay datos para guardar en caché');
         return false;
       }
 
@@ -269,10 +250,6 @@ class BrandServiceManager {
       // Serializar y guardar
       final String serialized = json.encode(cacheData);
       await prefs.setString(_cacheKey, serialized);
-
-      print(
-        '💾 BrandManager: Marcas guardadas en caché (${_brands.length} variantes)',
-      );
       return true;
     } catch (e) {
       print('⚠️ BrandManager: Error guardando caché: $e');

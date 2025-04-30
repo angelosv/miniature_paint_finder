@@ -53,7 +53,7 @@ class PaintService {
   void _initializeBrands() {
     _brandManager.initialize().then((success) {
       if (success) {
-        print('✅ Marcas oficiales inicializadas correctamente');
+        //print('✅ Marcas oficiales inicializadas correctamente');
       } else {
         print('⚠️ No se pudieron inicializar las marcas oficiales');
       }
@@ -137,8 +137,6 @@ class PaintService {
     InventoryEntryType type = InventoryEntryType.new_paint,
   }) async {
     try {
-      print('\n🔄 addToInventory → usando API real');
-
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print('❌ No hay usuario autenticado');
@@ -157,9 +155,6 @@ class PaintService {
         'notes': note ?? '',
       };
 
-      print('📤 POST → $url');
-      print('📦 Body: $body');
-
       final response = await http.post(
         url,
         headers: {
@@ -168,9 +163,6 @@ class PaintService {
         },
         body: jsonEncode(body),
       );
-
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _inventory[paint.id] = {
@@ -198,8 +190,6 @@ class PaintService {
     InventoryEntryType? type,
   }) async {
     try {
-      print('\n🔄 updateInventory → usando API real');
-
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print('❌ No hay usuario autenticado');
@@ -215,9 +205,6 @@ class PaintService {
         body['notes'] = note;
       }
 
-      print('📤 PUT → $url');
-      print('📦 Body: $body');
-
       final response = await http.put(
         url,
         headers: {
@@ -226,9 +213,6 @@ class PaintService {
         },
         body: jsonEncode(body),
       );
-
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         // 🧠 Actualización local

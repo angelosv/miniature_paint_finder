@@ -45,21 +45,16 @@ class PaletteController extends ChangeNotifier {
 
   /// Load all palettes for the current user
   Future<void> loadPalettes({int? page}) async {
-    print('🎨 PaletteController.loadPalettes() called with page: $page');
     try {
       _isLoading = true;
       notifyListeners();
 
       final currentPage = page ?? _currentPage;
-      print('🎨 Loading palettes for page: $currentPage');
 
       final result = await _repository.getUserPalettes(
         page: currentPage,
         limit: _limit,
       );
-
-      print('🎨 Got ${result['palettes'].length} palettes from repository');
-
       // Siempre reemplazar el contenido de la lista
       _palettes = result['palettes'];
 
@@ -68,23 +63,6 @@ class PaletteController extends ChangeNotifier {
       _totalPages = int.parse(result['totalPages'].toString());
       _totalPalettes = int.parse(result['totalPalettes'].toString());
       _limit = int.parse(result['limit'].toString());
-
-      print('Updated state:');
-      print('  - Current page: $_currentPage');
-      print('  - Total pages: $_totalPages');
-      print('  - Total palettes: $_totalPalettes');
-      print('  - Palettes loaded: ${_palettes.length}');
-
-      for (var i = 0; i < _palettes.length; i++) {
-        final palette = _palettes[i];
-        print('  🎨 Palette ${i + 1}:');
-        print('    - Name: ${palette.name}');
-        print('    - Image Path: ${palette.imagePath}');
-        print('    - Colors: ${palette.colors.length}');
-        print(
-          '    - Paint Selections: ${palette.paintSelections?.length ?? 0}',
-        );
-      }
     } catch (e) {
       print('❌ Error loading palettes: $e');
       _error = e.toString();

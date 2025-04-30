@@ -17,12 +17,14 @@ import 'package:miniature_paint_finder/services/image_cache_service.dart';
 
 /// Modal para mostrar los detalles de una paleta de colores
 class PaletteModal extends StatefulWidget {
+  final String paletteId;
   final String paletteName;
   final List<PaintSelection> paints;
   final String? imagePath;
 
   const PaletteModal({
     Key? key,
+    required this.paletteId,
     required this.paletteName,
     required this.paints,
     this.imagePath,
@@ -50,7 +52,7 @@ class _PaletteModalState extends State<PaletteModal> {
       imageCacheService.preloadImage(
         widget.imagePath!,
         context,
-        cacheKey: 'palette_modal_${widget.paletteName}',
+        cacheKey: 'palette_modal_${widget.paletteId}',
       );
     }
   }
@@ -70,7 +72,6 @@ class _PaletteModalState extends State<PaletteModal> {
     required String token,
   }) async {
     final url = Uri.parse('${Env.apiBaseUrl}/paint/paint-info/$brand/$paintId');
-    print('📤 Requesting paint info from: $url');
 
     try {
       final response = await http.get(
@@ -81,7 +82,6 @@ class _PaletteModalState extends State<PaletteModal> {
         },
       );
 
-      print('📥 Received response: ${response.statusCode}');
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = json.decode(response.body);
         return jsonData;
@@ -171,7 +171,7 @@ class _PaletteModalState extends State<PaletteModal> {
                   height: 150,
                   fit: BoxFit.cover,
                   fadeInDuration: const Duration(milliseconds: 200),
-                  cacheKey: 'palette_modal_${widget.paletteName}',
+                  cacheKey: 'palette_modal_${widget.paletteId}',
                   placeholder:
                       (context, loadingProgress) => Container(
                         width: double.infinity,
@@ -1333,6 +1333,7 @@ class _PaletteModalState extends State<PaletteModal> {
 /// Función helper para mostrar el modal de la paleta.
 void showPaletteModal(
   BuildContext context,
+  String paletteId,
   String paletteName,
   List<PaintSelection> paints, {
   String? imagePath,
@@ -1348,6 +1349,7 @@ void showPaletteModal(
           maxChildSize: 0.95,
           builder:
               (_, controller) => PaletteModal(
+                paletteId: paletteId,
                 paletteName: paletteName,
                 paints: paints,
                 imagePath: imagePath,
