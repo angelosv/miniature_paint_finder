@@ -63,7 +63,7 @@ class _AuthScreenState extends State<AuthScreen>
     // Condición que evalúa si la funcionalidad está disponible para el equipo de desarrollo
     // Establece esta variable como falsa para equipos sin Apple Developer
     const bool forceDisableAppleSignIn =
-        true; // Cambiado a true para deshabilitar en esta rama
+        false; // Cambiado a false para habilitar en esta rama
 
     return !forceDisableAppleSignIn &&
         (defaultTargetPlatform == TargetPlatform.iOS);
