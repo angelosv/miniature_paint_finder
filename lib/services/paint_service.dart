@@ -1404,6 +1404,7 @@ class PaintService {
   }
 
   /// Agrega una pintura a una paleta existente mediante API
+  /// Adds a paint to an existing palette via the API
   Future<Map<String, dynamic>> addPaintToPalette(
     Paint paint,
     String paletteId,
@@ -1420,55 +1421,52 @@ class PaintService {
         print('- Paint set: "${paint.set}"');
       }
 
-      // Determine correct brand_id using our helper method for consistency
+      // 1) Determine the correct brand_id as before
       String brandId = _determineBrandIdForPaint(paint);
       print('- Determined brand_id: $brandId');
 
-      // Verificar si el brand_id es válido usando BrandService
       if (!_brandManager.isOfficialBrandId(brandId)) {
-        // Intentar corregir según el nombre de la marca y el set
+        // Attempt to correct it using the brand name and set
         brandId = _brandManager.validateAndCorrectBrandId(
           brandId,
           paint.set != null ? '${paint.brand} ${paint.set}' : paint.brand,
         );
-
         print('- Corrected brand_id: $brandId');
       } else {
         print(
-          '✓ Brand_id validado: $brandId (${_brandManager.getBrandName(brandId)})',
+          '✓ Brand_id validated: $brandId (${_brandManager.getBrandName(brandId)})',
         );
       }
 
-      // Create request body with the corrected brand_id
-      final Map<String, dynamic> requestBody = {
-        'paint_id': paint.id,
-        'brand_id': brandId,
-      };
+      // 2) Build the payload as an array (even if only one item)
+      final List<Map<String, dynamic>> payload = [
+        {'paint_id': paint.id, 'brand_id': brandId},
+      ];
 
       print('- Request URL: $url');
-      print('- Request body: ${json.encode(requestBody)}');
+      print('- Request payload (array): ${json.encode(payload)}');
       print(
-        '- Request headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}',
+        '- Request headers: {"Content-Type":"application/json","Authorization":"Bearer $token"}',
       );
 
-      // Make the actual API call
+      // 3) Send the POST with the array as the body
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: json.encode(requestBody),
+        body: json.encode(payload),
       );
 
       print('- API response status: ${response.statusCode}');
       print('- API response body: ${response.body}');
 
-      // Parse response
+      // 4) Parse the response just like before
       Map<String, dynamic> responseData = {};
-      if (response.body != null && response.body.isNotEmpty) {
+      if (response.body.isNotEmpty) {
         try {
-          responseData = json.decode(response.body);
+          responseData = json.decode(response.body) as Map<String, dynamic>;
         } catch (e) {
           print('- Error parsing response body: $e');
           responseData = {'error': 'Invalid JSON response: ${response.body}'};
@@ -1482,21 +1480,21 @@ class PaintService {
           'data': responseData,
         };
       } else {
-        // Si el error es de brand_id que no existe, imprimir información de debug adicional
+        // Extra debug if the error is about an unknown brand_id
         if (responseData['message'] != null &&
             responseData['message'].toString().contains(
               'Brand does not exist',
             )) {
-          print('❌ ERROR CRÍTICO DE BRAND_ID:');
+          print('❌ CRITICAL BRAND_ID ERROR:');
           print('❌ Paint ID: ${paint.id}');
-          print('❌ Brand original: ${paint.brand}');
-          print('❌ Set original: ${paint.set}');
-          print('❌ Brand ID enviado: ${brandId}');
+          print('❌ Original brand: ${paint.brand}');
+          print('❌ Original set: ${paint.set}');
+          print('❌ Sent brand_id: $brandId');
           print(
-            '❌ Marcas oficiales disponibles: ${_brandManager.getAllBrandIds().join(", ")}',
+            '❌ Available official brands: ${_brandManager.getAllBrandIds().join(", ")}',
           );
           print(
-            '❌ El backend no reconoce este brand_id. Debe ser uno de los brands soportados.',
+            '❌ The backend did not recognize this brand_id. It must be one of the supported brands.',
           );
         }
 
@@ -1508,7 +1506,7 @@ class PaintService {
         };
       }
     } catch (e) {
-      print('- Exception adding paint to palette: $e');
+      print('- Exception while adding paint to palette: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -2207,5 +2205,53 @@ class PaintService {
       print('Error loading paints to cache: $e');
       return false;
     }
+  }
+
+  Future<Map<String, dynamic>> getPalettes({
+    required int page,
+    int limit = 10,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Usuario no autenticado');
+    final token = await user.getIdToken();
+
+    final url = Uri.parse('${Env.apiBaseUrl}/palettes?page=$page&limit=$limit');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        'x-user-uid': user.uid,
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error cargando paletas: ${response.statusCode}');
+    }
+
+    final decoded = json.decode(response.body)['data'];
+    final rawPalettes = decoded['palettes'] as List;
+    final totalPages = decoded['totalPages'] as int;
+
+    final palettes =
+        rawPalettes
+            .map(
+              (js) => Palette.fromJson({
+                'id': js['id'],
+                'name': js['name'],
+                'imagePath': js['image'],
+                'colors':
+                    (js['PaintSelections'] as List)
+                        .map((s) => s['colorHex'] as String)
+                        .toList(),
+                'createdAt': js['created_at'],
+                'paintSelections': js['PaintSelections'],
+                'totalPaints': js['total_paints'],
+                'createdAtText': js['created_at_text'],
+              }),
+            )
+            .toList();
+
+    return {'palettes': palettes, 'totalPages': totalPages};
   }
 }
