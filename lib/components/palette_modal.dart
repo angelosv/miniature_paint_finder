@@ -1,6 +1,7 @@
 import 'dart:convert'; // Para la codificación/decodificación JSON
 import 'package:http/http.dart' as http; // Para las peticiones HTTP
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 import '../models/palette.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
@@ -63,16 +64,14 @@ class _PaletteModalState extends State<PaletteModal> {
   }
 
   /// Llama al endpoint de la API para obtener la información de la pintura.
-  /// El endpoint es: https://paints-api.reachu.io/api/paint/paint-info/{brand}/{paintId}
+  /// El endpoint es: ${Env.apiBaseUrl}/paint/paint-info/{brand}/{paintId}
   /// Se requieren [brand], [paintId] y un [token] válido.
   static Future<Map<String, dynamic>> fetchPaintInfo({
     required String brand,
     required String paintId,
     required String token,
   }) async {
-    final url = Uri.parse(
-      'https://paints-api.reachu.io/api/paint/paint-info/$brand/$paintId',
-    );
+    final url = Uri.parse('${Env.apiBaseUrl}/paint/paint-info/$brand/$paintId');
 
     try {
       final response = await http.get(

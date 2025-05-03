@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:miniature_paint_finder/components/palette_selector.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/data/sample_data.dart';
@@ -515,131 +516,11 @@ class PaintGridCard extends StatelessWidget {
   }
 
   void _showPaletteSelector(BuildContext context) {
-    final paintColor = Color(
-      int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000,
-    );
-
-    // Obtenemos las paletas de sample_data
-    final palettes = SampleData.getPalettes();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder:
-          (context) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    margin: const EdgeInsets.only(bottom: 16),
-                  ),
-                ),
-
-                Text(
-                  'Add to Palette',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'Select a palette to add ${paint.name}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Lista de paletas disponibles
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.4,
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: palettes.length,
-                    itemBuilder: (context, index) {
-                      final palette = palettes[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 16,
-                        ),
-                        leading: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (final color in palette.colors.take(3))
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        title: Text(palette.name),
-                        subtitle: Text(
-                          '${palette.colors.length} colors',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        onTap: () {
-                          _addToPalette(context, palette, paintColor);
-                        },
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Botón para crear nueva paleta
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showCreatePaletteDialog(context);
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create New Palette'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+      builder: (_) => PaletteSelectorModal(paint: paint),
     );
   }
 

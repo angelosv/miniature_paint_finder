@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:miniature_paint_finder/models/most_used_paint.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaletteService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   Future<Map<String, dynamic>> uploadImage(
     String imagePath,
