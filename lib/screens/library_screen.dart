@@ -66,39 +66,44 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_argsProcessed) {
+      _argsProcessed = true;
+
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args != null) {
-        if (args.containsKey('brandName')) {
-          final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(
-            brandName,
-            false,
-          );
-        } else if (args.containsKey('paletteInfo')) {
-          final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
-          if (paletteInfo['isCreatingPalette'] == true) {
-            // Cargar todas las pinturas cuando estamos creando una paleta
-            context.read<PaintLibraryController>().loadPaints();
-          }
-        }
 
-        // Check if we should show the palettes promo modal
-        if (args.containsKey('showPalettesPromo') &&
-            args['showPalettesPromo'] == true) {
-          // Show the promo modal after a short delay to allow the screen to render
-          final currentUser = FirebaseAuth.instance.currentUser;
-          final isGuestUser = currentUser == null || currentUser.isAnonymous;
-          if (isGuestUser) {
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (mounted) {
-                GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
-              }
-            });
+      // Deferimos la lógica hasta después del primer build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final controller = context.read<PaintLibraryController>();
+
+        // Si vienen argumentos...
+        if (args != null) {
+          // Si es un filtro de marca
+          if (args.containsKey('brandName')) {
+            controller.filterByBrand(args['brandName'] as String, false);
+            controller.loadPaints();
+          }
+          // Si venimos desde creación de paleta
+          else if (args.containsKey('paletteInfo')) {
+            final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
+            if (paletteInfo['isCreatingPalette'] == true) {
+              controller.loadPaints();
+            }
+          }
+
+          // ¿Mostrar promo de paletas?
+          if (args['showPalettesPromo'] == true) {
+            final user = FirebaseAuth.instance.currentUser;
+            final isGuest = user == null || user.isAnonymous;
+            if (isGuest) {
+              Future.delayed(const Duration(milliseconds: 300), () {
+                if (mounted) {
+                  GuestPromoModal.showForRestrictedFeature(context, 'Palettes');
+                }
+              });
+            }
           }
         }
-      }
-      _argsProcessed = true;
+      });
     }
   }
 
