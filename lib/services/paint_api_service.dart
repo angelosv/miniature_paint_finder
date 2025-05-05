@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/models/paint.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaintApiService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   // Flag para habilitar logs detallados
   final bool _enableDetailedLogs = false;
@@ -46,7 +47,8 @@ class PaintApiService {
   }) async {
     final queryParams = {
       if (category != null && category != 'All') 'category': category,
-      if (brandId != null && brandId != 'All' && brandId != '') 'brandId': brandId,
+      if (brandId != null && brandId != 'All' && brandId != '')
+        'brandId': brandId,
       if (name != null) 'name': name,
       if (code != null) 'code': code,
       if (hex != null) 'hex': hex,
@@ -173,7 +175,9 @@ class PaintApiService {
         return List<Map<String, dynamic>>.from(data);
       } else {
         _log('❌ Error ${response.statusCode}: ${response.body}');
-        throw Exception('Error al cargar las categorias: ${response.statusCode}');
+        throw Exception(
+          'Error al cargar las categorias: ${response.statusCode}',
+        );
       }
     } catch (e) {
       _log('🔴 Exception: ${e.toString()}');

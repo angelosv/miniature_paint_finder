@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:http/http.dart' as http;
@@ -6,14 +7,18 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
+
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
   /// Devuelve null si no se encuentra una pintura coincidente
-  Future<List<Paint>?> findPaintByBarcode(String barcode, bool isGuestUser) async {
+  Future<List<Paint>?> findPaintByBarcode(
+    String barcode,
+    bool isGuestUser,
+  ) async {
     if (barcode.isEmpty) {
       print('❌ Barcode is empty');
       return null;
@@ -26,7 +31,7 @@ class BarcodeService {
 
       String token = '';
       if (!isGuestUser) {
-      // Get Firebase token
+        // Get Firebase token
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
           print('❌ No user logged in');
@@ -53,20 +58,26 @@ class BarcodeService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        
-        if (data['executed'] == true && data['data'] != null && data['data'].isNotEmpty) {
+
+        if (data['executed'] == true &&
+            data['data'] != null &&
+            data['data'].isNotEmpty) {
           final List<Paint> paints = [];
-          
+
           for (final paintData in data['data']) {
-            print('✅ Found paint: ${paintData['name']} (${paintData['brand']})');
-            
+            print(
+              '✅ Found paint: ${paintData['name']} (${paintData['brand']})',
+            );
+
             // Asegurarse de que las paletas vengan exactamente como la API las envía
-            final List<String> palettes = (paintData['palettes'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ?? [];
-            
+            final List<String> palettes =
+                (paintData['palettes'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [];
+
             print('📦 Palettes from API: $palettes');
-            
+
             // Crear el objeto Paint con las paletas exactamente como vienen de la API
             final paint = Paint(
               id: paintData['id'],
@@ -82,13 +93,14 @@ class BarcodeService {
               category: paintData['category'] ?? '',
               isMetallic: paintData['isMetallic'] ?? false,
               isTransparent: paintData['isTransparent'] ?? false,
-              palettes: palettes, // Usar las paletas exactamente como vienen de la API
+              palettes:
+                  palettes, // Usar las paletas exactamente como vienen de la API
             );
-            
+
             print('🎨 Created Paint object with palettes: ${paint.palettes}');
             paints.add(paint);
           }
-          
+
           return paints;
         } else {
           print('⚠️ No paint found in API response');

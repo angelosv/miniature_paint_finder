@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Servicio para gestionar las marcas oficiales de pinturas
@@ -266,7 +267,7 @@ class BrandService {
   /// Carga las marcas desde la API
   Future<bool> _loadFromApi() async {
     try {
-      final baseUrl = 'https://paints-api.reachu.io/api';
+      final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/brand');
 
       print('🌐 Cargando marcas desde API: $url');

@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:miniature_paint_finder/models/most_used_paint.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaletteService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
 
   Future<Map<String, dynamic>> uploadImage(
     String imagePath,
@@ -204,7 +205,6 @@ class PaletteService {
         body: jsonEncode(paintData),
       );
 
-      debugPrint('📤 Response: ${response.body}');
       final responseData = jsonDecode(response.body);
 
       if (responseData['executed'] == false) {
@@ -237,7 +237,6 @@ class PaletteService {
       },
     );
 
-    debugPrint('📤 Response (${response.statusCode}): ${response.body}');
     final responseData = jsonDecode(response.body);
 
     if (responseData['executed'] != true) {

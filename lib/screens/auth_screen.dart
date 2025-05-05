@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -226,7 +227,7 @@ class _AuthScreenState extends State<AuthScreen>
 
         // First, make the POST request to the registration endpoint
         final response = await http.post(
-          Uri.parse('https://paints-api.reachu.io/auth/register'),
+          Uri.parse('${Env.apiBaseUrl}/auth/register'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'username': _nameController.text,

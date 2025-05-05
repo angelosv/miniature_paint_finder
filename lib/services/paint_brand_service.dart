@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/models/paint_brand.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PaintBrandService {
-  static const String baseUrl = 'https://paints-api.reachu.io/api';
+  static final String baseUrl = '${Env.apiBaseUrl}';
   static const String CACHE_KEY = 'paint_brands_cache';
   static const int CACHE_DURATION_HOURS = 24; // Duración de la caché en horas
 
@@ -22,22 +23,14 @@ class PaintBrandService {
       final response = await http.get(Uri.parse('$baseUrl/brand'));
 
       if (response.statusCode == 200) {
-        print(
-          '✅ Paint brands API responded with status code: ${response.statusCode}',
-        );
-
-        // Log response body
-        // print('📊 Raw API Response: ${response.body}');
-
         final List<dynamic> data = json.decode(response.body);
-        print('🏭 Found ${data.length} paint brands in the response');
 
         // Log details of each brand's paint count
         final brands =
             data.map((json) {
               final brand = PaintBrand.fromJson(json);
               // print(
-                // '🎨 Brand: ${brand.name}, Paint Count: ${brand.paintCount}, ID: ${brand.id}',
+              // '🎨 Brand: ${brand.name}, Paint Count: ${brand.paintCount}, ID: ${brand.id}',
               // );
               return brand;
             }).toList();
@@ -47,7 +40,7 @@ class PaintBrandService {
 
         // print('📋 Brands sorted by paint count (descending)');
         // for (var brand in brands.take(5)) {
-          // print('  • ${brand.name}: ${brand.paintCount} paints');
+        // print('  • ${brand.name}: ${brand.paintCount} paints');
         // }
 
         // Calculate total paints
@@ -55,7 +48,6 @@ class PaintBrandService {
           0,
           (sum, brand) => sum + brand.paintCount,
         );
-        print('🔢 Total paints across all brands: $totalPaints');
 
         // Guardar en caché para uso futuro
         _saveBrandsToCache(brands);

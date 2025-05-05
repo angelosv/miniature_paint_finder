@@ -76,7 +76,6 @@ class ApiPaletteRepository implements PaletteRepository {
   @override
   Future<List<Palette>> getAll() async {
     try {
-      print('🎨 Using endpoint Palettes getAll: ${ApiEndpoints.palettes}');
       final response = await _apiService.get(ApiEndpoints.palettes);
       final data = response['data'];
       final palettes =
@@ -99,24 +98,11 @@ class ApiPaletteRepository implements PaletteRepository {
     int limit = 10,
   }) async {
     try {
-      print(
-        '🎨 ApiPaletteRepository.getUserPalettes() called with page: $page, limit: $limit',
-      );
-      print(
-        '🎨 Using endpoint: ${ApiEndpoints.userPalettes}?page=$page&limit=$limit',
-      );
-
       final response = await _apiService.get(
         '${ApiEndpoints.userPalettes}?page=$page&limit=$limit',
       );
 
-      print('🎨 API Response status: ${response['executed']}');
-      print('🎨 API Response message: ${response['message']}');
-      print('🎨 API Response data: ${response['data']}');
-
       final data = response['data'];
-      print('🎨 Data from response: ${data.toString()}');
-
       // Devolver los datos de paginación junto con las paletas
       return {
         'currentPage': int.parse(data['currentPage'].toString()),
@@ -142,22 +128,8 @@ class ApiPaletteRepository implements PaletteRepository {
   }
 
   Palette _convertApiPaletteToPalette(ApiPalette apiPalette) {
-    print('🎨 Converting API Palette to local Palette');
-    print('🎨 API Palette data:');
-    print('  - ID: ${apiPalette.id}');
-    print('  - Name: ${apiPalette.name}');
-    print('  - Image: ${apiPalette.image}');
-    print('  - Created At: ${apiPalette.createdAt}');
-    print('  - Number of paints: ${apiPalette.palettesPaints.length}');
-    print('  - Total Paints: ${apiPalette.totalPaints}');
-    print('  - Created At Text: ${apiPalette.createdAtText}');
-
     final colors = apiPalette.palettesPaints.map((paint) {
       if (paint.paint != null) {
-        print('  🎨 Paint found:');
-        print('    - Name: ${paint.paint!.name}');
-        print('    - Hex: ${paint.paint!.hex}');
-        print('    - RGB: (${paint.paint!.r}, ${paint.paint!.g}, ${paint.paint!.b})');
         return Color.fromRGBO(
           paint.paint!.r,
           paint.paint!.g,
@@ -165,12 +137,9 @@ class ApiPaletteRepository implements PaletteRepository {
           1,
         );
       } else if (paint.imageColorPicks != null) {
-        print('  🎨 Using color from image pick:');
-        print('    - Image Color Pick: ${paint.imageColorPicks.toString()}');
         if (paint.imageColorPicks!.r == null || 
             paint.imageColorPicks!.g == null || 
             paint.imageColorPicks!.b == null) {
-          print('    ⚠️ Warning: RGB values are null, using default color');
           return Colors.grey;
         }
         return Color.fromRGBO(
@@ -180,7 +149,6 @@ class ApiPaletteRepository implements PaletteRepository {
           1,
         );
       }
-      print('  ⚠️ No paint or color data available');
       return Colors.grey; // Color por defecto si no hay pintura
     }).toList();
 
@@ -223,15 +191,6 @@ class ApiPaletteRepository implements PaletteRepository {
         return null;
       }).whereType<PaintSelection>().toList(),
     );
-
-    print('🎨 Converted Palette:');
-    print('  - ID: ${convertedPalette.id}');
-    print('  - Name: ${convertedPalette.name}');
-    print('  - Image Path: ${convertedPalette.imagePath}');
-    print('  - Number of colors: ${convertedPalette.colors.length}');
-    print('  - Number of paint selections: ${convertedPalette.paintSelections?.length ?? 0}');
-    print('  - Total Paints: ${convertedPalette.totalPaints}');
-    print('  - Created At Text: ${convertedPalette.createdAtText}');
 
     return convertedPalette;
   }
@@ -328,17 +287,12 @@ class PaletteRepositoryImpl implements PaletteRepository {
 
   @override
   Future<List<Palette>> getAll() async {
-    print('📚 PaletteRepositoryImpl.getAll() called');
     // Simular retardo de API
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (_palettes == null) {
-      print('📚 Initializing sample palettes from SampleData.getPalettes()');
       _palettes = SampleData.getPalettes();
-      print('📚 Got ${_palettes!.length} sample palettes');
-    } else {
-      print('📚 Using cached palettes (${_palettes!.length})');
-    }
+    } 
 
     return _palettes!;
   }

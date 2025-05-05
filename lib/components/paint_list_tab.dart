@@ -427,9 +427,7 @@ class _PaintListTabState extends State<PaintListTab> {
                     ],
                   );
                 } else {
-                  print('***call recent');
                   final recent = paletteController.palettes.take(10).toList();
-                  print('recent $recent');
                   if (paletteController.isLoading || recent.isEmpty) {
                     return const PaletteSkeletonList(count: 3);
                   }
@@ -458,6 +456,7 @@ class _PaintListTabState extends State<PaintListTab> {
                               // Show palette modal
                               showPaletteModal(
                                 context,
+                                p.id,
                                 p.name,
                                 p.paintSelections ?? [],
                                 imagePath: p.imagePath,

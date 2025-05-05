@@ -8,8 +8,10 @@ import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart' as apple;
 import 'package:crypto/crypto.dart';
+import 'package:miniature_paint_finder/services/auth_stubs.dart';
+import 'package:miniature_paint_finder/utils/env.dart'; // Using stub implementation
 
 /// Custom exception for authentication errors
 class AuthException implements Exception {
@@ -461,7 +463,7 @@ class AuthService implements IAuthService {
       // Hacer el POST al endpoint para crear usuario
       try {
         final response = await http.post(
-          Uri.parse('https://paints-api.reachu.io/auth/create-user'),
+          Uri.parse('${Env.apiBaseUrl}/auth/create-user'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'uid': userCredential.user!.uid,
@@ -525,10 +527,10 @@ class AuthService implements IAuthService {
       print('Generated secure nonce: ${nonce.substring(0, 10)}...');
 
       // Request credential from Apple
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
+      final appleCredential = await apple.SignInWithApple.getAppleIDCredential(
         scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
+          apple.AppleIDAuthorizationScopes.email,
+          apple.AppleIDAuthorizationScopes.fullName,
         ],
         nonce: nonce,
       );
@@ -617,11 +619,11 @@ class AuthService implements IAuthService {
       return _currentUser!;
     } catch (e) {
       print('Apple Sign In Error: $e');
-      if (e is SignInWithAppleAuthorizationException) {
+      if (e is apple.SignInWithAppleAuthorizationException) {
         print(
           'SignInWithAppleAuthorizationException: ${e.code} - ${e.message}',
         );
-        if (e.code == AuthorizationErrorCode.canceled) {
+        if (e.code == apple.AuthorizationErrorCode.canceled) {
           throw AuthException(
             AuthErrorCode.cancelled,
             'Apple sign in was cancelled',

@@ -26,28 +26,20 @@ class ApiService {
 
   /// Realiza una petición GET
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
-    print('🌐 ApiService.get() called with endpoint: $endpoint');
     try {
       final token = await _auth.currentUser?.getIdToken();
-      print('🔑 Firebase token: ${token != null ? 'Present' : 'Missing'}');
 
       final url = Uri.parse('$baseUrl$endpoint');
-      print('🔗 Full URL: $url');
 
       final requestHeaders = {
         ..._defaultHeaders,
         ...?headers,
         if (token != null) 'Authorization': 'Bearer $token',
       };
-      print('📤 Headers: $requestHeaders');
 
       final response = await _client.get(url, headers: requestHeaders);
 
-      print('📥 Response status code: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
-
       final parsedResponse = _handleResponse(response);
-      print('📥 Parsed response: $parsedResponse');
 
       return parsedResponse;
     } catch (e) {
