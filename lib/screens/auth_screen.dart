@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:miniature_paint_finder/screens/phone_auth_screen.dart';
+import 'package:miniature_paint_finder/providers/guest_logic.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -580,6 +581,7 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   Widget _buildWelcomeScreen() {
+    final guestLogicProvider = Provider.of<GuestLogicProvider>(context);
     // Obtenemos el tamaño de la pantalla para hacer la UI responsive
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.height < 700;
@@ -713,26 +715,28 @@ class _AuthScreenState extends State<AuthScreen>
                 ),
                 const SizedBox(height: 12),
                 // Guest mode button
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: _continueAsGuest,
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.marineGold,
-                      padding: EdgeInsets.symmetric(
-                        vertical: buttonVerticalPadding * 0.6,
+                if (guestLogicProvider.guestLogic) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: _continueAsGuest,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.marineGold,
+                        padding: EdgeInsets.symmetric(
+                          vertical: buttonVerticalPadding * 0.6,
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      'Continue as Guest',
-                      style: AppTheme.buttonStyle.copyWith(
-                        color: AppTheme.marineGold,
-                        fontSize: buttonFontSize - 1,
+                      child: Text(
+                        'Continue as Guest',
+                        style: AppTheme.buttonStyle.copyWith(
+                          color: AppTheme.marineGold,
+                          fontSize: buttonFontSize - 1,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),

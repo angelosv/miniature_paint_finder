@@ -14,6 +14,8 @@ import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/screens/auth_screen.dart';
+import 'package:miniature_paint_finder/providers/guest_logic.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -101,6 +103,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final guestLogicProvider = Provider.of<GuestLogicProvider>(context);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+    if (!guestLogicProvider.guestLogic && isGuestUser) {
+      final authService = Provider.of<IAuthService>(context, listen: false);
+      authService.signOut();
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/',
+        (route) => false,
+        arguments: {'showRegistration': true},
+      );
+    }
+
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       selectedIndex: 0, // Always use index 0 for Home

@@ -51,7 +51,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.angelovs.miniaturePaintFinder</string>
+				<string>com.alan.miniaturePaintFinder</string>
 			</array>
 		</dict>
 	</array>

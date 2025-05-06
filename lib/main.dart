@@ -23,6 +23,8 @@ import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/image_cache_service.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
+import 'package:miniature_paint_finder/providers/guest_logic.dart';
 
 /// App entry point
 void main() async {
@@ -68,6 +70,15 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  bool guestLogic = false;
+  try {
+    final response = await apiService.get(ApiEndpoints.guestLogic);
+    guestLogic = response['value'];
+    print('GET Guest Logic MAIN: $guestLogic');
+  } catch (e) {
+    print('Error fetching guestLogic in main: $e');
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -85,10 +96,61 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => WishlistController(PaintService()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => GuestLogicProvider()..guestLogic = guestLogic,
+        ),
       ],
-      child: const MyApp(),
+      child: MyAppWrapper(apiService: apiService),
     ),
   );
+}
+
+/// Este widget maneja el ciclo de vida y observa el estado de la app
+class MyAppWrapper extends StatefulWidget {
+  final ApiService apiService;
+
+  const MyAppWrapper({required this.apiService});
+
+  @override
+  _MyAppWrapperState createState() => _MyAppWrapperState();
+}
+
+class _MyAppWrapperState extends State<MyAppWrapper> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void getGuestFlag() async {
+    try {
+      print('GET Guest Flag');
+      final response = await widget.apiService.get(ApiEndpoints.guestLogic);
+      final guestLogicProvider = Provider.of<GuestLogicProvider>(context, listen: false);
+      guestLogicProvider.guestLogic = response['value'];
+      print('CALL Guest Logic: ${guestLogicProvider.guestLogic}');
+    } catch (e) {
+      print('Error getting guest logic: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      getGuestFlag();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MyApp();
+  }
 }
 
 /// Main application widget
