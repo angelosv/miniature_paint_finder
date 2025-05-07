@@ -3,7 +3,6 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/repositories/base_repository.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
-
 /// Repository interface for paint operations
 abstract class PaintRepository extends BaseRepository<Paint> {
   /// Find paints by color hex
