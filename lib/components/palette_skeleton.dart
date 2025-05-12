@@ -13,110 +13,87 @@ class PaletteSkeleton extends StatefulWidget {
   State<PaletteSkeleton> createState() => _PaletteSkeletonState();
 }
 
-class _PaletteSkeletonState extends State<PaletteSkeleton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-
-    _animation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _PaletteSkeletonState extends State<PaletteSkeleton> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDarkMode ? Colors.grey[850] : Colors.grey[200];
 
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Container(
-          width: widget.isHorizontal ? 200.w : null,
-          margin: widget.isHorizontal ? EdgeInsets.only(right: 16.w) : null,
-          decoration: BoxDecoration(
-            color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
-            borderRadius: BorderRadius.circular(ResponsiveGuidelines.radiusL),
+    return Container(
+      width: widget.isHorizontal ? 200.w : null,
+      margin: widget.isHorizontal ? EdgeInsets.only(right: 16.w) : null,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(ResponsiveGuidelines.radiusL),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen de placeholder estática
+          ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(ResponsiveGuidelines.radiusL),
+            ),
+            child: Image.asset(
+              'assets/images/palette_palceholder.png',
+              height: 120.h,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Imagen de placeholder con efecto de shimmer
-              ShimmerContainer(
-                animation: _animation,
-                isDarkMode: isDarkMode,
-                child: Container(
-                  height: 120.h,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(ResponsiveGuidelines.radiusL),
-                    ),
-                  ),
-                ),
-              ),
 
-              // Información de la paleta con efecto de shimmer
-              Padding(
-                padding: EdgeInsets.all(ResponsiveGuidelines.spacingM),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Información de la paleta
+          Padding(
+            padding: EdgeInsets.all(ResponsiveGuidelines.spacingM),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Círculos de colores
+                Row(
                   children: [
-                    // Círculos de colores shimmer
-                    Row(
-                      children: [
-                        for (int i = 0; i < 5; i++)
-                          ShimmerContainer(
-                            animation: _animation,
-                            isDarkMode: isDarkMode,
-                            child: Container(
-                              width: 20.r,
-                              height: 20.r,
-                              margin: EdgeInsets.only(right: 4.w),
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-
-                    SizedBox(height: 8.h),
-
-                    // Texto de placeholder para el número de colores
-                    ShimmerContainer(
-                      animation: _animation,
-                      isDarkMode: isDarkMode,
-                      child: Container(
-                        width: 80.w,
-                        height: 14.h,
+                    for (int i = 0; i < 5; i++)
+                      Container(
+                        width: 20.r,
+                        height: 20.r,
+                        margin: EdgeInsets.only(right: 4.w),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(2),
+                          shape: BoxShape.circle,
+                          color: _getColorForIndex(i, isDarkMode),
                         ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ],
+
+                SizedBox(height: 8.h),
+
+                // Texto de placeholder
+                Container(
+                  width: 80.w,
+                  height: 14.h,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  // Colores fijos para los círculos
+  Color _getColorForIndex(int index, bool isDarkMode) {
+    final List<Color> colors = [
+      AppTheme.marineBlue,
+      AppTheme.marineOrange,
+      AppTheme.marineGold,
+      AppTheme.pinkColor,
+      AppTheme.greenColor,
+    ];
+
+    return colors[index % colors.length];
   }
 }
 
