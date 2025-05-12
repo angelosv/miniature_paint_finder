@@ -725,188 +725,173 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                // Scanner view
-                if (_isScanning &&
-                    _hasPermission &&
-                    _isInitialized &&
-                    _scannerController != null)
-                  MobileScanner(
-                    controller: _scannerController!,
-                    onDetect: _onBarcodeDetected,
-                  ),
-
-                // No permission view
-                if (!_hasPermission)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.no_photography,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Camera permission required',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Text(
-                            _isPermanentlyDenied
-                                ? 'You have permanently denied camera access. Please enable it in your device settings to scan barcodes.'
-                                : 'Please allow camera access to scan paint barcodes',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed:
-                              _isPermanentlyDenied
-                                  ? _openAppSettings
-                                  : _forceInitializeCamera,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: Icon(
-                            _isPermanentlyDenied
-                                ? Icons.settings
-                                : Icons.camera_alt,
-                          ),
-                          label: Text(
-                            _isPermanentlyDenied
-                                ? 'Open Settings'
-                                : 'Request Camera Permission',
-                          ),
-                        ),
-                      ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  // Scanner view
+                  if (_isScanning &&
+                      _hasPermission &&
+                      _isInitialized &&
+                      _scannerController != null)
+                    MobileScanner(
+                      controller: _scannerController!,
+                      onDetect: _onBarcodeDetected,
                     ),
-                  ),
 
-                // Scanner not initialized but has permission
-                if (!_isInitialized && _hasPermission)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        const Text('Initializing camera...'),
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 24),
+                  // No permission view
+                  if (!_hasPermission)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.no_photography,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Camera permission required',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(
-                              _errorMessage!,
+                              _isPermanentlyDenied
+                                  ? 'You have permanently denied camera access. Please enable it in your device settings to scan barcodes.'
+                                  : 'Please allow camera access to scan paint barcodes',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
                             ),
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
-                            onPressed: _restartScanner,
+                            onPressed:
+                                _isPermanentlyDenied
+                                    ? _openAppSettings
+                                    : _forceInitializeCamera,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryBlue,
                               foregroundColor: Colors.white,
                             ),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Back'),
+                            icon: Icon(
+                              _isPermanentlyDenied
+                                  ? Icons.settings
+                                  : Icons.camera_alt,
+                            ),
+                            label: Text(
+                              _isPermanentlyDenied
+                                  ? 'Open Settings'
+                                  : 'Request Camera Permission',
+                            ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-
-                // Loading indicator
-                if (_isSearching) _buildSearchingOverlay(),
-
-                // Scan guide overlay
-                if (_isScanning &&
-                    !_isSearching &&
-                    _hasPermission &&
-                    _isInitialized &&
-                    _scannerController != null)
-                  _buildScanGuideOverlay(),
-
-                // Error message
-                if (_errorMessage != null) _buildErrorOverlay(),
-              ],
-            ),
-          ),
-
-          // Bottom controls
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                if (_isInitialized && _hasPermission && _isScanning)
-                  Expanded(
-                    child: Text(
-                      'Position barcode in frame to scan',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                // if (!_hasPermission)
-                // Expanded(
-                // child: ElevatedButton.icon(
-                // onPressed:
-                // _isPermanentlyDenied
-                // ? _openAppSettings
-                // : _forceInitializeCamera,
-                // style: ElevatedButton.styleFrom(
-                // backgroundColor: AppTheme.primaryBlue,
-                // foregroundColor: Colors.white,
-                // ),
-                // icon: Icon(
-                // _isPermanentlyDenied
-                // ? Icons.settings
-                // : Icons.camera_alt,
-                // ),
-                // label: Text(
-                // _isPermanentlyDenied
-                // ? 'Open Settings'
-                // : 'Request Camera Permission',
-                // ),
-                // ),
-                // ),
-                if (_hasPermission && !_isScanning && _foundPaint == null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _restartScanner,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
                       ),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Restart Scanner'),
                     ),
-                  ),
-              ],
+
+                  // Scanner not initialized but has permission
+                  if (!_isInitialized && _hasPermission)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          const Text('Initializing camera...'),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 24),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: _restartScanner,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Back'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  // Loading indicator
+                  if (_isSearching) _buildSearchingOverlay(),
+
+                  // Scan guide overlay
+                  if (_isScanning &&
+                      !_isSearching &&
+                      _hasPermission &&
+                      _isInitialized &&
+                      _scannerController != null)
+                    _buildScanGuideOverlay(),
+
+                  // Error message
+                  if (_errorMessage != null) _buildErrorOverlay(),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Bottom controls
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (_isInitialized && _hasPermission && _isScanning)
+                    Expanded(
+                      child: Text(
+                        'Position barcode in frame to scan',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  if (_hasPermission && !_isScanning && _foundPaint == null)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _restartScanner,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Restart Scanner'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1023,14 +1008,22 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.search_off_rounded,
+                      Icons.info_outline_rounded,
                       size: 48,
-                      color: Colors.red.shade400,
+                      color: AppTheme.marineOrange,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      _errorMessage!,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      'No paint found',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This paint is not in our database yet.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
@@ -1048,22 +1041,31 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
+                        minimumSize: const Size(double.infinity, 50),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: AppTheme.marineOrange,
                       ),
                       child: const Text(
-                        'Help us grow the database by adding it!',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        'Add',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Your submission will be reviewed and added to our database.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
                     OutlinedButton(
                       onPressed: _restartScanner,
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
+                        minimumSize: const Size(double.infinity, 50),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

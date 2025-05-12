@@ -156,369 +156,371 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add New Paint'), elevation: 0),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Información del código de barras detectado
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppTheme.primaryBlue.withOpacity(0.2),
-                        width: 1,
+      body: SafeArea(
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Información del código de barras detectado
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryBlue.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.qr_code_scanner,
+                                color: AppTheme.primaryBlue,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Detected Barcode',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.white70
+                                          : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.barcode ?? 'No barcode detected',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.qr_code_scanner,
-                              color: AppTheme.primaryBlue,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Detected Barcode',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    isDarkMode
-                                        ? Colors.white70
-                                        : Colors.black54,
-                              ),
-                            ),
-                          ],
+
+                    const SizedBox(height: 24),
+
+                    // Campos obligatorios
+                    Text(
+                      'Required Information',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Dropdown de marca
+                    DropdownButtonFormField<String>(
+                      items:
+                          _brands
+                              .map(
+                                (brand) => DropdownMenuItem(
+                                  value: brand['id'] as String,
+                                  child: Text(brand['name']),
+                                ),
+                              )
+                              .toList(),
+                      decoration: InputDecoration(
+                        labelText: 'Brand',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.barcode ?? 'No barcode detected',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                        prefixIcon: const Icon(Icons.brush_outlined),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                      onChanged: (value) {
+                        _brandController.text = value!;
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a brand';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Campo de nombre
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.label_outline),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the paint name';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Información adicional
+                    Text(
+                      'Additional Information (Optional)',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Campos opcionales
+                    TextFormField(
+                      controller: _colorController,
+                      decoration: InputDecoration(
+                        labelText: 'Color',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.color_lens_outlined),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _codeController,
+                      decoration: InputDecoration(
+                        labelText: 'Code',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.code),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _setController,
+                      decoration: InputDecoration(
+                        labelText: 'Set',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.collections_outlined),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Información de color
+                    Text(
+                      'Color Values (Optional)',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextFormField(
+                      controller: _hexController,
+                      decoration: InputDecoration(
+                        labelText: 'Hex Code (e.g. #FF5733)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.palette_outlined),
+                        prefixText: '#',
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _rController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'R',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  isDarkMode
+                                      ? AppTheme.darkSurface
+                                      : Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _gController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'G',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  isDarkMode
+                                      ? AppTheme.darkSurface
+                                      : Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _bController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'B',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor:
+                                  isDarkMode
+                                      ? AppTheme.darkSurface
+                                      : Colors.white,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // Campos obligatorios
-                  Text(
-                    'Required Information',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Dropdown de marca
-                  DropdownButtonFormField<String>(
-                    items:
-                        _brands
-                            .map(
-                              (brand) => DropdownMenuItem(
-                                value: brand['id'] as String,
-                                child: Text(brand['name']),
-                              ),
-                            )
-                            .toList(),
-                    decoration: InputDecoration(
-                      labelText: 'Brand',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    // Fotografía
+                    Text(
+                      'Photo',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
                       ),
-                      prefixIcon: const Icon(Icons.brush_outlined),
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
                     ),
-                    onChanged: (value) {
-                      _brandController.text = value!;
-                    },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Please select a brand';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                  // Campo de nombre
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.label_outline),
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the paint name';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Información adicional
-                  Text(
-                    'Additional Information (Optional)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Campos opcionales
-                  TextFormField(
-                    controller: _colorController,
-                    decoration: InputDecoration(
-                      labelText: 'Color',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.color_lens_outlined),
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _codeController,
-                    decoration: InputDecoration(
-                      labelText: 'Code',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.code),
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _setController,
-                    decoration: InputDecoration(
-                      labelText: 'Set',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.collections_outlined),
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Información de color
-                  Text(
-                    'Color Values (Optional)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  TextFormField(
-                    controller: _hexController,
-                    decoration: InputDecoration(
-                      labelText: 'Hex Code (e.g. #FF5733)',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.palette_outlined),
-                      prefixText: '#',
-                      filled: true,
-                      fillColor:
-                          isDarkMode ? AppTheme.darkSurface : Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _rController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                    // Mostrar la imagen si se ha tomado una foto
+                    if (_imageFile != null)
+                      Container(
+                        height: 200,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
-                          decoration: InputDecoration(
-                            labelText: 'R',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode
-                                    ? AppTheme.darkSurface
-                                    : Colors.white,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            _imageFile!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _gController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          decoration: InputDecoration(
-                            labelText: 'G',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode
-                                    ? AppTheme.darkSurface
-                                    : Colors.white,
-                          ),
+
+                    ElevatedButton.icon(
+                      onPressed: _getImage,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take a photo of the label'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _bController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          decoration: InputDecoration(
-                            labelText: 'B',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor:
-                                isDarkMode
-                                    ? AppTheme.darkSurface
-                                    : Colors.white,
-                          ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Botón de envío
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        backgroundColor: AppTheme.marineOrange,
+                        foregroundColor: Colors.white,
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Fotografía
-                  Text(
-                    'Photo',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Mostrar la imagen si se ha tomado una foto
-                  if (_imageFile != null)
-                    Container(
-                      height: 200,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _imageFile!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
-                      ),
-                    ),
-
-                  ElevatedButton.icon(
-                    onPressed: _getImage,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take a photo of the label'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: AppTheme.primaryBlue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Botón de envío
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: AppTheme.marineOrange,
-                      foregroundColor: Colors.white,
-                    ),
-                    child:
-                        _isLoading
-                            ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                      child:
+                          _isLoading
+                              ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text(
+                                'Submit',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            )
-                            : const Text(
-                              'Submit',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                  ),
+                    ),
 
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
           ),
