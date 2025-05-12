@@ -83,17 +83,23 @@ class _AppScaffoldState extends State<AppScaffold> {
           break;
         case 1:
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const InventoryScreen()),
+            MaterialPageRoute(builder: (context) => const LibraryScreen()),
             (Route<dynamic> route) => false,
           );
           break;
         case 2:
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const WishlistScreen()),
+            MaterialPageRoute(builder: (context) => const InventoryScreen()),
             (Route<dynamic> route) => false,
           );
           break;
         case 3:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const WishlistScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 4:
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const PaletteScreen()),
             (Route<dynamic> route) => false,

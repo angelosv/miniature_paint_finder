@@ -430,7 +430,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Inventory',
-      selectedIndex: 1, // Uso del índice 1 para Inventory
+      selectedIndex: 2,
       body:
           _isLoading
               ? _buildLoader(isDarkMode)

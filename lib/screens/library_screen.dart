@@ -127,7 +127,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Paint Library',
-      selectedIndex: -1,
+      selectedIndex: 1,
       body: GuestService.wrapScreenForGuest(
         context: context,
         authService: authService,
