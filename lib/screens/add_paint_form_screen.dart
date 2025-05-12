@@ -8,7 +8,6 @@ import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:flutter/services.dart';
 
-
 class AddPaintFormScreen extends StatefulWidget {
   final String? barcode;
 
@@ -74,7 +73,7 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
     try {
       final ImageUploadService _imageUploadService = ImageUploadService();
       if (_imageFile == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please take a photo of the label')),
         );
         return;
@@ -94,19 +93,19 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
           barcode: widget.barcode ?? '',
           name: _nameController.text,
           status: 'pending',
-        );    
+        );
         print('start setting values');
-        if ( _hexController.text != null && _hexController.text.isNotEmpty) {
+        if (_hexController.text != null && _hexController.text.isNotEmpty) {
           paintSubmit.hex = _hexController.text;
         }
-        if ( _setController.text != null && _setController.text.isNotEmpty) {
+        if (_setController.text != null && _setController.text.isNotEmpty) {
           paintSubmit.set = _setController.text;
         }
 
-        if ( _codeController.text != null && _codeController.text.isNotEmpty) {
+        if (_codeController.text != null && _codeController.text.isNotEmpty) {
           paintSubmit.code = _codeController.text;
         }
-        if ( _colorController.text != null && _colorController.text.isNotEmpty) {
+        if (_colorController.text != null && _colorController.text.isNotEmpty) {
           paintSubmit.color = _colorController.text;
         }
         if (_rController.text != null && _rController.text.isNotEmpty) {
@@ -132,7 +131,9 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error sending request, try again later')),
+            const SnackBar(
+              content: Text('Error sending request, try again later'),
+            ),
           );
         }
       }
@@ -142,197 +143,384 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
       });
       print('Error submitting paint: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error submitting paint, try again later')),
+        const SnackBar(
+          content: Text('Error submitting paint, try again later'),
+        ),
       );
-    }    
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add New Paint'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<String>(
-                items: _brands.map((brand) => DropdownMenuItem(
-                  value: brand['id'] as String,
-                  child: Text(brand['name']),
-                )).toList(),
-                decoration: const InputDecoration(
-                  labelText: 'Brand',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {  
-                  _brandController.text = value!;
-                },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a brand';
-                  }
-                  return null;
-                },
-              ),    
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the paint name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _colorController,
-                decoration: const InputDecoration(
-                  labelText: 'Color (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Code (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _setController,
-                decoration: const InputDecoration(
-                  labelText: 'Set (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _hexController,
-                decoration: const InputDecoration(
-                  labelText: 'Hex (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
+      appBar: AppBar(title: const Text('Add New Paint'), elevation: 0),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _rController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'R (optional)',
-                        border: OutlineInputBorder(),
+                  // Información del código de barras detectado
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.primaryBlue.withOpacity(0.2),
+                        width: 1,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _gController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'G (optional)',
-                        border: OutlineInputBorder(),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.qr_code_scanner,
+                              color: AppTheme.primaryBlue,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Detected Barcode',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDarkMode
+                                        ? Colors.white70
+                                        : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.barcode ?? 'No barcode detected',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _bController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'B (optional)',
-                        border: OutlineInputBorder(),
-                      ),
+
+                  const SizedBox(height: 24),
+
+                  // Campos obligatorios
+                  Text(
+                    'Required Information',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
                     ),
                   ),
+                  const SizedBox(height: 12),
+
+                  // Dropdown de marca
+                  DropdownButtonFormField<String>(
+                    items:
+                        _brands
+                            .map(
+                              (brand) => DropdownMenuItem(
+                                value: brand['id'] as String,
+                                child: Text(brand['name']),
+                              ),
+                            )
+                            .toList(),
+                    decoration: InputDecoration(
+                      labelText: 'Brand',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.brush_outlined),
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                    onChanged: (value) {
+                      _brandController.text = value!;
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Please select a brand';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo de nombre
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.label_outline),
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter the paint name';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Información adicional
+                  Text(
+                    'Additional Information (Optional)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Campos opcionales
+                  TextFormField(
+                    controller: _colorController,
+                    decoration: InputDecoration(
+                      labelText: 'Color',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.color_lens_outlined),
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _codeController,
+                    decoration: InputDecoration(
+                      labelText: 'Code',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.code),
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _setController,
+                    decoration: InputDecoration(
+                      labelText: 'Set',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.collections_outlined),
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Información de color
+                  Text(
+                    'Color Values (Optional)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    controller: _hexController,
+                    decoration: InputDecoration(
+                      labelText: 'Hex Code (e.g. #FF5733)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      prefixIcon: const Icon(Icons.palette_outlined),
+                      prefixText: '#',
+                      filled: true,
+                      fillColor:
+                          isDarkMode ? AppTheme.darkSurface : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _rController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'R',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDarkMode
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _gController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'G',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDarkMode
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _bController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'B',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor:
+                                isDarkMode
+                                    ? AppTheme.darkSurface
+                                    : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Fotografía
+                  Text(
+                    'Photo',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Mostrar la imagen si se ha tomado una foto
+                  if (_imageFile != null)
+                    Container(
+                      height: 200,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _imageFile!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
+                      ),
+                    ),
+
+                  ElevatedButton.icon(
+                    onPressed: _getImage,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Take a photo of the label'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Botón de envío
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 54),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: AppTheme.marineOrange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child:
+                        _isLoading
+                            ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                            : const Text(
+                              'Submit',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 16),
-                        
-              if (widget.barcode != null)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'Detected Barcode: ${widget.barcode}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              const SizedBox(height: 16),
-
-              ElevatedButton.icon(
-                onPressed: _getImage,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Take a photo of the label'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (_imageFile != null)
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Image.file(
-                    _imageFile!,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              const SizedBox(height: 24),
-              
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Submit'),
-              )
-               
-            ],
+            ),
           ),
         ),
       ),
