@@ -209,7 +209,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-
+    print("barcode_scanner_screen.dart isGuestUser: $isGuestUser");
     // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
@@ -255,9 +255,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               _isScanning = false;
             });
           } else if (paints.length == 1) {
-            // Si solo hay una pintura, mostrarla directamente
-            _foundPaint = paints[0];
-            _showScanResultSheet(_foundPaint!);
+            if (isGuestUser) {
+              _showPaintSelectionDialog(paints);
+            } else {              
+              _foundPaint = paints[0];
+              _showScanResultSheet(_foundPaint!);
+            }
           } else {
             // Si hay múltiples pinturas, mostrar diálogo de selección
             _showPaintSelectionDialog(paints);
