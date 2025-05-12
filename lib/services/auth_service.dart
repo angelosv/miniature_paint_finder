@@ -8,6 +8,7 @@ import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:miniature_paint_finder/services/notification_service.dart';
 // import 'package:sign_in_with_apple/sign_in_with_apple.dart'; // Disabled in this branch
 import 'package:crypto/crypto.dart';
 import 'package:miniature_paint_finder/services/auth_stubs.dart';
@@ -158,7 +159,9 @@ class AuthService implements IAuthService {
       }
 
       // Listen to auth state changes
-      firebase.FirebaseAuth.instance.authStateChanges().listen((firebaseUser) {
+      firebase.FirebaseAuth.instance.authStateChanges().listen((
+        firebaseUser,
+      ) async {
         if (firebaseUser != null) {
           _currentUser = User(
             id: firebaseUser.uid,
@@ -173,9 +176,11 @@ class AuthService implements IAuthService {
           _currentUser = null;
         }
         _authStateController.add(_currentUser);
+        await NotificationService.saveFcmToken();
       });
 
       _authStateController.add(_currentUser);
+      await NotificationService.saveFcmToken();
     } catch (e) {
       print('Error initializing auth service: $e');
       throw AuthException(
@@ -233,6 +238,7 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
+      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
@@ -312,6 +318,8 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
+      await NotificationService.saveFcmToken();
+
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -500,6 +508,7 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
+      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } catch (e) {
@@ -544,6 +553,7 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
+      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } catch (e) {
