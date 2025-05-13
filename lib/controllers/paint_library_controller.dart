@@ -223,7 +223,6 @@ class PaintLibraryController extends ChangeNotifier {
   /// Restablecer todos los filtros
   void resetFilters() {
     _searchQuery = '';
-    _selectedBrand = 'All';
     _selectedCategory = 'All';
     _selectedColor = null;
     applyFilters();

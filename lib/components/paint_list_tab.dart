@@ -2773,6 +2773,9 @@ class _PaintListTabState extends State<PaintListTab> {
     List<PaletteInfo> paletteInfo,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final paintColor = Color(
+      int.parse(paint.hex.substring(1), radix: 16) | 0xFF000000,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -2785,164 +2788,379 @@ class _PaintListTabState extends State<PaintListTab> {
             color: isDarkMode ? const Color(0xFF1E2229) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // → Encabezado
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              // Close button
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: isDarkMode ? Colors.white70 : Colors.black54,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with title
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      child: Text(
                         'Paint Details',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: isDarkMode ? Colors.white : Colors.black54,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-                  Divider(
-                    color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // → Nombre y marca
-                  Text(
-                    paint.name,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    paint.brand,
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                  // → Color code
-                  Row(
-                    children: [
-                      Text(
-                        'Color Code:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        paint.hex,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black,
+                          color: isDarkMode ? Colors.white70 : Colors.black87,
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-                  // → Conteo real
-                  Text(
-                    'Used in $count palette${count == 1 ? '' : 's'}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
-                  // → Si no hay paletas
-                  if (count == 0)
-                    Center(
-                      child: Text(
-                        'This paint hasn\'t been used in any palette yet.',
-                        style: TextStyle(
-                          color:
-                              isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        ),
+                    const SizedBox(height: 12),
+
+                    Divider(
+                      color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+                    ),
+
+                    // Paint name section with large font
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Color avatar - large circle showing the paint color
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: paintColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[700]!
+                                        : Colors.grey[300]!,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Paint name and details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  paint.name,
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        isDarkMode
+                                            ? Colors.white
+                                            : Colors.black,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 4),
+
+                                // Brand with logo
+                                Row(
+                                  children: [
+                                    // Brand logo or first letter avatar
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[800]
+                                                : Colors.grey[200],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          paint.brand
+                                              .substring(0, 1)
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      paint.brand,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  else
-                    // → Iteramos lista real
-                    for (final info in paletteInfo)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          children: [
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Color code section
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Color Code:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[400]
+                                      : Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[850]
+                                      : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[700]!
+                                        : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: paintColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[600]!
+                                              : Colors.grey[400]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  paint.hex,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'monospace',
+                                    color:
+                                        isDarkMode
+                                            ? Colors.white
+                                            : Colors.black,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Palettes section
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.palette_outlined,
+                                size: 20,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Used in $count palette${count == 1 ? '' : 's'}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      isDarkMode
+                                          ? Colors.white
+                                          : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // No palettes message
+                          if (count == 0)
+                            Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[850]
+                                          : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        isDarkMode
+                                            ? Colors.grey[700]!
+                                            : Colors.grey[300]!,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.palette_outlined,
+                                      size: 36,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.grey[600]
+                                              : Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'This paint hasn\'t been used in any palette yet.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            // Palette items
                             Container(
-                              width: 40,
-                              height: 40,
                               decoration: BoxDecoration(
-                                color: Color(
-                                  int.parse(paint.hex.substring(1), radix: 16) |
-                                      0xFF000000,
-                                ).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[850]
+                                        : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color:
+                                      isDarkMode
+                                          ? Colors.grey[700]!
+                                          : Colors.grey[300]!,
+                                ),
                               ),
-                              child: const Center(
-                                child: Icon(Icons.palette, size: 20),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    info.name,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: paletteInfo.length,
+                                separatorBuilder:
+                                    (context, index) => Divider(
                                       color:
                                           isDarkMode
-                                              ? Colors.white
-                                              : Colors.black87,
+                                              ? Colors.grey[800]
+                                              : Colors.grey[300],
+                                      height: 1,
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${info.createdAt.year}-'
-                                    '${info.createdAt.month.toString().padLeft(2, '0')}-'
-                                    '${info.createdAt.day.toString().padLeft(2, '0')}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color:
-                                          isDarkMode
-                                              ? Colors.grey[400]
-                                              : Colors.grey[600],
+                                itemBuilder: (context, index) {
+                                  final info = paletteInfo[index];
+                                  return ListTile(
+                                    leading: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: paintColor.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(Icons.palette, size: 20),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    title: Text(
+                                      info.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.white
+                                                : Colors.black87,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${info.createdAt.year}-'
+                                      '${info.createdAt.month.toString().padLeft(2, '0')}-'
+                                      '${info.createdAt.day.toString().padLeft(2, '0')}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDarkMode
+                                                ? Colors.grey[400]
+                                                : Colors.grey[600],
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          ],
-                        ),
+                        ],
                       ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       },

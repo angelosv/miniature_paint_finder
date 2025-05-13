@@ -128,7 +128,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // Apply guest mode wrapper to protect restricted features
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      title: controller.showingBrandsView ? 'Paint Brands' : 'Paint Library',
+      title:
+          controller.showingBrandsView
+              ? 'Paint Brands'
+              : controller.selectedBrand == 'All'
+              ? 'Paint Library'
+              : 'Paint Library - ${controller.selectedBrand}',
       selectedIndex: 1,
       body: GuestService.wrapScreenForGuest(
         context: context,
@@ -158,7 +163,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             Expanded(
               child:
                   controller.showingBrandsView
-                      ? _buildBrandsGrid(isDarkMode, controller)
+                      ? _buildBrandsGrid(controller)
                       : Column(
                         children: [
                           _buildResultsBar(isDarkMode, controller),
@@ -220,6 +225,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               onChanged: (value) {
                 if (!controller.showingBrandsView) {
                   controller.searchPaints(value);
+                } else {
+                  // Force rebuild to filter brands based on search text
+                  setState(() {});
                 }
               },
               decoration: InputDecoration(
@@ -301,14 +309,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   // Vista de cuadrícula de marcas
-  Widget _buildBrandsGrid(bool isDarkMode, PaintLibraryController controller) {
-    // Filtrar marcas según la búsqueda
-    final searchQuery = _searchController.text.toLowerCase();
+  Widget _buildBrandsGrid(PaintLibraryController controller) {
+    final brands = controller.brands;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Filter brands based on search text
     final filteredBrands =
-        controller.brands.where((brand) {
-          final brandName = (brand['name'] as String).toLowerCase();
-          return searchQuery.isEmpty || brandName.contains(searchQuery);
-        }).toList();
+        _searchController.text.isEmpty
+            ? brands
+            : brands
+                .where(
+                  (brand) => (brand['name'] as String).toLowerCase().contains(
+                    _searchController.text.toLowerCase(),
+                  ),
+                )
+                .toList();
 
     if (filteredBrands.isEmpty) {
       return Center(
@@ -347,35 +362,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: filteredBrands.length,
-        itemBuilder: (context, index) {
-          final brand = filteredBrands[index];
-          return BrandCard(
-            id: brand['id'] as String,
-            name: brand['name'] as String,
-            logoUrl: brand['logo_url'] as String?,
-            paintCount: brand['paint_count'] as int? ?? 0,
-            onTap: () {
-              controller.navigateToBrandPaints(brand['name'] as String);
-            },
-          );
-        },
+    return GridView.builder(
+      padding: EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.8,
       ),
+      itemCount: filteredBrands.length,
+      itemBuilder: (context, index) {
+        final brand = filteredBrands[index];
+        return BrandCard(
+          id: brand['id'] as String,
+          name: brand['name'] as String,
+          logoUrl: brand['logo_url'] as String?,
+          paintCount: brand['paint_count'] as int? ?? 0,
+          onTap: () {
+            controller.navigateToBrandPaints(brand['name'] as String);
+          },
+        );
+      },
     );
   }
 
   bool _hasActiveFilters(PaintLibraryController controller) {
-    return controller.selectedBrand != 'All' ||
-        controller.selectedCategory != 'All' ||
+    return controller.selectedCategory != 'All' ||
         controller.selectedColor != null;
   }
 
@@ -569,13 +581,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          if (controller.selectedBrand != 'All')
-            _buildFilterChip(
-              label: controller.selectedBrand,
-              onRemove: () => controller.filterByBrand('All', true),
-              isDarkMode: isDarkMode,
-              icon: Icons.business,
-            ),
           if (controller.selectedCategory != 'All')
             _buildFilterChip(
               label: controller.selectedCategory,
@@ -767,50 +772,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    'By Brand',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: const Text('All Brands'),
-                          selected: controller.selectedBrand == 'All',
-                          onSelected: (selected) {
-                            if (selected) {
-                              controller.filterByBrand('All', false);
-                              setModalState(() {});
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        ...controller.availableBrands
-                            .where((brand) => brand != 'All')
-                            .map((brand) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: FilterChip(
-                                  label: Text(brand),
-                                  selected: controller.selectedBrand == brand,
-                                  onSelected: (selected) {
-                                    if (selected) {
-                                      controller.filterByBrand(brand, false);
-                                      setModalState(() {});
-                                    }
-                                  },
-                                ),
-                              );
-                            })
-                            .toList(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   Text(
                     'By Category',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
