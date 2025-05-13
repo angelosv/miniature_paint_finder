@@ -648,7 +648,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: Row(
                       children: [
                         FilterChip(
-                          label: const Text('All'),
+                          label: const Text('All Brands'),
                           selected: controller.selectedBrand == 'All',
                           onSelected: (selected) {
                             if (selected) {
@@ -658,21 +658,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           },
                         ),
                         const SizedBox(width: 8),
-                        ...controller.availableBrands.map((brand) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(brand),
-                              selected: controller.selectedBrand == brand,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  controller.filterByBrand(brand, false);
-                                  setModalState(() {});
-                                }
-                              },
-                            ),
-                          );
-                        }).toList(),
+                        ...controller.availableBrands
+                            .where((brand) => brand != 'All')
+                            .map((brand) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Text(brand),
+                                  selected: controller.selectedBrand == brand,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      controller.filterByBrand(brand, false);
+                                      setModalState(() {});
+                                    }
+                                  },
+                                ),
+                              );
+                            })
+                            .toList(),
                       ],
                     ),
                   ),
@@ -689,7 +692,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: Row(
                       children: [
                         FilterChip(
-                          label: const Text('All'),
+                          label: const Text('All Categories'),
                           selected: controller.selectedCategory == 'All',
                           onSelected: (selected) {
                             if (selected) {
@@ -699,108 +702,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           },
                         ),
                         const SizedBox(width: 8),
-                        ...controller.availableCategories.map((category) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(category),
-                              selected: controller.selectedCategory == category,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  controller.filterByCategory(category, false);
-                                  setModalState(() {});
-                                }
-                              },
-                            ),
-                          );
-                        }).toList(),
+                        ...controller.availableCategories
+                            .where((category) => category != 'All')
+                            .map((category) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Text(category),
+                                  selected:
+                                      controller.selectedCategory == category,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      controller.filterByCategory(
+                                        category,
+                                        false,
+                                      );
+                                      setModalState(() {});
+                                    }
+                                  },
+                                ),
+                              );
+                            })
+                            .toList(),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'By Color',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Color picker grid
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      // No color option
-                      GestureDetector(
-                        onTap: () {
-                          controller.filterByColor(null);
-                          setModalState(() {});
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey, width: 1),
-                            color:
-                                controller.selectedColor == null
-                                    ? Colors.grey.withOpacity(0.2)
-                                    : null,
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.not_interested, size: 20),
-                          ),
-                        ),
-                      ),
-                      // Fixed common paint colors
-                      ...[
-                        Colors.red,
-                        Colors.blue,
-                        Colors.green,
-                        Colors.yellow,
-                        Colors.purple,
-                        Colors.orange,
-                        Colors.brown,
-                        Colors.grey,
-                        Colors.black,
-                        Colors.white,
-                      ].map((color) {
-                        final isSelected = controller.selectedColor == color;
-                        return GestureDetector(
-                          onTap: () {
-                            controller.filterByColor(color);
-                            setModalState(() {});
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                              border: Border.all(
-                                color:
-                                    isSelected
-                                        ? isDarkMode
-                                            ? Colors.white
-                                            : Colors.black
-                                        : Colors.grey.shade300,
-                                width: isSelected ? 2 : 1,
-                              ),
-                              boxShadow:
-                                  isSelected
-                                      ? [
-                                        BoxShadow(
-                                          color: color.withOpacity(0.4),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        ),
-                                      ]
-                                      : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ],
                   ),
                   const SizedBox(height: 24),
                   Row(

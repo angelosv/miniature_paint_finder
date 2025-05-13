@@ -813,7 +813,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     // Determinar el brandId correcto de forma segura
-    print('⚠️ _buildInventoryCard paint: ${paint.toJson()}');
     final String brandId = paint.brandId ?? '';
 
     // Obtener el nombre oficial de forma segura
@@ -896,18 +895,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
         );
       },
       onDismissed: (direction) async {
-        print(
-          '🔄 Iniciando eliminación de ${paint.name} del inventario (swipe)',
-        );
-
-        // Llamar al servicio para eliminar
         final success = await _inventoryService.deleteInventoryRecord(item.id);
 
         if (success) {
-          print('✅ Pintura eliminada exitosamente del inventario');
-
           setState(() {
-            // Crear una nueva lista modificable
             final newFilteredInventory = List<PaintInventoryItem>.from(
               _filteredInventory,
             );
@@ -931,7 +922,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           );
         } else {
-          print('❌ Error al eliminar la pintura del inventario');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error removing ${paint.name} from inventory'),
@@ -969,7 +959,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
                       width: 1,
                     ),
-                    // Removed shadow
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1425,8 +1414,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Construye un widget seguro para mostrar el contenedor de stock
   Widget _buildStockContainer(int stock, bool isDarkMode) {
     return Container(
-      width: 32,
-      height: 32,
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
         color:
             stock > 0
@@ -1440,13 +1429,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   : (isDarkMode ? Colors.red[700]! : Colors.red[300]!),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Center(
         child: Text(
           '$stock',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 12,
+            fontSize: 14,
             color:
                 stock > 0
                     ? (isDarkMode ? Colors.green[300] : Colors.green[700])
@@ -1703,30 +1699,6 @@ class _InventoryItemModalState extends State<InventoryItemModal> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
-                              // Additional paint details
-                              if (paint.code != null && paint.code!.isNotEmpty)
-                                Text(
-                                  'Code: ${paint.code}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
-                                  ),
-                                ),
-                              if (paint.set != null && paint.set!.isNotEmpty)
-                                Text(
-                                  'Set: ${paint.set}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
-                                  ),
-                                ),
                             ],
                           ),
                         ),
