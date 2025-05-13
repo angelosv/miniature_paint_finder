@@ -17,6 +17,9 @@ class PaintLibraryController extends ChangeNotifier {
   List<Map<String, dynamic>> _brands = [];
   List<Map<String, dynamic>> _categories = [];
 
+  /// Flag para controlar la vista de biblioteca (True = Vista de marcas, False = Vista de pinturas)
+  bool _showingBrandsView = true;
+
   /// Conjunto de IDs de pinturas en la lista de deseos
   Set<String> _wishlist = {};
 
@@ -58,6 +61,9 @@ class PaintLibraryController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get selectedBrand => _selectedBrand;
+  bool get showingBrandsView => _showingBrandsView;
+  List<Map<String, dynamic>> get brands => _brands;
+
   set selectedBrand(String value) {
     _selectedBrand = value;
     notifyListeners();
@@ -90,6 +96,42 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Verificar si una pintura está en la wishlist
   bool isPaintInWishlist(String paintId) => _wishlist.contains(paintId);
+
+  /// Alterna entre la vista de marcas y la vista de pinturas
+  void toggleView() {
+    _showingBrandsView = !_showingBrandsView;
+    if (_showingBrandsView) {
+      _selectedBrand = 'All';
+    }
+    notifyListeners();
+  }
+
+  /// Establece la vista a mostrar
+  void setView(bool showBrands) {
+    if (_showingBrandsView != showBrands) {
+      _showingBrandsView = showBrands;
+      notifyListeners();
+    }
+  }
+
+  /// Navega a la vista de pinturas de una marca específica
+  void navigateToBrandPaints(String brandName) {
+    _showingBrandsView = false;
+    filterByBrand(brandName, true);
+  }
+
+  /// Vuelve a la vista de marcas
+  void backToBrandsView() {
+    _showingBrandsView = true;
+    _selectedBrand = 'All';
+    notifyListeners();
+  }
+
+  /// Obtiene marcas con conteo de pinturas
+  List<Map<String, dynamic>> getBrandsWithCounts() {
+    // Si ya tenemos las marcas cargadas, las devolvemos directamente
+    return _brands;
+  }
 
   /// Cargar todas las pinturas
   Future<void> loadPaints() async {
@@ -227,6 +269,9 @@ class PaintLibraryController extends ChangeNotifier {
   }
 
   Future<void> loadBrands() async {
+    _isLoading = true;
+    notifyListeners();
+
     try {
       final brands = await _apiService.getBrands();
       _brands = brands;
@@ -234,6 +279,9 @@ class PaintLibraryController extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Error al cargar las marcas: $e';
+      notifyListeners();
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
