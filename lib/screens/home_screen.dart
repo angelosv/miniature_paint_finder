@@ -6,6 +6,8 @@ import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:miniature_paint_finder/services/api_service.dart';
+import 'package:miniature_paint_finder/services/push_notification_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
@@ -27,6 +29,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  bool _pushInitialized = false;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _drawerAnimController;
   bool _showPromoButton = false;
@@ -45,9 +49,23 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Check navigation arguments and guest status
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializePushNotifications();
       _checkNavigationArguments();
       _checkPromoButtonVisibility();
     });
+  }
+
+  void _initializePushNotifications() {
+    if (_pushInitialized) return;
+    final authService = Provider.of<IAuthService>(context, listen: false);
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    if (authService.currentUser != null) {
+      PushNotificationService(
+        apiService: apiService,
+        authService: authService,
+      ).init();
+      _pushInitialized = true;
+    }
   }
 
   void _checkPromoButtonVisibility() async {

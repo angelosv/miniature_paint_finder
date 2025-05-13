@@ -1,7 +1,7 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
@@ -19,13 +19,13 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:miniature_paint_finder/models/user.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/image_cache_service.dart';
-import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
+import 'package:miniature_paint_finder/services/push_notification_service.dart'
+    show firebaseMessagingBackgroundHandler;
 
 /// App entry point
 void main() async {
@@ -36,9 +36,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
-    await NotificationService.init(); // <-- AQUÍ
-    NotificationService.listenForTokenRefresh();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
     print('Firebase initialization error: $e');
     // Continuamos con la app incluso si Firebase falla
@@ -86,6 +84,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         Provider<IAuthService>.value(value: authService),
         Provider<PaintRepository>.value(value: paintRepository),
@@ -119,7 +118,8 @@ class MyAppWrapper extends StatefulWidget {
   _MyAppWrapperState createState() => _MyAppWrapperState();
 }
 
-class _MyAppWrapperState extends State<MyAppWrapper> with WidgetsBindingObserver {
+class _MyAppWrapperState extends State<MyAppWrapper>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -130,7 +130,10 @@ class _MyAppWrapperState extends State<MyAppWrapper> with WidgetsBindingObserver
     try {
       print('GET Guest Flag');
       final response = await widget.apiService.get(ApiEndpoints.guestLogic);
-      final guestLogicProvider = Provider.of<GuestLogicProvider>(context, listen: false);
+      final guestLogicProvider = Provider.of<GuestLogicProvider>(
+        context,
+        listen: false,
+      );
       guestLogicProvider.guestLogic = response['value'];
       print('CALL Guest Logic: ${guestLogicProvider.guestLogic}');
     } catch (e) {
