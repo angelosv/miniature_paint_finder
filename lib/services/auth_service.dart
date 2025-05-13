@@ -1,17 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:miniature_paint_finder/services/notification_service.dart';
 // import 'package:sign_in_with_apple/sign_in_with_apple.dart'; // Disabled in this branch
 import 'package:crypto/crypto.dart';
-import 'package:miniature_paint_finder/services/auth_stubs.dart';
 import 'package:miniature_paint_finder/utils/env.dart'; // Using stub implementation
 
 /// Custom exception for authentication errors
@@ -176,11 +171,9 @@ class AuthService implements IAuthService {
           _currentUser = null;
         }
         _authStateController.add(_currentUser);
-        await NotificationService.saveFcmToken();
       });
 
       _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
     } catch (e) {
       print('Error initializing auth service: $e');
       throw AuthException(
@@ -238,7 +231,6 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
@@ -318,7 +310,6 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
@@ -508,7 +499,6 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } catch (e) {
@@ -553,7 +543,6 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
-      await NotificationService.saveFcmToken();
 
       return _currentUser!;
     } catch (e) {
