@@ -1,23 +1,29 @@
 // lib/services/push_notification_service.dart
 
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/main.dart'; // ← para navigatorKey
 
 /// Top‐level function for handling notification taps in foreground
 @pragma('vm:entry-point')
 void onNotificationTap(NotificationResponse resp) {
-  print('🔔 Notification tapped: ${resp.payload}');
+  if (resp.payload != null) {
+    final data = jsonDecode(resp.payload!);
+    final route = data['targetRoute'] ?? data['route'] ?? '/';
+    final args = data['screenArgs'];
+    navigatorKey.currentState?.pushNamed(route, arguments: args);
+  }
 }
 
 /// Top‐level function for handling notification taps when app is in background
 @pragma('vm:entry-point')
 void onNotificationTapBackground(NotificationResponse resp) {
-  print('🔔 Background tap: ${resp.payload}');
+  onNotificationTap(resp);
 }
 
 /// Top-level background message handler
@@ -94,6 +100,11 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
       final n = msg.notification;
       if (n == null || n.android == null) return;
+
+      final payload = jsonEncode(
+        msg.data.isNotEmpty ? msg.data : {'route': '/'},
+      );
+
       _fln.show(
         n.hashCode,
         n.title,
@@ -109,12 +120,28 @@ class PushNotificationService {
           ),
           iOS: DarwinNotificationDetails(),
         ),
+        payload: payload, // ← añadimos payload
       );
     });
 
     // 9. Log taps on notifications when app is opened via them
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
       print('👉 Notification opened: ${msg.messageId}');
+      _handleRemoteMessage(msg); // ← navegamos
     });
+
+    // 10. Handle cold start (app launched via notification)
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null) {
+      _handleRemoteMessage(initial);
+    }
+  }
+
+  // Nuevo método privado para procesar msg.data y navegar
+  void _handleRemoteMessage(RemoteMessage msg) {
+    final data = msg.data.isNotEmpty ? msg.data : {'route': '/'};
+    final route = data['targetRoute'] ?? data['route'] ?? '/';
+    final args = data['screenArgs'];
+    navigatorKey.currentState?.pushNamed(route, arguments: args);
   }
 }

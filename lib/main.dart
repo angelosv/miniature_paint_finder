@@ -13,7 +13,6 @@ import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
-import 'package:miniature_paint_finder/services/notification_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +25,8 @@ import 'package:miniature_paint_finder/services/image_cache_service.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
 import 'package:miniature_paint_finder/services/push_notification_service.dart'
     show firebaseMessagingBackgroundHandler;
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// App entry point
 void main() async {
@@ -179,6 +180,7 @@ class MyApp extends StatelessWidget {
       // Construir la aplicación
       builder: (_, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Miniature Painter',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
