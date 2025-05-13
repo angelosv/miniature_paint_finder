@@ -131,9 +131,31 @@ class PaintGridCard extends StatelessWidget {
                       ),
 
                       // Código de la pintura
-                      Text(
-                        paint.code,
-                        style: TextStyle(fontSize: 12.sp, color: subtextColor),
+                      Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: paintColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            paint.hex,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: subtextColor,
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
 
                       Spacer(),
@@ -181,24 +203,27 @@ class PaintGridCard extends StatelessWidget {
 
                           SizedBox(width: 8.r),
 
-                          // Nombre de la marca
+                          // Nombre de la marca y categoría en columna
                           Expanded(
-                            child: Text(
-                              paint.brand,
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                          ),
-
-                          // Categoría sin fondo
-                          Text(
-                            paint.category,
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              color: textColor.withOpacity(0.8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  paint.brand,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                                Text(
+                                  paint.category,
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: textColor.withOpacity(0.8),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
