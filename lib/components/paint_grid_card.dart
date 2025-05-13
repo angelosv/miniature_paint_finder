@@ -45,6 +45,9 @@ class PaintGridCard extends StatelessWidget {
 
   // Helper para obtener la URL del logo de la marca directamente del parámetro logo_url
   String _getBrandLogoUrl() {
+    if (paint.brandLogo != null && paint.brandLogo!.isNotEmpty) {
+      return paint.brandLogo!;
+    }
     // En una implementación real, esto vendría directamente de la respuesta de la API
     // como un campo "logo_url" en el objeto Paint
     // Aquí simulamos la URL basándonos en la marca

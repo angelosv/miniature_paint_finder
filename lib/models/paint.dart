@@ -28,6 +28,8 @@ class Paint {
   /// Manufacturer brand name
   final String brand;
 
+  final String? brandLogo;
+
   /// Manufacturer brand ID
   final String? brandId;
 
@@ -54,6 +56,7 @@ class Paint {
     required this.b,
     required this.brand,
     this.brandId,
+    this.brandLogo,
     required this.category,
     this.isMetallic = false,
     this.isTransparent = false,
@@ -73,6 +76,7 @@ class Paint {
       'b': b,
       'brand': brand,
       'brandId': brandId,
+      'brandLogo': brandLogo,
       'category': category,
       'isMetallic': isMetallic,
       'isTransparent': isTransparent,
@@ -95,6 +99,7 @@ class Paint {
       b: json['b'] as int? ?? 0,
       brand: json['brand'] as String? ?? '',
       brandId: brandId,
+      brandLogo: json['brandLogo'] as String? ?? '',
       category: json['category'] as String? ?? '',
       isMetallic: json['isMetallic'] as bool? ?? false,
       isTransparent: json['isTransparent'] as bool? ?? false,
@@ -122,6 +127,7 @@ class Paint {
     bool isMetallic = false,
     bool isTransparent = false,
     List<String> palettes = const [],
+    String brandLogo = "",
   }) {
     // Convert hex to RGB
     final hexColor = hex.startsWith('#') ? hex.substring(1) : hex;
@@ -133,6 +139,7 @@ class Paint {
       id: id,
       name: name,
       brand: brand,
+      brandLogo: brandLogo,
       hex: hex,
       category: category,
       set: set,
