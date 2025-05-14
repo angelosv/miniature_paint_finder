@@ -316,7 +316,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       title: 'Wishlist',
-      selectedIndex: 2,
+      selectedIndex: 3,
       body: _buildBody(),
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
       floatingActionButton: FloatingActionButton.extended(

@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:miniature_paint_finder/models/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart' as apple;
 import 'package:crypto/crypto.dart';
-import 'package:miniature_paint_finder/services/auth_stubs.dart';
 import 'package:miniature_paint_finder/utils/env.dart'; // Using stub implementation
 
 /// Custom exception for authentication errors
@@ -158,7 +154,9 @@ class AuthService implements IAuthService {
       }
 
       // Listen to auth state changes
-      firebase.FirebaseAuth.instance.authStateChanges().listen((firebaseUser) {
+      firebase.FirebaseAuth.instance.authStateChanges().listen((
+        firebaseUser,
+      ) async {
         if (firebaseUser != null) {
           _currentUser = User(
             id: firebaseUser.uid,
@@ -312,6 +310,7 @@ class AuthService implements IAuthService {
       );
 
       _authStateController.add(_currentUser);
+
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
       switch (e.code) {

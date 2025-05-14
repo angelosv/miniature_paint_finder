@@ -5,6 +5,9 @@ class ApiEndpoints {
   /// Base URL para todas las llamadas API
   static final String baseUrl = '${Env.apiBaseUrl}';
 
+  static String get paintSubmit => '/paint/pending-paint-submissions';
+  static String get guestLogic => '/flags/guest-logic';
+
   /// Endpoints relacionados con pinturas
   static String get paints => '/paints';
   static String get brands => '/brands';

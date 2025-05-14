@@ -211,7 +211,7 @@ class _PaintCardState extends State<PaintCard> {
                                   brandId: brandId,
                                   paintId: paint.id,
                                   quantity: quantity,
-                                  notes: notes as String,
+                                  notes: (notes as String?) ?? '',
                                 );
                             if (inventoryId != null) {
                               newId = inventoryId;
@@ -266,10 +266,24 @@ class _PaintCardState extends State<PaintCard> {
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
+                      backgroundColor:
+                          _inInventory
+                              ? (isDarkMode
+                                  ? AppTheme.drawerOrange
+                                  : AppTheme.primaryBlue)
+                              : Colors.transparent,
                       foregroundColor:
-                          isDarkMode
-                              ? AppTheme.drawerOrange
-                              : AppTheme.primaryBlue,
+                          _inInventory
+                              ? Colors.white
+                              : (isDarkMode
+                                  ? AppTheme.drawerOrange
+                                  : AppTheme.primaryBlue),
+                      side: BorderSide(
+                        color:
+                            isDarkMode
+                                ? AppTheme.drawerOrange
+                                : AppTheme.primaryBlue,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       minimumSize: const Size(0, 32),
                     ),
@@ -366,7 +380,14 @@ class _PaintCardState extends State<PaintCard> {
                       style: TextStyle(fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
+                      backgroundColor:
+                          _inWishlist ? Colors.redAccent : Colors.transparent,
+                      foregroundColor:
+                          _inWishlist ? Colors.white : Colors.redAccent,
+                      side: BorderSide(
+                        color:
+                            _inWishlist ? Colors.redAccent : Colors.redAccent,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       minimumSize: const Size(0, 32),
                     ),
@@ -595,10 +616,24 @@ class _PaintCardState extends State<PaintCard> {
                         style: const TextStyle(fontSize: 12),
                       ),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor:
+                            _inInventory
+                                ? (isDarkMode
+                                    ? AppTheme.drawerOrange
+                                    : AppTheme.primaryBlue)
+                                : Colors.transparent,
                         foregroundColor:
-                            isDarkMode
-                                ? AppTheme.drawerOrange
-                                : AppTheme.primaryBlue,
+                            _inInventory
+                                ? Colors.white
+                                : (isDarkMode
+                                    ? AppTheme.drawerOrange
+                                    : AppTheme.primaryBlue),
+                        side: BorderSide(
+                          color:
+                              isDarkMode
+                                  ? AppTheme.drawerOrange
+                                  : AppTheme.primaryBlue,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -699,7 +734,14 @@ class _PaintCardState extends State<PaintCard> {
                         _inWishlist ? 'Update Wishlist' : 'Add to Wishlist',
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.redAccent,
+                        backgroundColor:
+                            _inWishlist ? Colors.redAccent : Colors.transparent,
+                        foregroundColor:
+                            _inWishlist ? Colors.white : Colors.redAccent,
+                        side: BorderSide(
+                          color:
+                              _inWishlist ? Colors.redAccent : Colors.redAccent,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),

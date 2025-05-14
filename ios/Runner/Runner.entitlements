@@ -11,5 +11,7 @@
 	<!-- Application identifier para instalación -->
 	<key>application-identifier</key>
 	<string>$(AppIdentifierPrefix)com.angelovs.miniaturePaintFinder</string>
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
-</plist> 
+</plist>

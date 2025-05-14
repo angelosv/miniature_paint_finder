@@ -16,6 +16,8 @@ import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/guest_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
+import 'package:miniature_paint_finder/components/brand_card.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -38,26 +40,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+      // Cargar marcas para la vista inicial
+      context.read<PaintLibraryController>().loadBrands();
+      context.read<PaintLibraryController>().loadCategories();
+
       if (args != null) {
         if (args.containsKey('paletteInfo')) {
           final _paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
           _paletteName = _paletteInfo['paletteName'];
-          print('initState Palette name: $_paletteName');
+          // Si venimos para crear una paleta, mostrar pinturas directamente
+          context.read<PaintLibraryController>().setView(false);
+          context.read<PaintLibraryController>().loadPaints();
         }
         if (args.containsKey('brandName')) {
           final String brandName = args['brandName'];
-          context.read<PaintLibraryController>().filterByBrand(
-            brandName,
-            false,
-          );
-        } else {
-          context.read<PaintLibraryController>().loadPaints();
+          // Si especifican una marca, ir directamente a esa marca
+          context.read<PaintLibraryController>().setView(false);
+          context.read<PaintLibraryController>().filterByBrand(brandName, true);
         }
-      } else {
-        context.read<PaintLibraryController>().loadPaints();
       }
-      context.read<PaintLibraryController>().loadBrands();
-      context.read<PaintLibraryController>().loadCategories();
     });
     _inventoryService = InventoryService();
   }
@@ -79,13 +81,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (args != null) {
           // Si es un filtro de marca
           if (args.containsKey('brandName')) {
-            controller.filterByBrand(args['brandName'] as String, false);
-            controller.loadPaints();
+            controller.navigateToBrandPaints(args['brandName'] as String);
           }
           // Si venimos desde creación de paleta
           else if (args.containsKey('paletteInfo')) {
             final paletteInfo = args['paletteInfo'] as Map<String, dynamic>;
             if (paletteInfo['isCreatingPalette'] == true) {
+              controller.setView(false);
               controller.loadPaints();
             }
           }
@@ -126,8 +128,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // Apply guest mode wrapper to protect restricted features
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
-      title: 'Paint Library',
-      selectedIndex: -1,
+      title:
+          controller.showingBrandsView
+              ? 'Paint Brands'
+              : controller.selectedBrand == 'All'
+              ? 'Paint Library'
+              : 'Paint Library - ${controller.selectedBrand}',
+      selectedIndex: 1,
       body: GuestService.wrapScreenForGuest(
         context: context,
         authService: authService,
@@ -149,10 +156,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
       children: [
         Column(
           children: [
+            // Barra de búsqueda
             _buildSearchBar(isDarkMode, controller),
-            _buildResultsBar(isDarkMode, controller),
-            Expanded(child: _buildPaintGrid(isDarkMode, controller)),
-            _buildPagination(controller),
+
+            // Contenido principal (vista de marcas o pinturas)
+            Expanded(
+              child:
+                  controller.showingBrandsView
+                      ? _buildBrandsGrid(controller)
+                      : Column(
+                        children: [
+                          _buildResultsBar(isDarkMode, controller),
+                          Expanded(
+                            child: _buildPaintGrid(isDarkMode, controller),
+                          ),
+                          _buildPagination(controller),
+                        ],
+                      ),
+            ),
           ],
         ),
         if (controller.isLoading)
@@ -169,12 +190,51 @@ class _LibraryScreenState extends State<LibraryScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
+          // Botón Atrás (solo visible en vista de pinturas)
+          if (!controller.showingBrandsView)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color:
+                    isDarkMode
+                        ? AppTheme.darkSurface
+                        : Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                ),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                ),
+                onPressed: () {
+                  controller.backToBrandsView();
+                  _searchController.clear();
+                },
+                tooltip: 'Back to brands',
+              ),
+            ),
+
+          // Campo de búsqueda
           Expanded(
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => controller.searchPaints(value),
+              onChanged: (value) {
+                if (!controller.showingBrandsView) {
+                  controller.searchPaints(value);
+                } else {
+                  // Force rebuild to filter brands based on search text
+                  setState(() {});
+                }
+              },
               decoration: InputDecoration(
-                hintText: 'Search paints...',
+                hintText:
+                    controller.showingBrandsView
+                        ? 'Search brands...'
+                        : 'Search paints...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon:
                     _searchController.text.isNotEmpty
@@ -182,7 +242,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             _searchController.clear();
-                            controller.searchPaints('');
+                            if (!controller.showingBrandsView) {
+                              controller.searchPaints('');
+                            }
                           },
                         )
                         : null,
@@ -194,57 +256,138 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: () => _showFilterDialog(context, controller),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color:
-                    isDarkMode
-                        ? AppTheme.darkSurface
-                        : Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    Icons.filter_list,
-                    color:
-                        isDarkMode
-                            ? AppTheme.marineOrange
-                            : AppTheme.primaryBlue,
+
+          // Botón de filtro (solo visible en vista de pinturas)
+          if (!controller.showingBrandsView) const SizedBox(width: 12),
+
+          if (!controller.showingBrandsView)
+            InkWell(
+              onTap: () => _showFilterDialog(context, controller),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color:
+                      isDarkMode
+                          ? AppTheme.darkSurface
+                          : Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
                   ),
-                  if (_hasActiveFilters(controller))
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.filter_list,
+                      color:
+                          isDarkMode
+                              ? AppTheme.marineOrange
+                              : AppTheme.primaryBlue,
+                    ),
+                    if (_hasActiveFilters(controller))
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
+  // Vista de cuadrícula de marcas
+  Widget _buildBrandsGrid(PaintLibraryController controller) {
+    final brands = controller.brands;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Filter brands based on search text
+    final filteredBrands =
+        _searchController.text.isEmpty
+            ? brands
+            : brands
+                .where(
+                  (brand) => (brand['name'] as String).toLowerCase().contains(
+                    _searchController.text.toLowerCase(),
+                  ),
+                )
+                .toList();
+
+    if (filteredBrands.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No brands found matching your search',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {});
+              },
+              child: Text(
+                'Clear search',
+                style: TextStyle(
+                  color:
+                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: filteredBrands.length,
+      itemBuilder: (context, index) {
+        final brand = filteredBrands[index];
+        return BrandCard(
+          id: brand['id'] as String,
+          name: brand['name'] as String,
+          logoUrl: brand['logo_url'] as String?,
+          paintCount: brand['paint_count'] as int? ?? 0,
+          onTap: () {
+            controller.navigateToBrandPaints(brand['name'] as String);
+          },
+        );
+      },
+    );
+  }
+
   bool _hasActiveFilters(PaintLibraryController controller) {
-    return controller.selectedBrand != 'All' ||
-        controller.selectedCategory != 'All' ||
+    return controller.selectedCategory != 'All' ||
         controller.selectedColor != null;
   }
 
@@ -438,13 +581,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          if (controller.selectedBrand != 'All')
-            _buildFilterChip(
-              label: controller.selectedBrand,
-              onRemove: () => controller.filterByBrand('All', true),
-              isDarkMode: isDarkMode,
-              icon: Icons.business,
-            ),
           if (controller.selectedCategory != 'All')
             _buildFilterChip(
               label: controller.selectedCategory,
@@ -637,47 +773,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'By Brand',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          label: const Text('All'),
-                          selected: controller.selectedBrand == 'All',
-                          onSelected: (selected) {
-                            if (selected) {
-                              controller.filterByBrand('All', false);
-                              setModalState(() {});
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        ...controller.availableBrands.map((brand) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(brand),
-                              selected: controller.selectedBrand == brand,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  controller.filterByBrand(brand, false);
-                                  setModalState(() {});
-                                }
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
                     'By Category',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -689,7 +784,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: Row(
                       children: [
                         FilterChip(
-                          label: const Text('All'),
+                          label: const Text('All Categories'),
                           selected: controller.selectedCategory == 'All',
                           onSelected: (selected) {
                             if (selected) {
@@ -699,108 +794,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           },
                         ),
                         const SizedBox(width: 8),
-                        ...controller.availableCategories.map((category) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(category),
-                              selected: controller.selectedCategory == category,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  controller.filterByCategory(category, false);
-                                  setModalState(() {});
-                                }
-                              },
-                            ),
-                          );
-                        }).toList(),
+                        ...controller.availableCategories
+                            .where((category) => category != 'All')
+                            .map((category) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Text(category),
+                                  selected:
+                                      controller.selectedCategory == category,
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      controller.filterByCategory(
+                                        category,
+                                        false,
+                                      );
+                                      setModalState(() {});
+                                    }
+                                  },
+                                ),
+                              );
+                            })
+                            .toList(),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'By Color',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Color picker grid
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      // No color option
-                      GestureDetector(
-                        onTap: () {
-                          controller.filterByColor(null);
-                          setModalState(() {});
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey, width: 1),
-                            color:
-                                controller.selectedColor == null
-                                    ? Colors.grey.withOpacity(0.2)
-                                    : null,
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.not_interested, size: 20),
-                          ),
-                        ),
-                      ),
-                      // Fixed common paint colors
-                      ...[
-                        Colors.red,
-                        Colors.blue,
-                        Colors.green,
-                        Colors.yellow,
-                        Colors.purple,
-                        Colors.orange,
-                        Colors.brown,
-                        Colors.grey,
-                        Colors.black,
-                        Colors.white,
-                      ].map((color) {
-                        final isSelected = controller.selectedColor == color;
-                        return GestureDetector(
-                          onTap: () {
-                            controller.filterByColor(color);
-                            setModalState(() {});
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                              border: Border.all(
-                                color:
-                                    isSelected
-                                        ? isDarkMode
-                                            ? Colors.white
-                                            : Colors.black
-                                        : Colors.grey.shade300,
-                                width: isSelected ? 2 : 1,
-                              ),
-                              boxShadow:
-                                  isSelected
-                                      ? [
-                                        BoxShadow(
-                                          color: color.withOpacity(0.4),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        ),
-                                      ]
-                                      : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ],
                   ),
                   const SizedBox(height: 24),
                   Row(

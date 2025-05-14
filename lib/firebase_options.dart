@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'paints-78769.firebasestorage.app',
     iosClientId:
         '377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com',
-    iosBundleId: 'com.example.miniaturePaintFinder',
+    iosBundleId: 'com.angelosv.miniaturePaintFinder',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

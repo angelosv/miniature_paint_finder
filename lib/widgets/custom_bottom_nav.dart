@@ -22,7 +22,7 @@ class CustomBottomNav extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final double screenWidth = MediaQuery.of(context).size.width;
     final double itemWidth =
-        screenWidth / 4; // Dividir el ancho entre 4 elementos
+        screenWidth / 5; // Dividir el ancho entre 5 elementos
 
     // Obtener el padding inferior para evitar que se oculte por la barra de navegación
     final EdgeInsets viewPadding = MediaQuery.of(context).viewPadding;
@@ -59,10 +59,20 @@ class CustomBottomNav extends StatelessWidget {
           ),
           _buildNavItem(
             context: context,
+            icon: Icons.grid_view_outlined,
+            activeIcon: Icons.grid_view,
+            label: 'Library',
+            index: 1,
+            isDarkMode: isDarkMode,
+            width: itemWidth,
+            isRestricted: false,
+          ),
+          _buildNavItem(
+            context: context,
             icon: Icons.inventory_outlined,
             activeIcon: Icons.inventory,
             label: 'My Inventory',
-            index: 1,
+            index: 2,
             isDarkMode: isDarkMode,
             width: itemWidth,
             isRestricted: true,
@@ -73,7 +83,7 @@ class CustomBottomNav extends StatelessWidget {
             icon: Icons.favorite_outline,
             activeIcon: Icons.favorite,
             label: 'Wishlist',
-            index: 2,
+            index: 3,
             isDarkMode: isDarkMode,
             width: itemWidth,
             isRestricted: true,
@@ -84,7 +94,7 @@ class CustomBottomNav extends StatelessWidget {
             icon: Icons.palette_outlined,
             activeIcon: Icons.palette,
             label: 'My Palettes',
-            index: 3, // Cambiado de 4 a 3 ya que eliminamos Library
+            index: 4,
             isDarkMode: isDarkMode,
             width: itemWidth,
             isRestricted: true,

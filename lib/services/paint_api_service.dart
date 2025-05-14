@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
-
+import 'package:miniature_paint_finder/models/paint_submit.dart';
 class PaintApiService {
   static final String baseUrl = '${Env.apiBaseUrl}';
 
@@ -182,6 +182,32 @@ class PaintApiService {
     } catch (e) {
       _log('🔴 Exception: ${e.toString()}');
       rethrow;
+    }
+  }
+
+  Future<bool> submitPaint(PaintSubmit item) async {
+    try {
+      print('submitPaint');
+      final url = Uri.parse('${Env.apiBaseUrl}/paint/pending-paint-submissions');
+      print('submitPaint URL: $url');
+      print('submitPaint: ${item.toJson()}');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(item.toJson()),
+      );
+      print('submitPaint response.statusCode: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;  
+      } else {
+        return false;
+      }
+    } catch (e) {
+      print('Error Submitting paint in API: $e');
+      return false;
     }
   }
 }

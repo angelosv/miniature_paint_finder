@@ -4,7 +4,7 @@ class FirebaseConfig {
   static Future<void> init() async {
     try {
       print('Iniciando inicialización de Firebase...');
-      
+
       await Firebase.initializeApp(
         options: const FirebaseOptions(
           apiKey: "AIzaSyDO9f1l9fuv5kSzwmvfZkn2LJcfqRWD35U",
@@ -12,11 +12,12 @@ class FirebaseConfig {
           messagingSenderId: "377740311156",
           projectId: "paints-78769",
           storageBucket: "paints-78769.firebasestorage.app",
-          iosClientId: "377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com",
-          iosBundleId: "com.example.miniaturePaintFinder"
+          iosClientId:
+              "377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com",
+          iosBundleId: "com.angelosv.miniaturePaintFinder",
         ),
       );
-      
+
       print('Firebase inicializado exitosamente');
     } catch (e, stackTrace) {
       print('Error al inicializar Firebase: $e');
@@ -24,4 +25,4 @@ class FirebaseConfig {
       rethrow;
     }
   }
-} 
+}

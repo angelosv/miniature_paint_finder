@@ -18,13 +18,11 @@ import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
+
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
   /// Creates a barcode scanner screen
-  const BarcodeScannerScreen({
-    Key? key,
-    this.paletteName,
-  }) : super(key: key);
+  const BarcodeScannerScreen({Key? key, this.paletteName}) : super(key: key);
 
   /// Optional name of the palette being created
   final String? paletteName;
@@ -72,23 +70,25 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         _forceInitializeCamera();
       } else if (status.isDenied) {
         final result = await Permission.camera.request();
-        
+
         if (result.isGranted) {
           _forceInitializeCamera();
         } else {
           setState(() {
             _hasPermission = false;
             _isPermanentlyDenied = result.isPermanentlyDenied;
-            _errorMessage = result.isPermanentlyDenied
-                ? 'Camera permission permanently denied. Please enable it in your device settings.'
-                : 'Camera permission required to scan barcodes.';
+            _errorMessage =
+                result.isPermanentlyDenied
+                    ? 'Camera permission permanently denied. Please enable it in your device settings.'
+                    : 'Camera permission required to scan barcodes.';
           });
         }
       } else if (status.isPermanentlyDenied) {
         setState(() {
           _hasPermission = false;
           _isPermanentlyDenied = true;
-          _errorMessage = 'Camera permission permanently denied. Please enable it in your device settings.';
+          _errorMessage =
+              'Camera permission permanently denied. Please enable it in your device settings.';
         });
       } else if (status.isRestricted) {
         setState(() {
@@ -209,7 +209,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-
+    print("barcode_scanner_screen.dart isGuestUser: $isGuestUser");
     // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
@@ -242,7 +242,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // Look up the paint by barcode
     try {
       print('🔍 Searching for paint with barcode: $code');
-      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(code, isGuestUser);
+      final List<Paint>? paints = await _barcodeService.findPaintByBarcode(
+        code,
+        isGuestUser,
+      );
 
       if (mounted) {
         setState(() {
@@ -255,9 +258,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               _isScanning = false;
             });
           } else if (paints.length == 1) {
-            // Si solo hay una pintura, mostrarla directamente
-            _foundPaint = paints[0];
-            _showScanResultSheet(_foundPaint!);
+            if (isGuestUser) {
+              _showPaintSelectionDialog(paints);
+            } else {
+              _foundPaint = paints[0];
+              _showScanResultSheet(_foundPaint!);
+            }
           } else {
             // Si hay múltiples pinturas, mostrar diálogo de selección
             _showPaintSelectionDialog(paints);
@@ -301,7 +307,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Color(int.parse(paint.hex.substring(1), radix: 16) + 0xFF000000),
+                      color: Color(
+                        int.parse(paint.hex.substring(1), radix: 16) +
+                            0xFF000000,
+                      ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -401,7 +410,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             onUpdateInventory: (paint, quantity, note) async {
               try {
                 // Use the inventory service to update inventory
-                final success = await _inventoryService.updateStockFromApi(paint.id, quantity);
+                final success = await _inventoryService.updateStockFromApi(
+                  paint.id,
+                  quantity,
+                );
                 if (note != null) {
                   await _inventoryService.updateNotesFromApi(paint.id, note);
                 }
@@ -449,9 +461,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             onAddToPalette: (paint, palette) async {
               final user = FirebaseAuth.instance.currentUser;
               final token = await user?.getIdToken();
-              final _palette = await _paletteService.createPalette(palette.name, token ?? '');
+              final _palette = await _paletteService.createPalette(
+                palette.name,
+                token ?? '',
+              );
               final paletteId = _palette['id'];
-              await _paletteService.addPaintsToPalette(paletteId, [ { "paint_id": paint.id, "brand_id": paint.brandId } ], token ?? '');
+              await _paletteService.addPaintsToPalette(paletteId, [
+                {"paint_id": paint.id, "brand_id": paint.brandId},
+              ], token ?? '');
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -708,190 +725,173 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                // Scanner view
-                if (_isScanning &&
-                    _hasPermission &&
-                    _isInitialized &&
-                    _scannerController != null)
-                  MobileScanner(
-                    controller: _scannerController!,
-                    onDetect: _onBarcodeDetected,
-                  ),
-
-                // No permission view
-                if (!_hasPermission)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.no_photography,
-                          size: 64,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Camera permission required',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Text(
-                            _isPermanentlyDenied
-                                ? 'You have permanently denied camera access. Please enable it in your device settings to scan barcodes.'
-                                : 'Please allow camera access to scan paint barcodes',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _isPermanentlyDenied
-                              ? _openAppSettings
-                              : _forceInitializeCamera,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: Icon(
-                            _isPermanentlyDenied
-                                ? Icons.settings
-                                : Icons.camera_alt,
-                          ),
-                          label: Text(
-                            _isPermanentlyDenied
-                                ? 'Open Settings'
-                                : 'Request Camera Permission',
-                          ),
-                        ),
-                      ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  // Scanner view
+                  if (_isScanning &&
+                      _hasPermission &&
+                      _isInitialized &&
+                      _scannerController != null)
+                    MobileScanner(
+                      controller: _scannerController!,
+                      onDetect: _onBarcodeDetected,
                     ),
-                  ),
 
-                // Scanner not initialized but has permission
-                if (!_isInitialized && _hasPermission)
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        const Text('Initializing camera...'),
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 24),
+                  // No permission view
+                  if (!_hasPermission)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.no_photography,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Camera permission required',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(
-                              _errorMessage!,
+                              _isPermanentlyDenied
+                                  ? 'You have permanently denied camera access. Please enable it in your device settings to scan barcodes.'
+                                  : 'Please allow camera access to scan paint barcodes',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
                             ),
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
-                            onPressed: _restartScanner,
+                            onPressed:
+                                _isPermanentlyDenied
+                                    ? _openAppSettings
+                                    : _forceInitializeCamera,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryBlue,
                               foregroundColor: Colors.white,
                             ),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Back'),
+                            icon: Icon(
+                              _isPermanentlyDenied
+                                  ? Icons.settings
+                                  : Icons.camera_alt,
+                            ),
+                            label: Text(
+                              _isPermanentlyDenied
+                                  ? 'Open Settings'
+                                  : 'Request Camera Permission',
+                            ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-
-                // Loading indicator
-                if (_isSearching)
-                  _buildSearchingOverlay(),
-
-                // Scan guide overlay
-                if (_isScanning &&
-                    !_isSearching &&
-                    _hasPermission &&
-                    _isInitialized &&
-                    _scannerController != null)
-                  _buildScanGuideOverlay(),
-
-                // Error message
-                if (_errorMessage != null)
-                  _buildErrorOverlay(),
-              ],
-            ),
-          ),
-
-          // Bottom controls
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                if (_isInitialized && _hasPermission && _isScanning)
-                  Expanded(
-                    child: Text(
-                      'Position barcode in frame to scan',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                // if (!_hasPermission)
-                  // Expanded(
-                    // child: ElevatedButton.icon(
-                      // onPressed:
-                          // _isPermanentlyDenied
-                              // ? _openAppSettings
-                              // : _forceInitializeCamera,
-                      // style: ElevatedButton.styleFrom(
-                        // backgroundColor: AppTheme.primaryBlue,
-                        // foregroundColor: Colors.white,
-                      // ),
-                      // icon: Icon(
-                        // _isPermanentlyDenied
-                            // ? Icons.settings
-                            // : Icons.camera_alt,
-                      // ),
-                    // label: Text(
-                        // _isPermanentlyDenied
-                            // ? 'Open Settings'
-                            // : 'Request Camera Permission',
-                      // ),
-                    // ),
-                  // ),
-
-                if (_hasPermission && !_isScanning && _foundPaint == null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _restartScanner,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
                       ),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Restart Scanner'),
                     ),
-                  ),
-              ],
+
+                  // Scanner not initialized but has permission
+                  if (!_isInitialized && _hasPermission)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          const Text('Initializing camera...'),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 24),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: _restartScanner,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Back'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  // Loading indicator
+                  if (_isSearching) _buildSearchingOverlay(),
+
+                  // Scan guide overlay
+                  if (_isScanning &&
+                      !_isSearching &&
+                      _hasPermission &&
+                      _isInitialized &&
+                      _scannerController != null)
+                    _buildScanGuideOverlay(),
+
+                  // Error message
+                  if (_errorMessage != null) _buildErrorOverlay(),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Bottom controls
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (_isInitialized && _hasPermission && _isScanning)
+                    Expanded(
+                      child: Text(
+                        'Position barcode in frame to scan',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  if (_hasPermission && !_isScanning && _foundPaint == null)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _restartScanner,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Restart Scanner'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -981,84 +981,103 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   Widget _buildErrorOverlay() {
-    // return Positioned(
-      // bottom: 20,
-      // left: 20,
-      // right: 20,
-      // child: Container(
-        // padding: const EdgeInsets.all(12),
-        // decoration: BoxDecoration(
-          // color: Colors.red.withOpacity(0.8),
-          // borderRadius: BorderRadius.circular(8),
-        // ),
-        // child: Column(
-          // children: [
-            // Text(
-              // _errorMessage!,
-              // style: const TextStyle(
-                // color: Colors.white,
-                // fontWeight: FontWeight.bold,
-              // ),
-              // textAlign: TextAlign.center,
-            // ),
-            // if (_lastScannedCode != null) ...[
-              // const SizedBox(height: 8),
-              // Text(
-                // 'Code: $_lastScannedCode',
-                // style: TextStyle(
-                  // color: Colors.white.withOpacity(0.8),
-                  // fontSize: 12,
-                // ),
-              // ),
-            // ],
-          // ],
-        // ),
-        
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                  textAlign: TextAlign.center,
+    return Container(
+      color: Colors.black.withOpacity(0.5),
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddPaintFormScreen(
-                          barcode: _lastScannedCode,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 48,
+                      color: AppTheme.marineOrange,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No paint found',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This paint is not in our database yet.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => AddPaintFormScreen(
+                                  barcode: _lastScannedCode,
+                                ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: AppTheme.marineOrange,
+                      ),
+                      child: const Text(
+                        'Add',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: const Text('We couldn\'t find this paint. Help us grow the database by adding it!'),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Your submission will be reviewed and added to our database.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      onPressed: _restartScanner,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Restart Scanner'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
