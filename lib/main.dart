@@ -25,12 +25,16 @@ import 'package:miniature_paint_finder/services/image_cache_service.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
 import 'package:miniature_paint_finder/services/push_notification_service.dart'
     show firebaseMessagingBackgroundHandler;
+import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// App entry point
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure platform-specific behavior
+  configureLinuxPlugins();
 
   // Initialize Firebase
   try {
