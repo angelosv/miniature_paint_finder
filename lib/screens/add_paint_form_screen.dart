@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/models/paint_submit.dart';
@@ -87,12 +88,14 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
           _imageFile!,
         );
         print('Image uploaded: $imageUrl');
+        final firebaseUser = FirebaseAuth.instance.currentUser;
         final PaintSubmit paintSubmit = PaintSubmit(
           imageUrl: imageUrl,
           brandId: _brandController.text,
           barcode: widget.barcode ?? '',
           name: _nameController.text,
           status: 'pending',
+          userId: firebaseUser?.uid ?? '',
         );
         print('start setting values');
         if (_hexController.text != null && _hexController.text.isNotEmpty) {
