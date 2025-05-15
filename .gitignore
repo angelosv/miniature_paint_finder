@@ -95,7 +95,7 @@ coverage/
 
 # Firebase config files
 google-services.json
-GoogleService-Info.plist
+# GoogleService-Info.plist  # Commenting out to keep this file in version control
 
 # Environment files
 .env
