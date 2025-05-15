@@ -96,7 +96,7 @@ class BrandCard extends StatelessWidget {
                           ),
                           SizedBox(width: 4),
                           Text(
-                            '$paintCount paints',
+                            _formatPaintCount(paintCount),
                             style: TextStyle(
                               fontSize: 12,
                               color:
@@ -179,5 +179,15 @@ class BrandCard extends StatelessWidget {
         height: double.infinity,
       ),
     );
+  }
+
+  String _formatPaintCount(int count) {
+    if (count < 1000) {
+      return '$count paints';
+    } else if (count < 1000000) {
+      return '${(count / 1000).toStringAsFixed(1)}k paints';
+    } else {
+      return '${(count / 1000000).toStringAsFixed(1)}M paints';
+    }
   }
 }
