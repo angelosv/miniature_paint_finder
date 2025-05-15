@@ -116,3 +116,22 @@ GoogleService-Info.plist
 *.iml
 *.iws
 .DS_Store
+
+# Custom folders to ignore
+ios_backup/
+android/app/src/main/kotlin/com/angelovs/
+
+# iOS build files
+ios/build/
+ios/FixedMLImage/
+ios/Pods/
+
+# iOS fix scripts
+ios/fix_*.sh
+ios/emulator_fix.sh
+ios/fix_complete.sh
+ios/fix_deep_solution.sh
+ios/fix_device_info_plus.sh
+ios/fix_ios_build.sh
+ios/fix_mlimage.sh
+ios/fix_pods.sh
