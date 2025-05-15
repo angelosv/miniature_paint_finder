@@ -26,6 +26,8 @@ import 'package:miniature_paint_finder/providers/guest_logic.dart';
 import 'package:miniature_paint_finder/services/push_notification_service.dart'
     show firebaseMessagingBackgroundHandler;
 import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
+import 'package:miniature_paint_finder/utils/analytics_route_observer.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -65,6 +67,13 @@ void main() async {
   final IAuthService authService = AuthService();
   await authService.init();
 
+  // Initialize analytics in non-blocking way
+  final analyticsService = MixpanelService();
+  Future.microtask(() async {
+    await analyticsService.init();
+    debugPrint('Analytics initialized in background');
+  });
+
   // Initialize repositories and services
   final PaintRepository paintRepository = PaintRepositoryImpl();
   final ApiService apiService = ApiService(baseUrl: ApiEndpoints.baseUrl);
@@ -95,6 +104,7 @@ void main() async {
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
         Provider<PaintApiService>.value(value: paintApiService),
+        Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
           create: (context) => PaletteController(paletteRepository),
         ),
@@ -190,6 +200,7 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
           initialRoute: '/',
+          navigatorObservers: [analyticsRouteObserver],
           routes: {
             '/': (context) => const AuthScreen(),
             '/home': (context) => const HomeScreen(),

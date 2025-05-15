@@ -62,13 +62,12 @@ class _AuthScreenState extends State<AuthScreen>
   // Verificar si estamos en iOS o macOS para mostrar el botón de Apple
   // También verificamos una variable de entorno para desarrollo
   bool get _isAppleSignInAvailable {
-    // Condición que evalúa si la funcionalidad está disponible para el equipo de desarrollo
-    // Establece esta variable como falsa para equipos sin Apple Developer
-    const bool forceDisableAppleSignIn =
-        false; // Cambiado a false para habilitar en esta rama
+    // Temporalmente deshabilitado por problemas de autorización
+    return false;
 
-    return !forceDisableAppleSignIn &&
-        (defaultTargetPlatform == TargetPlatform.iOS);
+    // Código original:
+    // const bool forceDisableAppleSignIn = false;
+    // return !forceDisableAppleSignIn && (defaultTargetPlatform == TargetPlatform.iOS);
   }
 
   // Nuevo método para manejar el inicio de sesión con Apple
@@ -446,28 +445,30 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AuthScreen()),
-                  (route) => false,
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
+    // Use WidgetsBinding to ensure the dialog is shown after the frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Only show if the context is still valid
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -903,19 +904,18 @@ class _AuthScreenState extends State<AuthScreen>
                       height: buttonHeight,
                     ),
 
-                    // Show Apple login on iOS and web
+                    // Show Apple login on iOS and web - COMENTADO TEMPORALMENTE
                     SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.apple,
-                      label: 'Continue with Apple',
-                      color: Colors.white,
-                      textColor: AppTheme.darkBackground,
-                      onPressed:
-                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
-                      height: buttonHeight,
-                      // No mostrar el botón en Android
-                      visible: _isAppleSignInAvailable,
-                    ),
+                    // Botón de Apple Sign In temporalmente deshabilitado
+                    // _buildAuthButton(
+                    //   icon: Icons.apple,
+                    //   label: 'Continue with Apple',
+                    //   color: Colors.white,
+                    //   textColor: AppTheme.darkBackground,
+                    //   onPressed: _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                    //   height: buttonHeight,
+                    //   visible: _isAppleSignInAvailable,
+                    // ),
 
                     // Show Phone login for Android (and others)
                     // SizedBox(height: buttonSpacing),
@@ -1080,19 +1080,18 @@ class _AuthScreenState extends State<AuthScreen>
                       height: buttonHeight,
                     ),
 
-                    // Show Apple login on iOS and web
+                    // Show Apple login on iOS and web - COMENTADO TEMPORALMENTE
                     SizedBox(height: buttonSpacing),
-                    _buildAuthButton(
-                      icon: Icons.apple,
-                      label: 'Continue with Apple',
-                      color: Colors.white,
-                      textColor: AppTheme.darkBackground,
-                      onPressed:
-                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
-                      height: buttonHeight,
-                      // No mostrar el botón en Android
-                      visible: _isAppleSignInAvailable,
-                    ),
+                    // Botón de Apple Sign In temporalmente deshabilitado
+                    // _buildAuthButton(
+                    //   icon: Icons.apple,
+                    //   label: 'Continue with Apple',
+                    //   color: Colors.white,
+                    //   textColor: AppTheme.darkBackground,
+                    //   onPressed: _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                    //   height: buttonHeight,
+                    //   visible: _isAppleSignInAvailable,
+                    // ),
 
                     // Show Phone login for Android (and others)
                     // SizedBox(height: buttonSpacing),
