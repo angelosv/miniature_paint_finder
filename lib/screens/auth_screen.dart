@@ -62,12 +62,10 @@ class _AuthScreenState extends State<AuthScreen>
   // Verificar si estamos en iOS o macOS para mostrar el botón de Apple
   // También verificamos una variable de entorno para desarrollo
   bool get _isAppleSignInAvailable {
-    // Temporalmente deshabilitado por problemas de autorización
-    return false;
-
-    // Código original:
-    // const bool forceDisableAppleSignIn = false;
-    // return !forceDisableAppleSignIn && (defaultTargetPlatform == TargetPlatform.iOS);
+    // Código original restaurado:
+    const bool forceDisableAppleSignIn = false;
+    return !forceDisableAppleSignIn &&
+        (defaultTargetPlatform == TargetPlatform.iOS);
   }
 
   // Nuevo método para manejar el inicio de sesión con Apple
@@ -292,10 +290,14 @@ class _AuthScreenState extends State<AuthScreen>
       await _authService.signInWithGoogle();
 
       if (mounted) {
-        // Navigate to home screen after successful login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Add a small delay to ensure previous animations complete
+        await Future.delayed(Duration(milliseconds: 300));
+        if (mounted) {
+          // Navigate to home screen after successful login
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
       }
     } on AuthException catch (e) {
       // Handle specific auth errors with user-friendly messages
@@ -481,9 +483,13 @@ class _AuthScreenState extends State<AuthScreen>
       await authService.signInWithGoogle();
       // If we get here, executed was true
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Add a small delay to ensure previous animations complete
+        await Future.delayed(Duration(milliseconds: 300));
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
@@ -904,18 +910,19 @@ class _AuthScreenState extends State<AuthScreen>
                       height: buttonHeight,
                     ),
 
-                    // Show Apple login on iOS and web - COMENTADO TEMPORALMENTE
+                    // Show Apple login on iOS and web
                     SizedBox(height: buttonSpacing),
-                    // Botón de Apple Sign In temporalmente deshabilitado
-                    // _buildAuthButton(
-                    //   icon: Icons.apple,
-                    //   label: 'Continue with Apple',
-                    //   color: Colors.white,
-                    //   textColor: AppTheme.darkBackground,
-                    //   onPressed: _isAppleSignInAvailable ? _handleAppleSignIn : null,
-                    //   height: buttonHeight,
-                    //   visible: _isAppleSignInAvailable,
-                    // ),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed:
+                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                      height: buttonHeight,
+                      // No mostrar el botón en Android
+                      visible: _isAppleSignInAvailable,
+                    ),
 
                     // Show Phone login for Android (and others)
                     // SizedBox(height: buttonSpacing),
@@ -1080,18 +1087,19 @@ class _AuthScreenState extends State<AuthScreen>
                       height: buttonHeight,
                     ),
 
-                    // Show Apple login on iOS and web - COMENTADO TEMPORALMENTE
+                    // Show Apple login on iOS and web
                     SizedBox(height: buttonSpacing),
-                    // Botón de Apple Sign In temporalmente deshabilitado
-                    // _buildAuthButton(
-                    //   icon: Icons.apple,
-                    //   label: 'Continue with Apple',
-                    //   color: Colors.white,
-                    //   textColor: AppTheme.darkBackground,
-                    //   onPressed: _isAppleSignInAvailable ? _handleAppleSignIn : null,
-                    //   height: buttonHeight,
-                    //   visible: _isAppleSignInAvailable,
-                    // ),
+                    _buildAuthButton(
+                      icon: Icons.apple,
+                      label: 'Continue with Apple',
+                      color: Colors.white,
+                      textColor: AppTheme.darkBackground,
+                      onPressed:
+                          _isAppleSignInAvailable ? _handleAppleSignIn : null,
+                      height: buttonHeight,
+                      // No mostrar el botón en Android
+                      visible: _isAppleSignInAvailable,
+                    ),
 
                     // Show Phone login for Android (and others)
                     // SizedBox(height: buttonSpacing),
