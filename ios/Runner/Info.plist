@@ -63,5 +63,16 @@
 			<string>remote-notification</string>
 			<string>fetch</string>
 		</array>
+		<key>NSCameraUsageDescription</key>
+		<string>We need camera access to let you scan paint barcodes.</string>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>Esta app necesita abrir un servidor local para las herramientas de depuración de
+			Flutter.</string>
+		<key>NSBonjourServices</key>
+		<array>
+			<string>_dartobservatory._tcp</string>
+		</array>
+
+
 	</dict>
 </plist>
