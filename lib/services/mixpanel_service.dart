@@ -40,17 +40,30 @@ class MixpanelService {
   void trackEvent(String eventName, [Map<String, dynamic>? properties]) {
     if (!_enabled) return;
 
-    // Log the event in debug mode but don't actually send anything
-    debugPrint(
-      '📊 MixpanelService: Track event "$eventName" with properties: $properties',
-    );
+    try {
+      // Log the event in debug mode but don't actually send anything
+      debugPrint(
+        '📊 MixpanelService: Track event "$eventName" with properties: $properties',
+      );
+    } catch (e) {
+      // Silently catch any errors to avoid disrupting app flow
+      debugPrint('📊 MixpanelService error: $e');
+    }
   }
 
   /// Track screen view
   void trackScreen(String screenName) {
     if (!_enabled) return;
 
-    trackEvent('Screen View', {'screen': screenName});
+    try {
+      // Use a microtask to ensure analytics doesn't block navigation
+      Future.microtask(() {
+        trackEvent('Screen View', {'screen': screenName});
+      });
+    } catch (e) {
+      // Silently catch any errors to avoid disrupting app flow
+      debugPrint('📊 MixpanelService screen tracking error: $e');
+    }
   }
 
   /// Identify user

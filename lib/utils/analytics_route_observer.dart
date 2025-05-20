@@ -34,12 +34,25 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
 
   /// Extract the screen name from route and track it
   void _trackScreenView(PageRoute<dynamic> route) {
-    // Extract meaningful name from route
-    String? screenName = _extractScreenName(route);
+    try {
+      // Extract meaningful name from route
+      String? screenName = _extractScreenName(route);
 
-    if (screenName != null) {
-      // Only track if we have a screen name
-      _analytics.trackScreen(screenName);
+      if (screenName != null) {
+        // Use a microtask to ensure it doesn't interfere with navigation
+        Future.microtask(() {
+          try {
+            // Only track if we have a screen name
+            _analytics.trackScreen(screenName);
+          } catch (e) {
+            // Silently catch errors
+            debugPrint('Analytics route observer error: $e');
+          }
+        });
+      }
+    } catch (e) {
+      // Silently catch any errors to avoid disrupting navigation
+      debugPrint('AnalyticsRouteObserver error: $e');
     }
   }
 

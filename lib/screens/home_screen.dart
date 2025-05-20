@@ -124,14 +124,25 @@ class _HomeScreenState extends State<HomeScreen>
     final guestLogicProvider = Provider.of<GuestLogicProvider>(context);
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-    if (!guestLogicProvider.guestLogic && isGuestUser) {
-      final authService = Provider.of<IAuthService>(context, listen: false);
-      authService.signOut();
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/',
-        (route) => false,
-        arguments: {'showRegistration': true},
-      );
+
+    // Modificación: Usar un Future.microtask para navegar fuera del ciclo de build
+    // y solo si es un usuario anónimo real (no durante autenticación)
+    if (!guestLogicProvider.guestLogic &&
+        isGuestUser &&
+        currentUser?.isAnonymous == true) {
+      // Solo manejar la redirección si es un usuario realmente anónimo
+      // y no durante el proceso de autenticación
+      Future.microtask(() {
+        if (mounted) {
+          final authService = Provider.of<IAuthService>(context, listen: false);
+          authService.signOut();
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/',
+            (route) => false,
+            arguments: {'showRegistration': true},
+          );
+        }
+      });
     }
 
     return AppScaffold(
