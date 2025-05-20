@@ -69,7 +69,7 @@ void main() async {
   await authService.init();
 
   // Initialize analytics in non-blocking way
-  final analyticsService = MixpanelService();
+  final analyticsService = MixpanelService.instance;
   Future.microtask(() async {
     await analyticsService.init();
     debugPrint('Analytics initialized in background');
