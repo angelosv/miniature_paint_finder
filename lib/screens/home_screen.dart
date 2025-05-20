@@ -18,6 +18,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
+import 'package:miniature_paint_finder/screens/screen_analytics.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +29,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, ScreenAnalyticsMixin {
   int _selectedIndex = 0;
   bool _pushInitialized = false;
 
@@ -37,6 +39,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Screens
   static const List<Widget> _screens = <Widget>[PaintListTab(), ProfileTab()];
+
+  @override
+  String get screenName => 'Home Screen';
 
   @override
   void initState() {
@@ -52,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen>
       _initializePushNotifications();
       _checkNavigationArguments();
       _checkPromoButtonVisibility();
+      _trackUserProperties();
     });
   }
 
@@ -117,6 +123,12 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _selectedIndex = index;
     });
+
+    // Trackear cambio de tab
+    trackEvent('Tab Changed', {
+      'tab_index': index,
+      'tab_name': index == 0 ? 'Paint List' : 'Profile',
+    });
   }
 
   @override
@@ -124,14 +136,25 @@ class _HomeScreenState extends State<HomeScreen>
     final guestLogicProvider = Provider.of<GuestLogicProvider>(context);
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-    if (!guestLogicProvider.guestLogic && isGuestUser) {
-      final authService = Provider.of<IAuthService>(context, listen: false);
-      authService.signOut();
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/',
-        (route) => false,
-        arguments: {'showRegistration': true},
-      );
+
+    // Modificación: Usar un Future.microtask para navegar fuera del ciclo de build
+    // y solo si es un usuario anónimo real (no durante autenticación)
+    if (!guestLogicProvider.guestLogic &&
+        isGuestUser &&
+        currentUser?.isAnonymous == true) {
+      // Solo manejar la redirección si es un usuario realmente anónimo
+      // y no durante el proceso de autenticación
+      Future.microtask(() {
+        if (mounted) {
+          final authService = Provider.of<IAuthService>(context, listen: false);
+          authService.signOut();
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/',
+            (route) => false,
+            arguments: {'showRegistration': true},
+          );
+        }
+      });
     }
 
     return AppScaffold(
@@ -142,6 +165,14 @@ class _HomeScreenState extends State<HomeScreen>
       drawer: const SharedDrawer(currentScreen: 'home'),
       // Customize behavior only if other tabs are added to this screen
       onNavItemSelected: (index) {
+        // Si es la navegación principal, trackear el evento
+        if (index != 0) {
+          MixpanelService.instance.trackEvent('Navigation', {
+            'from': 'Home',
+            'to': _getScreenNameFromIndex(index),
+          });
+        }
+
         // If we're already on Home and user taps Home, do nothing
         if (index == 0) {
           return true;
@@ -152,17 +183,110 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Función auxiliar para obtener el nombre de pantalla a partir del índice
+  String _getScreenNameFromIndex(int index) {
+    switch (index) {
+      case 0:
+        return 'Home';
+      case 1:
+        return 'Palettes';
+      case 2:
+        return 'Library';
+      case 3:
+        return 'Wishlist';
+      case 4:
+        return 'Inventory';
+      default:
+        return 'Unknown';
+    }
+  }
+
   Widget _buildGuestPromoButton() {
     return FloatingActionButton.extended(
-      onPressed:
-          () => GuestPromoModal.showForRestrictedFeature(
-            context,
-            'Premium Features',
-          ),
+      onPressed: () {
+        // Trackear clic en botón de promoción
+        trackEvent('Guest Promo Button Clicked');
+        GuestPromoModal.showForRestrictedFeature(context, 'Premium Features');
+      },
       label: Text('Unlock More!'),
       icon: Icon(Icons.star),
       backgroundColor: AppTheme.marineGold,
       foregroundColor: Colors.black87,
     );
+  }
+
+  // Método para trackear propiedades adicionales del usuario
+  void _trackUserProperties() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      final analytics = MixpanelService.instance;
+      final isGuestUser = currentUser.isAnonymous;
+
+      // Obtener información sobre el dispositivo
+      final prefs = await SharedPreferences.getInstance();
+      final firstVisit = prefs.getBool('first_visit') ?? true;
+      final visitCount = prefs.getInt('visit_count') ?? 0;
+
+      // Actualizar contador de visitas
+      await prefs.setInt('visit_count', visitCount + 1);
+
+      // Si es primera visita, registrar
+      if (firstVisit) {
+        await prefs.setBool('first_visit', false);
+        await prefs.setString(
+          'first_visit_date',
+          DateTime.now().toIso8601String(),
+        );
+      }
+
+      // Calcular días desde primera visita
+      int daysSinceFirstVisit = 0;
+      final firstVisitDateStr = prefs.getString('first_visit_date');
+      if (firstVisitDateStr != null) {
+        final firstVisitDate = DateTime.parse(firstVisitDateStr);
+        daysSinceFirstVisit = DateTime.now().difference(firstVisitDate).inDays;
+      }
+
+      // Trackear visita
+      analytics.trackVisitCount(visitCount + 1, daysSinceFirstVisit);
+
+      // Si no es usuario anónimo, completar perfil
+      if (!isGuestUser) {
+        // Actualizar propiedades adicionales del usuario
+        analytics.updateUserProperty(
+          'last_seen',
+          DateTime.now().toIso8601String(),
+        );
+        analytics.updateUserProperty('home_screen_visits', visitCount + 1);
+
+        // Adjuntar propiedades sobre uso de pestañas
+        if (_selectedIndex == 0) {
+          analytics.incrementUserProperty('paint_list_tab_views', 1.0);
+        } else if (_selectedIndex == 1) {
+          analytics.incrementUserProperty('profile_tab_views', 1.0);
+        }
+
+        // Trackear frecuencia de uso
+        if (daysSinceFirstVisit > 0) {
+          final visitsPerDay = (visitCount + 1) / daysSinceFirstVisit;
+          final isFrequentUser =
+              visitsPerDay > 0.5; // Más de una visita cada 2 días
+
+          analytics.trackUsageFrequency(
+            'daily',
+            visitCount + 1,
+            daysSinceFirstVisit,
+          );
+
+          analytics.updateUserProperty('is_frequent_user', isFrequentUser);
+          analytics.updateUserProperty('visits_per_day', visitsPerDay);
+        }
+      }
+    } catch (e) {
+      print('Error tracking user properties: $e');
+      // No propagar error para no afectar la experiencia del usuario
+    }
   }
 }

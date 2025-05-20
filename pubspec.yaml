@@ -59,7 +59,9 @@ dependencies:
   cupertino_icons: ^1.0.2
   mobile_scanner: ^6.0.7
   device_info_plus: ^10.1.2
-  # sign_in_with_apple: ^6.1.4  # Disabled in this branch - requires additional Apple Developer capabilities
+  sign_in_with_apple: ^6.1.4  # Habilitado en esta rama - requerido para Apple Sign In
+  mixpanel_flutter: ^2.4.1
+  package_info_plus: ^8.3.0
   
 dev_dependencies:
   flutter_test:
@@ -114,6 +116,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Dependency overrides to handle platform compatibility issues
+dependency_overrides:
+  flutter_local_notifications:
+    git:
+      url: https://github.com/MaikuB/flutter_local_notifications.git
+      ref: master
+      path: flutter_local_notifications
 
 # Flutter Launcher Icons configuration
 flutter_launcher_icons:

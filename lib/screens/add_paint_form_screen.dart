@@ -8,6 +8,7 @@ import 'package:miniature_paint_finder/services/image_upload_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:flutter/services.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
 class AddPaintFormScreen extends StatefulWidget {
   final String? barcode;
@@ -73,6 +74,8 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
   void _submitForm() async {
     try {
       final ImageUploadService _imageUploadService = ImageUploadService();
+      final MixpanelService _analytics = MixpanelService.instance;
+
       if (_imageFile == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please take a photo of the label')),
@@ -124,6 +127,52 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
         final PaintApiService paintApiService = PaintApiService();
         final bool result = await paintApiService.submitPaint(paintSubmit);
         print('Result of submitPaint: $result');
+
+        // Trackear el envío de la nueva pintura
+        if (result) {
+          // Trackear paint submission exitosa
+          _analytics.trackPaintSubmission(
+            paintSubmit.name,
+            _brands.firstWhere(
+                  (b) => b['id'] == paintSubmit.brandId,
+                  orElse: () => {'name': 'Unknown'},
+                )['name'] ??
+                'Unknown',
+            paintSubmit.barcode,
+            hexColor: paintSubmit.hex,
+            category: paintSubmit.color,
+            isMetallic:
+                paintSubmit.color?.toLowerCase().contains('metallic') ?? false,
+            isTransparent:
+                paintSubmit.color?.toLowerCase().contains('transparent') ??
+                false,
+            additionalDetails: {
+              'has_code':
+                  paintSubmit.code != null && paintSubmit.code!.isNotEmpty,
+              'has_rgb':
+                  paintSubmit.r != null &&
+                  paintSubmit.g != null &&
+                  paintSubmit.b != null,
+              'has_set': paintSubmit.set != null && paintSubmit.set!.isNotEmpty,
+              'has_image': imageUrl.isNotEmpty,
+              'submission_source':
+                  widget.barcode != null ? 'barcode_scanner' : 'manual_entry',
+            },
+          );
+
+          // Trackear comportamiento de contribución
+          _analytics.trackUserBehavior(
+            'contribution',
+            'paint_submission',
+            count: 1,
+            behaviorDetails: {
+              'paint_name': paintSubmit.name,
+              'brand_id': paintSubmit.brandId,
+              'barcode': paintSubmit.barcode,
+            },
+          );
+        }
+
         setState(() {
           _isLoading = false;
         });
@@ -145,6 +194,14 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
         _isLoading = false;
       });
       print('Error submitting paint: $e');
+
+      // Trackear el error de envío
+      MixpanelService.instance.trackError('Paint Submission', e.toString(), {
+        'barcode': widget.barcode,
+        'paint_name': _nameController.text,
+        'brand_id': _brandController.text,
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error submitting paint, try again later'),
