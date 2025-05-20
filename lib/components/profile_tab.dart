@@ -448,6 +448,41 @@ class ProfileTab extends StatelessWidget {
 
               SizedBox(height: 20.r),
 
+              // Developer Options (solo visible en modo debug)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(20.r),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Developer Options',
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    SizedBox(height: 16.r),
+
+                    ProfileMenuItem(
+                      icon: Icons.analytics_outlined,
+                      title: 'Mixpanel Diagnostics',
+                      subtitle: 'Verify analytics tracking',
+                      onTap: () {
+                        Navigator.of(context).pushNamed('/mixpanel_diagnostic');
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 20.r),
+
               // Account Actions Section
               Container(
                 width: double.infinity,

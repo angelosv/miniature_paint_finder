@@ -28,6 +28,7 @@ import 'package:miniature_paint_finder/services/push_notification_service.dart'
 import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'package:miniature_paint_finder/utils/analytics_route_observer.dart';
+import 'package:miniature_paint_finder/screens/mixpanel_diagnostic_screen.dart';
 import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -218,6 +219,8 @@ class MyApp extends StatelessWidget {
             '/home': (context) => const HomeScreen(),
             '/palettes': (context) => const PaletteScreen(),
             '/library': (context) => const LibraryScreen(),
+            '/mixpanel_diagnostic':
+                (context) => const MixpanelDiagnosticScreen(),
           },
           debugShowCheckedModeBanner: false,
         );

@@ -33,6 +33,10 @@ class MixpanelService {
     if (_initialized) return;
 
     try {
+      debugPrint(
+        '🔍 Mixpanel: Intentando inicializar con token: ${_token.substring(0, 8)}...',
+      );
+
       // Inicializar Mixpanel con timeout para evitar bloqueos
       _mixpanel = await Mixpanel.init(
         _token,
@@ -46,6 +50,8 @@ class MixpanelService {
         },
       );
 
+      debugPrint('🔍 Mixpanel: Instancia creada: ${_mixpanel != null}');
+
       // Obtener información del dispositivo de manera no bloqueante
       unawaited(_getDeviceInfo());
 
@@ -55,10 +61,23 @@ class MixpanelService {
         '✅ Mixpanel initialized with token: ${_token.substring(0, 8)}...',
       );
 
+      // Enviar un evento de prueba inmediatamente
+      _mixpanel?.track(
+        'Debug_Initialization_Test',
+        properties: {
+          'timestamp': DateTime.now().toIso8601String(),
+          'successful': true,
+        },
+      );
+      debugPrint('🔍 Mixpanel: Evento de prueba enviado');
+
       // Tracking de instalación en segundo plano para no bloquear la UI
       unawaited(trackInstall());
     } catch (e) {
       debugPrint('❌ Error initializing Mixpanel: $e');
+      if (e is Error) {
+        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
+      }
       // Establecer mixpanel a null para que los métodos _safeTrack sepan que falló
       _mixpanel = null;
       _initialized = false;
@@ -394,6 +413,10 @@ class MixpanelService {
     String eventName,
     Map<String, dynamic>? properties,
   ) async {
+    debugPrint(
+      '🔍 Mixpanel _safeTrack: Intentando trackear evento: $eventName',
+    );
+
     // Si no está inicializado, intentar inicializar una vez más
     if (!_initialized || _mixpanel == null) {
       debugPrint(
@@ -404,11 +427,16 @@ class MixpanelService {
         await init().timeout(
           Duration(seconds: 1),
           onTimeout: () {
+            debugPrint(
+              '⚠️ Mixpanel: Timeout al reinicializar para evento: $eventName',
+            );
             throw TimeoutException('Mixpanel re-initialization timed out');
           },
         );
       } catch (e) {
-        debugPrint('❌ Failed to initialize Mixpanel for event: $eventName');
+        debugPrint(
+          '❌ Failed to initialize Mixpanel for event: $eventName - Error: $e',
+        );
         return; // Si falla, simplemente salimos sin registrar el evento
       }
     }
@@ -430,9 +458,18 @@ class MixpanelService {
 
       // Enviar el evento a Mixpanel
       _mixpanel!.track(eventName, properties: enrichedProperties);
-      debugPrint('📊 Event tracked: $eventName');
+      debugPrint(
+        '✅ Mixpanel _safeTrack: Evento "$eventName" enviado exitosamente',
+      );
+
+      // Verificar el estado de la instancia
+      final distinctId = await _mixpanel!.getDistinctId();
+      debugPrint('🔍 Mixpanel: distinctId actual: $distinctId');
     } catch (e) {
       debugPrint('❌ Error tracking event $eventName: $e');
+      if (e is Error) {
+        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
+      }
       // No relanzamos la excepción para no afectar la UI
     }
   }
@@ -463,10 +500,16 @@ class MixpanelService {
     String eventName, [
     Map<String, dynamic>? properties,
   ]) async {
+    debugPrint('🔍 Mixpanel: Intentando trackear evento: $eventName');
     // Intenta trackear directamente (modo sincrónico)
     try {
       if (!_initialized || _mixpanel == null) {
-        await init().catchError((_) {});
+        debugPrint(
+          '🔍 Mixpanel: No inicializado, intentando inicializar para evento: $eventName',
+        );
+        await init().catchError((e) {
+          debugPrint('🔍 Mixpanel: Error al inicializar para evento: $e');
+        });
       }
 
       final Map<String, dynamic> enrichedProperties = {
@@ -474,13 +517,24 @@ class MixpanelService {
         ...?properties,
       };
 
+      debugPrint(
+        '🔍 Mixpanel: Estado antes de enviar evento: inicializado=${_initialized}, instancia=${_mixpanel != null}',
+      );
+
       // Tracking inmediato (para acciones críticas como auth)
       if (_mixpanel != null) {
         _mixpanel!.track(eventName, properties: enrichedProperties);
-        debugPrint('📊 Event tracked synchronously: $eventName');
+        debugPrint('✅ Mixpanel: Evento "$eventName" trackeado sincrónicamente');
+      } else {
+        debugPrint(
+          '⚠️ Mixpanel: No se pudo trackear "$eventName" - instancia null',
+        );
       }
     } catch (e) {
       debugPrint('❌ Error en trackEvent sincrónico ($eventName): $e');
+      if (e is Error) {
+        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
+      }
       // Intentar en segundo plano si falla el modo sincrónico
       _trackEventAsync(eventName, properties);
     }
@@ -1388,6 +1442,85 @@ class MixpanelService {
       return await isWorking();
     } catch (e) {
       debugPrint('❌ Failed to restart Mixpanel: $e');
+      return false;
+    }
+  }
+
+  /// Método de diagnóstico para verificar la configuración de Mixpanel
+  Future<bool> runDiagnostics() async {
+    debugPrint(
+      '🔍 Mixpanel DIAGNÓSTICO: Iniciando verificación de conexión...',
+    );
+    debugPrint('🔍 Mixpanel DIAGNÓSTICO: Token: ${_token.substring(0, 8)}...');
+
+    // 1. Verificar que Mixpanel está inicializado
+    if (!_initialized || _mixpanel == null) {
+      debugPrint(
+        '⚠️ Mixpanel DIAGNÓSTICO: No inicializado, intentando inicializar',
+      );
+      try {
+        await init();
+      } catch (e) {
+        debugPrint('❌ Mixpanel DIAGNÓSTICO: Falló la inicialización: $e');
+        return false;
+      }
+    }
+
+    if (!_initialized || _mixpanel == null) {
+      debugPrint(
+        '❌ Mixpanel DIAGNÓSTICO: Sigue sin estar inicializado después de init()',
+      );
+      return false;
+    }
+
+    debugPrint('✅ Mixpanel DIAGNÓSTICO: Inicializado correctamente');
+
+    // 2. Verificar si podemos obtener distinctId
+    try {
+      final distinctId = await _mixpanel!.getDistinctId();
+      debugPrint('✅ Mixpanel DIAGNÓSTICO: Obtenido distinctId: $distinctId');
+    } catch (e) {
+      debugPrint('❌ Mixpanel DIAGNÓSTICO: Error al obtener distinctId: $e');
+      return false;
+    }
+
+    // 3. Intentar enviar un evento de diagnóstico
+    try {
+      final eventId = DateTime.now().millisecondsSinceEpoch.toString();
+      final eventName = 'DIAGNOSTICO_TEST_$eventId';
+
+      _mixpanel!.track(
+        eventName,
+        properties: {
+          'timestamp': DateTime.now().toIso8601String(),
+          'deviceId': _deviceId,
+          'appVersion': _appVersion,
+          'osVersion': _osVersion,
+          'testId': eventId,
+        },
+      );
+
+      debugPrint(
+        '✅ Mixpanel DIAGNÓSTICO: Evento de prueba enviado: $eventName',
+      );
+
+      // 4. Verificar la configuración actual
+      debugPrint('🔍 Mixpanel DIAGNÓSTICO: Configuración actual:');
+      debugPrint(
+        '   - Platform: ${defaultTargetPlatform.toString().split('.').last}',
+      );
+      debugPrint('   - AppVersion: $_appVersion');
+      debugPrint('   - DeviceModel: $_deviceModel');
+
+      // Si llegamos hasta aquí, todo parece estar bien
+      debugPrint(
+        '✅ Mixpanel DIAGNÓSTICO: Verificación completa, todo parece correcto',
+      );
+      return true;
+    } catch (e) {
+      debugPrint(
+        '❌ Mixpanel DIAGNÓSTICO: Error al enviar evento de prueba: $e',
+      );
       return false;
     }
   }
