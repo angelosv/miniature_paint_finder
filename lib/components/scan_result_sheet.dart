@@ -318,17 +318,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     _showSuccessSnackbar('Paint added to your wishlist');
   }
 
-  void _findEquivalents() {
-    widget.onFindEquivalents(widget.paint);
-    _showSuccessSnackbar('Looking for equivalents...');
-  }
-
-  void _purchase() {
-    if (widget.onPurchase != null) {
-      widget.onPurchase!(widget.paint);
-    }
-  }
-
   void _showSuccessSnackbar(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -436,9 +425,44 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                   ),
                                 ],
                               ),
-                              Text(
-                                widget.paint.brand,
-                                style: Theme.of(context).textTheme.bodyLarge,
+                              Row(
+                                children: [
+                                  // Brand avatar
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.grey[800]
+                                              : Colors.grey[200],
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        widget.paint.brand
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              Theme.of(context).brightness ==
+                                                      Brightness.dark
+                                                  ? Colors.white
+                                                  : Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    widget.paint.brand,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Row(
@@ -552,17 +576,17 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                         margin: const EdgeInsets.only(top: 8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
+                          color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.amber.withOpacity(0.3),
+                            color: Colors.red.withOpacity(0.3),
                           ),
                         ),
                         child: Row(
                           children: [
                             const Icon(
-                              Icons.star,
-                              color: Colors.amber,
+                              Icons.favorite,
+                              color: Colors.red,
                               size: 24,
                             ),
                             const SizedBox(width: 8),
@@ -698,18 +722,13 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         // Wishlist action (only if not already in wishlist)
         if (!widget.isInWishlist)
           ListTile(
-            leading: Icon(
-              Icons.star_border_outlined,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
+            leading: Icon(Icons.favorite_border, color: Colors.red),
             title: const Text('Add to wishlist'),
             subtitle: const Text('Save for later purchase'),
             onTap: _showAddToWishlistDialog,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-              ),
+              side: BorderSide(color: Colors.red.withOpacity(0.2)),
             ),
           ),
         const SizedBox(height: 8),
@@ -725,36 +744,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             side: BorderSide(color: Colors.purple.withOpacity(0.2)),
           ),
         ),
-        const SizedBox(height: 8),
-
-        // Find equivalents
-        ListTile(
-          leading: Icon(Icons.compare_arrows, color: Colors.blue[700]),
-          title: const Text('Find equivalents'),
-          subtitle: const Text('Find similar colors from other brands'),
-          onTap: _findEquivalents,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Colors.blue[700]!.withOpacity(0.2)),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Purchase (if available)
-        if (widget.onPurchase != null)
-          ListTile(
-            leading: Icon(
-              Icons.shopping_cart_outlined,
-              color: Colors.green[700],
-            ),
-            title: const Text('Purchase'),
-            subtitle: const Text('Check availability and prices'),
-            onTap: _purchase,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide(color: Colors.green[700]!.withOpacity(0.2)),
-            ),
-          ),
       ],
     );
   }
@@ -1098,19 +1087,27 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         ),
         const SizedBox(height: 16),
 
-        // Priority checkbox
+        // Priority checkbox with heart icon
         Row(
           children: [
-            Checkbox(
-              value: _isPriority,
-              onChanged: (value) {
+            IconButton(
+              icon: Icon(
+                _isPriority ? Icons.favorite : Icons.favorite_border,
+                color: Colors.red,
+              ),
+              onPressed: () {
                 setState(() {
-                  _isPriority = value ?? false;
+                  _isPriority = !_isPriority;
                 });
               },
-              activeColor: Theme.of(context).colorScheme.secondary,
             ),
-            const Text('Mark as priority'),
+            Text(
+              'Mark as priority',
+              style: TextStyle(
+                color: _isPriority ? Colors.red : null,
+                fontWeight: _isPriority ? FontWeight.bold : null,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -1133,7 +1130,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               child: ElevatedButton(
                 onPressed: _addToWishlist,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Add'),

@@ -46,140 +46,158 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   String? _lastScannedCode;
   Paint? _foundPaint;
   String? _errorMessage;
-  bool _hasPermission = false;
+  bool _hasPermission = true;
   bool _isInitialized = false;
   bool _isPermanentlyDenied = false;
+  bool _hasScanAttempt = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkAndRequestCameraPermission();
+    _directCameraInitialization();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print('App resumed, checking camera permission again...');
-      _checkAndRequestCameraPermission();
+      print('App resumed, force initializing camera...');
+      _directCameraInitialization();
     }
   }
 
-  Future<void> _checkAndRequestCameraPermission() async {
-    try {
-      final status = await Permission.camera.status;
-      if (status.isGranted) {
-        _forceInitializeCamera();
-      } else if (status.isDenied) {
-        final result = await Permission.camera.request();
+  Future<void> _directCameraInitialization() async {
+    setState(() {
+      _hasPermission = true;
+      _errorMessage = null;
+    });
 
-        if (result.isGranted) {
-          _forceInitializeCamera();
-        } else {
-          setState(() {
-            _hasPermission = false;
-            _isPermanentlyDenied = result.isPermanentlyDenied;
-            _errorMessage =
-                result.isPermanentlyDenied
-                    ? 'Camera permission permanently denied. Please enable it in your device settings.'
-                    : 'Camera permission required to scan barcodes.';
-          });
-        }
-      } else if (status.isPermanentlyDenied) {
-        setState(() {
-          _hasPermission = false;
-          _isPermanentlyDenied = true;
-          _errorMessage =
-              'Camera permission permanently denied. Please enable it in your device settings.';
-        });
-      } else if (status.isRestricted) {
-        setState(() {
-          _hasPermission = false;
-          _errorMessage = 'Camera access is restricted on this device.';
-        });
-      }
-    } catch (e) {
-      print('Error checking camera permission: $e');
-      setState(() {
-        _hasPermission = false;
-        _errorMessage = 'Error checking camera permission: $e';
-      });
-    }
+    await _forceInitializeCamera();
   }
 
-  // Force initialize camera without checking permissions first
   Future<void> _forceInitializeCamera() async {
-    // Don't check permissions first - just try to access the camera directly
     print("FORCING camera initialization regardless of permission state");
 
-    try {
-      if (_scannerController != null) {
-        try {
-          await _scannerController!.stop();
-          await _scannerController!.dispose();
-        } catch (e) {
-          print("Error stopping existing controller: $e");
+    // Intentar hasta 3 veces con diferentes configuraciones
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (_scannerController != null) {
+          try {
+            await _scannerController!.stop();
+            await _scannerController!.dispose();
+          } catch (e) {
+            print("Error stopping existing controller: $e");
+          }
+          _scannerController = null;
         }
-        _scannerController = null;
-      }
 
-      setState(() {
-        _errorMessage = null;
-        _isInitialized = false;
-      });
-
-      // Use a more aggressive direct initialization strategy
-      print("Creating minimal scanner controller");
-      _scannerController = MobileScannerController(
-        detectionSpeed: DetectionSpeed.normal,
-        formats: [BarcodeFormat.ean13],
-      );
-
-      print("Starting camera WITHOUT checking permissions first");
-      await _scannerController!.start();
-      print("SUCCESS! Camera started without permission checks");
-
-      // If we got here, the camera is working
-      setState(() {
-        _hasPermission = true;
-        _isInitialized = true;
-        _errorMessage = null;
-      });
-    } catch (e) {
-      print("Direct camera initialization error: $e");
-
-      // Now check if this is a permission issue
-      if (e.toString().toLowerCase().contains("permission") ||
-          e.toString().toLowerCase().contains("denied")) {
-        print("Looks like a permission error - requesting permission");
-
-        // Only now request permission since we know we need it
-        final status = await Permission.camera.request();
-        print("Permission request result: ${status.toString()}");
-
-        if (status.isGranted) {
-          print("Permission granted after request, trying again");
-          _forceInitializeCamera(); // Try again with new permission
-        } else {
-          setState(() {
-            _hasPermission = false;
-            _isInitialized = false;
-            _isPermanentlyDenied = status.isPermanentlyDenied;
-            _errorMessage =
-                status.isPermanentlyDenied
-                    ? 'Camera permission permanently denied. Please enable it in your device settings.'
-                    : 'Camera permission required to use scanner.';
-          });
-        }
-      } else {
-        // Some other non-permission related error
         setState(() {
-          _errorMessage = 'Error initializing camera: $e';
+          _errorMessage = null;
           _isInitialized = false;
-
-          // We'll assume we have permission but hardware issue
-          _hasPermission = true;
+          _hasScanAttempt = false;
         });
+
+        print("Creating scanner controller (intento $attempt)");
+
+        // Probar diferentes configuraciones según el intento
+        if (attempt == 1) {
+          _scannerController = MobileScannerController(
+            detectionSpeed: DetectionSpeed.normal,
+            formats: [BarcodeFormat.ean13],
+          );
+        } else if (attempt == 2) {
+          _scannerController = MobileScannerController(
+            detectionSpeed: DetectionSpeed.noDuplicates,
+            formats: [
+              BarcodeFormat.ean13,
+              BarcodeFormat.ean8,
+              BarcodeFormat.code128,
+            ],
+          );
+        } else {
+          // En el último intento, usar configuración mínima
+          _scannerController = MobileScannerController(
+            facing: CameraFacing.back,
+            detectionSpeed: DetectionSpeed.normal,
+            torchEnabled: false,
+          );
+        }
+
+        print("Starting camera (intento $attempt)");
+        await _scannerController!.start();
+        print("Camera inicializada con éxito en intento $attempt");
+
+        setState(() {
+          _hasPermission = true;
+          _isInitialized = true;
+          _errorMessage = null;
+        });
+
+        // Si llegamos aquí, la cámara está funcionando, salir del bucle
+        return;
+      } catch (e) {
+        print("Error en intento $attempt de inicialización: $e");
+
+        // En el último intento, procesar errores de permisos
+        if (attempt == 3) {
+          if (e.toString().toLowerCase().contains("permission") ||
+              e.toString().toLowerCase().contains("denied")) {
+            print(
+              "Problema persistente de permisos - solicitando explícitamente",
+            );
+            try {
+              final status = await Permission.camera.request();
+              print("Resultado solicitud de permisos: ${status.toString()}");
+
+              if (status.isGranted) {
+                print(
+                  "Permiso finalmente concedido, reiniciando inicialización",
+                );
+                return _forceInitializeCamera();
+              } else if (status.isPermanentlyDenied) {
+                setState(() {
+                  _hasPermission = false;
+                  _isInitialized = false;
+                  _isPermanentlyDenied = true;
+                  _errorMessage =
+                      'Camera permission permanently denied. Please enable it in your device settings.';
+                });
+              } else {
+                setState(() {
+                  _hasPermission =
+                      true; // Asumir que tenemos permiso de todos modos
+                  _isInitialized = false;
+                });
+
+                // Esperar un momento e intentar una vez más
+                await Future.delayed(Duration(milliseconds: 800));
+                return _forceInitializeCamera();
+              }
+            } catch (permError) {
+              print("Error solicitando permisos: $permError");
+              // Asumir que tenemos permisos de todos modos
+              setState(() {
+                _hasPermission = true;
+                _isInitialized = false;
+              });
+            }
+          } else {
+            // Error de hardware u otro
+            setState(() {
+              _isInitialized = false;
+              _hasPermission = true; // Asumir que tenemos permiso
+            });
+
+            // Intentar una vez más después de un corto retraso
+            await Future.delayed(Duration(milliseconds: 800));
+            return _forceInitializeCamera();
+          }
+        }
+
+        // Si no es el último intento, esperar un momento antes del siguiente intento
+        if (attempt < 3) {
+          await Future.delayed(Duration(milliseconds: 500));
+        }
       }
     }
   }
@@ -196,11 +214,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _onBarcodeDetected(BarcodeCapture capture) async {
-    // If already processing a barcode or not scanning, ignore
     if (_isSearching || !_isScanning || !_hasPermission || !_isInitialized)
       return;
 
-    // Get barcode data
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -209,19 +225,20 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     print('Barcode detected: $code');
 
-    // Track scanner activity - inicio de escaneo
+    setState(() {
+      _hasScanAttempt = true;
+    });
+
     final scanStartTime = DateTime.now().millisecondsSinceEpoch;
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
     print("barcode_scanner_screen.dart isGuestUser: $isGuestUser");
-    // Validate code
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
         _errorMessage = 'Invalid barcode format: ${code ?? "unknown"}';
       });
 
-      // Track scanner error - formato inválido
       _analytics.trackScannerActivity(
         'error',
         barcode: code,
@@ -229,7 +246,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         scanDurationMs: DateTime.now().millisecondsSinceEpoch - scanStartTime,
       );
 
-      // Clear error after 2 seconds
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
@@ -241,10 +257,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       return;
     }
 
-    // Don't process the same code twice in a row
     if (code == _lastScannedCode) return;
 
-    // Update state to show we're searching
     setState(() {
       _isSearching = true;
       _lastScannedCode = code;
@@ -252,7 +266,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       _foundPaint = null;
     });
 
-    // Look up the paint by barcode
     try {
       print('🔍 Searching for paint with barcode: $code');
       final List<Paint>? paints = await _barcodeService.findPaintByBarcode(
@@ -260,26 +273,23 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         isGuestUser,
       );
 
-      // Calcular duración del escaneo
       final scanDurationMs =
           DateTime.now().millisecondsSinceEpoch - scanStartTime;
 
       if (mounted) {
         setState(() {
           _isSearching = false;
-          _isScanning = false; // Stop scanning after finding paints
+          _isScanning = false;
 
           if (paints == null || paints.isEmpty) {
             _errorMessage = 'No paint found for this barcode';
 
-            // TRACK BARCODE NO ENCONTRADO - MÉTODO PRIORITARIO 1
             _analytics.trackBarcodeNotFound(
               code,
               contextScreen: 'BarcodeScannerScreen',
               brandGuess: _guessBrandFromBarcode(code),
             );
 
-            // También trackear la actividad del scanner como error
             _analytics.trackScannerActivity(
               'not_found',
               barcode: code,
@@ -291,7 +301,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               _isScanning = false;
             });
           } else if (paints.length == 1) {
-            // Track scanner success
             _analytics.trackScannerActivity(
               'success',
               barcode: code,
@@ -300,7 +309,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               scanDurationMs: scanDurationMs,
             );
 
-            // Track paint interaction
             _analytics.trackPaintInteraction(
               paints[0].id,
               paints[0].name,
@@ -320,7 +328,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               _showScanResultSheet(_foundPaint!);
             }
           } else {
-            // Track scanner success but with multiple results
             _analytics.trackScannerActivity(
               'success_multiple',
               barcode: code,
@@ -328,7 +335,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               errorDetails: 'Multiple paints found for same barcode',
             );
 
-            // Si hay múltiples pinturas, mostrar diálogo de selección
             _showPaintSelectionDialog(paints);
           }
         });
@@ -336,7 +342,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     } catch (e) {
       print('❌ Error searching for paint: $e');
 
-      // Track scanner error
       _analytics.trackScannerActivity(
         'error',
         barcode: code,
@@ -348,7 +353,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         setState(() {
           _isSearching = false;
           _errorMessage = 'Error searching for paint: ${e.toString()}';
-          // Automatically clear error and restart scanning after 3 seconds
           Future.delayed(const Duration(seconds: 3), () {
             if (mounted && _errorMessage != null) {
               _resetScanner();
@@ -359,9 +363,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
   }
 
-  // Helper method to guess brand from barcode format
   String? _guessBrandFromBarcode(String barcode) {
-    // Common barcode prefixes for paint brands
     if (barcode.startsWith('5011921')) return 'Citadel_Colour';
     if (barcode.startsWith('8429551')) return 'Vallejo';
     if (barcode.startsWith('7331545')) return 'Army_Painter';
@@ -431,9 +433,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     );
   }
 
-  // Show the scan result bottom sheet
   void _showScanResultSheet(Paint paint) {
-    // Get the real paint status using the service
     final bool isInInventory = _paintService.isInInventory(paint.id);
     final int? inventoryQuantity = _paintService.getInventoryQuantity(paint.id);
     final bool isInWishlist = _paintService.isInWishlist(paint.id);
@@ -460,7 +460,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             paletteName: widget.paletteName,
             onAddToInventory: (paint, quantity, note) async {
               try {
-                // Use the inventory service to add to inventory
                 final success = await _inventoryService.addInventoryRecord(
                   brandId: paint.brandId ?? '',
                   paintId: paint.id,
@@ -494,7 +493,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             },
             onUpdateInventory: (paint, quantity, note) async {
               try {
-                // Use the inventory service to update inventory
                 final success = await _inventoryService.updateStockFromApi(
                   paint.id,
                   quantity,
@@ -528,7 +526,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
             },
             onAddToWishlist: (paint, isPriority) async {
-              // Use the service to add to wishlist
               await _paintService.addToWishlist(paint, isPriority);
 
               if (mounted) {
@@ -564,18 +561,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 );
               }
 
-              // Navigator.pop(context);
-              // Navigator.pop(context, paint);
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (context) => const PaletteScreen()),
-                (Route<dynamic> route) => false, // elimina todo lo anterior
+                (Route<dynamic> route) => false,
               );
             },
             onFindEquivalents: (paint) async {
-              // Close the modal first
               Navigator.pop(context);
 
-              // Show loading
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -585,24 +578,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 );
               }
 
-              // Use the service to search for equivalents
               try {
                 final equivalents = await _paintService.findEquivalents(paint);
 
                 if (mounted) {
-                  // Here we would normally navigate to an equivalents screen
-                  // For demo, just show a message with the count
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
                         'Found ${equivalents.length} equivalent paints',
                       ),
-                      action: SnackBarAction(
-                        label: 'View',
-                        onPressed: () {
-                          // Here we would navigate to the equivalents screen
-                        },
-                      ),
+                      action: SnackBarAction(label: 'View', onPressed: () {}),
                     ),
                   );
                 }
@@ -620,7 +605,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Navigator.pop(context, paint);
             },
             onPurchase: (paint) {
-              // Here we would implement navigation to purchase screen
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Checking availability for ${paint.name}...'),
@@ -639,7 +623,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         );
       },
     ).then((_) {
-      // When the bottom sheet is closed, reset the scanner if we're still on this screen
       if (mounted && !_isScanning) {
         _resetScanner();
       }
@@ -653,16 +636,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       _lastScannedCode = null;
       _foundPaint = null;
       _errorMessage = null;
+      _hasScanAttempt = false;
     });
 
-    // Restart scanner
     if (_hasPermission && _scannerController != null) {
       _scannerController!.start();
     }
   }
 
   void _restartScanner() {
-    // Restart the scanner completely
     _forceInitializeCamera();
     setState(() {
       _isScanning = true;
@@ -670,6 +652,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       _lastScannedCode = null;
       _foundPaint = null;
       _errorMessage = null;
+      _hasScanAttempt = false;
     });
   }
 
@@ -679,6 +662,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       appBar: AppBar(
         title: const Text('Barcode Scanner'),
         actions: [
+          // Botón para forzar la inicialización
+          IconButton(
+            icon: const Icon(Icons.camera_enhance),
+            onPressed: () {
+              print('Forcing camera initialization from UI button');
+              _directCameraInitialization();
+            },
+            tooltip: 'Force camera',
+          ),
           if (_hasPermission && _isInitialized && _scannerController != null)
             IconButton(
               icon: Icon(_isScanning ? Icons.flash_on : Icons.flash_off),
@@ -691,7 +683,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               onPressed: () => _scannerController!.switchCamera(),
               tooltip: 'Switch camera',
             ),
-          // Botón de debug con menú para simular diferentes escenarios
           PopupMenuButton<String>(
             icon: const Icon(Icons.bug_report),
             tooltip: 'Simulate scan',
@@ -706,14 +697,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   selectedPaint = paints[randomIndex];
                   break;
                 case 'in_inventory':
-                  // Simulate a paint that's already in inventory
                   selectedPaint = paints.firstWhere(
                     (p) => _paintService.isInInventory(p.id),
                     orElse: () => paints.first,
                   );
                   break;
                 case 'not_in_inventory':
-                  // Simulate a paint that exists but is NOT in inventory or wishlist
                   selectedPaint = paints.firstWhere(
                     (p) =>
                         !_paintService.isInInventory(p.id) &&
@@ -722,14 +711,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   );
                   break;
                 case 'in_wishlist':
-                  // Simulate a paint that's already in wishlist
                   selectedPaint = paints.firstWhere(
                     (p) => _paintService.isInWishlist(p.id),
                     orElse: () => paints.first,
                   );
                   break;
                 case 'in_palette':
-                  // Simulate a paint that's in some palette
                   selectedPaint = paints.firstWhere(
                     (p) =>
                         _paintService
@@ -739,14 +726,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   );
                   break;
                 case 'metallic':
-                  // Simulate a metallic paint
                   selectedPaint = paints.firstWhere(
                     (p) => p.isMetallic,
                     orElse: () => paints.first,
                   );
                   break;
                 case 'transparent':
-                  // Simulate a transparent paint
                   selectedPaint = paints.firstWhere(
                     (p) => p.isTransparent,
                     orElse: () => paints.first,
@@ -793,18 +778,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                 ],
           ),
-          // Add refresh button to forcibly restart camera permissions and initialization
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               print('Manual camera refresh requested');
-              // Force permission refresh
-              Permission.camera.shouldShowRequestRationale.then((_) {
-                Permission.camera.status.then((status) {
-                  print('Manual refresh - Camera status: ${status.toString()}');
-                  _forceInitializeCamera();
-                });
-              });
+              // Forzar directamente sin verificar permisos
+              _directCameraInitialization();
             },
             tooltip: 'Refresh camera',
           ),
@@ -816,7 +795,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             Expanded(
               child: Stack(
                 children: [
-                  // Scanner view
                   if (_isScanning &&
                       _hasPermission &&
                       _isInitialized &&
@@ -826,7 +804,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       onDetect: _onBarcodeDetected,
                     ),
 
-                  // No permission view
                   if (!_hasPermission)
                     Center(
                       child: Column(
@@ -880,8 +857,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       ),
                     ),
 
-                  // Scanner not initialized but has permission
-                  if (!_isInitialized && _hasPermission)
+                  if (!_isInitialized)
                     Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -889,44 +865,22 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           const CircularProgressIndicator(),
                           const SizedBox(height: 16),
                           const Text('Initializing camera...'),
-                          if (_errorMessage != null) ...[
-                            const SizedBox(height: 24),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.red),
-                              ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _directCameraInitialization,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
                             ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: _restartScanner,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry'),
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Back'),
-                            ),
-                          ],
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Force Camera'),
+                          ),
                         ],
                       ),
                     ),
 
-                  // Loading indicator
                   if (_isSearching) _buildSearchingOverlay(),
 
-                  // Scan guide overlay
                   if (_isScanning &&
                       !_isSearching &&
                       _hasPermission &&
@@ -934,13 +888,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       _scannerController != null)
                     _buildScanGuideOverlay(),
 
-                  // Error message
-                  if (_errorMessage != null) _buildErrorOverlay(),
+                  if (_errorMessage != null &&
+                      _hasScanAttempt &&
+                      _lastScannedCode != null &&
+                      !_isSearching)
+                    _buildErrorOverlay(),
                 ],
               ),
             ),
 
-            // Bottom controls
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -1099,7 +1055,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No paint found',
+                      _errorMessage == 'No paint found for this barcode'
+                          ? 'No paint found'
+                          : 'Error',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -1107,45 +1065,49 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'This paint is not in our database yet.',
+                      _errorMessage == 'No paint found for this barcode'
+                          ? 'This paint is not in our database yet.'
+                          : _errorMessage ?? 'An error occurred',
                       style: Theme.of(context).textTheme.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => AddPaintFormScreen(
-                                  barcode: _lastScannedCode,
-                                ),
+                    if (_errorMessage == 'No paint found for this barcode') ...[
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => AddPaintFormScreen(
+                                    barcode: _lastScannedCode,
+                                  ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          backgroundColor: AppTheme.marineOrange,
                         ),
-                        backgroundColor: AppTheme.marineOrange,
-                      ),
-                      child: const Text(
-                        'Add',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        child: const Text(
+                          'Add',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Your submission will be reviewed and added to our database.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Your submission will be reviewed and added to our database.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     OutlinedButton(
                       onPressed: _restartScanner,
@@ -1168,8 +1130,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   Widget _buildPaintDetailsView() {
-    // This is being replaced by the ScanResultSheet
-    // We'll keep this for backward compatibility but it won't be used
     final paint = _foundPaint!;
     final Color paintColor = Color(
       int.parse(paint.hex.substring(1), radix: 16) + 0xFF000000,
@@ -1189,7 +1149,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Success icon
             const Icon(Icons.check_circle, color: Colors.green, size: 60),
             const SizedBox(height: 16),
             const Text(
@@ -1198,7 +1157,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             ),
             const SizedBox(height: 20),
 
-            // Paint card
             Container(
               decoration: BoxDecoration(
                 color: cardColor,
@@ -1214,7 +1172,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // Paint color
                   Container(
                     width: 120,
                     height: 120,
@@ -1236,7 +1193,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   const SizedBox(height: 24),
 
-                  // Paint name
                   Text(
                     paint.name,
                     style: TextStyle(
@@ -1248,7 +1204,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   const SizedBox(height: 8),
 
-                  // Paint brand & category
                   Text(
                     '${paint.brand} - ${paint.category}',
                     style: TextStyle(color: secondaryTextColor, fontSize: 18),
@@ -1256,11 +1211,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   const SizedBox(height: 24),
 
-                  // Divider
                   Divider(color: secondaryTextColor?.withOpacity(0.3)),
                   const SizedBox(height: 16),
 
-                  // Paint details
                   _buildDetailRow(
                     icon: Icons.colorize,
                     label: 'Color Code',
