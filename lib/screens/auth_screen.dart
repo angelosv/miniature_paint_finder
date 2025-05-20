@@ -32,15 +32,23 @@ class _AuthScreenState extends State<AuthScreen>
   @override
   void initState() {
     super.initState();
-    // Check if user is already logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authService = Provider.of<IAuthService>(context, listen: false);
-      if (authService.currentUser != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
-    });
+    // No longer need to check if user is already logged in because the splash screen handles this
+  }
+
+  // Helper method to safely navigate after successful auth without running into navigator lock issues
+  void _safeNavigateToHome() {
+    if (mounted) {
+      // Use named route and add to widget tree next frame to avoid navigator lock
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/splash',
+            (route) => false,
+          );
+        }
+      });
+    }
   }
 
   // Auth service instance
@@ -62,11 +70,8 @@ class _AuthScreenState extends State<AuthScreen>
   // Verificar si estamos en iOS o macOS para mostrar el botón de Apple
   // También verificamos una variable de entorno para desarrollo
   bool get _isAppleSignInAvailable {
-    // Condición que evalúa si la funcionalidad está disponible para el equipo de desarrollo
-    // Establece esta variable como falsa para equipos sin Apple Developer
-    const bool forceDisableAppleSignIn =
-        true; // Cambiado a true para deshabilitar en esta rama
-
+    // Código original restaurado:
+    const bool forceDisableAppleSignIn = false;
     return !forceDisableAppleSignIn &&
         (defaultTargetPlatform == TargetPlatform.iOS);
   }
@@ -96,11 +101,8 @@ class _AuthScreenState extends State<AuthScreen>
 
       await authService.signInWithApple();
 
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Use our safe navigation method
+      _safeNavigateToHome();
     } catch (e) {
       if (mounted) {
         if (e is AuthException && e.code == AuthErrorCode.cancelled) {
@@ -161,12 +163,8 @@ class _AuthScreenState extends State<AuthScreen>
 
       print('✅ Login exitoso: ${user.email} (${user.id})');
 
-      if (mounted) {
-        // Navigate to home screen after successful login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Use our safe navigation method
+      _safeNavigateToHome();
     } on AuthException catch (e) {
       // Handle specific auth errors with user-friendly messages
       String errorMessage;
@@ -253,11 +251,8 @@ class _AuthScreenState extends State<AuthScreen>
             );
             print('Firebase login successful');
 
-            if (mounted) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-              );
-            }
+            // Use our safe navigation method
+            _safeNavigateToHome();
           } else {
             print('No custom token received in response');
             throw Exception('No custom token received from server');
@@ -292,12 +287,8 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       await _authService.signInWithGoogle();
 
-      if (mounted) {
-        // Navigate to home screen after successful login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Use our safe navigation method
+      _safeNavigateToHome();
     } on AuthException catch (e) {
       // Handle specific auth errors with user-friendly messages
       String errorMessage;
@@ -446,28 +437,30 @@ class _AuthScreenState extends State<AuthScreen>
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AuthScreen()),
-                  (route) => false,
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
+    // Use WidgetsBinding to ensure the dialog is shown after the frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Only show if the context is still valid
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -478,12 +471,8 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       final authService = Provider.of<IAuthService>(context, listen: false);
       await authService.signInWithGoogle();
-      // If we get here, executed was true
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Use our safe navigation method
+      _safeNavigateToHome();
     } catch (e) {
       if (context.mounted) {
         if (e is AuthException) {
@@ -1755,11 +1744,8 @@ class _AuthScreenState extends State<AuthScreen>
       final authService = Provider.of<IAuthService>(context, listen: false);
       await authService.continueAsGuest();
 
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Use our safe navigation method
+      _safeNavigateToHome();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -26,6 +26,8 @@ import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
+import 'package:miniature_paint_finder/screens/screen_analytics.dart';
 
 /// A screen for managing the user's paint inventory.
 ///
@@ -44,10 +46,12 @@ class InventoryScreen extends StatefulWidget {
 }
 
 /// The state for the InventoryScreen widget.
-class _InventoryScreenState extends State<InventoryScreen> {
+class _InventoryScreenState extends State<InventoryScreen>
+    with ScreenAnalyticsMixin {
   // Services
   final InventoryService _inventoryService = InventoryService();
   final PaintService _paintService = PaintService();
+  final MixpanelService _analytics = MixpanelService.instance;
 
   final BrandServiceManager _brandManager = BrandServiceManager();
   final PaintBrandService _paintBrandService = PaintBrandService();
@@ -98,6 +102,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final Map<String, String?> _brandLogos = {};
 
   @override
+  String get screenName => 'Inventory Screen';
+
+  @override
   void initState() {
     super.initState();
     _filteredInventory = [];
@@ -130,6 +137,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
 
     try {
+      // Track el inicio de la carga del inventario
+      final startTime = DateTime.now().millisecondsSinceEpoch;
+
       await _inventoryService.loadInventory(
         limit: _currentPageSize,
         page: _currentPage,
@@ -140,6 +150,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
         minStock: _stockRange.start.toInt(),
         maxStock: _stockRange.end.toInt(),
       );
+
+      // Calcular tiempo de carga
+      final endTime = DateTime.now().millisecondsSinceEpoch;
+      final loadTimeMs = endTime - startTime;
+
+      // Track el resultado de la carga
+      _analytics.trackPerformance('Inventory Load', loadTimeMs, {
+        'page': _currentPage,
+        'page_size': _currentPageSize,
+        'has_search': _searchController.text.isNotEmpty,
+        'filter_brand': _selectedBrand,
+        'filter_category': _selectedCategory,
+        'filter_stock_only': _onlyShowInStock,
+        'item_count': _inventoryService.inventory.length,
+        'total_pages': _inventoryService.totalPages,
+      });
+
+      // Nuevo tracking detallado de actividad en el inventario
+      _analytics.trackInventoryActivity(
+        'load',
+        itemsAffected: _inventoryService.inventory.length,
+        timeTakenSeconds: (loadTimeMs / 1000).round(),
+        additionalInfo: {
+          'page': _currentPage,
+          'page_size': _currentPageSize,
+          'total_pages': _inventoryService.totalPages,
+          'had_filters':
+              _searchController.text.isNotEmpty ||
+              _selectedBrand != null ||
+              _selectedCategory != null ||
+              _onlyShowInStock,
+        },
+      );
+
       _filteredInventory = _inventoryService.inventory;
       _uniqueCategories = _inventoryService.getUniqueCategories();
       _uniqueBrands = await _inventoryService.getUniqueBrands();
@@ -150,6 +194,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
       });
     } catch (e) {
       print('Error loading inventory: $e');
+      // Track el error
+      _analytics.trackError('Inventory Load', e.toString(), {
+        'page': _currentPage,
+        'page_size': _currentPageSize,
+      });
+
+      // Nuevo tracking detallado de problemas específicos de plataforma si es relevante
+      if (e.toString().contains('platform') ||
+          e.toString().contains('iOS') ||
+          e.toString().contains('Android')) {
+        _analytics.trackPlatformSpecificIssue(
+          'inventory_load',
+          e.toString(),
+          technicalDetails: {
+            'page': _currentPage,
+            'page_size': _currentPageSize,
+            'had_filters':
+                _searchController.text.isNotEmpty ||
+                _selectedBrand != null ||
+                _selectedCategory != null ||
+                _onlyShowInStock,
+          },
+        );
+      }
+
       setState(() {
         _isLoading = false;
       });
@@ -210,6 +279,38 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Then sorts the results and updates pagination.
   void _filterInventory() {
+    // Track la acción de filtrado
+    _analytics.trackEvent('Inventory Filtered', {
+      'search_term': _searchController.text,
+      'brand_filter': _selectedBrand,
+      'category_filter': _selectedCategory,
+      'in_stock_only': _onlyShowInStock,
+      'min_stock': _stockRange.start.toInt(),
+      'max_stock': _stockRange.end.toInt(),
+    });
+
+    // Nuevo método para tracking más detallado de la actividad de inventario
+    _analytics.trackInventoryActivity(
+      'filter',
+      filterCriteria:
+          _searchController.text.isNotEmpty
+              ? 'search:${_searchController.text}'
+              : _selectedBrand != null
+              ? 'brand:$_selectedBrand'
+              : _selectedCategory != null
+              ? 'category:$_selectedCategory'
+              : 'stock:${_stockRange.start.toInt()}-${_stockRange.end.toInt()}',
+      additionalInfo: {
+        'has_search': _searchController.text.isNotEmpty,
+        'has_brand_filter': _selectedBrand != null,
+        'has_category_filter': _selectedCategory != null,
+        'has_stock_filter':
+            _onlyShowInStock ||
+            _stockRange.start > 0 ||
+            _stockRange.end < _maxPossibleStock,
+      },
+    );
+
     // En lugar de filtrar localmente, recargamos desde la API con los filtros
     setState(() {
       _currentPage = 1; // Reset a primera página al filtrar
@@ -219,6 +320,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Toggles the "only show in-stock items" filter.
   void _toggleStockFilter(bool value) {
+    _analytics.trackEvent('Inventory Filter Changed', {
+      'filter_type': 'in_stock_only',
+      'value': value,
+    });
+
     setState(() {
       _onlyShowInStock = value;
       _filterInventory();
@@ -227,6 +333,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Updates the stock range filter.
   void _updateStockRange(RangeValues values) {
+    _analytics.trackEvent('Inventory Filter Changed', {
+      'filter_type': 'stock_range',
+      'min_value': values.start.toInt(),
+      'max_value': values.end.toInt(),
+    });
+
     setState(() {
       _stockRange = values;
       _filterInventory();
@@ -235,6 +347,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Updates the brand filter.
   void _updateBrandFilter(String? brand) {
+    _analytics.trackEvent('Inventory Filter Changed', {
+      'filter_type': 'brand',
+      'value': brand ?? 'All',
+    });
+
     setState(() {
       _selectedBrand = brand;
       _filterInventory();
@@ -243,6 +360,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Updates the category filter.
   void _updateCategoryFilter(String? category) {
+    _analytics.trackEvent('Inventory Filter Changed', {
+      'filter_type': 'category',
+      'value': category ?? 'All',
+    });
+
     setState(() {
       _selectedCategory = category;
       _filterInventory();
@@ -251,6 +373,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   /// Resets all filters to their default values.
   void _resetFilters() {
+    _analytics.trackEvent('Inventory Filters Reset', {});
+
     setState(() {
       _onlyShowInStock = false;
       _selectedBrand = null;
@@ -297,6 +421,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     // Prevent negative stock
     if (newStock < 0) return;
 
+    // Track el cambio de stock
+    final stockDelta = newStock - item.stock;
+    final stockAction = stockDelta > 0 ? 'Increased' : 'Decreased';
+
+    _analytics.trackEvent('Inventory Stock Updated', {
+      'paint_id': item.id,
+      'paint_name': item.paint.name,
+      'brand': item.paint.brand,
+      'previous_stock': item.stock,
+      'new_stock': newStock,
+      'delta': stockDelta,
+      'action': stockAction,
+    });
+
     // Update stock through service
     bool success = await _inventoryService.updateStockFromApi(
       item.id,
@@ -324,6 +462,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
           _sortInventory();
         }
       });
+    } else {
+      // Track el error
+      _analytics
+          .trackError('Inventory Stock Update', 'Failed to update stock', {
+            'paint_id': item.id,
+            'paint_name': item.paint.name,
+            'attempted_stock': newStock,
+          });
     }
   }
 
@@ -331,6 +477,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ///
   /// Updates both the UI state and the inventory service data.
   void _updatePaintNotes(PaintInventoryItem item, String notes) async {
+    // Track la actualización de notas
+    _analytics.trackEvent('Inventory Notes Updated', {
+      'paint_id': item.id,
+      'paint_name': item.paint.name,
+      'brand': item.paint.brand,
+      'has_previous_notes': item.notes.isNotEmpty,
+      'notes_length': notes.length,
+    });
+
     // Update notes through service
     bool success = await _inventoryService.updateNotesFromApi(item.id, notes);
 
@@ -347,6 +502,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
         }
         _sortInventory();
       });
+    } else {
+      // Track el error
+      _analytics.trackError(
+        'Inventory Notes Update',
+        'Failed to update notes',
+        {'paint_id': item.id, 'paint_name': item.paint.name},
+      );
     }
   }
 
@@ -359,6 +521,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// - Viewing palette usage
   /// - Removing the paint from inventory
   void _showInventoryItemOptions(PaintInventoryItem item) {
+    // Track la apertura de detalles de una pintura
+    _analytics.trackPaintView(item.id, item.paint.name, item.paint.brand, {
+      'context': 'Inventory',
+      'current_stock': item.stock,
+      'has_notes': item.notes.isNotEmpty,
+    });
+
+    // Nuevo tracking de interacción detallada con pinturas
+    _analytics.trackPaintInteraction(
+      item.id,
+      item.paint.name,
+      item.paint.brand,
+      'viewed',
+      source: 'inventory',
+      additionalData: {
+        'current_stock': item.stock,
+        'has_notes': item.notes.isNotEmpty,
+        'color_hex': item.paint.hex,
+        'category': item.paint.category,
+      },
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -390,6 +574,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
             if (user == null) return;
             Paint paint = item.paint;
             paint.id = item.paint.code;
+
+            // Track adición a wishlist
+            _analytics.trackPaintAddedToWishlist(
+              paint.id,
+              paint.name,
+              paint.brand,
+            );
 
             await _paintService.addToWishlistDirect(
               paint,

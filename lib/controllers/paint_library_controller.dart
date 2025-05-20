@@ -273,6 +273,40 @@ class PaintLibraryController extends ChangeNotifier {
 
     try {
       final brands = await _apiService.getBrands();
+
+      // Verificar si los brands ya incluyen el paint_count
+      bool needsCountUpdate = false;
+      for (var brand in brands) {
+        if (!brand.containsKey('paint_count') || brand['paint_count'] == null) {
+          needsCountUpdate = true;
+          // Asegurar que todos tengan un paint_count inicial
+          brand['paint_count'] = 0;
+        }
+      }
+
+      // Si al menos una marca no tiene count, obtenerlos manualmente
+      if (needsCountUpdate) {
+        print('🎨 Obteniendo conteo de pinturas para cada marca...');
+
+        // Intentar obtener recuentos para cada marca
+        for (var brand in brands) {
+          try {
+            // Obtener el recuento total de pinturas para esta marca
+            final result = await _apiService.getPaints(
+              brandId: brand['id'] as String,
+              limit: 1, // Solo necesitamos el total, no las pinturas reales
+            );
+
+            // Actualizar el recuento de pinturas
+            brand['paint_count'] = result['totalPaints'] as int;
+          } catch (e) {
+            print('Error al obtener conteo para marca ${brand['name']}: $e');
+            // Mantener el count en 0 si falla
+          }
+        }
+      }
+
+      // Actualizar el estado
       _brands = brands;
       _availableBrands = ['All', ...brands.map((b) => b['name'] as String)];
       notifyListeners();

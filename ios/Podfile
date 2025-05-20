@@ -27,6 +27,27 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+def flutter_post_install(installer)
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    
+    # Fix for sqflite_darwin Flutter.h not found error
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_WARN_UNUSED_VARIABLE'] = 'YES'
+      
+      # Add the Flutter framework search paths
+      config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)']
+      config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '${PODS_ROOT}/../Flutter'
+      config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '${PODS_CONFIGURATION_BUILD_DIR}'
+      
+      # Add header search paths
+      config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+      config.build_settings['HEADER_SEARCH_PATHS'] << '${PODS_ROOT}/Flutter'
+      config.build_settings['HEADER_SEARCH_PATHS'] << '${PODS_ROOT}/../Flutter'
+    end
+  end
+end
+
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
@@ -38,31 +59,5 @@ target 'Runner' do
 end
 
 post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-    
-    # Configuración para todos los targets
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
-      config.build_settings['ENABLE_BITCODE'] = 'NO'
-
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PERMISSION_CAMERA=1'
-
-      # Configuración específica para simuladores
-      if config.build_settings['SDKROOT'] == 'iphonesimulator'
-        # Excluir arquitecturas antiguas
-        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386 armv7'
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-        config.build_settings['VALID_ARCHS'] = 'arm64 x86_64'
-        
-        # Para MLKit y funcionalidades que no funcionan en simuladores
-        if ['MLImage', 'MLKitVision', 'MLKitBarcodeScanning', 'GoogleMLKit', 'mobile_scanner', 'device_info_plus'].include?(target.name)
-          config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] += ' arm64'
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'DISABLE_SCANNER_IN_SIMULATOR=1'
-        end
-      end
-    end
-  end
+  flutter_post_install(installer)
 end

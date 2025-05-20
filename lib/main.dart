@@ -25,12 +25,19 @@ import 'package:miniature_paint_finder/services/image_cache_service.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
 import 'package:miniature_paint_finder/services/push_notification_service.dart'
     show firebaseMessagingBackgroundHandler;
+import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
+import 'package:miniature_paint_finder/utils/analytics_route_observer.dart';
+import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// App entry point
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure platform-specific behavior
+  configureLinuxPlugins();
 
   // Initialize Firebase
   try {
@@ -60,6 +67,13 @@ void main() async {
   // Initialize services
   final IAuthService authService = AuthService();
   await authService.init();
+
+  // Initialize analytics in non-blocking way
+  final analyticsService = MixpanelService.instance;
+  Future.microtask(() async {
+    await analyticsService.init();
+    debugPrint('Analytics initialized in background');
+  });
 
   // Initialize repositories and services
   final PaintRepository paintRepository = PaintRepositoryImpl();
@@ -91,6 +105,7 @@ void main() async {
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
         Provider<PaintApiService>.value(value: paintApiService),
+        Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
           create: (context) => PaletteController(paletteRepository),
         ),
@@ -125,6 +140,7 @@ class _MyAppWrapperState extends State<MyAppWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Remove the auth state listener navigation logic that's causing issues
   }
 
   void getGuestFlag() async {
@@ -135,10 +151,18 @@ class _MyAppWrapperState extends State<MyAppWrapper>
         context,
         listen: false,
       );
-      guestLogicProvider.guestLogic = response['value'];
+      // Si no se puede obtener el flag, asumir que es true por defecto para evitar problemas
+      final bool flagValue = response['value'] ?? true;
+      guestLogicProvider.guestLogic = flagValue;
       print('CALL Guest Logic: ${guestLogicProvider.guestLogic}');
     } catch (e) {
       print('Error getting guest logic: $e');
+      // En caso de error, establecer guestLogic a true para permitir la autenticación
+      final guestLogicProvider = Provider.of<GuestLogicProvider>(
+        context,
+        listen: false,
+      );
+      guestLogicProvider.guestLogic = true;
     }
   }
 
@@ -185,8 +209,11 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          initialRoute: '/',
+          initialRoute: '/splash',
+          // Temporarily disable analytics observer to avoid navigation conflicts
+          // navigatorObservers: [analyticsRouteObserver],
           routes: {
+            '/splash': (context) => const AuthSplashScreen(),
             '/': (context) => const AuthScreen(),
             '/home': (context) => const HomeScreen(),
             '/palettes': (context) => const PaletteScreen(),
@@ -195,6 +222,60 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
         );
       },
+    );
+  }
+}
+
+/// A splash screen that handles authentication redirection
+class AuthSplashScreen extends StatefulWidget {
+  const AuthSplashScreen({Key? key}) : super(key: key);
+
+  @override
+  _AuthSplashScreenState createState() => _AuthSplashScreenState();
+}
+
+class _AuthSplashScreenState extends State<AuthSplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndRedirect();
+  }
+
+  Future<void> _checkAuthAndRedirect() async {
+    // Add a small delay to let the UI render
+    await Future.delayed(Duration(milliseconds: 100));
+
+    if (!mounted) return;
+
+    final authService = Provider.of<IAuthService>(context, listen: false);
+
+    // Check if user is already authenticated
+    if (authService.currentUser != null) {
+      // Navigate to home if already logged in
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      // Navigate to auth screen if not logged in
+      Navigator.of(context).pushReplacementNamed('/');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // App logo or loading indicator
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.marineGold),
+            ),
+            SizedBox(height: 24),
+            Text('Loading...', style: TextStyle(color: Colors.white70)),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 import 'package:miniature_paint_finder/models/paint_submit.dart';
+
 class PaintApiService {
   static final String baseUrl = '${Env.apiBaseUrl}';
 
@@ -147,11 +148,60 @@ class PaintApiService {
 
         // Log de ejemplo de marca
         if (data.isNotEmpty) {
-          _logJson('Ejemplo de marca', data[0] as Map<String, dynamic>);
+          final sampleBrand = data[0] as Map<String, dynamic>;
+          _logJson('Ejemplo de marca', sampleBrand);
+
+          // Verificar si las marcas tienen el campo paint_count
+          final hasPaintCount =
+              sampleBrand.containsKey('paintCount') ||
+              sampleBrand.containsKey('paint_count');
+          print('📊 Brands API includes paint count: $hasPaintCount');
+
+          // Verificar si hay otros campos de conteo relevantes
+          final countFields =
+              sampleBrand.keys
+                  .where((k) => k.contains('count') || k.contains('Count'))
+                  .toList();
+          if (countFields.isNotEmpty) {
+            print('📊 Campos de conteo disponibles: $countFields');
+          }
         }
 
         _log('✅ Received ${data.length} brands');
-        return List<Map<String, dynamic>>.from(data);
+
+        // Asegurar que todas las marcas tengan un campo paint_count
+        final processedData =
+            data.map((brand) {
+              final Map<String, dynamic> processedBrand =
+                  Map<String, dynamic>.from(brand as Map<String, dynamic>);
+
+              // Verificar si ya existe paintCount en la respuesta y mapearlo a paint_count
+              if (processedBrand.containsKey('paintCount')) {
+                processedBrand['paint_count'] = processedBrand['paintCount'];
+              }
+              // Si no hay paint_count, intentar buscar otros campos alternativos
+              else if (!processedBrand.containsKey('paint_count')) {
+                if (processedBrand.containsKey('paints_count')) {
+                  processedBrand['paint_count'] =
+                      processedBrand['paints_count'];
+                } else if (processedBrand.containsKey('count')) {
+                  processedBrand['paint_count'] = processedBrand['count'];
+                } else {
+                  // Si no hay ningún campo de conteo, establecer en 0
+                  processedBrand['paint_count'] = 0;
+                }
+              }
+
+              // Verificar que el valor de paint_count sea un entero
+              if (processedBrand['paint_count'] is! int) {
+                processedBrand['paint_count'] =
+                    int.tryParse(processedBrand['paint_count'].toString()) ?? 0;
+              }
+
+              return processedBrand;
+            }).toList();
+
+        return processedData;
       } else {
         _log('❌ Error ${response.statusCode}: ${response.body}');
         throw Exception('Error al cargar las marcas: ${response.statusCode}');
@@ -188,20 +238,20 @@ class PaintApiService {
   Future<bool> submitPaint(PaintSubmit item) async {
     try {
       print('submitPaint');
-      final url = Uri.parse('${Env.apiBaseUrl}/paint/pending-paint-submissions');
+      final url = Uri.parse(
+        '${Env.apiBaseUrl}/paint/pending-paint-submissions',
+      );
       print('submitPaint URL: $url');
       print('submitPaint: ${item.toJson()}');
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode(item.toJson()),
       );
       print('submitPaint response.statusCode: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;  
+        return true;
       } else {
         return false;
       }

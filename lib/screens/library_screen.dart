@@ -18,6 +18,7 @@ import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/components/brand_card.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shimmer/shimmer.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -152,35 +153,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
     bool isDarkMode,
     PaintLibraryController controller,
   ) {
-    return Stack(
+    return Column(
       children: [
-        Column(
-          children: [
-            // Barra de búsqueda
-            _buildSearchBar(isDarkMode, controller),
+        // Barra de búsqueda
+        _buildSearchBar(isDarkMode, controller),
 
-            // Contenido principal (vista de marcas o pinturas)
-            Expanded(
-              child:
-                  controller.showingBrandsView
-                      ? _buildBrandsGrid(controller)
-                      : Column(
-                        children: [
-                          _buildResultsBar(isDarkMode, controller),
-                          Expanded(
-                            child: _buildPaintGrid(isDarkMode, controller),
-                          ),
-                          _buildPagination(controller),
-                        ],
-                      ),
-            ),
-          ],
+        // Contenido principal (vista de marcas o pinturas)
+        Expanded(
+          child:
+              controller.showingBrandsView
+                  ? _buildBrandsGrid(controller)
+                  : Column(
+                    children: [
+                      _buildResultsBar(isDarkMode, controller),
+                      Expanded(child: _buildPaintGrid(isDarkMode, controller)),
+                      _buildPagination(controller),
+                    ],
+                  ),
         ),
-        if (controller.isLoading)
-          Container(
-            color: Colors.black.withOpacity(0.3),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
       ],
     );
   }
@@ -313,6 +303,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final brands = controller.brands;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Mostrar skeletons cuando está cargando y no hay marcas aún
+    if (controller.isLoading && brands.isEmpty) {
+      return GridView.builder(
+        padding: EdgeInsets.all(16),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: 10, // Mostrar 10 skeletons
+        itemBuilder: (context, index) {
+          return _buildBrandCardSkeleton(isDarkMode);
+        },
+      );
+    }
+
     // Filter brands based on search text
     final filteredBrands =
         _searchController.text.isEmpty
@@ -386,6 +393,105 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  // Skeleton para las tarjetas de marcas durante la carga
+  Widget _buildBrandCardSkeleton(bool isDarkMode) {
+    return Shimmer.fromColors(
+      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+      period: const Duration(milliseconds: 1500),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppTheme.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Logo container skeleton
+            Expanded(
+              flex: 2,
+              child: ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                child: Container(
+                  color: Colors.white,
+                  child: Center(
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Brand info container skeleton
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color:
+                    isDarkMode
+                        ? AppTheme.marineBlue.withOpacity(0.1)
+                        : Colors.grey[50],
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name skeleton
+                  Container(
+                    width: double.infinity,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Paint count skeleton
+                      Container(
+                        width: 80,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      // Arrow icon skeleton
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _hasActiveFilters(PaintLibraryController controller) {
     return controller.selectedCategory != 'All' ||
         controller.selectedColor != null;
@@ -444,6 +550,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
 
+    // Mostrar skeletons durante la carga
+    if (controller.isLoading && controller.paginatedPaints.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: GridView.builder(
+          padding: const EdgeInsets.all(8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: 10, // Mostrar 10 skeletons
+          itemBuilder: (context, index) {
+            return _buildPaintCardSkeleton(isDarkMode);
+          },
+        ),
+      );
+    }
+
     return controller.paginatedPaints.isEmpty
         ? const Center(child: Text('No paints found matching your filters'))
         : Padding(
@@ -487,6 +613,88 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ],
           ),
         );
+  }
+
+  // Skeleton para las tarjetas de pinturas durante la carga
+  Widget _buildPaintCardSkeleton(bool isDarkMode) {
+    return Shimmer.fromColors(
+      baseColor: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+      highlightColor: isDarkMode ? Colors.grey[700]! : Colors.grey[100]!,
+      period: const Duration(milliseconds: 1500),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[850] : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Color swatch skeleton
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              ),
+            ),
+
+            // Paint info skeleton
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name skeleton
+                  Container(
+                    width: double.infinity,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+
+                  // Brand skeleton
+                  Container(
+                    width: 100,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // Actions skeleton
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(
+                      3,
+                      (index) => Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Add to inventory with guest check
