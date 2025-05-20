@@ -152,12 +152,16 @@ class PaintApiService {
           _logJson('Ejemplo de marca', sampleBrand);
 
           // Verificar si las marcas tienen el campo paint_count
-          final hasPaintCount = sampleBrand.containsKey('paint_count');
+          final hasPaintCount =
+              sampleBrand.containsKey('paintCount') ||
+              sampleBrand.containsKey('paint_count');
           print('📊 Brands API includes paint count: $hasPaintCount');
 
           // Verificar si hay otros campos de conteo relevantes
           final countFields =
-              sampleBrand.keys.where((k) => k.contains('count')).toList();
+              sampleBrand.keys
+                  .where((k) => k.contains('count') || k.contains('Count'))
+                  .toList();
           if (countFields.isNotEmpty) {
             print('📊 Campos de conteo disponibles: $countFields');
           }
@@ -170,8 +174,13 @@ class PaintApiService {
             data.map((brand) {
               final Map<String, dynamic> processedBrand =
                   Map<String, dynamic>.from(brand as Map<String, dynamic>);
-              if (!processedBrand.containsKey('paint_count')) {
-                // Intentar buscar otro campo que pueda contener el conteo
+
+              // Verificar si ya existe paintCount en la respuesta y mapearlo a paint_count
+              if (processedBrand.containsKey('paintCount')) {
+                processedBrand['paint_count'] = processedBrand['paintCount'];
+              }
+              // Si no hay paint_count, intentar buscar otros campos alternativos
+              else if (!processedBrand.containsKey('paint_count')) {
                 if (processedBrand.containsKey('paints_count')) {
                   processedBrand['paint_count'] =
                       processedBrand['paints_count'];
@@ -182,6 +191,13 @@ class PaintApiService {
                   processedBrand['paint_count'] = 0;
                 }
               }
+
+              // Verificar que el valor de paint_count sea un entero
+              if (processedBrand['paint_count'] is! int) {
+                processedBrand['paint_count'] =
+                    int.tryParse(processedBrand['paint_count'].toString()) ?? 0;
+              }
+
               return processedBrand;
             }).toList();
 

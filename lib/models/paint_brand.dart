@@ -16,6 +16,38 @@ class PaintBrand {
   });
 
   factory PaintBrand.fromJson(Map<String, dynamic> json) {
+    // Extraer la cuenta de pinturas de diferentes campos posibles
+    int extractPaintCount() {
+      if (json.containsKey('paintCount') && json['paintCount'] != null) {
+        if (json['paintCount'] is int) {
+          return json['paintCount'];
+        } else {
+          return int.tryParse(json['paintCount'].toString()) ?? 0;
+        }
+      } else if (json.containsKey('paint_count') &&
+          json['paint_count'] != null) {
+        if (json['paint_count'] is int) {
+          return json['paint_count'];
+        } else {
+          return int.tryParse(json['paint_count'].toString()) ?? 0;
+        }
+      } else if (json.containsKey('paints_count') &&
+          json['paints_count'] != null) {
+        if (json['paints_count'] is int) {
+          return json['paints_count'];
+        } else {
+          return int.tryParse(json['paints_count'].toString()) ?? 0;
+        }
+      } else if (json.containsKey('count') && json['count'] != null) {
+        if (json['count'] is int) {
+          return json['count'];
+        } else {
+          return int.tryParse(json['count'].toString()) ?? 0;
+        }
+      }
+      return 0;
+    }
+
     return PaintBrand(
       id: json['id'],
       name: json['name'],
@@ -26,7 +58,7 @@ class PaintBrand {
       updatedAt: DateTime.fromMillisecondsSinceEpoch(
         json['updated_at']['_seconds'] * 1000,
       ),
-      paintCount: json['paintCount'] ?? 0,
+      paintCount: extractPaintCount(),
     );
   }
 
