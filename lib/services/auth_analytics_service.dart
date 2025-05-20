@@ -1,134 +1,115 @@
-import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
-/// A service that tracks authentication-related events
+/// Wrapper para el servicio de autenticación que agrega tracking de eventos con Mixpanel
 class AuthAnalyticsService {
-  static final AuthAnalyticsService _instance =
-      AuthAnalyticsService._internal();
-  final MixpanelService _analytics = MixpanelService();
+  final IAuthService _authService;
+  final MixpanelService _mixpanel = MixpanelService.instance;
 
-  /// Factory constructor for singleton pattern
-  factory AuthAnalyticsService() => _instance;
+  AuthAnalyticsService(this._authService);
 
-  /// Private constructor
-  AuthAnalyticsService._internal();
+  /// Trackea un evento de inicio de sesión exitoso
+  void _trackSuccessfulLogin(User? user, String method) {
+    _mixpanel.trackEvent('Login', {'method': method, 'success': true});
 
-  /// Track successful login event
-  void trackLogin(String provider, String userId) {
+    // Identificar al usuario en Mixpanel
+    if (user != null) {
+      _mixpanel.identify(user.uid);
+    }
+  }
+
+  /// Trackea un evento de inicio de sesión fallido
+  void _trackFailedLogin(String method, String error) {
+    _mixpanel.trackEvent('Login', {
+      'method': method,
+      'success': false,
+      'error': error,
+    });
+  }
+
+  /// Wrapper para signInWithEmailAndPassword con tracking
+  Future<User?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
-      debugPrint(
-        '🔍 AuthAnalytics: User logged in - ID: $userId, Provider: $provider',
+      final user = await _authService.signInWithEmailAndPassword(
+        email,
+        password,
       );
+      _trackSuccessfulLogin(user, 'Email/Password');
+      return user;
+    } catch (e) {
+      _trackFailedLogin('Email/Password', e.toString());
+      rethrow; // Permitir que el error se propague para su manejo
+    }
+  }
 
-      // Identify the user first
-      _analytics.identify(userId, {
-        'auth_provider': provider,
-        'last_login': DateTime.now().toIso8601String(),
-      });
+  /// Wrapper para signInWithGoogle con tracking
+  Future<User?> signInWithGoogle() async {
+    try {
+      final user = await _authService.signInWithGoogle();
+      _trackSuccessfulLogin(user, 'Google');
+      return user;
+    } catch (e) {
+      _trackFailedLogin('Google', e.toString());
+      rethrow;
+    }
+  }
 
-      // Track the login event
-      _analytics.trackEvent('User Login', {
-        'auth_provider': provider,
+  /// Wrapper para signInWithApple con tracking
+  Future<User?> signInWithApple() async {
+    try {
+      final user = await _authService.signInWithApple();
+      _trackSuccessfulLogin(user, 'Apple');
+      return user;
+    } catch (e) {
+      _trackFailedLogin('Apple', e.toString());
+      rethrow;
+    }
+  }
+
+  /// Wrapper para createUserWithEmailAndPassword con tracking
+  Future<User?> createUserWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
+    try {
+      final user = await _authService.createUserWithEmailAndPassword(
+        email,
+        password,
+      );
+      _mixpanel.trackEvent('Registration', {
+        'method': 'Email/Password',
         'success': true,
       });
+      _trackSuccessfulLogin(user, 'Email/Password - New User');
+      return user;
     } catch (e) {
-      debugPrint('⚠️ AuthAnalytics Error: $e');
-    }
-  }
-
-  /// Track successful registration event
-  void trackRegistration(String provider, String userId) {
-    try {
-      debugPrint(
-        '🔍 AuthAnalytics: User registered - ID: $userId, Provider: $provider',
-      );
-
-      // Identify the user first
-      _analytics.identify(userId, {
-        'auth_provider': provider,
-        'signup_date': DateTime.now().toIso8601String(),
+      _mixpanel.trackEvent('Registration', {
+        'method': 'Email/Password',
+        'success': false,
+        'error': e.toString(),
       });
-
-      // Track the signup event
-      _analytics.trackEvent('User Registration', {
-        'auth_provider': provider,
-        'success': true,
-      });
-    } catch (e) {
-      debugPrint('⚠️ AuthAnalytics Error: $e');
+      rethrow;
     }
   }
 
-  /// Track login/signup failure
-  void trackAuthFailure(String provider, String reason) {
-    try {
-      debugPrint(
-        '🔍 AuthAnalytics: Auth failed - Provider: $provider, Reason: $reason',
-      );
-
-      // Track the failure event
-      _analytics.trackEvent('Auth Failed', {
-        'auth_provider': provider,
-        'reason': reason,
-      });
-    } catch (e) {
-      debugPrint('⚠️ AuthAnalytics Error: $e');
-    }
+  /// Wrapper para signOut con tracking
+  Future<void> signOut() async {
+    _mixpanel.logout();
+    await _authService.signOut();
   }
 
-  /// Track logout event
-  void trackLogout() {
-    try {
-      debugPrint('🔍 AuthAnalytics: User logged out');
+  /// Delegación simple de otros métodos al servicio subyacente
+  Stream<User?> get authStateChanges => _authService.authStateChanges;
 
-      // Track the logout event
-      _analytics.trackEvent('User Logout');
-
-      // Reset user data
-      _analytics.reset();
-    } catch (e) {
-      debugPrint('⚠️ AuthAnalytics Error: $e');
-    }
+  Future<void> sendPasswordResetEmail(String email) {
+    return _authService.sendPasswordResetEmail(email);
   }
 
-  /// Track password reset request
-  void trackPasswordReset(String email) {
-    try {
-      // Mask email for privacy
-      final maskedEmail = _maskEmail(email);
+  User? get currentUser => _authService.currentUser;
 
-      debugPrint(
-        '🔍 AuthAnalytics: Password reset requested - Email: $maskedEmail',
-      );
-
-      // Track the password reset event
-      _analytics.trackEvent('Password Reset Requested', {
-        'email_domain': email.split('@').last,
-      });
-    } catch (e) {
-      debugPrint('⚠️ AuthAnalytics Error: $e');
-    }
-  }
-
-  /// Mask email for privacy
-  String _maskEmail(String email) {
-    try {
-      final parts = email.split('@');
-      if (parts.length != 2) return '***@***.***';
-
-      final name = parts[0];
-      final domain = parts[1];
-
-      String maskedName;
-      if (name.length <= 2) {
-        maskedName = '*' * name.length;
-      } else {
-        maskedName = name.substring(0, 2) + '*' * (name.length - 2);
-      }
-
-      return '$maskedName@$domain';
-    } catch (e) {
-      return '***@***.***';
-    }
-  }
+  // Agrega más delegaciones según sea necesario para implementar IAuthService completo
 }

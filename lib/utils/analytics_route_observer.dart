@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
-/// Route observer that tracks screen views for analytics
+/// Un observador de rutas que automáticamente registra eventos de navegación en Mixpanel
 class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
-  final MixpanelService _analytics = MixpanelService();
+  final MixpanelService _analytics = MixpanelService.instance;
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
     if (route is PageRoute) {
-      // Track screen view when route is pushed
       _trackScreenView(route);
     }
   }
@@ -18,7 +18,6 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
     if (newRoute is PageRoute) {
-      // Track screen view when route is replaced
       _trackScreenView(newRoute);
     }
   }
@@ -27,59 +26,37 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
     if (previousRoute is PageRoute && route is PageRoute) {
-      // Track screen view when returning to previous route
       _trackScreenView(previousRoute);
     }
   }
 
-  /// Extract the screen name from route and track it
   void _trackScreenView(PageRoute<dynamic> route) {
     try {
-      // Extract meaningful name from route
-      String? screenName = _extractScreenName(route);
-
-      if (screenName != null) {
-        // Use a microtask to ensure it doesn't interfere with navigation
-        Future.microtask(() {
-          try {
-            // Only track if we have a screen name
-            _analytics.trackScreen(screenName);
-          } catch (e) {
-            // Silently catch errors
-            debugPrint('Analytics route observer error: $e');
-          }
-        });
-      }
+      final String screenName = _getScreenName(route);
+      _analytics.trackScreen(screenName);
     } catch (e) {
-      // Silently catch any errors to avoid disrupting navigation
-      debugPrint('AnalyticsRouteObserver error: $e');
+      debugPrint('Error tracking screen view: $e');
+      // No propagamos el error para no interrumpir la navegación
     }
   }
 
-  /// Extract a readable name from the route
-  String? _extractScreenName(PageRoute<dynamic> route) {
-    // Get settings name if available
-    final String? name = route.settings.name;
+  String _getScreenName(PageRoute<dynamic> route) {
+    // Intenta obtener el nombre de la ruta a partir de settings.name
+    final String? routeName = route.settings.name;
 
-    if (name != null && name.isNotEmpty) {
-      return name;
+    // Si hay un nombre de ruta explícito, úsalo
+    if (routeName != null && routeName.isNotEmpty) {
+      return routeName;
     }
 
-    // Fall back to the route's runtimeType
-    final routeType = route.runtimeType.toString();
-
-    // Extract clean name from route type
-    if (routeType.contains('_')) {
-      // Handle routes with underscore
-      final parts = routeType.split('_');
-      if (parts.length > 1) {
-        return parts[0];
-      }
-    }
-
-    return routeType;
+    // En caso contrario, usa el nombre de la clase del widget principal
+    // Nota: No podemos acceder directamente al widget, así que usamos el nombre de la ruta
+    // o un nombre genérico basado en hashCode si no hay nombre
+    return 'Screen-${route.hashCode}';
   }
 }
 
-// Create a global instance to use in MaterialApp
+// Crea una instancia global para usar en MaterialApp
 final analyticsRouteObserver = AnalyticsRouteObserver();
+// Clave global para tener acceso al contexto del navigator
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

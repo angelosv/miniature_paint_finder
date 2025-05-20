@@ -18,6 +18,7 @@ import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
+import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
@@ -38,6 +39,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   final PaintService _paintService = PaintService();
   final PaletteService _paletteService = PaletteService();
   final InventoryService _inventoryService = InventoryService();
+  final MixpanelService _analytics = MixpanelService.instance;
 
   bool _isScanning = true;
   bool _isSearching = false;
@@ -207,6 +209,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     print('Barcode detected: $code');
 
+    // Track scanner activity - inicio de escaneo
+    final scanStartTime = DateTime.now().millisecondsSinceEpoch;
+
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
     print("barcode_scanner_screen.dart isGuestUser: $isGuestUser");
@@ -215,6 +220,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       setState(() {
         _errorMessage = 'Invalid barcode format: ${code ?? "unknown"}';
       });
+
+      // Track scanner error - formato inválido
+      _analytics.trackScannerActivity(
+        'error',
+        barcode: code,
+        errorDetails: 'Invalid barcode format',
+        scanDurationMs: DateTime.now().millisecondsSinceEpoch - scanStartTime,
+      );
 
       // Clear error after 2 seconds
       Future.delayed(const Duration(seconds: 2), () {
@@ -247,6 +260,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         isGuestUser,
       );
 
+      // Calcular duración del escaneo
+      final scanDurationMs =
+          DateTime.now().millisecondsSinceEpoch - scanStartTime;
+
       if (mounted) {
         setState(() {
           _isSearching = false;
@@ -254,10 +271,48 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
           if (paints == null || paints.isEmpty) {
             _errorMessage = 'No paint found for this barcode';
+
+            // TRACK BARCODE NO ENCONTRADO - MÉTODO PRIORITARIO 1
+            _analytics.trackBarcodeNotFound(
+              code,
+              contextScreen: 'BarcodeScannerScreen',
+              brandGuess: _guessBrandFromBarcode(code),
+            );
+
+            // También trackear la actividad del scanner como error
+            _analytics.trackScannerActivity(
+              'not_found',
+              barcode: code,
+              errorDetails: 'No paint found for this barcode',
+              scanDurationMs: scanDurationMs,
+            );
+
             setState(() {
               _isScanning = false;
             });
           } else if (paints.length == 1) {
+            // Track scanner success
+            _analytics.trackScannerActivity(
+              'success',
+              barcode: code,
+              paintId: paints[0].id,
+              paintName: paints[0].name,
+              scanDurationMs: scanDurationMs,
+            );
+
+            // Track paint interaction
+            _analytics.trackPaintInteraction(
+              paints[0].id,
+              paints[0].name,
+              paints[0].brand,
+              'scanned',
+              source: 'barcode_scanner',
+              additionalData: {
+                'barcode': code,
+                'scan_duration_ms': scanDurationMs,
+              },
+            );
+
             if (isGuestUser) {
               _showPaintSelectionDialog(paints);
             } else {
@@ -265,6 +320,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               _showScanResultSheet(_foundPaint!);
             }
           } else {
+            // Track scanner success but with multiple results
+            _analytics.trackScannerActivity(
+              'success_multiple',
+              barcode: code,
+              scanDurationMs: scanDurationMs,
+              errorDetails: 'Multiple paints found for same barcode',
+            );
+
             // Si hay múltiples pinturas, mostrar diálogo de selección
             _showPaintSelectionDialog(paints);
           }
@@ -272,6 +335,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       }
     } catch (e) {
       print('❌ Error searching for paint: $e');
+
+      // Track scanner error
+      _analytics.trackScannerActivity(
+        'error',
+        barcode: code,
+        errorDetails: e.toString(),
+        scanDurationMs: DateTime.now().millisecondsSinceEpoch - scanStartTime,
+      );
+
       if (mounted) {
         setState(() {
           _isSearching = false;
@@ -285,6 +357,19 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         });
       }
     }
+  }
+
+  // Helper method to guess brand from barcode format
+  String? _guessBrandFromBarcode(String barcode) {
+    // Common barcode prefixes for paint brands
+    if (barcode.startsWith('5011921')) return 'Citadel_Colour';
+    if (barcode.startsWith('8429551')) return 'Vallejo';
+    if (barcode.startsWith('7331545')) return 'Army_Painter';
+    if (barcode.startsWith('3760')) return 'Scale75';
+    if (barcode.startsWith('639713')) return 'P3';
+    if (barcode.startsWith('8436042')) return 'Green_Stuff_World';
+    if (barcode.startsWith('4009803')) return 'AK';
+    return null;
   }
 
   void _showPaintSelectionDialog(List<Paint> paints) {

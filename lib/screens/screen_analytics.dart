@@ -1,65 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 
-/// A mixin to add analytics tracking capabilities to screen widgets
-mixin ScreenAnalytics<T extends StatefulWidget> on State<T> {
-  final MixpanelService _analytics = MixpanelService();
-  String get screenName;
+/// Mixin para implementar tracking de pantallas en StatefulWidget
+mixin ScreenAnalyticsMixin<T extends StatefulWidget> on State<T> {
+  final MixpanelService _analytics = MixpanelService.instance;
+  String get screenName => widget.runtimeType.toString();
 
   @override
   void initState() {
     super.initState();
-    // Track when screen is first shown
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _trackScreenView();
-    });
+    _trackScreenView();
   }
 
   void _trackScreenView() {
-    _analytics.trackScreen(screenName);
+    try {
+      _analytics.trackScreen(screenName);
+    } catch (e) {
+      debugPrint('Error tracking screen view: $e');
+      // No propagamos el error para no interrumpir la UI
+    }
   }
 
-  /// Track a custom event with optional properties
+  /// Utilidad para trackear eventos personalizados
   void trackEvent(String eventName, [Map<String, dynamic>? properties]) {
-    _analytics.trackEvent(eventName, properties);
+    try {
+      _analytics.trackEvent(eventName, properties);
+    } catch (e) {
+      debugPrint('Error tracking event: $e');
+      // No propagamos el error para no interrumpir la UI
+    }
   }
 }
 
-/// A stateful widget that automatically tracks screen views
-abstract class AnalyticsStatefulWidget extends StatefulWidget {
-  const AnalyticsStatefulWidget({Key? key}) : super(key: key);
-}
-
-/// A base state class for widgets that need analytics tracking
-abstract class AnalyticsState<T extends AnalyticsStatefulWidget>
-    extends State<T>
-    with ScreenAnalytics<T> {
-  @override
-  String get screenName => widget.runtimeType.toString();
-}
-
-/// A wrapper widget that tracks screen views for any child widget
-class ScreenViewTracker extends StatefulWidget {
+/// Widget que automáticamente trackea la vista de una pantalla
+class AnalyticsScreen extends StatefulWidget {
   final Widget child;
   final String screenName;
 
-  const ScreenViewTracker({
+  const AnalyticsScreen({
     Key? key,
     required this.child,
     required this.screenName,
   }) : super(key: key);
 
   @override
-  _ScreenViewTrackerState createState() => _ScreenViewTrackerState();
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _ScreenViewTrackerState extends State<ScreenViewTracker>
-    with ScreenAnalytics<ScreenViewTracker> {
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
-  String get screenName => widget.screenName;
+  void initState() {
+    super.initState();
+    MixpanelService.instance.trackScreen(widget.screenName);
+  }
 
   @override
   Widget build(BuildContext context) {
     return widget.child;
+  }
+}
+
+/// Extensión para agregar tracking de eventos a cualquier widget
+extension AnalyticsExtension on Widget {
+  /// Envuelve el widget con tracking de analytics
+  Widget withAnalytics(String screenName) {
+    return AnalyticsScreen(screenName: screenName, child: this);
   }
 }
