@@ -271,7 +271,7 @@ class _PaintListTabState extends State<PaintListTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Paint Search',
+                                'Match from Image',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -280,7 +280,7 @@ class _PaintListTabState extends State<PaintListTab> {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Find matching paints for your images',
+                                'Use a photo to find similar paints',
                                 style: TextStyle(color: Colors.white),
                               ),
                             ],
@@ -310,6 +310,101 @@ class _PaintListTabState extends State<PaintListTab> {
                           ),
                           const SizedBox(width: 8),
                           Icon(Icons.arrow_forward, color: AppTheme.marineBlue),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // === Paint Library ===
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/library');
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.teal, Colors.teal.shade300],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.teal.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.menu_book,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Paint Library',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Browse and search all paints',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Open Library',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, color: Colors.teal),
                         ],
                       ),
                     ),
@@ -545,7 +640,7 @@ class _PaintListTabState extends State<PaintListTab> {
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paint Search'),
+        title: const Text('Match from Image'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _reset,
