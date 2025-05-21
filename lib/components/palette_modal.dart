@@ -93,7 +93,6 @@ class _PaletteModalState extends State<PaletteModal> {
         };
       }
     } catch (e) {
-      print('❌ Exception in fetchPaintInfo: $e');
       return {'executed': false, 'message': 'Exception: $e', 'data': null};
     }
   }
@@ -184,7 +183,6 @@ class _PaletteModalState extends State<PaletteModal> {
                         ),
                       ),
                   errorWidget: (context, error, stackTrace) {
-                    print('❌ Error loading network image: $error');
                     return Image.asset(
                       'assets/images/placeholder.jpeg',
                       width: double.infinity,
