@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/utils/env.dart';
 import 'dart:convert';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:miniature_paint_finder/components/scan_result_sheet.dart';
@@ -19,6 +20,7 @@ import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
+import 'package:http/http.dart' as http; // Para las peticiones HTTP
 
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
@@ -433,28 +435,48 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     );
   }
 
-  void _showScanResultSheet(Paint paint) {
-    final bool isInInventory = _paintService.isInInventory(paint.id);
+  void _showScanResultSheet(Paint paint) async {
+    String inventoryId = "";
+    String wishlistId = "";
+
+    bool isInInventory = _paintService.isInInventory(paint.id);
     final int? inventoryQuantity = _paintService.getInventoryQuantity(paint.id);
-    final bool isInWishlist = _paintService.isInWishlist(paint.id);
+    bool isInWishlist = _paintService.isInWishlist(paint.id);
     final List<Palette> inPalettes = _paintService.getPalettesContainingPaint(
       paint.id,
     );
     final List<Palette> userPalettes = _paintService.getUserPalettes();
+
+    final Map<String, dynamic> paintStatus = await _getPaintStatus(paint);
+
+    if (paintStatus['data'] != null) {
+      final data = paintStatus['data'];
+      isInInventory = data['in_inventory'] == true;
+      isInWishlist = data['in_whitelist'] == true;
+      inventoryId = data['inventory_id'];
+      wishlistId = data['wishlist_id'];
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
+        debugPrint('👨‍💻 paint: $paint');
+        print('👨‍💻 isInInventory: $isInInventory');
+        print('👨‍💻 isInWishlist: $isInWishlist');
+
         return Container(
           height: MediaQuery.of(context).size.height * 0.9,
           decoration: const BoxDecoration(color: Colors.transparent),
+
           child: ScanResultSheet(
             paint: paint,
             isInInventory: isInInventory,
-            inventoryQuantity: inventoryQuantity,
             isInWishlist: isInWishlist,
+            inventoryId: inventoryId,
+            wishlistId: wishlistId,
+            inventoryQuantity: inventoryQuantity,
             inPalettes: inPalettes,
             userPalettes: userPalettes,
             paletteName: widget.paletteName,
@@ -491,14 +513,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 }
               }
             },
-            onUpdateInventory: (paint, quantity, note) async {
+            onUpdateInventory: (paint, quantity, note, inventoryId) async {
               try {
                 final success = await _inventoryService.updateStockFromApi(
-                  paint.id,
+                  inventoryId as String,
                   quantity,
                 );
                 if (note != null) {
-                  await _inventoryService.updateNotesFromApi(paint.id, note);
+                  await _inventoryService.updateNotesFromApi(inventoryId, note);
                 }
                 print('✅ Inventory update result: $success');
 
@@ -526,7 +548,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
             },
             onAddToWishlist: (paint, isPriority) async {
-              await _paintService.addToWishlist(paint, isPriority);
+              final firebaseUser = FirebaseAuth.instance.currentUser;
+              if (firebaseUser == null) {
+                return;
+              }
+
+              final userId = firebaseUser.uid;
+
+              await _paintService.addToWishlistDirect(
+                paint,
+                isPriority ? 3 : 0,
+                userId,
+              );
 
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -654,6 +687,47 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       _errorMessage = null;
       _hasScanAttempt = false;
     });
+  }
+
+  static Future<Map<String, dynamic>> fetchPaintInfo({
+    required String brand,
+    required String paintId,
+    required String token,
+  }) async {
+    final url = Uri.parse('${Env.apiBaseUrl}/paint/paint-info/$brand/$paintId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        return jsonData;
+      } else {
+        return {
+          'executed': false,
+          'message': 'Error: Code ${response.statusCode}',
+          'data': null,
+        };
+      }
+    } catch (e) {
+      print('❌ Exception in fetchPaintInfo: $e');
+      return {'executed': false, 'message': 'Exception: $e', 'data': null};
+    }
+  }
+
+  Future<Map<String, dynamic>> _getPaintStatus(Paint paint) async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    return fetchPaintInfo(
+      brand: paint.brandId ?? '',
+      paintId: paint.id,
+      token: token ?? '',
+    );
   }
 
   @override
