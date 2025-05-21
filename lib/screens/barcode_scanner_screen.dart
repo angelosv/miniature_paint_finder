@@ -547,31 +547,43 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 }
               }
             },
-            onAddToWishlist: (paint, isPriority) async {
-              final firebaseUser = FirebaseAuth.instance.currentUser;
-              if (firebaseUser == null) {
-                return;
-              }
+            onAddToWishlist: (paint, priority) async {
+              try {
+                final firebaseUser = FirebaseAuth.instance.currentUser;
+                if (firebaseUser == null) {
+                  return;
+                }
 
-              final userId = firebaseUser.uid;
+                final userId = firebaseUser.uid;
 
-              await _paintService.addToWishlistDirect(
-                paint,
-                isPriority ? 3 : 0,
-                userId,
-              );
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Paint added to wishlist!'),
-                    backgroundColor: Colors.amber,
-                  ),
+                await _paintService.addToWishlistDirect(
+                  paint,
+                  priority,
+                  userId,
                 );
-              }
 
-              Navigator.pop(context);
-              Navigator.pop(context, paint);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Paint added to wishlist!'),
+                      backgroundColor: Colors.amber,
+                    ),
+                  );
+                }
+
+                Navigator.pop(context);
+                Navigator.pop(context, paint);
+              } catch (e) {
+                print('❌ Error adding to inventory: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error adding to wishlist: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             onAddToPalette: (paint, palette) async {
               final user = FirebaseAuth.instance.currentUser;

@@ -42,7 +42,7 @@ class ScanResultSheet extends StatefulWidget {
   onUpdateInventory;
 
   /// Callback when adding to wishlist
-  final Function(Paint paint, bool isPriority) onAddToWishlist;
+  final Function(Paint paint, int isPriority) onAddToWishlist;
 
   /// Callback when adding to a palette
   final Function(Paint paint, Palette palette) onAddToPalette;
@@ -85,7 +85,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   String _newPaletteName = "";
   bool isCreatingPaletteInView = false;
 
-  bool _isPriority = false;
+  int _isPriority = 0;
   int _quantity = 1;
   String? _note;
   Palette? _selectedPalette;
@@ -146,6 +146,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     });
   }
 
+  void _showAddToWishlistDialog() {
+    setState(() {
+      _isAddingToWishlist = true;
+    });
+  }
+
   void _showAddToPaletteDialog() {
     setState(() {
       _isAddingToPalette = true;
@@ -162,92 +168,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         }
       }
     });
-  }
-
-  void _showAddToWishlistDialog() {
-    Navigator.pop(context);
-
-    AddToWishlistModal.show(
-      isUpdate: widget.isInWishlist,
-      wishlistId: widget.wishlistId,
-      context: context,
-      paint: widget.paint,
-      onAddToWishlist: (paint, priority, _) async {
-        print('🔍 Iniciando proceso de añadir a wishlist');
-        print('📦 Datos de la pintura: ${paint.toJson()}');
-        print('🎯 Prioridad seleccionada: $priority');
-
-        try {
-          // Obtener el usuario actual de Firebase
-          final firebaseUser = FirebaseAuth.instance.currentUser;
-          if (firebaseUser == null) {
-            print('❌ No hay usuario autenticado');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Necesitas iniciar sesión para añadir a wishlist',
-                  ),
-                  backgroundColor: Colors.red,
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-            return;
-          }
-
-          final userId = firebaseUser.uid;
-          print('🔑 ID de usuario: $userId');
-
-          // Crear instancia del servicio
-          final paintService = PaintService();
-
-          print('📤 Llamando a addToWishlistDirect...');
-          final result = await paintService.addToWishlistDirect(
-            paint,
-            priority,
-            userId,
-          );
-
-          print('📥 Respuesta de addToWishlistDirect: $result');
-
-          if (result['success'] == true) {
-            widget.onClose();
-
-            print('✅ Pintura añadida a wishlist exitosamente');
-            _showSuccessSnackbar(
-              result['alreadyExists'] == true
-                  ? '${paint.name} ya está en tu wishlist'
-                  : '${paint.name} añadido a tu wishlist',
-            );
-          } else {
-            widget.onClose();
-
-            print('❌ Error en la respuesta: ${result['message']}');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${result['message']}'),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-          }
-        } catch (e) {
-          print('❌ Error al añadir a wishlist: $e');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: $e'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        } finally {}
-      },
-    );
   }
 
   void _addToInventory() {
@@ -1091,45 +1011,66 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     return Color(int.parse(hex.substring(1, 7), radix: 16) + 0xFF000000);
   }
 
+  String _getPriorityLabel(int priority) {
+    switch (priority) {
+      case 1:
+        return "Low priority";
+      case 2:
+        return "Somewhat important";
+      case 3:
+        return "Important";
+      case 4:
+        return "Very important";
+      case 5:
+        return "Highest priority";
+      default:
+        return "";
+    }
+  }
+
   Widget _buildAddToWishlistForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           'Add to wishlist',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            shadows: [],
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
 
-        // Priority checkbox with heart icon
+        // Selector de prioridad con estrellas
+        Text('Priority', style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: 8),
         Row(
-          children: [
-            IconButton(
+          children: List.generate(5, (index) {
+            return IconButton(
               icon: Icon(
-                _isPriority ? Icons.favorite : Icons.favorite_border,
-                color: Colors.red,
+                index < _isPriority ? Icons.star : Icons.star_border,
+                color: AppTheme.marineOrange,
+                size: 32,
               ),
               onPressed: () {
                 setState(() {
-                  _isPriority = !_isPriority;
+                  _isPriority = index + 1;
                 });
               },
-            ),
-            Text(
-              'Mark as priority',
-              style: TextStyle(
-                color: _isPriority ? Colors.red : null,
-                fontWeight: _isPriority ? FontWeight.bold : null,
-              ),
-            ),
-          ],
+              tooltip: '${index + 1} star${index == 0 ? '' : 's'}',
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // Etiqueta descriptiva (opcional)
+        Text(
+          _getPriorityLabel(_isPriority),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
         ),
         const SizedBox(height: 24),
 
-        // Action buttons
+        // Botones de acción
         Row(
           children: [
             Expanded(
@@ -1145,7 +1086,15 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: _addToWishlist,
+                onPressed: () {
+                  widget.onAddToWishlist(widget.paint, _isPriority);
+                  setState(() {
+                    _isAddingToWishlist = false;
+                  });
+                  _showSuccessSnackbar(
+                    '${widget.paint.name} added with priority $_isPriority',
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
