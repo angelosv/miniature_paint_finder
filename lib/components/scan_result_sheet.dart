@@ -288,7 +288,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         ], token);
 
         print('✅ Pintura añadida a paleta exitosamente');
-        widget.onAddToPalette(widget.paint, _selectedPalette!);
+        // widget.onAddToPalette(widget.paint, _selectedPalette!);
+        widget.onClose();
         setState(() {
           _isAddingToPalette = false;
         });
