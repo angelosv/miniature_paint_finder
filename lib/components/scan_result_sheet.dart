@@ -21,6 +21,10 @@ class ScanResultSheet extends StatefulWidget {
   /// Whether the paint is in the wishlist
   final bool isInWishlist;
 
+  final String? inventoryId;
+
+  final String? wishlistId;
+
   /// Palettes containing this paint
   final List<Palette>? inPalettes;
 
@@ -34,7 +38,8 @@ class ScanResultSheet extends StatefulWidget {
   final Function(Paint paint, int quantity, String? note) onAddToInventory;
 
   /// Callback when updating inventory
-  final Function(Paint paint, int quantity, String? note) onUpdateInventory;
+  final Function(Paint paint, int quantity, String? note, String? inventoryId)
+  onUpdateInventory;
 
   /// Callback when adding to wishlist
   final Function(Paint paint, bool isPriority) onAddToWishlist;
@@ -56,8 +61,10 @@ class ScanResultSheet extends StatefulWidget {
     super.key,
     required this.paint,
     this.isInInventory = false,
-    this.inventoryQuantity,
     this.isInWishlist = false,
+    this.inventoryId = "",
+    this.wishlistId = "",
+    this.inventoryQuantity,
     this.inPalettes,
     required this.userPalettes,
     this.paletteName,
@@ -161,6 +168,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     Navigator.pop(context);
 
     AddToWishlistModal.show(
+      isUpdate: widget.isInWishlist,
+      wishlistId: widget.wishlistId,
       context: context,
       paint: widget.paint,
       onAddToWishlist: (paint, priority, _) async {
@@ -203,6 +212,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
           print('📥 Respuesta de addToWishlistDirect: $result');
 
           if (result['success'] == true) {
+            widget.onClose();
+
             print('✅ Pintura añadida a wishlist exitosamente');
             _showSuccessSnackbar(
               result['alreadyExists'] == true
@@ -210,6 +221,8 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   : '${paint.name} añadido a tu wishlist',
             );
           } else {
+            widget.onClose();
+
             print('❌ Error en la respuesta: ${result['message']}');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -232,7 +245,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
               ),
             );
           }
-        }
+        } finally {}
       },
     );
   }
@@ -246,7 +259,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   }
 
   void _updateInventory() {
-    widget.onUpdateInventory(widget.paint, _quantity, _note);
+    widget.onUpdateInventory(
+      widget.paint,
+      _quantity,
+      _note,
+      widget.inventoryId,
+    );
     setState(() {
       _isAddingToInventory = false;
     });
@@ -556,11 +574,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
-                                  Text(
-                                    'Quantity: ${widget.inventoryQuantity}',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
                                 ],
                               ),
                             ),
@@ -724,7 +737,10 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         if (!widget.isInWishlist)
           ListTile(
             leading: Icon(Icons.favorite_border, color: Colors.red),
-            title: const Text('Add to wishlist'),
+            // title: const Text('Add to wishlist'),
+            title: Text(
+              widget.isInWishlist ? 'Update in wishlist' : 'Add to wishlist',
+            ),
             subtitle: const Text('Save for later purchase'),
             onTap: _showAddToWishlistDialog,
             shape: RoundedRectangleBorder(

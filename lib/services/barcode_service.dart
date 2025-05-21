@@ -44,7 +44,7 @@ class BarcodeService {
 
       // Make API call to find paint by barcode
       final url = Uri.parse('$baseUrl/paint/barcode/$normalized');
-      print('🌐 API URL: $url');
+      print('🌐API URL: $url');
 
       final response = await http.get(
         url,
