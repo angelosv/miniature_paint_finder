@@ -175,7 +175,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     setState(() {
       _isAddingToInventory = false;
     });
-    _showSuccessSnackbar('Paint added to your inventory');
   }
 
   void _updateInventory() {
@@ -188,7 +187,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
     setState(() {
       _isAddingToInventory = false;
     });
-    _showSuccessSnackbar('Inventory updated');
   }
 
   void _addToPalette() async {
@@ -247,14 +245,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         }
       }
     }
-  }
-
-  void _addToWishlist() {
-    widget.onAddToWishlist(widget.paint, _isPriority);
-    setState(() {
-      _isAddingToWishlist = false;
-    });
-    _showSuccessSnackbar('Paint added to your wishlist');
   }
 
   void _showSuccessSnackbar(String message) {
@@ -1091,9 +1081,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                   setState(() {
                     _isAddingToWishlist = false;
                   });
-                  _showSuccessSnackbar(
-                    '${widget.paint.name} added with priority $_isPriority',
-                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
