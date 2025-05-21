@@ -146,14 +146,14 @@ class _BarcodeScannerCardState extends State<BarcodeScannerCard> {
         }
 
         // Mostrar notificación de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Found paint: ${scannedPaint.name} (${scannedPaint.brand})',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(
+        //       'Found paint: ${scannedPaint.name} (${scannedPaint.brand})',
+        //     ),
+        //     duration: const Duration(seconds: 2),
+        //   ),
+        // );
       }
     } catch (e) {
       print('Error in scanner opening process: $e');
