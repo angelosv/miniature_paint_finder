@@ -204,27 +204,31 @@ class _WishlistScreenState extends State<WishlistScreen> {
   Future<void> _removeFromWishlist(
     String paintId,
     String paintName,
-    String _id,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Confirm Removal'),
-            content: Text('Remove $paintName from your wishlist?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('CANCEL'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('REMOVE'),
-              ),
-            ],
-          ),
-    );
-    if (confirmed != true) return;
+    String _id, [
+    bool? _showDialog = true,
+  ]) async {
+    if (_showDialog == true) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('Confirm Removal'),
+              content: Text('Remove $paintName from your wishlist?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('CANCEL'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('REMOVE'),
+                ),
+              ],
+            ),
+      );
+      if (confirmed != true) return;
+    }
+
     final controller = context.read<WishlistController>();
     final result = await controller.removeFromWishlist(paintId, _id);
     if (result && mounted) {
@@ -1357,7 +1361,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 false;
           },
           onDismissed: (direction) {
-            _removeFromWishlist(paint.id, paint.name, _id);
+            _removeFromWishlist(paint.id, paint.name, _id, false);
           },
           child: card,
         );
