@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
+import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/brand_service.dart';
@@ -321,7 +322,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
       drawer: const SharedDrawer(currentScreen: 'wishlist'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LibraryScreen()),
+          );
         },
         backgroundColor:
             isDarkMode ? AppTheme.marineOrange : Theme.of(context).primaryColor,
