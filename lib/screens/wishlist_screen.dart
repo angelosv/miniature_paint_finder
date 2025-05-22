@@ -1818,15 +1818,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildPalettesSection(List<String> palettes, bool isDarkMode) {
-    final demoPalettes = [
-      {'name': 'Space Marines', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Imperial Guard', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Tau Empire', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Eldar Craftworlds', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Orks', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Tyranids', 'color': const Color(0xFFD8BFD8)},
-      {'name': 'Necrons', 'color': const Color(0xFFD8BFD8)},
-    ];
+    final demoPalettes = [];
     final displayPalettes =
         palettes.isNotEmpty
             ? palettes
