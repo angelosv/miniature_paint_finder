@@ -710,6 +710,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
     try {
       await _inventoryService.addPaintToInventory(paint);
 
+      await _inventoryService.addInventoryRecord(
+        brandId: paint.brandId ?? '',
+        paintId: paint.id,
+        quantity: 1,
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Added ${paint.name} to your inventory'),
