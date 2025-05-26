@@ -467,9 +467,6 @@ class PaintGridCard extends StatelessWidget {
                     }
 
                     if (paletteName != null) {
-                      print(
-                        "****** paint_grid_card Palette name: $paletteName",
-                      );
                       _showCreateModal(context);
                     } else {
                       Navigator.pop(context);
@@ -627,13 +624,9 @@ class PaintGridCard extends StatelessWidget {
           }
 
           final userId = firebaseUser.uid;
-          print('🔑 User ID detectado: $userId');
 
           // Llamar directamente a la API
           final paintService = PaintService();
-          print(
-            '📤 Enviando pintura ${paint.id} con prioridad $priority y userId $userId',
-          );
 
           final result = await paintService.addToWishlistDirect(
             paint,
@@ -642,9 +635,6 @@ class PaintGridCard extends StatelessWidget {
           );
 
           scaffoldMessenger.hideCurrentSnackBar();
-
-          // Imprimir resultado completo
-          print('✅ Resultado completo de API Wishlist: $result');
 
           if (result['success'] == true) {
             // Actualizar UI localmente con callback
@@ -663,10 +653,6 @@ class PaintGridCard extends StatelessWidget {
             );
           } else {
             // Mostrar error con detalles
-            print(
-              '❌ Error con detalles: ${result['raw_response'] ?? result['message']}',
-            );
-
             scaffoldMessenger.showSnackBar(
               SnackBar(
                 content: Text('Error: ${result['message']}'),
@@ -677,7 +663,6 @@ class PaintGridCard extends StatelessWidget {
                   label: 'Detalles',
                   textColor: Colors.white,
                   onPressed: () {
-                    // Mostrar diálogo con detalles completos del error
                     showDialog(
                       context: context,
                       builder:
@@ -700,9 +685,6 @@ class PaintGridCard extends StatelessWidget {
             );
           }
         } catch (e) {
-          print('⚠️ Excepción: $e');
-          print('⚠️ Stack trace: ${StackTrace.current}');
-
           scaffoldMessenger.hideCurrentSnackBar();
           scaffoldMessenger.showSnackBar(
             SnackBar(
@@ -767,10 +749,6 @@ class PaintGridCard extends StatelessWidget {
 
                 ElevatedButton(
                   onPressed: () {
-                    print("****** save palette: $paletteName");
-                    print("****** save palette: ${paint.id}");
-                    print("****** save palette: ${paint.brandId}");
-
                     Navigator.pop(context);
                     onAddToPalette!(
                       paletteName ?? "",

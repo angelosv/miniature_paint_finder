@@ -91,7 +91,6 @@ class WishlistController extends ChangeNotifier {
 
   /// Cargar la wishlist desde la API
   Future<void> loadWishlist() async {
-    print('🔄 WishlistController: Iniciando carga de wishlist');
     _isLoading = true;
     _hasError = false;
     _errorMessage = null;
@@ -103,69 +102,29 @@ class WishlistController extends ChangeNotifier {
 
       // Get Firebase token if available
       try {
-        print('🔐 WishlistController: Intentando obtener token de Firebase...');
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          print(
-            '👤 WishlistController: Usuario autenticado: ${user.email ?? 'No email'}',
-          );
           final idToken = await user.getIdToken();
           if (idToken != null) {
             token = idToken;
             usingFallbackToken = false;
-            print(
-              '✅ WishlistController: Token de Firebase obtenido correctamente',
-            );
-          } else {
-            print(
-              '⚠️ WishlistController: Token de Firebase es null, usando token de respaldo',
-            );
           }
-        } else {
-          print(
-            '⚠️ WishlistController: No hay usuario autenticado, usando token de respaldo',
-          );
         }
       } catch (e) {
-        print('❌ WishlistController: Error al obtener token de Firebase: $e');
-        print('⚠️ WishlistController: Usando token de respaldo para continuar');
+        // Continue with fallback token
       }
-
-      if (usingFallbackToken) {
-        print(
-          '⚠️ WishlistController: Usando token de respaldo para la petición de wishlist',
-        );
-      }
-
-      print('🔄 WishlistController: Obteniendo datos de wishlist...');
-
-      // Print token used (for debugging, without exposing full token)
-      final tokenPreview =
-          token.length > 8
-              ? '${token.substring(0, 4)}...${token.substring(token.length - 4)}'
-              : '[token too short]';
-      print('🔑 WishlistController: Usando token: $tokenPreview');
 
       // Call the service to get wishlist items
       final wishlistItems = await _paintService.getWishlistPaints(token);
 
-      print(
-        '✅ WishlistController: Datos de wishlist obtenidos: ${wishlistItems.length} elementos',
-      );
-
       _wishlistItems = wishlistItems;
       _applyFiltersAndSort(); // Aplicar filtros y ordenamiento
     } catch (e, stackTrace) {
-      print('❌ WishlistController: Error al cargar wishlist: $e');
-      print('❌ WishlistController: Stack trace: $stackTrace');
       _hasError = true;
       _errorMessage = 'Error al cargar wishlist: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
-      print(
-        '🏁 WishlistController: Finalizada carga de wishlist (${_hasError ? 'con errores' : 'exitosa'})',
-      );
     }
   }
 
@@ -299,62 +258,30 @@ class WishlistController extends ChangeNotifier {
 
       // Get Firebase token if available
       try {
-        print(
-          '🔐 WishlistController: Intentando obtener token de Firebase para eliminar pintura...',
-        );
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          print(
-            '👤 WishlistController: Usuario autenticado: ${user.email ?? 'No email'}',
-          );
           final idToken = await user.getIdToken();
           if (idToken != null) {
             token = idToken;
             usingFallbackToken = false;
-            print(
-              '✅ WishlistController: Token de Firebase obtenido correctamente',
-            );
-          } else {
-            print(
-              '⚠️ WishlistController: Token de Firebase es null, usando token de respaldo',
-            );
           }
-        } else {
-          print(
-            '⚠️ WishlistController: No hay usuario autenticado, usando token de respaldo',
-          );
         }
       } catch (e) {
-        print('❌ WishlistController: Error al obtener token de Firebase: $e');
-        print('⚠️ WishlistController: Usando token de respaldo para continuar');
+        // Continue with fallback token
       }
 
-      if (usingFallbackToken) {
-        print(
-          '⚠️ WishlistController: Usando token de respaldo para eliminar de wishlist',
-        );
-      }
-
-      print(
-        '🔄 WishlistController: Eliminando pintura de wishlist (ID: $id)...',
-      );
       final result = await _paintService.removeFromWishlist(paintId, id, token);
 
       if (result) {
-        print(
-          '✅ WishlistController: Pintura eliminada de wishlist correctamente',
-        );
         // Actualizar la lista local
         _wishlistItems.removeWhere((item) => item['id'] == id);
         _applyFiltersAndSort(); // Actualizar la lista filtrada
         notifyListeners();
         return true;
       } else {
-        print('❌ WishlistController: Error al eliminar pintura de wishlist');
         return false;
       }
     } catch (e) {
-      print('❌ WishlistController: Excepción al eliminar de wishlist: $e');
       _hasError = true;
       _errorMessage = 'Error al eliminar de wishlist: $e';
       return false;
@@ -377,53 +304,17 @@ class WishlistController extends ChangeNotifier {
 
       // Get Firebase token if available
       try {
-        print(
-          '🔐 WishlistController: Intentando obtener token de Firebase para actualizar prioridad...',
-        );
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          print(
-            '👤 WishlistController: Usuario autenticado: ${user.email ?? 'No email'}',
-          );
           final idToken = await user.getIdToken();
           if (idToken != null) {
             token = idToken;
             usingFallbackToken = false;
-            print(
-              '✅ WishlistController: Token de Firebase obtenido correctamente',
-            );
-          } else {
-            print(
-              '⚠️ WishlistController: Token de Firebase es null, usando token de respaldo',
-            );
           }
-        } else {
-          print(
-            '⚠️ WishlistController: No hay usuario autenticado, usando token de respaldo',
-          );
         }
       } catch (e) {
-        print('❌ WishlistController: Error al obtener token de Firebase: $e');
-        print('⚠️ WishlistController: Usando token de respaldo para continuar');
+        // Continue with fallback token
       }
-
-      if (usingFallbackToken) {
-        print(
-          '⚠️ WishlistController: Usando token de respaldo para actualizar prioridad',
-        );
-      }
-
-      // Display proper priority level in logs
-      final String priorityDesc =
-          priorityLevel > 0
-              ? 'Nivel ${priorityLevel}'
-              : isPriority
-              ? 'Prioritaria'
-              : 'Normal';
-
-      print(
-        '🔄 WishlistController: Actualizando prioridad de pintura (ID: $id) a: $priorityDesc',
-      );
 
       final result = await _paintService.updateWishlistPriority(
         paintId,
@@ -434,8 +325,6 @@ class WishlistController extends ChangeNotifier {
       );
 
       if (result) {
-        print('✅ WishlistController: Prioridad actualizada correctamente');
-
         // Actualizar el elemento en la lista local
         final index = _wishlistItems.indexWhere((item) => item['id'] == id);
         if (index != -1) {
@@ -452,11 +341,9 @@ class WishlistController extends ChangeNotifier {
 
         return true;
       } else {
-        print('❌ WishlistController: Error al actualizar prioridad');
         return false;
       }
     } catch (e) {
-      print('❌ WishlistController: Excepción al actualizar prioridad: $e');
       return false;
     }
   }
@@ -465,40 +352,25 @@ class WishlistController extends ChangeNotifier {
   Future<bool> addToWishlist(Paint paint, bool isPriority) async {
     try {
       if (paint == null) {
-        print(
-          '❌ WishlistController: Intento de añadir pintura null a wishlist',
-        );
         return false;
       }
-
-      print(
-        '🔄 WishlistController: Añadiendo ${paint.name} a wishlist con prioridad: ${isPriority ? 'Alta' : 'Normal'}',
-      );
 
       // Call the service method
       final result = await _paintService.addToWishlist(paint, isPriority);
 
       if (result) {
-        print('✅ WishlistController: Pintura añadida a wishlist correctamente');
-
         // Try to reload wishlist but handle errors
         try {
           await loadWishlist(); // Recargar la lista completa para obtener el ID generado
         } catch (reloadError) {
-          print(
-            '⚠️ WishlistController: Error al recargar wishlist: $reloadError',
-          );
           // Continue with success flow even if reload fails
         }
 
         return true;
       } else {
-        print('❌ WishlistController: Error al añadir pintura a wishlist');
         return false;
       }
     } catch (e, stackTrace) {
-      print('❌ WishlistController: Excepción al añadir a wishlist: $e');
-      print('❌ WishlistController: Stack trace: $stackTrace');
       return false;
     }
   }

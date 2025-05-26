@@ -99,18 +99,6 @@ class ImageCacheService {
       imageCache.maximumSizeBytes = maxSizeBytes;
       imageCache.maximumSize = maxImages;
 
-      debugPrint('📊 Estadísticas de caché antes de configuración:');
-      debugPrint('- Imágenes en caché: $currentSize');
-      debugPrint(
-        '- Bytes en caché: ${(currentSizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB',
-      );
-
-      debugPrint('✅ Configuración de caché aplicada:');
-      debugPrint('- Límite de imágenes: $maxImages');
-      debugPrint(
-        '- Límite de memoria: ${(maxSizeBytes / (1024 * 1024)).toStringAsFixed(2)} MB',
-      );
-
       // Log de memoria
       _logMemoryUsage('After cache configuration');
     } catch (e) {
