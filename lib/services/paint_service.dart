@@ -87,7 +87,11 @@ class PaintService {
 
   /// Helper method to determine brand_id consistently
   String _determineBrandIdForPaint(Paint paint) {
-    return _brandManager.determineBrandIdForPaint(paint);
+    final brandId = paint.brandId;
+    if (brandId == null || brandId.isEmpty) {
+      return _brandManager.determineBrandIdForPaint(paint);
+    }
+    return brandId;
   }
 
   /// Verifica si una pintura está en el inventario
@@ -1230,14 +1234,16 @@ class PaintService {
 
       String brandId = _determineBrandIdForPaint(paint);
 
-      if (_brandManager.isOfficialBrandId(brandId)) {
-        // Brand ID is valid
-      } else {
-        if (brandId.contains('Army') ||
-            brandId.toLowerCase().contains('warpaint')) {
-          brandId = 'Army_Painter';
-        } else if (brandId.contains('Citadel')) {
-          brandId = 'Citadel_Colour';
+      if (brandId == null || brandId.isEmpty) {
+        if (_brandManager.isOfficialBrandId(brandId)) {
+          // Brand ID is valid
+        } else {
+          if (brandId.contains('Army') ||
+              brandId.toLowerCase().contains('warpaint')) {
+            brandId = 'Army_Painter';
+          } else if (brandId.contains('Citadel')) {
+            brandId = 'Citadel_Colour';
+          }
         }
       }
 

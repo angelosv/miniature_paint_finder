@@ -986,6 +986,7 @@ class _PaletteModalState extends State<PaletteModal> {
 
                     final Paint paintObj = Paint(
                       id: paint.paintId,
+                      brandId: paint.paintBrandId,
                       name: paint.paintName,
                       brand: paint.paintBrand,
                       hex: paint.paintColorHex,
@@ -1126,6 +1127,8 @@ class _PaletteModalState extends State<PaletteModal> {
     final Paint paintObj = Paint(
       id: paint.paintId,
       name: paint.paintName,
+      brandId: paint.paintBrandId,
+
       brand: paint.paintBrand,
       hex: paint.paintColorHex,
       set: "Palette Paint",

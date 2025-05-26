@@ -67,7 +67,7 @@ class Palette {
     return Palette(
       id: json['id'],
       name: json['name'],
-      imagePath: json['imagePath'],
+      imagePath: json['imagePath'] ?? '',
       colors:
           (json['colors'] as List)
               .map((hex) => _hexToColor(hex as String))

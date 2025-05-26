@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
 
 class PaletteSelectorModal extends StatefulWidget {
   final Paint paint;
@@ -15,11 +16,14 @@ class PaletteSelectorModal extends StatefulWidget {
 class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
   final List<Palette> _palettes = [];
   final ScrollController _scrollCtrl = ScrollController();
+  final PaletteService _paletteService = PaletteService();
 
   int _currentPage = 1;
   int _totalPages = 1;
   bool _isLoading = false;
   bool _isLoadingMore = false;
+
+  final TextEditingController _newPaletteNameCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -34,6 +38,52 @@ class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
         !_isLoadingMore &&
         _currentPage <= _totalPages) {
       _fetchPalettes(loadMore: true);
+    }
+  }
+
+  /// New method: create a palette and immediately add the selected paint
+  Future<void> _createPaletteAndAdd(String name) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            CircularProgressIndicator(strokeWidth: 2),
+            SizedBox(width: 12),
+            Text('Creating palette…'),
+          ],
+        ),
+        duration: Duration(minutes: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    try {
+      final user = FirebaseAuth.instance.currentUser!;
+      final token = await user.getIdToken();
+
+      // 1) Create the new palette
+      final created = await _paletteService.createPalette(name, token ?? '');
+      final paletteId = created['id'] as String;
+
+      // 2) Add the paint to that palette
+      await _paletteService.addPaintsToPalette(paletteId, [
+        {"paint_id": widget.paint.id, "brand_id": widget.paint.brandId},
+      ], token as String);
+
+      var result = true;
+
+      messenger.hideCurrentSnackBar();
+      if (result) {
+        messenger.showSnackBar(
+          SnackBar(content: Text("✔️ '$name' created and paint added")),
+        );
+      }
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -192,9 +242,42 @@ class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
 
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              // Aquí tu lógica para crear una paleta nueva
+            onPressed: () async {
+              // open dialog to ask for palette name
+              final name = await showDialog<String>(
+                context: context,
+                builder:
+                    (ctx) => AlertDialog(
+                      title: const Text('New Palette'),
+                      content: TextField(
+                        controller: _newPaletteNameCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'Palette name',
+                        ),
+                        autofocus: true,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final value = _newPaletteNameCtrl.text.trim();
+                            Navigator.of(
+                              ctx,
+                            ).pop(value.isNotEmpty ? value : null);
+                          },
+                          child: const Text('Create'),
+                        ),
+                      ],
+                    ),
+              );
+
+              if (name != null) {
+                Navigator.pop(context); // close the selector modal
+                await _createPaletteAndAdd(name);
+              }
             },
             icon: const Icon(Icons.add),
             label: const Text('Create New Palette'),
@@ -211,6 +294,7 @@ class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
   @override
   void dispose() {
     _scrollCtrl.dispose();
+    _newPaletteNameCtrl.dispose();
     super.dispose();
   }
 }
