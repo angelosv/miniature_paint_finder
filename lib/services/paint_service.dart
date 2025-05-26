@@ -52,10 +52,8 @@ class PaintService {
   /// Inicializa las marcas oficiales
   void _initializeBrands() {
     _brandManager.initialize().then((success) {
-      if (success) {
-        //print('✅ Marcas oficiales inicializadas correctamente');
-      } else {
-        print('⚠️ No se pudieron inicializar las marcas oficiales');
+      if (!success) {
+        // No se pudieron inicializar las marcas oficiales
       }
     });
   }
@@ -139,7 +137,6 @@ class PaintService {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('❌ No hay usuario autenticado');
         return false;
       }
 
@@ -176,7 +173,6 @@ class PaintService {
 
       return false;
     } catch (e) {
-      print('❌ Error en addToInventory: $e');
       return false;
     }
   }
@@ -192,7 +188,6 @@ class PaintService {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('❌ No hay usuario autenticado');
         return false;
       }
 
@@ -215,7 +210,6 @@ class PaintService {
       );
 
       if (response.statusCode == 200) {
-        // 🧠 Actualización local
         _inventory[paint.id] ??= {};
         final entry = _inventory[paint.id]!;
 
@@ -235,7 +229,6 @@ class PaintService {
 
       return false;
     } catch (e) {
-      print('❌ Error en updateInventory: $e');
       return false;
     }
   }
@@ -257,10 +250,7 @@ class PaintService {
     String token,
   ) async {
     final baseUrl = '${Env.apiBaseUrl}';
-
     final url = Uri.parse('$baseUrl/wishlist/$_id');
-
-    print('📤 DELETE Wishlist request: $url');
 
     try {
       final response = await http.delete(
@@ -271,24 +261,15 @@ class PaintService {
         },
       );
 
-      print(
-        '📥 DELETE Wishlist response [${response.statusCode}]: ${response.body}',
-      );
-
       if (response.statusCode == 200) {
-        // Mantén actualizado el estado local
         if (_wishlist.containsKey(paintId)) {
           _wishlist.remove(paintId);
         }
         return true;
       } else {
-        print(
-          '❌ Error al eliminar de wishlist: Código ${response.statusCode}, Respuesta: ${response.body}',
-        );
         return false;
       }
     } catch (e) {
-      print('⚠️ Excepción al eliminar de wishlist: $e');
       rethrow;
     }
   }
@@ -304,15 +285,8 @@ class PaintService {
     final baseUrl = '${Env.apiBaseUrl}';
     final url = Uri.parse('$baseUrl/wishlist/$wishlistId');
 
-    // If priorityLevel is provided (0-4), use it as the priority value
-    // Otherwise use the standard conversion (0 = priority, -1 = no priority)
     final int priorityValue = priorityLevel.clamp(0, 5);
-
-    // The API expects a body with type and priority fields
     final requestBody = {'type': 'favorite', 'priority': priorityValue};
-
-    print('📤 PATCH Wishlist priority request: $url');
-    print('📤 Request body: ${jsonEncode(requestBody)}');
 
     try {
       final response = await http.patch(
@@ -324,25 +298,16 @@ class PaintService {
         body: jsonEncode(requestBody),
       );
 
-      print(
-        '📥 PATCH Wishlist priority response [${response.statusCode}]: ${response.body}',
-      );
-
       if (response.statusCode == 200) {
-        // Actualiza el estado local
         if (_wishlist.containsKey(paintId)) {
           _wishlist[paintId]!['isPriority'] = isPriority;
           _wishlist[paintId]!['priority'] = priorityValue;
         }
         return true;
       } else {
-        print(
-          '❌ Error actualizando prioridad: Código ${response.statusCode}, Respuesta: ${response.body}',
-        );
         return false;
       }
     } catch (e) {
-      print('⚠️ Excepción al actualizar prioridad: $e');
       rethrow;
     }
   }
@@ -351,8 +316,6 @@ class PaintService {
   Future<List<Map<String, dynamic>>> getWishlistPaints(String token) async {
     final baseUrl = '${Env.apiBaseUrl}';
     final url = Uri.parse('$baseUrl/wishlist');
-
-    print('📤 GET Wishlist request: $url');
 
     try {
       final response = await http.get(
@@ -363,36 +326,26 @@ class PaintService {
         },
       );
 
-      print('📥 GET Wishlist response [${response.statusCode}]');
-
       if (response.statusCode != 200) {
-        print(
-          '❌ Error al obtener wishlist: Código ${response.statusCode}, Respuesta: ${response.body}',
-        );
         throw Exception(
           'Failed to fetch wishlist (${response.statusCode}): ${response.body}',
         );
       }
 
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      print('📊 Estructura de respuesta: ${jsonData.keys.toList()}');
-
       final List<dynamic> wishlist = jsonData['whitelist'] ?? [];
-      print('📊 Total de elementos en la wishlist: ${wishlist.length}');
 
       final List<Map<String, dynamic>> result = [];
       int skippedCount = 0;
       int processedCount = 0;
 
       for (final item in wishlist) {
-        // Skip items with missing data
         if (item == null) {
           skippedCount++;
           continue;
         }
 
         try {
-          // Check if item has direct paint_id and brand_id vs nested paint and brand objects
           bool isDirectFormat =
               item['paint'] == null && item['paint_id'] != null;
           String paintId =
@@ -401,24 +354,18 @@ class PaintService {
               isDirectFormat ? item['brand_id'] : item['brand']?['name'];
 
           if (paintId == null || brandId == null) {
-            print('⚠️ Skipping wishlist item with missing data: $item');
             skippedCount++;
             continue;
           }
 
-          // In direct format case, we need to find the paint details
           if (isDirectFormat) {
-            print('🔍 Processing direct format wishlist item: $item');
-
-            // For direct format, we'll attempt to find the paint or create a placeholder
             final createdAt = item['created_at'];
 
-            // Create a minimal Paint object with available information
             final Paint paint = Paint.fromHex(
               id: paintId,
               name: _getPaintNameFromId(paintId),
               brand: _formatBrandId(brandId),
-              hex: '#9c27b0', // Default purple color
+              hex: '#9c27b0',
               set: '',
               code: paintId,
               category: '',
@@ -430,8 +377,7 @@ class PaintService {
                 createdAt['_seconds'] * 1000,
               );
             } catch (e) {
-              print('⚠️ Error parsing date: $e');
-              addedAt = DateTime.now(); // Fallback to current time
+              addedAt = DateTime.now();
             }
 
             result.add({
@@ -444,14 +390,11 @@ class PaintService {
             });
 
             processedCount++;
-          }
-          // Original format with nested paint and brand objects
-          else if (item['paint'] != null && item['brand'] != null) {
+          } else if (item['paint'] != null && item['brand'] != null) {
             final paintJson = item['paint'];
             final brandJson = item['brand'];
             final createdAt = item['created_at'];
 
-            // Parse hex to get rgb components
             final hexColor =
                 paintJson['hex'].startsWith('#')
                     ? paintJson['hex'].substring(1)
@@ -489,17 +432,13 @@ class PaintService {
 
             processedCount++;
           } else {
-            print('⚠️ Skipping wishlist item with missing data: $item');
             skippedCount++;
           }
         } catch (e) {
-          print('⚠️ Error processing wishlist item: $e');
-          print('⚠️ Item data: $item');
           skippedCount++;
         }
       }
 
-      // Ordenar por prioridad (null al final) y luego por fecha de agregado
       result.sort((a, b) {
         final aPriority = a['priority'] ?? 9999;
         final bPriority = b['priority'] ?? 9999;
@@ -511,12 +450,9 @@ class PaintService {
         return (b['addedAt'] as DateTime).compareTo(a['addedAt'] as DateTime);
       });
 
-      print('✅ Procesados $processedCount elementos de la wishlist');
-      print('⚠️ Omitidos $skippedCount elementos de la wishlist');
       return result;
     } catch (e) {
-      print('⚠️ Excepción al obtener la wishlist: $e');
-      return []; // Return empty list instead of rethrowing
+      return [];
     }
   }
 
@@ -598,14 +534,8 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
-      print('🎨 Creating new palette via API');
-      print('- Palette name: $name');
-      print('- Colors count: ${colors.length}');
-
-      // Prepare color data in format expected by API
       List<Map<String, dynamic>> colorData =
           colors.map((color) {
-            // Convert Flutter Color to hex string
             final String hex = '#${color.value.toRadixString(16).substring(2)}';
             final r = color.red;
             final g = color.green;
@@ -614,19 +544,11 @@ class PaintService {
             return {'hex': hex, 'r': r, 'g': g, 'b': b};
           }).toList();
 
-      // Create request body
       final Map<String, dynamic> requestBody = {
         'name': name,
         'colors': colorData,
       };
 
-      print('- Request URL: $url');
-      print('- Request body: ${json.encode(requestBody)}');
-      print(
-        '- Request headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}',
-      );
-
-      // Make the API call
       final response = await http.post(
         url,
         headers: {
@@ -636,16 +558,11 @@ class PaintService {
         body: json.encode(requestBody),
       );
 
-      print('- API response status: ${response.statusCode}');
-      print('- API response body: ${response.body}');
-
-      // Parse response
       Map<String, dynamic> responseData = {};
       if (response.body != null && response.body.isNotEmpty) {
         try {
           responseData = json.decode(response.body);
         } catch (e) {
-          print('- Error parsing response body: $e');
           responseData = {'error': 'Invalid JSON response: ${response.body}'};
         }
       }
@@ -653,7 +570,6 @@ class PaintService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final String paletteId = responseData['id'] ?? 'unknown-id';
 
-        // Create a local copy of the palette
         final palette = Palette(
           id: paletteId,
           name: name,
@@ -662,7 +578,6 @@ class PaintService {
           createdAt: DateTime.now(),
         );
 
-        // Add to local palettes
         _userPalettes.add(palette);
 
         return {
@@ -681,7 +596,6 @@ class PaintService {
         };
       }
     } catch (e) {
-      print('- Exception creating palette: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -692,20 +606,13 @@ class PaintService {
     String token,
   ) async {
     try {
-      print('🧪 INICIANDO TEST DE INTEGRACIÓN 🧪');
-      print('==================================');
-
       // 1. Verificar la estructura actual de wishlist
-      print('\n📋 PASO 1: Verificando estructura de wishlist actual');
       await debugWishlistData(token);
 
       // 2. Verificar la estructura actual de paletas
-      print('\n📋 PASO 2: Verificando estructura de paletas actual');
       await debugPaletteData(token);
 
       // 3. Crear una nueva paleta para pruebas
-      print('\n📋 PASO 3: Creando nueva paleta de prueba');
-      // Crear un color basado en la pintura
       final color = Color(
         int.parse(paint.hex.substring(1), radix: 16) + 0xFF000000,
       );
@@ -724,10 +631,8 @@ class PaintService {
       }
 
       final String paletteId = createPaletteResult['id'];
-      print('✅ Palette created with ID: $paletteId');
 
       // 4. Simular añadir una pintura a la paleta para ver qué datos se enviarían
-      print('\n📋 PASO 4: Simulando añadir pintura a paleta');
       final simulationResult = await debugSavePaintToPalette(
         paint,
         paletteId,
@@ -735,7 +640,6 @@ class PaintService {
       );
 
       // 5. Añadir la pintura a la paleta
-      print('\n📋 PASO 5: Añadiendo pintura a la paleta');
       final addToPaletteResult = await addPaintToPalette(
         paint,
         paletteId,
@@ -743,7 +647,6 @@ class PaintService {
       );
 
       // 6. Intentar añadir la pintura a la wishlist
-      print('\n📋 PASO 6: Añadiendo pintura a wishlist');
       final addToWishlistResult = await addToWishlistDirect(
         paint,
         3,
@@ -760,7 +663,6 @@ class PaintService {
         'palette_id': paletteId,
       };
     } catch (e) {
-      print('❌ ERROR en test de integración: $e');
       return {'success': false, 'message': 'Error en test de integración: $e'};
     }
   }
@@ -775,7 +677,6 @@ class PaintService {
 
       // 1. Primero, obtenemos los datos actuales de la paleta
       final url = Uri.parse('$baseUrl/palettes/$paletteId');
-      print('🔧 DIAGNÓSTICO: Obteniendo datos de la paleta $paletteId');
 
       final response = await http.get(
         url,
@@ -786,7 +687,6 @@ class PaintService {
       );
 
       if (response.statusCode != 200) {
-        print('❌ Error obteniendo datos de la paleta: ${response.statusCode}');
         return {
           'success': false,
           'message':
@@ -796,12 +696,10 @@ class PaintService {
       }
 
       final data = json.decode(response.body);
-      print('✅ Datos de paleta obtenidos correctamente');
 
       // 2. Analizar las pinturas de la paleta
       if (!data.containsKey('data') ||
           !data['data'].containsKey('palettes_paints')) {
-        print('❌ Formato de datos de paleta incorrecto');
         return {
           'success': false,
           'message': 'Formato de datos de paleta incorrecto',
@@ -810,7 +708,6 @@ class PaintService {
       }
 
       final List paletteItems = data['data']['palettes_paints'];
-      print('🔍 La paleta tiene ${paletteItems.length} pinturas');
 
       // Lista para almacenar los problemas encontrados
       final List<Map<String, dynamic>> itemsWithProblems = [];
@@ -823,22 +720,16 @@ class PaintService {
         // Obtener datos completos de la pintura
         final Paint? paintResult = await _getPaintDetailsById(paintId);
         if (paintResult == null) {
-          print('⚠️ No se pudo obtener detalles de la pintura $paintId');
           continue;
         }
 
-        final Paint paint = paintResult; // Ya verificamos que no es null
+        final Paint paint = paintResult;
 
         // Determinar el brand_id correcto según nuestra lógica
         final String correctBrandId = _determineBrandIdForPaint(paint);
 
         // Comprobar si hay discrepancia
         if (currentBrandId != correctBrandId) {
-          print('⚠️ DISCREPANCIA DE BRAND_ID:');
-          print('  - Paint ID: $paintId (${paint.name})');
-          print('  - Brand ID actual: $currentBrandId');
-          print('  - Brand ID correcto: $correctBrandId');
-
           itemsWithProblems.add({
             'item_id': item['id'],
             'paint_id': paintId,
@@ -849,18 +740,6 @@ class PaintService {
             'paint_set': paint.set,
           });
         }
-      }
-
-      // 4. Mostrar resumen
-      if (itemsWithProblems.isEmpty) {
-        print('✅ No se encontraron problemas de brand_id en la paleta');
-      } else {
-        print(
-          '⚠️ Se encontraron ${itemsWithProblems.length} pinturas con problemas de brand_id',
-        );
-
-        // Si quieres intentar corregir automáticamente, aquí iría el código
-        // para enviar las correcciones al API
       }
 
       return {
@@ -874,7 +753,6 @@ class PaintService {
                 : 'Se encontraron ${itemsWithProblems.length} problemas de brand_id',
       };
     } catch (e) {
-      print('❌ Error durante el diagnóstico: $e');
       return {'success': false, 'message': 'Error durante el diagnóstico: $e'};
     }
   }
@@ -940,7 +818,6 @@ class PaintService {
         category: 'Unknown',
       );
     } catch (e) {
-      print('❌ Error obteniendo detalles de la pintura $paintId: $e');
       return null;
     }
   }
@@ -955,7 +832,6 @@ class PaintService {
 
       // 1. Primero, obtenemos los datos actuales de la paleta
       final getUrl = Uri.parse('$baseUrl/palettes/$paletteId');
-      print('🔧 REPARACIÓN: Obteniendo datos de la paleta $paletteId');
 
       final getResponse = await http.get(
         getUrl,
@@ -966,9 +842,6 @@ class PaintService {
       );
 
       if (getResponse.statusCode != 200) {
-        print(
-          '❌ Error obteniendo datos de la paleta: ${getResponse.statusCode}',
-        );
         return {
           'success': false,
           'message':
@@ -978,12 +851,10 @@ class PaintService {
       }
 
       final data = json.decode(getResponse.body);
-      print('✅ Datos de paleta obtenidos correctamente');
 
       // 2. Analizar las pinturas de la paleta
       if (!data.containsKey('data') ||
           !data['data'].containsKey('palettes_paints')) {
-        print('❌ Formato de datos de paleta incorrecto');
         return {
           'success': false,
           'message': 'Formato de datos de paleta incorrecto',
@@ -992,7 +863,6 @@ class PaintService {
       }
 
       final List paletteItems = data['data']['palettes_paints'];
-      print('🔍 La paleta tiene ${paletteItems.length} pinturas');
 
       // Lista para almacenar las pinturas que se van a corregir
       final List<Map<String, dynamic>> itemsToFix = [];
@@ -1027,11 +897,6 @@ class PaintService {
 
         // Si es de Army Painter pero no tiene el brand_id correcto
         if (isArmyPainter && currentBrandId != 'Army_Painter') {
-          print('⚠️ Pinturas de Army Painter con brand_id incorrecto:');
-          print('  - Item ID: $itemId');
-          print('  - Paint ID: $paintId');
-          print('  - Brand ID actual: $currentBrandId');
-
           itemsToFix.add({
             'id': itemId,
             'paint_id': paintId,
@@ -1044,17 +909,12 @@ class PaintService {
       final List<Map<String, dynamic>> fixResults = [];
 
       if (itemsToFix.isEmpty) {
-        print(
-          '✅ No se encontraron pinturas de Army Painter con brand_id incorrecto',
-        );
         return {
           'success': true,
           'message': 'No se encontraron pinturas que corregir',
           'items_to_fix': itemsToFix,
         };
       }
-
-      print('🔧 Corrigiendo ${itemsToFix.length} pinturas de Army Painter');
 
       for (final item in itemsToFix) {
         final itemId = item['id'];
@@ -1065,10 +925,6 @@ class PaintService {
         // Preparar los datos para actualizar
         final updateBody = {'brand_id': 'Army_Painter'};
 
-        print('🔄 Actualizando pintura $itemId');
-        print('- URL: $updateUrl');
-        print('- Body: ${json.encode(updateBody)}');
-
         try {
           final updateResponse = await http.patch(
             updateUrl,
@@ -1078,9 +934,6 @@ class PaintService {
             },
             body: json.encode(updateBody),
           );
-
-          print('- Respuesta: ${updateResponse.statusCode}');
-          print('- Cuerpo: ${updateResponse.body}');
 
           Map<String, dynamic> resultData = {
             'id': itemId,
@@ -1100,7 +953,6 @@ class PaintService {
 
           fixResults.add(resultData);
         } catch (e) {
-          print('❌ Error actualizando pintura $itemId: $e');
           fixResults.add({
             'id': itemId,
             'success': false,
@@ -1121,89 +973,8 @@ class PaintService {
         'palette_id': paletteId,
       };
     } catch (e) {
-      print('❌ Error durante la reparación: $e');
       return {'success': false, 'message': 'Error durante la reparación: $e'};
     }
-  }
-
-  /// Imprime diagnóstico de las marcas oficiales cargadas
-  void printBrandDiagnostics() {
-    print('\n🔍 DIAGNÓSTICO DE MARCAS OFICIALES 🔍');
-    print('===================================');
-
-    if (!_brandManager.isLoaded) {
-      print('⚠️ No hay marcas oficiales cargadas');
-      print('Intentando cargar marcas desde API...');
-
-      _brandManager.initialize().then((success) {
-        if (success) {
-          _printLoadedBrands();
-        } else {
-          print('❌ No se pudieron cargar las marcas oficiales');
-        }
-      });
-
-      return;
-    }
-
-    _printLoadedBrands();
-  }
-
-  /// Método auxiliar para imprimir las marcas cargadas
-  void _printLoadedBrands() {
-    print('\n✅ Marcas oficiales cargadas');
-
-    // Obtener todos los brand IDs
-    final List<String> brandIds = _brandManager.getAllBrandIds();
-    print('\nTotal de marcas oficiales: ${brandIds.length}');
-
-    // Imprimir mapeo directo ordenado alfabéticamente
-    final sortedBrandIds = List<String>.from(brandIds)..sort();
-    print('\nMapeo directo (ID → Nombre):');
-    for (final id in sortedBrandIds.take(10)) {
-      final name = _brandManager.getBrandName(id);
-      print('  - $id → ${name ?? "Sin nombre"}');
-    }
-
-    if (sortedBrandIds.length > 10) {
-      print('  - ... y ${sortedBrandIds.length - 10} más ...');
-    }
-
-    // Mostrar información de marcas comunes
-    print('\nEstado de marcas comunes:');
-    final commonBrands = [
-      'army painter',
-      'the army painter',
-      'warpaints',
-      'citadel',
-      'citadel colour',
-      'vallejo',
-      'ak interactive',
-    ];
-
-    for (final brand in commonBrands) {
-      final String? brandId = _brandManager.getBrandId(brand);
-      if (brandId != null) {
-        print(
-          '  ✓ "$brand" → $brandId (${_brandManager.getBrandName(brandId)})',
-        );
-      } else {
-        print('  ✗ "$brand" no tiene mapeo directo');
-      }
-    }
-
-    print('\n===================================\n');
-  }
-
-  /// Valida si un brand_id es oficial y retorna el id correcto o null
-  String? validateBrandId(String brandId) {
-    // Verificar si ya es un ID oficial
-    if (_brandManager.isOfficialBrandId(brandId)) {
-      return brandId;
-    }
-
-    // Intentar obtener el ID correcto usando el servicio
-    return _brandManager.getBrandId(brandId);
   }
 
   /// Repara problemas de marcas en paletas usando la lista oficial
@@ -1214,7 +985,6 @@ class PaintService {
     try {
       // 0. Asegurar que tenemos las marcas oficiales cargadas
       if (!_brandManager.isLoaded) {
-        print('🏭 Ya hay una carga de marcas en curso, esperando...');
         final loaded = await loadOfficialBrands();
         if (!loaded) {
           return {
@@ -1223,10 +993,6 @@ class PaintService {
           };
         }
       }
-
-      print(
-        '🔧 REPARACIÓN AVANZADA: Corrigiendo marcas en paleta $paletteId usando lista oficial',
-      );
 
       final baseUrl = '${Env.apiBaseUrl}';
 
@@ -1243,9 +1009,6 @@ class PaintService {
       );
 
       if (getResponse.statusCode != 200) {
-        print(
-          '❌ Error obteniendo datos de la paleta: ${getResponse.statusCode}',
-        );
         return {
           'success': false,
           'message':
@@ -1255,12 +1018,10 @@ class PaintService {
       }
 
       final data = json.decode(getResponse.body);
-      print('✅ Datos de paleta obtenidos correctamente');
 
       // 3. Verificar si la paleta contiene pinturas de Army Painter
       if (!data.containsKey('data') ||
           !data['data'].containsKey('palettes_paints')) {
-        print('❌ Formato de datos de paleta incorrecto');
         return {
           'success': false,
           'message': 'Formato de datos de paleta incorrecto',
@@ -1269,7 +1030,6 @@ class PaintService {
       }
 
       final List paletteItems = data['data']['palettes_paints'];
-      print('🔍 La paleta tiene ${paletteItems.length} pinturas');
 
       // Lista para almacenar las pinturas que se van a corregir
       final List<Map<String, dynamic>> itemsToFix = [];
@@ -1304,11 +1064,6 @@ class PaintService {
 
         // Si es de Army Painter pero no tiene el brand_id correcto
         if (isArmyPainter && currentBrandId != 'Army_Painter') {
-          print('⚠️ Pinturas de Army Painter con brand_id incorrecto:');
-          print('  - Item ID: $itemId');
-          print('  - Paint ID: $paintId');
-          print('  - Brand ID actual: $currentBrandId');
-
           itemsToFix.add({
             'id': itemId,
             'paint_id': paintId,
@@ -1321,17 +1076,12 @@ class PaintService {
       final List<Map<String, dynamic>> fixResults = [];
 
       if (itemsToFix.isEmpty) {
-        print(
-          '✅ No se encontraron pinturas de Army Painter con brand_id incorrecto',
-        );
         return {
           'success': true,
           'message': 'No se encontraron pinturas que corregir',
           'items_to_fix': itemsToFix,
         };
       }
-
-      print('🔧 Corrigiendo ${itemsToFix.length} pinturas de Army Painter');
 
       for (final item in itemsToFix) {
         final itemId = item['id'];
@@ -1342,10 +1092,6 @@ class PaintService {
         // Preparar los datos para actualizar
         final updateBody = {'brand_id': 'Army_Painter'};
 
-        print('🔄 Actualizando pintura $itemId');
-        print('- URL: $updateUrl');
-        print('- Body: ${json.encode(updateBody)}');
-
         try {
           final updateResponse = await http.patch(
             updateUrl,
@@ -1355,9 +1101,6 @@ class PaintService {
             },
             body: json.encode(updateBody),
           );
-
-          print('- Respuesta: ${updateResponse.statusCode}');
-          print('- Cuerpo: ${updateResponse.body}');
 
           Map<String, dynamic> resultData = {
             'id': itemId,
@@ -1377,7 +1120,6 @@ class PaintService {
 
           fixResults.add(resultData);
         } catch (e) {
-          print('❌ Error actualizando pintura $itemId: $e');
           fixResults.add({
             'id': itemId,
             'success': false,
@@ -1398,7 +1140,6 @@ class PaintService {
         'palette_id': paletteId,
       };
     } catch (e) {
-      print('❌ Error durante la reparación: $e');
       return {'success': false, 'message': 'Error durante la reparación: $e'};
     }
   }
@@ -1414,16 +1155,8 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
-      print('🎨 Adding paint to palette via API');
-      print('- Paint: ${paint.toJson()}');
-      print('- Palette ID: $paletteId');
-      if (paint.set != null) {
-        print('- Paint set: "${paint.set}"');
-      }
-
       // 1) Determine the correct brand_id as before
       String brandId = _determineBrandIdForPaint(paint);
-      print('- Determined brand_id: $brandId');
 
       if (!_brandManager.isOfficialBrandId(brandId)) {
         // Attempt to correct it using the brand name and set
@@ -1431,23 +1164,12 @@ class PaintService {
           brandId,
           paint.set != null ? '${paint.brand} ${paint.set}' : paint.brand,
         );
-        print('- Corrected brand_id: $brandId');
-      } else {
-        print(
-          '✓ Brand_id validated: $brandId (${_brandManager.getBrandName(brandId)})',
-        );
       }
 
       // 2) Build the payload as an array (even if only one item)
       final List<Map<String, dynamic>> payload = [
         {'paint_id': paint.id, 'brand_id': brandId},
       ];
-
-      print('- Request URL: $url');
-      print('- Request payload (array): ${json.encode(payload)}');
-      print(
-        '- Request headers: {"Content-Type":"application/json","Authorization":"Bearer $token"}',
-      );
 
       // 3) Send the POST with the array as the body
       final response = await http.post(
@@ -1459,16 +1181,12 @@ class PaintService {
         body: json.encode(payload),
       );
 
-      print('- API response status: ${response.statusCode}');
-      print('- API response body: ${response.body}');
-
       // 4) Parse the response just like before
       Map<String, dynamic> responseData = {};
       if (response.body.isNotEmpty) {
         try {
           responseData = json.decode(response.body) as Map<String, dynamic>;
         } catch (e) {
-          print('- Error parsing response body: $e');
           responseData = {'error': 'Invalid JSON response: ${response.body}'};
         }
       }
@@ -1480,24 +1198,6 @@ class PaintService {
           'data': responseData,
         };
       } else {
-        // Extra debug if the error is about an unknown brand_id
-        if (responseData['message'] != null &&
-            responseData['message'].toString().contains(
-              'Brand does not exist',
-            )) {
-          print('❌ CRITICAL BRAND_ID ERROR:');
-          print('❌ Paint ID: ${paint.id}');
-          print('❌ Original brand: ${paint.brand}');
-          print('❌ Original set: ${paint.set}');
-          print('❌ Sent brand_id: $brandId');
-          print(
-            '❌ Available official brands: ${_brandManager.getAllBrandIds().join(", ")}',
-          );
-          print(
-            '❌ The backend did not recognize this brand_id. It must be one of the supported brands.',
-          );
-        }
-
         return {
           'success': false,
           'message': 'Failed to add paint to palette (${response.statusCode})',
@@ -1506,7 +1206,6 @@ class PaintService {
         };
       }
     } catch (e) {
-      print('- Exception while adding paint to palette: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -1517,60 +1216,31 @@ class PaintService {
     int priority,
     String userId,
   ) async {
-    // Debug log the full request parameters
-    print('📝 addToWishlistDirect request parameters:');
-    print('- Paint: ${paint.toJson()}');
-    print('- Priority: $priority');
-    print('- User ID: $userId');
-    print('- Original brand name: "${paint.brand}"');
-    print('- Original paint ID: "${paint.id}"');
-    if (paint.set != null) {
-      print('- Paint set: "${paint.set}"');
-    }
-
     try {
       if (paint == null) {
-        print('❌ Error: Paint object is null');
         return {'success': false, 'message': 'Paint object is null'};
       }
 
       if (userId == null || userId.isEmpty) {
-        print('❌ Error: User ID is null or empty');
         return {'success': false, 'message': 'User ID is required'};
       }
 
-      // Ensure we're using the correct API endpoint
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/wishlist');
 
-      // Determine brand ID using our consistent helper method
       String brandId = _determineBrandIdForPaint(paint);
-      print('- Determined brand_id: $brandId');
 
-      // Verificar si el brand_id está entre las marcas oficiales conocidas
       if (_brandManager.isOfficialBrandId(brandId)) {
-        print(
-          '✓ Brand_id validado: $brandId (${_brandManager.getBrandName(brandId)})',
-        );
+        // Brand ID is valid
       } else {
-        // Si no es una marca oficial, forzar override para ciertos casos conocidos
         if (brandId.contains('Army') ||
             brandId.toLowerCase().contains('warpaint')) {
-          print('⚠️ Brand_id no oficial, corrigiendo: $brandId → Army_Painter');
           brandId = 'Army_Painter';
         } else if (brandId.contains('Citadel')) {
-          print(
-            '⚠️ Brand_id no oficial, corrigiendo: $brandId → Citadel_Colour',
-          );
           brandId = 'Citadel_Colour';
-        } else {
-          print(
-            '⚠️ Advertencia: brand_id "$brandId" no está en la lista oficial',
-          );
         }
       }
 
-      // Create request body EXACTLY as required
       final requestBody = {
         "paint_id": paint.id,
         "brand_id": brandId,
@@ -1578,43 +1248,26 @@ class PaintService {
         "priority": priority,
       };
 
-      print('📤 POST Add to Wishlist direct request: $url');
-      print('📤 Request body: ${jsonEncode(requestBody)}');
-      print(
-        '📤 Request headers: {"Content-Type": "application/json", "x-user-uid": "$userId"}',
-      );
-
-      // Ensure we're using the POST method with correct headers
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json', 'x-user-uid': userId},
         body: jsonEncode(requestBody),
       );
 
-      print('📥 Direct API response status: ${response.statusCode}');
-      print('📥 Direct API response body: ${response.body}');
-
-      // Parse response safely
       Map<String, dynamic> responseData = {};
       if (response.body != null && response.body.isNotEmpty) {
         try {
           responseData = json.decode(response.body);
-          print('📥 Parsed response data: $responseData');
         } catch (e) {
-          print('❌ Error parsing response body: $e');
           responseData = {'error': 'Invalid JSON response: ${response.body}'};
         }
       }
 
-      // Handle the case when paint is already in wishlist (treat as success)
       if (response.statusCode == 500 &&
           responseData['message'] != null &&
           responseData['message'].toString().contains(
             'Paint is already in the wishlist',
           )) {
-        print('📝 Paint is already in wishlist, treating as success');
-
-        // Update local wishlist
         _wishlist[paint.id] = {
           'isPriority': priority > 0,
           'addedAt': DateTime.now(),
@@ -1630,7 +1283,6 @@ class PaintService {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Actualizar wishlist local para mantener consistencia
         _wishlist[paint.id] = {
           'isPriority': priority > 0,
           'addedAt': DateTime.now(),
@@ -1643,24 +1295,6 @@ class PaintService {
           'response': responseData,
         };
       } else {
-        // Si el error es de brand_id que no existe, imprimir información de debug adicional
-        if (responseData['message'] != null &&
-            responseData['message'].toString().contains(
-              'Brand does not exist',
-            )) {
-          print('❌ ERROR CRÍTICO DE BRAND_ID:');
-          print('❌ Paint ID: ${paint.id}');
-          print('❌ Brand original: ${paint.brand}');
-          print('❌ Set original: ${paint.set}');
-          print('❌ Brand ID enviado: ${brandId}');
-          print(
-            '❌ Marcas oficiales disponibles: ${_brandManager.getAllBrandIds().join(", ")}',
-          );
-          print(
-            '❌ El backend no reconoce este brand_id. Debe ser uno de los brands soportados.',
-          );
-        }
-
         return {
           'success': false,
           'message':
@@ -1670,8 +1304,6 @@ class PaintService {
         };
       }
     } catch (e, stackTrace) {
-      print('⚠️ Excepción al añadir a wishlist directamente: $e');
-      print('⚠️ StackTrace: $stackTrace');
       return {
         'success': false,
         'message': 'Error: $e',
@@ -1686,8 +1318,6 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
-      print('📤 GET Palettes request: $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -1696,12 +1326,7 @@ class PaintService {
         },
       );
 
-      print('📥 GET Palettes response [${response.statusCode}]');
-
       if (response.statusCode != 200) {
-        print(
-          '❌ Error al obtener paletas: Código ${response.statusCode}, Respuesta: ${response.body}',
-        );
         return {
           'success': false,
           'message': 'Failed to fetch palettes (${response.statusCode})',
@@ -1709,57 +1334,10 @@ class PaintService {
         };
       }
 
-      // Parse and log the palette data to help diagnose
       final Map<String, dynamic> jsonData = json.decode(response.body);
-      print('📊 Raw palette response structure: ${jsonData.keys.toList()}');
-
-      // Log some sample data if available
-      if (jsonData.containsKey('palettes') &&
-          jsonData['palettes'] is List &&
-          jsonData['palettes'].isNotEmpty) {
-        final List<dynamic> palettes = jsonData['palettes'];
-        print('📊 Total palettes: ${palettes.length}');
-
-        // Log details of first palette
-        if (palettes.isNotEmpty) {
-          final firstPalette = palettes[0];
-          print('📊 Sample palette structure: ${firstPalette.keys.toList()}');
-
-          // Log paint details if available
-          if (firstPalette.containsKey('paints') &&
-              firstPalette['paints'] is List &&
-              firstPalette['paints'].isNotEmpty) {
-            final List<dynamic> paints = firstPalette['paints'];
-            print('📊 Sample palette paint count: ${paints.length}');
-
-            if (paints.isNotEmpty) {
-              final firstPaint = paints[0];
-              print(
-                '📊 Sample paint data structure: ${firstPaint.keys.toList()}',
-              );
-              print('📊 Sample paint data: $firstPaint');
-
-              // Log details about brand and paint fields
-              if (firstPaint.containsKey('brand_id')) {
-                print('📊 Sample paint brand_id: ${firstPaint['brand_id']}');
-              }
-              if (firstPaint.containsKey('brand')) {
-                print('📊 Sample paint brand object: ${firstPaint['brand']}');
-              }
-              if (firstPaint.containsKey('paint_id')) {
-                print('📊 Sample paint paint_id: ${firstPaint['paint_id']}');
-              }
-              if (firstPaint.containsKey('paint')) {
-                print('📊 Sample paint paint object: ${firstPaint['paint']}');
-              }
-            }
-          }
-        }
-      }
 
       return {'success': true, 'data': jsonData};
     } catch (e) {
-      print('⚠️ Excepción al obtener las paletas: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -1770,8 +1348,6 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes');
 
-      print('🔍 DEBUG: Requesting palette data from $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -1780,102 +1356,11 @@ class PaintService {
         },
       );
 
-      print('🔍 DEBUG: Palette API response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
-        print('🔍 DEBUG: Palette response keys: ${data.keys.toList()}');
-
-        // Check if we have palettes in the response
-        if (data.containsKey('palettes') && data['palettes'] is List) {
-          final List palettes = data['palettes'];
-          print('🔍 DEBUG: Found ${palettes.length} palettes');
-
-          if (palettes.isNotEmpty) {
-            // Log data for the first palette
-            final firstPalette = palettes[0];
-            print(
-              '🔍 DEBUG: First palette keys: ${firstPalette.keys.toList()}',
-            );
-            print('🔍 DEBUG: First palette ID: ${firstPalette['id']}');
-            print('🔍 DEBUG: First palette name: ${firstPalette['name']}');
-
-            // Check if we have paints in the palette
-            if (firstPalette.containsKey('paints') &&
-                firstPalette['paints'] is List) {
-              final List paints = firstPalette['paints'];
-              print('🔍 DEBUG: First palette has ${paints.length} paints');
-
-              if (paints.isNotEmpty) {
-                final firstPaint = paints[0];
-                print('🔍 DEBUG: First paint in palette - complete data:');
-                print(json.encode(firstPaint));
-
-                // Look for brand information
-                if (firstPaint.containsKey('brand_id')) {
-                  print(
-                    '🔍 DEBUG: Paint has brand_id: ${firstPaint['brand_id']}',
-                  );
-                } else {
-                  print('🔍 DEBUG: Paint does NOT have brand_id field');
-                }
-
-                if (firstPaint.containsKey('brand')) {
-                  print(
-                    '🔍 DEBUG: Paint has brand object: ${firstPaint['brand']}',
-                  );
-                  if (firstPaint['brand'] is Map) {
-                    final brandObj = firstPaint['brand'];
-                    print(
-                      '🔍 DEBUG: Brand object keys: ${brandObj.keys.toList()}',
-                    );
-                    if (brandObj.containsKey('name')) {
-                      print('🔍 DEBUG: Brand name: ${brandObj['name']}');
-                    }
-                  }
-                } else {
-                  print('🔍 DEBUG: Paint does NOT have brand object');
-                }
-
-                // Look for paint information
-                if (firstPaint.containsKey('paint_id')) {
-                  print(
-                    '🔍 DEBUG: Paint has paint_id: ${firstPaint['paint_id']}',
-                  );
-                } else {
-                  print('🔍 DEBUG: Paint does NOT have paint_id field');
-                }
-
-                if (firstPaint.containsKey('paint')) {
-                  print(
-                    '🔍 DEBUG: Paint has paint object: ${firstPaint['paint']}',
-                  );
-                  if (firstPaint['paint'] is Map) {
-                    final paintObj = firstPaint['paint'];
-                    print(
-                      '🔍 DEBUG: Paint object keys: ${paintObj.keys.toList()}',
-                    );
-                    if (paintObj.containsKey('name')) {
-                      print('🔍 DEBUG: Paint name: ${paintObj['name']}');
-                    }
-                    if (paintObj.containsKey('code')) {
-                      print('🔍 DEBUG: Paint code: ${paintObj['code']}');
-                    }
-                  }
-                } else {
-                  print('🔍 DEBUG: Paint does NOT have paint object');
-                }
-              }
-            }
-          }
-        }
-      } else {
-        print('🔍 ERROR: Failed to get palette data - ${response.statusCode}');
-        print('🔍 ERROR: Response body: ${response.body}');
       }
     } catch (e) {
-      print('🔍 EXCEPTION: $e');
+      // Handle error silently
     }
   }
 
@@ -1885,8 +1370,6 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/wishlist');
 
-      print('🔎 DEBUG WISHLIST: Requesting wishlist data from $url');
-
       final response = await http.get(
         url,
         headers: {
@@ -1895,133 +1378,11 @@ class PaintService {
         },
       );
 
-      print('🔎 DEBUG WISHLIST: API response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
-        print('🔎 DEBUG WISHLIST: Response keys: ${data.keys.toList()}');
-
-        // Check if we have whitelist items in the response
-        if (data.containsKey('whitelist') && data['whitelist'] is List) {
-          final List whitelist = data['whitelist'];
-          print(
-            '🔎 DEBUG WISHLIST: Found ${whitelist.length} items in wishlist',
-          );
-
-          if (whitelist.isNotEmpty) {
-            // Log the first 3 items to see the pattern
-            final int itemsToLog = whitelist.length > 3 ? 3 : whitelist.length;
-
-            for (int i = 0; i < itemsToLog; i++) {
-              final item = whitelist[i];
-              print('🔎 DEBUG WISHLIST: Item #${i + 1} - complete data:');
-              print(json.encode(item));
-
-              print(
-                '🔎 DEBUG WISHLIST: Item #${i + 1} keys: ${item.keys.toList()}',
-              );
-
-              // Check for brand information
-              if (item.containsKey('brand_id')) {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} has brand_id: ${item['brand_id']}',
-                );
-              } else {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} does NOT have brand_id field',
-                );
-              }
-
-              if (item.containsKey('brand')) {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} has brand object: ${item['brand']}',
-                );
-                if (item['brand'] is Map) {
-                  final brandObj = item['brand'];
-                  print(
-                    '🔎 DEBUG WISHLIST: Brand object keys: ${brandObj.keys.toList()}',
-                  );
-                  if (brandObj.containsKey('name')) {
-                    print('🔎 DEBUG WISHLIST: Brand name: ${brandObj['name']}');
-                  }
-                }
-              } else {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} does NOT have brand object',
-                );
-              }
-
-              // Check for paint information
-              if (item.containsKey('paint_id')) {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} has paint_id: ${item['paint_id']}',
-                );
-              } else {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} does NOT have paint_id field',
-                );
-              }
-
-              if (item.containsKey('paint')) {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} has paint object: ${item['paint']}',
-                );
-                if (item['paint'] is Map) {
-                  final paintObj = item['paint'];
-                  print(
-                    '🔎 DEBUG WISHLIST: Paint object keys: ${paintObj.keys.toList()}',
-                  );
-                  if (paintObj.containsKey('name')) {
-                    print('🔎 DEBUG WISHLIST: Paint name: ${paintObj['name']}');
-                  }
-                  if (paintObj.containsKey('code')) {
-                    print('🔎 DEBUG WISHLIST: Paint code: ${paintObj['code']}');
-                  }
-                }
-              } else {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} does NOT have paint object',
-                );
-              }
-
-              if (item.containsKey('priority')) {
-                print(
-                  '🔎 DEBUG WISHLIST: Item #${i + 1} priority: ${item['priority']}',
-                );
-              }
-
-              print('----------------------------------------------------');
-            }
-
-            // Log if there are different structures in the wishlist
-            final Set<String> uniqueStructures = Set<String>();
-            for (final item in whitelist) {
-              final List<String> keys = List<String>.from(item.keys);
-              keys.sort();
-              uniqueStructures.add(keys.join(','));
-            }
-
-            print(
-              '🔎 DEBUG WISHLIST: Number of unique data structures: ${uniqueStructures.length}',
-            );
-            int structureIndex = 1;
-            for (final structure in uniqueStructures) {
-              print(
-                '🔎 DEBUG WISHLIST: Structure #$structureIndex: $structure',
-              );
-              structureIndex++;
-            }
-          }
-        } else {
-          print('🔎 DEBUG WISHLIST: No wishlist data found in response');
-        }
-      } else {
-        print('🔎 ERROR: Failed to get wishlist data - ${response.statusCode}');
-        print('🔎 ERROR: Response body: ${response.body}');
       }
     } catch (e) {
-      print('🔎 EXCEPTION: $e');
+      // Handle error silently
     }
   }
 
@@ -2035,31 +1396,12 @@ class PaintService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
-      print(
-        '🔮 DEBUG PALETTE SAVE: Analysis of paint data before saving to palette',
-      );
-      print('🔮 Paint ID: ${paint.id}');
-      print('🔮 Paint Name: ${paint.name}');
-      print('🔮 Paint Brand: ${paint.brand}');
-      print('🔮 Paint Code: ${paint.code}');
-      print('🔮 Paint Full Data: ${paint.toJson()}');
-
-      // Check what brand_id would be determined for this paint
       String determinedBrandId = _determineBrandIdForPaint(paint);
-      print('🔮 Determined brand_id would be: $determinedBrandId');
 
-      // Create what the request body would look like
       final Map<String, dynamic> requestBody = {
         'paint_id': paint.id,
         'brand_id': determinedBrandId,
       };
-
-      print('🔮 Request body would be: ${json.encode(requestBody)}');
-      print('🔮 Request URL would be: $url');
-      print('🔮 Request method would be: POST');
-
-      // Simulate what the actual request would do without sending it
-      print('🔮 This is just a simulation, no actual API call is being made');
 
       return {
         'success': true,
@@ -2069,7 +1411,6 @@ class PaintService {
         'simulated_request_body': requestBody,
       };
     } catch (e) {
-      print('🔮 EXCEPTION during analysis: $e');
       return {'success': false, 'message': 'Error during analysis: $e'};
     }
   }
@@ -2079,13 +1420,11 @@ class PaintService {
     try {
       // Si ya tenemos un proceso de carga en curso, esperamos a que termine
       if (_brandManager.isLoaded == false && _loadingBrandsCompleter != null) {
-        print('🏭 Ya hay una carga de marcas en curso, esperando...');
         return await _loadingBrandsCompleter!.future;
       }
 
       // Si las marcas ya están cargadas, simplemente retornamos éxito
       if (_brandManager.isLoaded) {
-        print('✅ Marcas ya cargadas previamente');
         return true;
       }
 
@@ -2103,7 +1442,6 @@ class PaintService {
         return false;
       }
     } catch (e) {
-      print('❌ Error cargando marcas oficiales: $e');
       if (_loadingBrandsCompleter != null &&
           !_loadingBrandsCompleter!.isCompleted) {
         _loadingBrandsCompleter!.complete(false);
@@ -2153,7 +1491,6 @@ class PaintService {
 
       return {'count': count, 'lastUpdated': lastUpdate, 'details': details};
     } catch (e) {
-      print('Error getting cache info: $e');
       return {
         'count': 0,
         'lastUpdated': null,
@@ -2170,7 +1507,6 @@ class PaintService {
       await prefs.remove(_LAST_CACHE_UPDATE_KEY);
       return true;
     } catch (e) {
-      print('Error clearing cache: $e');
       return false;
     }
   }
@@ -2202,7 +1538,6 @@ class PaintService {
 
       return true;
     } catch (e) {
-      print('Error loading paints to cache: $e');
       return false;
     }
   }

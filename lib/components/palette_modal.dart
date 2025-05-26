@@ -1177,17 +1177,10 @@ class _PaletteModalState extends State<PaletteModal> {
           }
 
           final userId = firebaseUser.uid;
-          print('🔑 User ID detected: $userId');
-          print(
-            '📤 Sending paint ${paint.id} with priority $priority and userId $userId',
-          );
-          print('📤 Paint details: ${paint.toJson()}');
-          // 👉 Lógica diferenciada entre add y update
           Map<String, dynamic> result = {};
 
           if (isInWishlist) {
-            // Suponiendo que tienes una forma de recuperar el wishlistId:
-            final wishlistId = wishlist_id; // <--- ajusta esto según tu modelo
+            final wishlistId = wishlist_id;
             final bool isPriority = priority > 0;
             final token = await FirebaseAuth.instance.currentUser?.getIdToken();
             final success = await paintService.updateWishlistPriority(
@@ -1213,7 +1206,6 @@ class _PaletteModalState extends State<PaletteModal> {
           }
 
           scaffoldMessenger.hideCurrentSnackBar();
-          print('✅ Complete API Wishlist result: $result');
 
           if (result['success'] == true) {
             final priorityText = _getPriorityText(priority);
@@ -1245,9 +1237,6 @@ class _PaletteModalState extends State<PaletteModal> {
               ),
             );
           } else {
-            print(
-              '❌ Error details: ${result['raw_response'] ?? result['message']}',
-            );
             scaffoldMessenger.showSnackBar(
               SnackBar(
                 content: Text('Error: ${result['message']}'),
@@ -1280,8 +1269,6 @@ class _PaletteModalState extends State<PaletteModal> {
             );
           }
         } catch (e, stackTrace) {
-          print('❌ Exception adding or updating to wishlist: $e');
-          print('❌ Stack trace: $stackTrace');
           scaffoldMessenger.hideCurrentSnackBar();
           scaffoldMessenger.showSnackBar(
             SnackBar(

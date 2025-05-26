@@ -117,10 +117,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         final palettes = await _paletteService.getAllPalettesNamesAndIds(token);
         setState(() {
           _palettes = palettes;
-          print('🎨 Paletas cargadas: ${palettes.length}');
           if (palettes.isNotEmpty) {
-            print('🎨 Paletas cargadas: ${palettes.first['id']}');
-            print('🎨 Paletas cargadas: ${palettes.first['name']}');
             _selectedPalette = Palette(
               id: palettes.first['id'],
               name: palettes.first['name'],
@@ -132,7 +129,7 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error cargando paletas: $e');
+      debugPrint('Error loading palettes: $e');
     } finally {
       setState(() {
         _isLoadingPalettes = false;
@@ -191,19 +188,13 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
   void _addToPalette() async {
     if (_selectedPalette != null) {
-      print('🎨 Iniciando proceso de añadir pintura a paleta');
-      print('📦 Datos de la pintura: ${widget.paint.toJson()}');
-      print('🎯 Paleta seleccionada: ${_selectedPalette!.toJson()}');
-
       try {
-        // Obtener el usuario actual de Firebase
         final firebaseUser = FirebaseAuth.instance.currentUser;
         if (firebaseUser == null) {
-          print('❌ No hay usuario autenticado');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Necesitas iniciar sesión para añadir a paleta'),
+                content: Text('You need to be logged in to add to palette'),
                 backgroundColor: Colors.red,
                 duration: Duration(seconds: 3),
               ),
@@ -213,18 +204,12 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         }
 
         final token = await firebaseUser.getIdToken() ?? '';
-        print('🔑 Token de usuario obtenido');
-
         final paletteService = PaletteService();
 
-        print('📤 Llamando a addPaintsToPalette...');
-        print('🎨 Agregando 1 pintura a la paleta: ${_selectedPalette!.id}');
         await paletteService.addPaintsToPalette(_selectedPalette!.id, [
           {"paint_id": widget.paint.id, "brand_id": widget.paint.brandId},
         ], token);
 
-        print('✅ Pintura añadida a paleta exitosamente');
-        // widget.onAddToPalette(widget.paint, _selectedPalette!);
         widget.onClose();
         setState(() {
           _isAddingToPalette = false;
@@ -233,7 +218,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
           'Paint added to palette ${_selectedPalette!.name}',
         );
       } catch (e) {
-        print('❌ Error al añadir a paleta: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -778,8 +762,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
 
   Widget _buildAddToPaletteForm() {
     final isCreatingPalette = widget.paletteName != null;
-    print('isCreatingPalette: $isCreatingPalette');
-    print(widget.paletteName);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -832,8 +814,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
                       }).toList(),
                   onChanged: (Map<String, dynamic>? value) {
                     if (value != null) {
-                      print('🎨 Paleta seleccionada: ${value['id']}');
-                      print('🎨 Paleta seleccionada: ${value['name']}');
                       setState(() {
                         _selectedPalette = Palette(
                           id: value['id'],
@@ -975,12 +955,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
   void _createPalette() {
     String _name =
         isCreatingPaletteInView ? _newPaletteName : (widget.paletteName ?? "");
-    print('_createPalette widget.paletteName: ${widget.paletteName}');
-    print('_createPalette _newPaletteName: ${_newPaletteName}');
-    print('_createPalette _name: ${_name}');
-    print('_createPalette widget.paint.hex: ${widget.paint.hex}');
-    print('_createPalette paint.id: ${widget.paint.id}');
-    print('_createPalette paint.name: ${widget.paint.name}');
 
     final newPalette = Palette(
       id: DateTime.now().millisecondsSinceEpoch.toString(),

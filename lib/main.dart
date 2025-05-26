@@ -12,6 +12,7 @@ import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
+import 'package:miniature_paint_finder/screens/debug_analytics_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
@@ -72,7 +73,15 @@ void main() async {
   final analyticsService = MixpanelService.instance;
   Future.microtask(() async {
     await analyticsService.init();
-    debugPrint('Analytics initialized in background');
+
+    // Configurar identificación automática de usuarios
+    await analyticsService.setupAutoUserIdentification(
+      authService.authStateChanges,
+    );
+
+    debugPrint(
+      'Analytics initialized with auto user identification in background',
+    );
   });
 
   // Initialize repositories and services
@@ -218,6 +227,7 @@ class MyApp extends StatelessWidget {
             '/home': (context) => const HomeScreen(),
             '/palettes': (context) => const PaletteScreen(),
             '/library': (context) => const LibraryScreen(),
+            '/debug-analytics': (context) => const DebugAnalyticsScreen(),
           },
           debugShowCheckedModeBanner: false,
         );

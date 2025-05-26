@@ -6,8 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/widgets.dart';
 
 class MixpanelService {
-  static const String _token =
-      '570d806261b36af574266b6256137b0d'; // Token de Mixpanel
+  static const String _token = '570d806261b36af574266b6256137b0d';
   static MixpanelService? _instance;
   Mixpanel? _mixpanel;
   bool _initialized = false;
@@ -16,52 +15,32 @@ class MixpanelService {
   String? _deviceModel;
   String? _osVersion;
 
-  // Singleton pattern
   static MixpanelService get instance => _instance ??= MixpanelService._();
 
   MixpanelService._();
 
   bool get isInitialized => _initialized;
-
-  // Getter para la versión de la app
   String get appVersion => _appVersion ?? 'unknown';
-
-  // Getter para el ID del dispositivo
   String? get deviceId => _deviceId;
 
   Future<void> init() async {
     if (_initialized) return;
 
     try {
-      debugPrint(
-        '🔍 Mixpanel: Intentando inicializar con token: ${_token.substring(0, 8)}...',
-      );
-
-      // Inicializar Mixpanel con timeout para evitar bloqueos
       _mixpanel = await Mixpanel.init(
         _token,
         optOutTrackingDefault: false,
         trackAutomaticEvents: true,
       ).timeout(
-        Duration(seconds: 3), // Reducimos el timeout a 3 segundos
+        Duration(seconds: 3),
         onTimeout: () {
-          debugPrint('⚠️ Mixpanel initialization timed out after 3 seconds');
           throw TimeoutException('Mixpanel initialization timed out');
         },
       );
 
-      debugPrint('🔍 Mixpanel: Instancia creada: ${_mixpanel != null}');
-
-      // Obtener información del dispositivo de manera no bloqueante
       unawaited(_getDeviceInfo());
-
-      // Marcar como inicializado aunque falten detalles del dispositivo
       _initialized = true;
-      debugPrint(
-        '✅ Mixpanel initialized with token: ${_token.substring(0, 8)}...',
-      );
 
-      // Enviar un evento de prueba inmediatamente
       _mixpanel?.track(
         'Debug_Initialization_Test',
         properties: {
@@ -69,29 +48,19 @@ class MixpanelService {
           'successful': true,
         },
       );
-      debugPrint('🔍 Mixpanel: Evento de prueba enviado');
 
-      // Tracking de instalación en segundo plano para no bloquear la UI
       unawaited(trackInstall());
     } catch (e) {
-      debugPrint('❌ Error initializing Mixpanel: $e');
-      if (e is Error) {
-        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
-      }
-      // Establecer mixpanel a null para que los métodos _safeTrack sepan que falló
       _mixpanel = null;
       _initialized = false;
-      // No volvemos a lanzar excepciones para evitar romper la app
     }
   }
 
   Future<void> _getDeviceInfo() async {
     try {
-      // Obtener información del paquete (versión de la app)
       final packageInfo = await PackageInfo.fromPlatform();
       _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
-      // Obtener información del dispositivo
       final deviceInfo = DeviceInfoPlugin();
 
       if (defaultTargetPlatform == TargetPlatform.iOS) {
@@ -106,10 +75,9 @@ class MixpanelService {
         _osVersion = androidInfo.version.release;
       }
 
-      // Establecer propiedades de superposición para todas las llamadas
       _setSuperProperties();
     } catch (e) {
-      debugPrint('Error getting device info: $e');
+      // Silently handle device info errors
     }
   }
 
@@ -135,15 +103,12 @@ class MixpanelService {
       };
 
       _mixpanel!.registerSuperProperties(properties);
-
-      // También establecemos estas propiedades individualmente
       properties.forEach((key, value) {
         _mixpanel!.getPeople().set(key, value);
       });
     }
   }
 
-  /// Identificar al usuario (llamar cuando el usuario inicie sesión)
   Future<void> identify(String userId) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -151,27 +116,19 @@ class MixpanelService {
 
     if (_mixpanel != null) {
       try {
-        // Identificar al usuario
         _mixpanel!.identify(userId);
-
-        // Establecer propiedades en el perfil del usuario
         final people = _mixpanel!.getPeople();
-        people.set('\$name', userId); // Nombre Mixpanel
+        people.set('\$name', userId);
         people.set('\$last_login', DateTime.now().toIso8601String());
         people.set('user_id', userId);
         people.set('identified_at', DateTime.now().toIso8601String());
-
-        // Incrementar la sesión
         people.increment('\$session_count', 1.0);
-
-        debugPrint('👤 User identified in Mixpanel: $userId');
       } catch (e) {
-        debugPrint('❌ Error identifying user in Mixpanel: $e');
+        // Silently handle identification errors
       }
     }
   }
 
-  /// Identificar al usuario con información completa (nombre, email, etc.)
   Future<void> identifyUserWithDetails({
     required String userId,
     String? name,
@@ -187,18 +144,13 @@ class MixpanelService {
 
     if (_mixpanel != null) {
       try {
-        // Identificar al usuario con su ID único
         _mixpanel!.identify(userId);
-
-        // Establecer propiedades en el perfil del usuario
         final people = _mixpanel!.getPeople();
 
-        // Propiedades estándar de Mixpanel
         if (name != null) people.set('\$name', name);
         if (email != null) people.set('\$email', email);
         if (phoneNumber != null) people.set('\$phone', phoneNumber);
 
-        // Propiedades personalizadas
         people.set('user_id', userId);
         people.set('last_login', DateTime.now().toIso8601String());
         if (authProvider != null) people.set('auth_provider', authProvider);
@@ -210,25 +162,19 @@ class MixpanelService {
         people.set('device_model', _deviceModel);
         people.set('os_version', _osVersion);
 
-        // Si es un usuario nuevo, registrar fecha de creación
         if (isNewUser) {
           people.set('created_at', DateTime.now().toIso8601String());
           people.set('is_new_user', true);
         }
 
-        // Establecer propiedades adicionales si existen
         if (additionalUserProperties != null) {
           additionalUserProperties.forEach((key, value) {
             people.set(key, value);
           });
         }
 
-        // Incrementar contador de sesiones
         people.increment('\$session_count', 1.0);
 
-        debugPrint('👤 User identified in Mixpanel with full details: $userId');
-
-        // Registrar evento de identificación exitosa
         trackEvent('User Identified', {
           'user_id': userId,
           'has_name': name != null,
@@ -238,12 +184,11 @@ class MixpanelService {
           'is_new_user': isNewUser,
         });
       } catch (e) {
-        debugPrint('❌ Error identifying user with details in Mixpanel: $e');
+        // Silently handle identification errors
       }
     }
   }
 
-  /// Actualizar una propiedad específica del perfil del usuario
   Future<void> updateUserProperty(String property, dynamic value) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -252,14 +197,12 @@ class MixpanelService {
     if (_mixpanel != null) {
       try {
         _mixpanel!.getPeople().set(property, value);
-        debugPrint('👤 User property updated in Mixpanel: $property');
       } catch (e) {
-        debugPrint('❌ Error updating user property in Mixpanel: $e');
+        // Silently handle property update errors
       }
     }
   }
 
-  /// Incrementar una propiedad numérica del perfil del usuario
   Future<void> incrementUserProperty(String property, double value) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -268,14 +211,12 @@ class MixpanelService {
     if (_mixpanel != null) {
       try {
         _mixpanel!.getPeople().increment(property, value);
-        debugPrint('👤 User property incremented in Mixpanel: $property');
       } catch (e) {
-        debugPrint('❌ Error incrementing user property in Mixpanel: $e');
+        // Silently handle increment errors
       }
     }
   }
 
-  /// Añadir un valor a una lista en el perfil del usuario
   Future<void> appendToUserList(String property, dynamic value) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -284,14 +225,12 @@ class MixpanelService {
     if (_mixpanel != null) {
       try {
         _mixpanel!.getPeople().append(property, value);
-        debugPrint('👤 Value appended to user list in Mixpanel: $property');
       } catch (e) {
-        debugPrint('❌ Error appending to user list in Mixpanel: $e');
+        // Silently handle append errors
       }
     }
   }
 
-  // Trackear propiedades del usuario
   Future<void> setUserProperties(Map<String, dynamic> properties) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -302,14 +241,12 @@ class MixpanelService {
         properties.forEach((key, value) {
           _mixpanel!.getPeople().set(key, value);
         });
-        debugPrint('👤 User properties set in Mixpanel');
       } catch (e) {
-        debugPrint('❌ Error setting user properties in Mixpanel: $e');
+        // Silently handle property setting errors
       }
     }
   }
 
-  // Trackear acciones específicas del usuario
   Future<void> trackUserAction(
     String action, [
     Map<String, dynamic>? properties,
@@ -327,7 +264,6 @@ class MixpanelService {
     _safeTrack('User Action', actionProperties);
   }
 
-  // Trackear errores de la aplicación
   Future<void> trackError(
     String errorType,
     String errorMessage, [
@@ -347,7 +283,6 @@ class MixpanelService {
     _safeTrack('Error', errorProperties);
   }
 
-  // Trackear métricas de rendimiento
   Future<void> trackPerformance(
     String metricName,
     int valueMs, [
@@ -367,7 +302,6 @@ class MixpanelService {
     _safeTrack('Performance', perfProperties);
   }
 
-  // Trackear uso de características
   Future<void> trackFeatureUsage(
     String featureName, [
     Map<String, dynamic>? usageInfo,
@@ -385,14 +319,12 @@ class MixpanelService {
     _safeTrack('Feature Usage', featureProperties);
   }
 
-  // Trackear la instalación de la app
   Future<void> trackInstall() async {
     if (!_initialized || _mixpanel == null) {
       await init();
     }
 
     if (_mixpanel != null && _deviceId != null) {
-      // Usamos distinctId para asegurar que solo registramos una instalación por dispositivo
       final distinctId = _mixpanel!.getDistinctId();
 
       _mixpanel!.track(
@@ -403,78 +335,40 @@ class MixpanelService {
           'distinct_id': distinctId,
         },
       );
-
-      debugPrint('📱 App installation tracked');
     }
   }
 
-  // Método seguro que no falla si Mixpanel no está inicializado
   Future<void> _safeTrack(
     String eventName,
     Map<String, dynamic>? properties,
   ) async {
-    debugPrint(
-      '🔍 Mixpanel _safeTrack: Intentando trackear evento: $eventName',
-    );
-
-    // Si no está inicializado, intentar inicializar una vez más
     if (!_initialized || _mixpanel == null) {
-      debugPrint(
-        '⚠️ Mixpanel not initialized for event: $eventName, attempting to initialize',
-      );
       try {
-        // Intentar inicializar pero con un timeout muy corto para no bloquear la UI
         await init().timeout(
           Duration(seconds: 1),
           onTimeout: () {
-            debugPrint(
-              '⚠️ Mixpanel: Timeout al reinicializar para evento: $eventName',
-            );
             throw TimeoutException('Mixpanel re-initialization timed out');
           },
         );
       } catch (e) {
-        debugPrint(
-          '❌ Failed to initialize Mixpanel for event: $eventName - Error: $e',
-        );
-        return; // Si falla, simplemente salimos sin registrar el evento
+        return;
       }
     }
 
-    // Si Mixpanel sigue sin inicializarse, no registramos el evento
-    if (_mixpanel == null) {
-      debugPrint(
-        '⚠️ Skipping event tracking: $eventName (Mixpanel not available)',
-      );
-      return;
-    }
+    if (_mixpanel == null) return;
 
     try {
-      // Añadir timestamp a todas las propiedades si no lo tiene
       final Map<String, dynamic> enrichedProperties = {
         'timestamp': DateTime.now().toIso8601String(),
         ...?properties,
       };
 
-      // Enviar el evento a Mixpanel
       _mixpanel!.track(eventName, properties: enrichedProperties);
-      debugPrint(
-        '✅ Mixpanel _safeTrack: Evento "$eventName" enviado exitosamente',
-      );
-
-      // Verificar el estado de la instancia
-      final distinctId = await _mixpanel!.getDistinctId();
-      debugPrint('🔍 Mixpanel: distinctId actual: $distinctId');
     } catch (e) {
-      debugPrint('❌ Error tracking event $eventName: $e');
-      if (e is Error) {
-        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
-      }
-      // No relanzamos la excepción para no afectar la UI
+      // Silently handle tracking errors
     }
   }
 
-  // Trackear usuario activo (llamar cuando la aplicación se inicie)
   Future<void> trackActiveUser() async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -483,7 +377,6 @@ class MixpanelService {
     _safeTrack('Active User', {'timestamp': DateTime.now().toIso8601String()});
   }
 
-  // Trackear vistas de pantalla
   Future<void> trackScreen(String screenName) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -495,21 +388,13 @@ class MixpanelService {
     });
   }
 
-  // Método general para trackear eventos personalizados
   Future<void> trackEvent(
     String eventName, [
     Map<String, dynamic>? properties,
   ]) async {
-    debugPrint('🔍 Mixpanel: Intentando trackear evento: $eventName');
-    // Intenta trackear directamente (modo sincrónico)
     try {
       if (!_initialized || _mixpanel == null) {
-        debugPrint(
-          '🔍 Mixpanel: No inicializado, intentando inicializar para evento: $eventName',
-        );
-        await init().catchError((e) {
-          debugPrint('🔍 Mixpanel: Error al inicializar para evento: $e');
-        });
+        await init().catchError((e) {});
       }
 
       final Map<String, dynamic> enrichedProperties = {
@@ -517,80 +402,46 @@ class MixpanelService {
         ...?properties,
       };
 
-      debugPrint(
-        '🔍 Mixpanel: Estado antes de enviar evento: inicializado=${_initialized}, instancia=${_mixpanel != null}',
-      );
-
-      // Tracking inmediato (para acciones críticas como auth)
       if (_mixpanel != null) {
         _mixpanel!.track(eventName, properties: enrichedProperties);
-        debugPrint('✅ Mixpanel: Evento "$eventName" trackeado sincrónicamente');
-      } else {
-        debugPrint(
-          '⚠️ Mixpanel: No se pudo trackear "$eventName" - instancia null',
-        );
       }
     } catch (e) {
-      debugPrint('❌ Error en trackEvent sincrónico ($eventName): $e');
-      if (e is Error) {
-        debugPrint('❌ Mixpanel Error Stack: ${e.stackTrace}');
-      }
-      // Intentar en segundo plano si falla el modo sincrónico
       _trackEventAsync(eventName, properties);
     }
   }
 
-  // Método interno para trackear en segundo plano
   void _trackEventAsync(String eventName, [Map<String, dynamic>? properties]) {
-    // Ejecutamos en microtask para no bloquear
     Future.microtask(() async {
       try {
-        // Delegamos el trabajo al método seguro
         await _safeTrack(eventName, properties);
       } catch (e) {
-        // Capturar cualquier error para no afectar la UI
-        debugPrint('❌ Error en _trackEventAsync($eventName): $e');
+        // Silently handle async tracking errors
       }
     });
   }
 
-  // Cerrar sesión (llamar cuando el usuario cierre sesión)
   Future<void> logout() async {
-    // Intentar registrar el evento de logout antes de resetear
     if (_initialized && _mixpanel != null) {
       try {
-        // Crear un evento de logout para registrar la acción
         final Map<String, dynamic> logoutProperties = {
           'logout_timestamp': DateTime.now().toIso8601String(),
-          'user_id_before_reset':
-              await _mixpanel!.getDistinctId(), // Obtener el ID antes del reset
+          'user_id_before_reset': await _mixpanel!.getDistinctId(),
         };
-        // Usar _safeTrack para asegurar que se intente enviar incluso si hay problemas
         await _safeTrack('User Logged Out', logoutProperties);
       } catch (e) {
-        debugPrint('❌ Error tracking logout event: $e');
+        // Silently handle logout tracking errors
       }
     }
 
-    // Proceder con el reseteo de Mixpanel
     if (_mixpanel != null) {
       try {
         await _mixpanel!.reset();
-        debugPrint('👋 User session reset in Mixpanel');
       } catch (e) {
-        debugPrint('❌ Error resetting Mixpanel session: $e');
+        // Silently handle reset errors
       }
-    } else {
-      debugPrint('⚠️ Mixpanel instance was null, nothing to reset.');
     }
-
-    // No es necesario llamar a init() aquí, ya que el objetivo es limpiar la sesión.
-    // La próxima acción que requiera Mixpanel (ej. nuevo login) se encargará de inicializar si es necesario.
   }
 
-  // MÉTODOS ESPECÍFICOS PARA TRACKING DE PINTURAS
-
-  // Trackear búsqueda de pinturas
   Future<void> trackPaintSearch(
     String searchTerm,
     int resultsCount, [
@@ -610,7 +461,6 @@ class MixpanelService {
     _safeTrack('Paint Search', searchProperties);
   }
 
-  // Trackear detalles de pintura vistos
   Future<void> trackPaintView(
     String paintId,
     String paintName,
@@ -632,7 +482,6 @@ class MixpanelService {
     _safeTrack('Paint View', viewProperties);
   }
 
-  // Trackear adición de pintura al inventario
   Future<void> trackPaintAddedToInventory(
     String paintId,
     String paintName,
@@ -651,16 +500,14 @@ class MixpanelService {
 
     _safeTrack('Paint Added To Inventory', addProperties);
 
-    // También incrementamos contador en el perfil de usuario
     try {
       _mixpanel!.getPeople().increment('paints_in_inventory', 1);
       _mixpanel!.getPeople().append('brands_owned', brand);
     } catch (e) {
-      debugPrint('❌ Error updating user profile inventory stats: $e');
+      // Silently handle inventory tracking errors
     }
   }
 
-  // Trackear eliminación de pintura del inventario
   Future<void> trackPaintRemovedFromInventory(
     String paintId,
     String paintName,
@@ -679,15 +526,13 @@ class MixpanelService {
 
     _safeTrack('Paint Removed From Inventory', removeProperties);
 
-    // Decremento del contador en el perfil
     try {
       _mixpanel!.getPeople().increment('paints_in_inventory', -1);
     } catch (e) {
-      debugPrint('❌ Error updating user profile inventory stats: $e');
+      // Silently handle inventory tracking errors
     }
   }
 
-  // Trackear adición de pintura a wishlist
   Future<void> trackPaintAddedToWishlist(
     String paintId,
     String paintName,
@@ -706,15 +551,13 @@ class MixpanelService {
 
     _safeTrack('Paint Added To Wishlist', wishlistProperties);
 
-    // Incrementamos contador en el perfil
     try {
       _mixpanel!.getPeople().increment('paints_in_wishlist', 1);
     } catch (e) {
-      debugPrint('❌ Error updating user profile wishlist stats: $e');
+      // Silently handle wishlist tracking errors
     }
   }
 
-  // Trackear búsqueda por color
   Future<void> trackColorSearch(String hexColor, int resultsCount) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -729,7 +572,6 @@ class MixpanelService {
     _safeTrack('Color Search', colorSearchProperties);
   }
 
-  // Trackear uso del escáner de código de barras
   Future<void> trackBarcodeScanned(
     String barcode,
     bool paintFound, [
@@ -757,7 +599,6 @@ class MixpanelService {
     _safeTrack('Barcode Scanned', barcodeProperties);
   }
 
-  // Trackear creación de paleta
   Future<void> trackPaletteCreated(String paletteName, int colorCount) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -771,17 +612,13 @@ class MixpanelService {
 
     _safeTrack('Palette Created', paletteProperties);
 
-    // Incrementamos contador en el perfil
     try {
       _mixpanel!.getPeople().increment('palettes_created', 1);
     } catch (e) {
-      debugPrint('❌ Error updating user profile palette stats: $e');
+      // Silently handle palette tracking errors
     }
   }
 
-  // MÉTODO PRIORITARIO 1: TRACKING DE BARCODES NO ENCONTRADOS
-  /// Trackea cuando un usuario escanea un barcode que no se encuentra en la base de datos
-  /// Esto es crucial para identificar productos que deberían añadirse al catálogo
   Future<void> trackBarcodeNotFound(
     String barcode, {
     String? contextScreen,
@@ -803,20 +640,16 @@ class MixpanelService {
 
     _safeTrack('Barcode Not Found', properties);
 
-    // Incrementar contador global de barcodes no encontrados
     try {
       _mixpanel!.getPeople().increment('barcodes_not_found_count', 1.0);
-      // También guardar el barcode en un array para análisis posterior
       _mixpanel!.getPeople().append('barcodes_not_found', barcode);
     } catch (e) {
-      debugPrint('❌ Error updating barcode stats: $e');
+      // Silently handle barcode tracking errors
     }
   }
 
-  // MÉTODO PRIORITARIO 2: ANÁLISIS DETALLADO DEL SCANNER
-  /// Trackea problemas y uso del scanner de barcodes para mejorar esta funcionalidad
   Future<void> trackScannerActivity(
-    String activityType, { // success, error, permission_denied, timeout
+    String activityType, {
     String? barcode,
     String? paintId,
     String? paintName,
@@ -843,29 +676,23 @@ class MixpanelService {
 
     _safeTrack('Scanner Activity', properties);
 
-    if (activityType == 'success') {
-      try {
+    try {
+      if (activityType == 'success') {
         _mixpanel!.getPeople().increment('successful_scans', 1.0);
-      } catch (e) {
-        debugPrint('❌ Error updating scan success stats: $e');
-      }
-    } else if (activityType == 'error') {
-      try {
+      } else if (activityType == 'error') {
         _mixpanel!.getPeople().increment('failed_scans', 1.0);
-      } catch (e) {
-        debugPrint('❌ Error updating scan error stats: $e');
       }
+    } catch (e) {
+      // Silently handle scanner tracking errors
     }
   }
 
-  // MÉTODO PRIORITARIO 3: TRACKING DE PINTURAS POPULARES
-  /// Trackea interacciones con pinturas para determinar cuáles son más populares
   Future<void> trackPaintInteraction(
     String paintId,
     String paintName,
     String brand,
-    String interactionType, { // viewed, searched, added, removed, favorited
-    String? source, // inventory, library, scanner, search
+    String interactionType, {
+    String? source,
     Map<String, dynamic>? additionalData,
   }) async {
     if (!_initialized || _mixpanel == null) {
@@ -884,30 +711,22 @@ class MixpanelService {
 
     _safeTrack('Paint Interaction', properties);
 
-    // Actualizar listas por marca en el perfil del usuario
     try {
-      // Si es una interacción de vista o búsqueda, incrementar contador
       if (interactionType == 'viewed' || interactionType == 'searched') {
         _mixpanel!.getPeople().increment('paints_viewed_count', 1.0);
       }
 
-      // Mantener un registro de marcas con las que el usuario interactúa
       _mixpanel!.getPeople().append('brands_interacted', brand);
 
-      // Mantener un registro de pinturas vistas recientemente (últimas 20)
-      // Esto es útil para recomendaciones y análisis de comportamiento
       if (interactionType == 'viewed') {
-        // Mecanismo simple para evitar duplicaciones en el último día
-        // Normalmente esto se haría con una operación union en el backend
         final recentViewKey = 'recent_paints_$brand';
         _mixpanel!.getPeople().append(recentViewKey, '$paintId:$paintName');
       }
     } catch (e) {
-      debugPrint('❌ Error updating paint interaction stats: $e');
+      // Silently handle paint interaction tracking errors
     }
   }
 
-  /// Trackea búsquedas por color realizadas por el usuario
   Future<void> trackColorSearchDetailed(
     String hexColor,
     int resultsCount, {
@@ -938,17 +757,14 @@ class MixpanelService {
 
     try {
       _mixpanel!.getPeople().increment('color_searches', 1.0);
-      // Guardar colores buscados recientemente para análisis
       _mixpanel!.getPeople().append('colors_searched', hexColor);
     } catch (e) {
-      debugPrint('❌ Error updating color search stats: $e');
+      // Silently handle color search tracking errors
     }
   }
 
-  /// Trackea actividad en el inventario para entender cómo lo usan los usuarios
   Future<void> trackInventoryActivity(
-    String
-    activityType, { // filter, sort, search, bulk_add, bulk_delete, export, import
+    String activityType, {
     int? itemsAffected,
     String? filterCriteria,
     int? timeTakenSeconds,
@@ -969,31 +785,25 @@ class MixpanelService {
 
     _safeTrack('Inventory Activity', properties);
 
-    // Ciertas acciones pueden justificar actualizaciones al perfil
-    if (activityType == 'bulk_add' && itemsAffected != null) {
-      try {
+    try {
+      if (activityType == 'bulk_add' && itemsAffected != null) {
         _mixpanel!.getPeople().increment('inventory_bulk_adds', 1.0);
         _mixpanel!.getPeople().increment(
           'total_paints_added',
           itemsAffected.toDouble(),
         );
-      } catch (e) {
-        debugPrint('❌ Error updating inventory activity stats: $e');
-      }
-    } else if (activityType == 'export') {
-      try {
+      } else if (activityType == 'export') {
         _mixpanel!.getPeople().increment('inventory_exports', 1.0);
         _mixpanel!.getPeople().set(
           'last_inventory_export',
           DateTime.now().toIso8601String(),
         );
-      } catch (e) {
-        debugPrint('❌ Error updating inventory export stats: $e');
       }
+    } catch (e) {
+      // Silently handle inventory activity tracking errors
     }
   }
 
-  /// Trackea acciones específicas relacionadas con la onboarding y retención
   Future<void> trackOnboardingProgress(
     String stage,
     bool completed, {
@@ -1024,11 +834,10 @@ class MixpanelService {
         _mixpanel!.getPeople().set('skipped_stage_$stage', skippedReason);
       }
     } catch (e) {
-      debugPrint('❌ Error updating onboarding stats: $e');
+      // Silently handle onboarding tracking errors
     }
   }
 
-  /// Trackea problemas específicos de plataforma para iOS/Android
   Future<void> trackPlatformSpecificIssue(
     String feature,
     String issueDescription, {
@@ -1052,18 +861,11 @@ class MixpanelService {
     _safeTrack('Platform Specific Issue', properties);
   }
 
-  // MÉTRICAS DE USO Y COMPORTAMIENTO
-
-  /// Trackea cuando un usuario inicia una nueva sesión en la app
-  /// Debe llamarse en el arranque y después de períodos largos de inactividad
   Future<void> trackSessionStart() async {
     try {
-      // No inicializar Mixpanel si no está inicializado para evitar bloqueos
       if (_initialized && _mixpanel != null) {
-        // Guardar timestamp de inicio para cálculos de duración
         final sessionStartTimestamp = DateTime.now();
 
-        // Tracking directo del evento (crítico para funcionamiento correcto)
         final Map<String, dynamic> properties = {
           'timestamp': sessionStartTimestamp.toIso8601String(),
           'local_time':
@@ -1076,7 +878,6 @@ class MixpanelService {
 
         _mixpanel!.track('Session Start', properties: properties);
 
-        // Usar una microtask para las actualizaciones de perfil que son menos críticas
         Future.microtask(() {
           try {
             if (_mixpanel != null) {
@@ -1087,12 +888,10 @@ class MixpanelService {
               _mixpanel!.getPeople().increment('session_count', 1.0);
             }
           } catch (e) {
-            debugPrint('❌ Error updating session stats: $e');
+            // Silently handle session tracking errors
           }
         });
       } else {
-        // Si no está inicializado, inicializar y luego trackear
-        // Pero hacerlo en segundo plano para no bloquear
         Future.microtask(() async {
           await init().catchError((_) {});
           if (_mixpanel != null) {
@@ -1104,22 +903,17 @@ class MixpanelService {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error tracking session start: $e');
+      // Silently handle session start errors
     }
   }
 
-  /// Trackea cuando un usuario finaliza una sesión
-  /// Debe llamarse cuando la app pasa a segundo plano o se cierra
   Future<void> trackSessionEnd(DateTime sessionStartTime) async {
     try {
-      // No inicializar Mixpanel si no está inicializado para evitar bloqueos
       if (_initialized && _mixpanel != null) {
-        // Calcular duración de la sesión
         final sessionEndTime = DateTime.now();
         final sessionDurationSeconds =
             sessionEndTime.difference(sessionStartTime).inSeconds;
 
-        // Evento principal (crítico)
         final Map<String, dynamic> properties = {
           'session_duration_seconds': sessionDurationSeconds,
           'start_timestamp': sessionStartTime.toIso8601String(),
@@ -1128,7 +922,6 @@ class MixpanelService {
 
         _mixpanel!.track('Session End', properties: properties);
 
-        // Actualizaciones del perfil en segundo plano
         Future.microtask(() {
           try {
             if (_mixpanel != null) {
@@ -1146,19 +939,15 @@ class MixpanelService {
               );
             }
           } catch (e) {
-            debugPrint('❌ Error updating session end stats: $e');
+            // Silently handle session end tracking errors
           }
         });
-      } else {
-        // Si no está inicializado, hacer tracking mínimo
-        debugPrint('⚠️ Session end tracked without active Mixpanel instance');
       }
     } catch (e) {
-      debugPrint('❌ Error tracking session end: $e');
+      // Silently handle session end errors
     }
   }
 
-  /// Trackea cuando un usuario envía una nueva pintura para añadir a la base de datos
   Future<void> trackPaintSubmission(
     String paintName,
     String brand,
@@ -1189,17 +978,15 @@ class MixpanelService {
 
     _safeTrack('Paint Submission', properties);
 
-    // Actualizar estadísticas de contribución del usuario
     try {
       _mixpanel!.getPeople().increment('paints_submitted_count', 1.0);
       _mixpanel!.getPeople().append('paints_submitted', '$paintName ($brand)');
       _mixpanel!.getPeople().append('barcodes_submitted', barcode);
     } catch (e) {
-      debugPrint('❌ Error updating paint submission stats: $e');
+      // Silently handle paint submission tracking errors
     }
   }
 
-  /// Trackea el tiempo que un usuario permanece en una pantalla específica
   Future<void> trackScreenTime(
     String screenName,
     int durationSeconds, {
@@ -1218,18 +1005,16 @@ class MixpanelService {
 
     _safeTrack('Screen Time', properties);
 
-    // Actualizar tiempo acumulado por pantalla
     try {
       _mixpanel!.getPeople().increment(
         'screen_time_$screenName',
         durationSeconds.toDouble(),
       );
     } catch (e) {
-      debugPrint('❌ Error updating screen time stats: $e');
+      // Silently handle screen time tracking errors
     }
   }
 
-  /// Calcula y trackea el tiempo promedio de uso por día
   Future<void> trackAverageUsageTime(
     double averageMinutesPerDay,
     int daysRecorded,
@@ -1246,7 +1031,6 @@ class MixpanelService {
 
     _safeTrack('Average Usage Time', properties);
 
-    // Actualizar promedio en el perfil
     try {
       _mixpanel!.getPeople().set(
         'average_daily_usage_minutes',
@@ -1261,11 +1045,10 @@ class MixpanelService {
         daysRecorded,
       );
     } catch (e) {
-      debugPrint('❌ Error updating average usage stats: $e');
+      // Silently handle usage time tracking errors
     }
   }
 
-  /// Trackea comportamientos específicos de usuario
   Future<void> trackUserBehavior(
     String behaviorType,
     String action, {
@@ -1288,9 +1071,7 @@ class MixpanelService {
 
     _safeTrack('User Behavior', properties);
 
-    // Registrar comportamiento en perfil para segmentación
     try {
-      // Incrementar contador de este comportamiento específico
       if (count != null && count > 0) {
         _mixpanel!.getPeople().increment(
           'behavior_${behaviorType}_${action}_count',
@@ -1298,18 +1079,16 @@ class MixpanelService {
         );
       }
 
-      // Guardar último comportamiento de este tipo
       _mixpanel!.getPeople().set('last_behavior_$behaviorType', action);
       _mixpanel!.getPeople().set(
         'last_behavior_${behaviorType}_time',
         DateTime.now().toIso8601String(),
       );
     } catch (e) {
-      debugPrint('❌ Error updating behavior stats: $e');
+      // Silently handle behavior tracking errors
     }
   }
 
-  /// Trackea cuántas visitas acumula un usuario (útil para análisis de retención)
   Future<void> trackVisitCount(int visitCount, int daysSinceFirstVisit) async {
     if (!_initialized || _mixpanel == null) {
       await init().catchError((_) {});
@@ -1323,7 +1102,6 @@ class MixpanelService {
 
     _safeTrack('Visit Count', properties);
 
-    // Actualizar datos de retención
     try {
       _mixpanel!.getPeople().set('total_visits', visitCount);
       _mixpanel!.getPeople().set('days_since_first_visit', daysSinceFirstVisit);
@@ -1332,13 +1110,12 @@ class MixpanelService {
         daysSinceFirstVisit > 0 ? visitCount / daysSinceFirstVisit : visitCount,
       );
     } catch (e) {
-      debugPrint('❌ Error updating visit count stats: $e');
+      // Silently handle visit count tracking errors
     }
   }
 
-  /// Trackea frecuencia específica de uso (diario, semanal, mensual)
   Future<void> trackUsageFrequency(
-    String frequencyType, // daily, weekly, monthly
+    String frequencyType,
     int visitsInPeriod,
     int activeDaysInPeriod,
   ) async {
@@ -1355,7 +1132,6 @@ class MixpanelService {
 
     _safeTrack('Usage Frequency', properties);
 
-    // Actualizar estadísticas de frecuencia
     try {
       _mixpanel!.getPeople().set('${frequencyType}_visits', visitsInPeriod);
       _mixpanel!.getPeople().set(
@@ -1363,7 +1139,6 @@ class MixpanelService {
         activeDaysInPeriod,
       );
 
-      // Categorizar usuarios por frecuencia
       if (frequencyType == 'daily' && visitsInPeriod >= 5) {
         _mixpanel!.getPeople().set('user_frequency_category', 'daily_user');
       } else if (frequencyType == 'weekly' && visitsInPeriod >= 3) {
@@ -1375,14 +1150,12 @@ class MixpanelService {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error updating frequency stats: $e');
+      // Silently handle frequency tracking errors
     }
   }
 
-  /// Método para verificar si Mixpanel está funcionando correctamente
   Future<bool> isWorking() async {
     try {
-      // Si no está inicializado, intentar inicializar
       if (!_initialized || _mixpanel == null) {
         await init().timeout(
           Duration(seconds: 2),
@@ -1394,12 +1167,10 @@ class MixpanelService {
         );
       }
 
-      // Si sigue sin estar inicializado, no está funcionando
       if (_mixpanel == null) {
         return false;
       }
 
-      // Enviar un evento de diagnóstico
       await _mixpanel!
           .track(
             'Mixpanel_Diagnostic',
@@ -1417,75 +1188,39 @@ class MixpanelService {
             },
           );
 
-      // Si llegamos aquí, Mixpanel está funcionando
-      debugPrint('✅ Mixpanel connection verified successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ Mixpanel connection check failed: $e');
       return false;
     }
   }
 
-  /// Método para reiniciar Mixpanel si no está funcionando
   Future<bool> restart() async {
-    debugPrint('🔄 Attempting to restart Mixpanel...');
-
-    // Reiniciar el estado
     _initialized = false;
     _mixpanel = null;
 
     try {
-      // Intentar inicializar de nuevo
       await init().timeout(Duration(seconds: 5));
-
-      // Verificar si está funcionando
       return await isWorking();
     } catch (e) {
-      debugPrint('❌ Failed to restart Mixpanel: $e');
       return false;
     }
   }
 
-  /// Método de diagnóstico para verificar la configuración de Mixpanel
   Future<bool> runDiagnostics() async {
-    debugPrint(
-      '🔍 Mixpanel DIAGNÓSTICO: Iniciando verificación de conexión...',
-    );
-    debugPrint('🔍 Mixpanel DIAGNÓSTICO: Token: ${_token.substring(0, 8)}...');
-
-    // 1. Verificar que Mixpanel está inicializado
     if (!_initialized || _mixpanel == null) {
-      debugPrint(
-        '⚠️ Mixpanel DIAGNÓSTICO: No inicializado, intentando inicializar',
-      );
       try {
         await init();
       } catch (e) {
-        debugPrint('❌ Mixpanel DIAGNÓSTICO: Falló la inicialización: $e');
         return false;
       }
     }
 
     if (!_initialized || _mixpanel == null) {
-      debugPrint(
-        '❌ Mixpanel DIAGNÓSTICO: Sigue sin estar inicializado después de init()',
-      );
       return false;
     }
 
-    debugPrint('✅ Mixpanel DIAGNÓSTICO: Inicializado correctamente');
-
-    // 2. Verificar si podemos obtener distinctId
     try {
       final distinctId = await _mixpanel!.getDistinctId();
-      debugPrint('✅ Mixpanel DIAGNÓSTICO: Obtenido distinctId: $distinctId');
-    } catch (e) {
-      debugPrint('❌ Mixpanel DIAGNÓSTICO: Error al obtener distinctId: $e');
-      return false;
-    }
-
-    // 3. Intentar enviar un evento de diagnóstico
-    try {
       final eventId = DateTime.now().millisecondsSinceEpoch.toString();
       final eventName = 'DIAGNOSTICO_TEST_$eventId';
 
@@ -1500,28 +1235,209 @@ class MixpanelService {
         },
       );
 
-      debugPrint(
-        '✅ Mixpanel DIAGNÓSTICO: Evento de prueba enviado: $eventName',
-      );
-
-      // 4. Verificar la configuración actual
-      debugPrint('🔍 Mixpanel DIAGNÓSTICO: Configuración actual:');
-      debugPrint(
-        '   - Platform: ${defaultTargetPlatform.toString().split('.').last}',
-      );
-      debugPrint('   - AppVersion: $_appVersion');
-      debugPrint('   - DeviceModel: $_deviceModel');
-
-      // Si llegamos hasta aquí, todo parece estar bien
-      debugPrint(
-        '✅ Mixpanel DIAGNÓSTICO: Verificación completa, todo parece correcto',
-      );
       return true;
     } catch (e) {
-      debugPrint(
-        '❌ Mixpanel DIAGNÓSTICO: Error al enviar evento de prueba: $e',
-      );
       return false;
     }
+  }
+
+  Future<void> setupAutoUserIdentification(
+    Stream<dynamic> authStateChanges,
+  ) async {
+    authStateChanges.listen((user) async {
+      if (user != null) {
+        await _handleUserAuthenticated(user);
+      } else {
+        await _handleUserLoggedOut();
+      }
+    });
+  }
+
+  Future<void> _handleUserAuthenticated(dynamic user) async {
+    try {
+      if (!_initialized || _mixpanel == null) {
+        await init().catchError((_) {});
+      }
+
+      if (_mixpanel != null) {
+        String userId;
+        String? name;
+        String? email;
+        String? phoneNumber;
+        String authProvider = 'unknown';
+        Map<String, dynamic> additionalProperties = {};
+
+        if (user.runtimeType.toString().contains('User') && user.id != null) {
+          userId = user.id;
+          name = user.name?.isNotEmpty == true ? user.name : null;
+          email = user.email?.isNotEmpty == true ? user.email : null;
+          phoneNumber = user.phoneNumber;
+          authProvider = user.authProvider ?? 'unknown';
+
+          additionalProperties.addAll({
+            'creation_time': user.createdAt?.toIso8601String(),
+            'last_login_time': user.lastLoginAt?.toIso8601String(),
+            'profile_image': user.profileImage,
+            'has_preferences': user.preferences != null,
+            'preferences_count': user.preferences?.length ?? 0,
+            'is_guest_user': authProvider == 'guest',
+          });
+        } else {
+          userId =
+              user.uid ??
+              user.id ??
+              'unknown_user_${DateTime.now().millisecondsSinceEpoch}';
+
+          try {
+            name = user.displayName;
+            email = user.email;
+            phoneNumber = user.phoneNumber;
+
+            additionalProperties.addAll({
+              'user_verified': user.emailVerified ?? false,
+              'is_anonymous': user.isAnonymous ?? false,
+              'photo_url': user.photoURL,
+            });
+          } catch (e) {
+            // Silently handle user property extraction errors
+          }
+        }
+
+        await identifyUserWithDetails(
+          userId: userId,
+          name: name,
+          email: email,
+          phoneNumber: phoneNumber,
+          authProvider: authProvider,
+          isNewUser: false,
+          additionalUserProperties: {
+            'auto_identified_at': DateTime.now().toIso8601String(),
+            'identification_source': 'auth_state_change',
+            ...additionalProperties,
+          },
+        );
+      }
+    } catch (e) {
+      // Silently handle user authentication errors
+    }
+  }
+
+  Future<void> _handleUserLoggedOut() async {
+    try {
+      await logout();
+    } catch (e) {
+      // Silently handle logout errors
+    }
+  }
+
+  Future<Map<String, dynamic>> debugUserIdentification() async {
+    if (!_initialized || _mixpanel == null) {
+      return {
+        'status': 'not_initialized',
+        'mixpanel_instance': null,
+        'distinct_id': null,
+      };
+    }
+
+    try {
+      final distinctId = await _mixpanel!.getDistinctId();
+      return {
+        'status': 'initialized',
+        'mixpanel_instance': _mixpanel != null,
+        'distinct_id': distinctId,
+        'device_id': _deviceId,
+        'app_version': _appVersion,
+        'device_model': _deviceModel,
+        'os_version': _osVersion,
+        'initialized': _initialized,
+      };
+    } catch (e) {
+      return {
+        'status': 'error',
+        'error': e.toString(),
+        'mixpanel_instance': _mixpanel != null,
+        'initialized': _initialized,
+      };
+    }
+  }
+
+  Future<void> forceUserReidentification(
+    String userId, {
+    String? name,
+    String? email,
+    String? phoneNumber,
+    String? authProvider,
+    Map<String, dynamic>? additionalProperties,
+  }) async {
+    try {
+      if (!_initialized || _mixpanel == null) {
+        await init();
+      }
+
+      if (_mixpanel != null) {
+        await _mixpanel!.reset();
+
+        await identifyUserWithDetails(
+          userId: userId,
+          name: name,
+          email: email,
+          phoneNumber: phoneNumber,
+          authProvider: authProvider ?? 'unknown',
+          isNewUser: false,
+          additionalUserProperties: {
+            'force_reidentified_at': DateTime.now().toIso8601String(),
+            'reidentification_reason': 'manual_force',
+            ...?additionalProperties,
+          },
+        );
+
+        await trackEvent('Debug_User_Reidentification', {
+          'user_id': userId,
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      throw Exception('Failed to force reidentification: $e');
+    }
+  }
+
+  Future<bool> verifyUserTracking() async {
+    try {
+      if (!_initialized || _mixpanel == null) {
+        return false;
+      }
+
+      final distinctId = await _mixpanel!.getDistinctId();
+
+      await _safeTrack('Debug_Tracking_Verification', {
+        'verification_timestamp': DateTime.now().toIso8601String(),
+        'distinct_id': distinctId,
+        'device_id': _deviceId,
+        'verification_id': '${DateTime.now().millisecondsSinceEpoch}',
+      });
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> getUserIdentificationStats() async {
+    final debug = await debugUserIdentification();
+
+    return {
+      'mixpanel_status': debug['status'],
+      'current_distinct_id': debug['distinct_id'],
+      'initialization_time': _initialized ? 'initialized' : 'not_initialized',
+      'device_info_available': _deviceId != null,
+      'tracking_verification': await verifyUserTracking(),
+      'service_health': {
+        'mixpanel_instance': _mixpanel != null,
+        'device_id': _deviceId,
+        'app_version': _appVersion,
+        'device_model': _deviceModel,
+        'os_version': _osVersion,
+      },
+    };
   }
 }

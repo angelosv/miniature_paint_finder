@@ -45,7 +45,6 @@ class BrandService {
     _addDefaultBrandLogos();
 
     if (_isLoaded && brands.isNotEmpty) {
-      print('✅ Marcas ya están cargadas (${brands.length} variantes)');
       return true;
     }
 
@@ -54,8 +53,6 @@ class BrandService {
 
   /// Añade logotipos predeterminados para marcas conocidas
   void _addDefaultBrandLogos() {
-    print('🔄 Añadiendo logos predeterminados a BrandService');
-
     final defaultLogos = {
       'Army_Painter': 'https://i.imgur.com/OuMPZQh.png', // Logo de Army Painter
       'Citadel_Colour': 'https://i.imgur.com/YOXbGGb.png', // Logo de Citadel
@@ -86,39 +83,19 @@ class BrandService {
         brandLogos[key] = value;
       }
     });
-
-    print('✅ Logotipos predeterminados añadidos: ${defaultLogos.length}');
-    print('🖼️ Brand logos disponibles: ${brandLogos.keys.join(", ")}');
-
-    // Print each logo URL for debugging
-    brandLogos.forEach((key, value) {
-      print('🔹 Logo para "$key": $value');
-    });
   }
 
   /// Obtiene la URL del logo para un brandId específico
   String? getLogoUrl(String brandId) {
     try {
-      print('🔍 BrandService: Buscando logo para brand ID: "$brandId"');
-
       // Intentar obtener directamente
       if (brandLogos.containsKey(brandId)) {
-        final logo = brandLogos[brandId];
-        print('✅ BrandService: Logo encontrado para "$brandId": $logo');
-        return logo;
+        return brandLogos[brandId];
       }
-
-      // Print available logos for debugging
-      print(
-        '📋 BrandService: Logos disponibles: ${brandLogos.keys.join(", ")}',
-      );
 
       // Check for case insensitive matches
       for (final entry in brandLogos.entries) {
         if (entry.key.toLowerCase() == brandId.toLowerCase()) {
-          print(
-            '✅ BrandService: Logo encontrado por coincidencia case-insensitive: ${entry.key}',
-          );
           return entry.value;
         }
       }
@@ -126,9 +103,6 @@ class BrandService {
       // Si no lo encuentra, intentar corregir el brandId
       String correctedId = validateAndCorrectBrandId(brandId, null);
       if (correctedId != brandId && brandLogos.containsKey(correctedId)) {
-        print(
-          '✅ BrandService: Logo encontrado para ID corregido "$correctedId"',
-        );
         return brandLogos[correctedId];
       }
 
@@ -136,18 +110,12 @@ class BrandService {
       for (final entry in brandLogos.entries) {
         if (brandId.toLowerCase().contains(entry.key.toLowerCase()) ||
             entry.key.toLowerCase().contains(brandId.toLowerCase())) {
-          print(
-            '✅ BrandService: Logo encontrado por coincidencia parcial: "${entry.key}" para "$brandId"',
-          );
           return entry.value;
         }
       }
 
-      // No se encontró logo
-      print('⚠️ BrandService: No se encontró logo para "$brandId"');
       return null;
     } catch (e) {
-      print('⚠️ BrandService: Error obteniendo logo URL para $brandId: $e');
       return null;
     }
   }
@@ -157,7 +125,6 @@ class BrandService {
     try {
       // Si ya hay una carga en curso, esperamos su resultado
       if (_loadingCompleter != null) {
-        print('🔄 Ya hay una carga de marcas en curso, esperando...');
         return await _loadingCompleter!.future;
       }
 
@@ -184,7 +151,6 @@ class BrandService {
       _loadingCompleter!.complete(false);
       return false;
     } catch (e) {
-      print('❌ Error cargando marcas: $e');
       if (_loadingCompleter != null && !_loadingCompleter!.isCompleted) {
         _loadingCompleter!.complete(false);
       }
@@ -205,7 +171,6 @@ class BrandService {
       final String? cachedData = prefs.getString(_cacheKey);
 
       if (cachedData == null || cachedData.isEmpty) {
-        print('📝 No se encontró caché de marcas');
         return false;
       }
 
@@ -216,7 +181,6 @@ class BrandService {
       if (!data.containsKey('timestamp') ||
           !data.containsKey('brands') ||
           !data.containsKey('brand_names')) {
-        print('⚠️ Caché de marcas con formato inválido');
         return false;
       }
 
@@ -227,7 +191,6 @@ class BrandService {
       final Duration difference = now.difference(cacheTime);
 
       if (difference.inHours > _cacheExpirationHours) {
-        print('⏰ Caché de marcas expirada (${difference.inHours} horas)');
         return false;
       }
 
@@ -254,12 +217,8 @@ class BrandService {
         });
       }
 
-      print('✅ Marcas cargadas desde caché (${brands.length} variantes)');
-      print('📅 Fecha de la caché: ${cacheTime.toIso8601String()}');
-
       return true;
     } catch (e) {
-      print('❌ Error cargando marcas desde caché: $e');
       return false;
     }
   }
@@ -270,21 +229,16 @@ class BrandService {
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/brand');
 
-      print('🌐 Cargando marcas desde API: $url');
-
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode != 200) {
-        print('❌ Error cargando marcas desde API: ${response.statusCode}');
-        print('   Respuesta: ${response.body}');
         return false;
       }
 
       final List<dynamic> brandsList = json.decode(response.body);
-      print('✅ API retornó ${brandsList.length} marcas');
 
       // Limpiar los mapas existentes
       brands.clear();
@@ -322,12 +276,8 @@ class BrandService {
       // Agregar casos especiales conocidos
       _addSpecialCases();
 
-      print(
-        '✅ Marcas procesadas: ${brands.length} variantes de ${brandNames.length} marcas',
-      );
       return true;
     } catch (e) {
-      print('❌ Error cargando marcas desde API: $e');
       return false;
     }
   }
@@ -373,7 +323,6 @@ class BrandService {
   Future<bool> _saveToCache() async {
     try {
       if (brands.isEmpty || brandNames.isEmpty) {
-        print('⚠️ No hay marcas para guardar en caché');
         return false;
       }
 
@@ -391,10 +340,8 @@ class BrandService {
       final String serialized = json.encode(cacheData);
       await prefs.setString(_cacheKey, serialized);
 
-      print('💾 Marcas guardadas en caché (${brands.length} variantes)');
       return true;
     } catch (e) {
-      print('❌ Error guardando marcas en caché: $e');
       return false;
     }
   }
