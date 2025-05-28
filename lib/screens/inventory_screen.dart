@@ -17,6 +17,7 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
@@ -28,6 +29,7 @@ import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'package:miniature_paint_finder/screens/screen_analytics.dart';
+import 'package:provider/provider.dart';
 
 /// A screen for managing the user's paint inventory.
 ///
@@ -140,16 +142,43 @@ class _InventoryScreenState extends State<InventoryScreen>
       // Track el inicio de la carga del inventario
       final startTime = DateTime.now().millisecondsSinceEpoch;
 
-      await _inventoryService.loadInventory(
-        limit: _currentPageSize,
-        page: _currentPage,
-        searchQuery: _searchController.text,
-        onlyInStock: _onlyShowInStock,
-        brand: _selectedBrand,
-        category: _selectedCategory,
-        minStock: _stockRange.start.toInt(),
-        maxStock: _stockRange.end.toInt(),
+      // Use cache service if available, fallback to direct service
+      final cacheService = Provider.of<InventoryCacheService>(
+        context,
+        listen: false,
       );
+      List<PaintInventoryItem> inventoryItems;
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimized loading
+        inventoryItems = await cacheService.getInventory(
+          limit: _currentPageSize,
+          page: _currentPage,
+          searchQuery:
+              _searchController.text.isNotEmpty ? _searchController.text : null,
+          onlyInStock: _onlyShowInStock,
+          brand: _selectedBrand,
+          category: _selectedCategory,
+        );
+
+        // Update UI with cache status indicators
+        setState(() {
+          // Add cache status to UI if needed
+        });
+      } else {
+        // Fallback to direct API call
+        await _inventoryService.loadInventory(
+          limit: _currentPageSize,
+          page: _currentPage,
+          searchQuery: _searchController.text,
+          onlyInStock: _onlyShowInStock,
+          brand: _selectedBrand,
+          category: _selectedCategory,
+          minStock: _stockRange.start.toInt(),
+          maxStock: _stockRange.end.toInt(),
+        );
+        inventoryItems = _inventoryService.inventory;
+      }
 
       // Calcular tiempo de carga
       final endTime = DateTime.now().millisecondsSinceEpoch;
@@ -163,14 +192,17 @@ class _InventoryScreenState extends State<InventoryScreen>
         'filter_brand': _selectedBrand,
         'filter_category': _selectedCategory,
         'filter_stock_only': _onlyShowInStock,
-        'item_count': _inventoryService.inventory.length,
+        'item_count': inventoryItems.length,
         'total_pages': _inventoryService.totalPages,
+        'cache_used': cacheService.isInitialized,
+        'has_connection': cacheService.hasConnection,
+        'pending_operations': cacheService.pendingOperationsCount,
       });
 
       // Nuevo tracking detallado de actividad en el inventario
       _analytics.trackInventoryActivity(
         'load',
-        itemsAffected: _inventoryService.inventory.length,
+        itemsAffected: inventoryItems.length,
         timeTakenSeconds: (loadTimeMs / 1000).round(),
         additionalInfo: {
           'page': _currentPage,
@@ -181,10 +213,12 @@ class _InventoryScreenState extends State<InventoryScreen>
               _selectedBrand != null ||
               _selectedCategory != null ||
               _onlyShowInStock,
+          'cache_used': cacheService.isInitialized,
+          'offline_mode': !cacheService.hasConnection,
         },
       );
 
-      _filteredInventory = _inventoryService.inventory;
+      _filteredInventory = inventoryItems;
       _uniqueCategories = _inventoryService.getUniqueCategories();
       _uniqueBrands = await _inventoryService.getUniqueBrands();
       _totalPages = _inventoryService.totalPages;
@@ -435,11 +469,24 @@ class _InventoryScreenState extends State<InventoryScreen>
       'action': stockAction,
     });
 
-    // Update stock through service
-    bool success = await _inventoryService.updateStockFromApi(
-      item.id,
-      newStock,
+    // Use cache service for optimistic updates if available
+    final cacheService = Provider.of<InventoryCacheService>(
+      context,
+      listen: false,
     );
+    bool success = false;
+
+    if (cacheService.isInitialized) {
+      // Use cache service for optimistic update and automatic sync
+      success = await cacheService.updateInventoryItem(
+        item.id,
+        newStock,
+        notes: item.notes,
+      );
+    } else {
+      // Fallback to direct API call
+      success = await _inventoryService.updateStockFromApi(item.id, newStock);
+    }
 
     if (success) {
       setState(() {
@@ -486,8 +533,24 @@ class _InventoryScreenState extends State<InventoryScreen>
       'notes_length': notes.length,
     });
 
-    // Update notes through service
-    bool success = await _inventoryService.updateNotesFromApi(item.id, notes);
+    // Use cache service for optimistic updates if available
+    final cacheService = Provider.of<InventoryCacheService>(
+      context,
+      listen: false,
+    );
+    bool success = false;
+
+    if (cacheService.isInitialized) {
+      // Use cache service for optimistic update and automatic sync
+      success = await cacheService.updateInventoryItem(
+        item.id,
+        item.stock,
+        notes: notes,
+      );
+    } else {
+      // Fallback to direct API call
+      success = await _inventoryService.updateNotesFromApi(item.id, notes);
+    }
 
     if (success) {
       setState(() {

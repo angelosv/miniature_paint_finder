@@ -4,14 +4,16 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
-import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 class PaintCard extends StatefulWidget {
   final Paint paint;
@@ -204,19 +206,49 @@ class _PaintCardState extends State<PaintCard> {
                               return null;
                             }
                           } else {
-                            final brandId = _brandManager
-                                .determineBrandIdForPaint(paint);
-                            final inventoryId = await _inventoryService
-                                .addInventoryRecordReturningId(
-                                  brandId: brandId,
-                                  paintId: paint.id,
-                                  quantity: quantity,
-                                  notes: (notes as String?) ?? '',
+                            // Use cache service for optimistic updates and automatic sync
+                            final cacheService =
+                                Provider.of<InventoryCacheService>(
+                                  context,
+                                  listen: false,
                                 );
-                            if (inventoryId != null) {
-                              newId = inventoryId;
+
+                            if (cacheService.isInitialized) {
+                              // Use cache service for optimistic update
+                              final success = await cacheService
+                                  .addInventoryItem(
+                                    _brandManager.determineBrandIdForPaint(
+                                      paint,
+                                    ),
+                                    paint.id,
+                                    quantity,
+                                    notes: (notes as String?) ?? '',
+                                  );
+
+                              if (success) {
+                                // For UI consistency, we need an ID - using timestamp as placeholder
+                                newId =
+                                    DateTime.now().millisecondsSinceEpoch
+                                        .toString();
+                              } else {
+                                return null;
+                              }
                             } else {
-                              return null;
+                              // Fallback to direct service
+                              final brandId = _brandManager
+                                  .determineBrandIdForPaint(paint);
+                              final inventoryId = await _inventoryService
+                                  .addInventoryRecordReturningId(
+                                    brandId: brandId,
+                                    paintId: paint.id,
+                                    quantity: quantity,
+                                    notes: (notes as String?) ?? '',
+                                  );
+                              if (inventoryId != null) {
+                                newId = inventoryId;
+                              } else {
+                                return null;
+                              }
                             }
                           }
 
@@ -556,17 +588,49 @@ class _PaintCardState extends State<PaintCard> {
                                 return null;
                               }
                             } else {
-                              final inventoryId = await _inventoryService
-                                  .addInventoryRecordReturningId(
-                                    brandId: paint.brandId as String,
-                                    paintId: paint.id,
-                                    quantity: quantity,
-                                    notes: notes as String,
+                              // Use cache service for optimistic updates and automatic sync
+                              final cacheService =
+                                  Provider.of<InventoryCacheService>(
+                                    context,
+                                    listen: false,
                                   );
-                              if (inventoryId != null) {
-                                newId = inventoryId;
+
+                              if (cacheService.isInitialized) {
+                                // Use cache service for optimistic update
+                                final success = await cacheService
+                                    .addInventoryItem(
+                                      _brandManager.determineBrandIdForPaint(
+                                        paint,
+                                      ),
+                                      paint.id,
+                                      quantity,
+                                      notes: (notes as String?) ?? '',
+                                    );
+
+                                if (success) {
+                                  // For UI consistency, we need an ID - using timestamp as placeholder
+                                  newId =
+                                      DateTime.now().millisecondsSinceEpoch
+                                          .toString();
+                                } else {
+                                  return null;
+                                }
                               } else {
-                                return null;
+                                // Fallback to direct service
+                                final brandId = _brandManager
+                                    .determineBrandIdForPaint(paint);
+                                final inventoryId = await _inventoryService
+                                    .addInventoryRecordReturningId(
+                                      brandId: brandId,
+                                      paintId: paint.id,
+                                      quantity: quantity,
+                                      notes: (notes as String?) ?? '',
+                                    );
+                                if (inventoryId != null) {
+                                  newId = inventoryId;
+                                } else {
+                                  return null;
+                                }
                               }
                             }
 

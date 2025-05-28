@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
@@ -273,13 +275,34 @@ class _WishlistScreenState extends State<WishlistScreen> {
         print(
           '🔄 Adding ${paint.name} to inventory, quantity: ${result['quantity']}',
         );
-        final success = await _inventoryService.addInventoryRecord(
-          brandId: brandId,
-          paintId: paint.id,
-          quantity: result['quantity'] as int,
-          notes: result['note'] as String?,
+
+        // Use cache service for optimistic updates and automatic sync
+        final cacheService = Provider.of<InventoryCacheService>(
+          context,
+          listen: false,
         );
-        print('✅ Paint added to inventory');
+        bool success = false;
+
+        if (cacheService.isInitialized) {
+          // Use cache service for optimistic update
+          success = await cacheService.addInventoryItem(
+            brandId,
+            paint.id,
+            result['quantity'] as int,
+            notes: result['note'] as String?,
+          );
+          print('✅ Paint added to inventory via cache');
+        } else {
+          // Fallback to direct service
+          success = await _inventoryService.addInventoryRecord(
+            brandId: brandId,
+            paintId: paint.id,
+            quantity: result['quantity'] as int,
+            notes: result['note'] as String?,
+          );
+          print('✅ Paint added to inventory');
+        }
+
         final controller = context.read<WishlistController>();
         await controller.removeFromWishlist(paint.id, _id);
         if (success) {

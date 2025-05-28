@@ -10,6 +10,7 @@ import 'package:miniature_paint_finder/services/barcode_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -482,21 +483,54 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             paletteName: widget.paletteName,
             onAddToInventory: (paint, quantity, note) async {
               try {
-                final success = await _inventoryService.addInventoryRecord(
-                  brandId: paint.brandId ?? '',
-                  paintId: paint.id,
-                  quantity: quantity,
-                  notes: note ?? '',
+                // Use cache service for optimistic updates and automatic sync
+                final cacheService = Provider.of<InventoryCacheService>(
+                  context,
+                  listen: false,
                 );
-                print('✅ Inventory add result: $success');
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Paint added to inventory!'),
-                      backgroundColor: Colors.green,
-                    ),
+                if (cacheService.isInitialized) {
+                  // Use cache service for optimistic update
+                  final success = await cacheService.addInventoryItem(
+                    paint.brandId ?? '',
+                    paint.id,
+                    quantity,
+                    notes: note,
                   );
+
+                  if (success) {
+                    print('✅ Inventory add result via cache: $success');
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Paint added to inventory!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    throw Exception('Failed to add to inventory');
+                  }
+                } else {
+                  // Fallback to direct service
+                  final success = await _inventoryService.addInventoryRecord(
+                    brandId: paint.brandId ?? '',
+                    paintId: paint.id,
+                    quantity: quantity,
+                    notes: note ?? '',
+                  );
+
+                  print('✅ Inventory add result: $success');
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Paint added to inventory!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 }
 
                 Navigator.pop(context);

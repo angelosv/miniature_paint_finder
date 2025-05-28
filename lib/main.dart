@@ -16,6 +16,8 @@ import 'package:miniature_paint_finder/screens/debug_analytics_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/services/library_cache_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -95,14 +97,24 @@ void main() async {
     paintApiService,
   );
 
+  // Initialize the inventory cache service
+  final InventoryService inventoryService = InventoryService();
+  final InventoryCacheService inventoryCacheService = InventoryCacheService(
+    inventoryService,
+  );
+
   // Initialize cache in background without blocking app startup
   Future.microtask(() async {
     try {
       debugPrint('🚀 Starting library cache initialization...');
       await libraryCacheService.initialize();
       debugPrint('✅ Library cache service initialized successfully');
+
+      debugPrint('🚀 Starting inventory cache initialization...');
+      await inventoryCacheService.initialize();
+      debugPrint('✅ Inventory cache service initialized successfully');
     } catch (e) {
-      debugPrint('❌ Error initializing library cache service: $e');
+      debugPrint('❌ Error initializing cache services: $e');
     }
   });
 
@@ -133,6 +145,9 @@ void main() async {
         ChangeNotifierProvider<LibraryCacheService>.value(
           value: libraryCacheService,
         ),
+        ChangeNotifierProvider<InventoryCacheService>.value(
+          value: inventoryCacheService,
+        ),
         Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
           create: (context) => PaletteController(paletteRepository),
@@ -152,6 +167,7 @@ void main() async {
       child: MyAppWrapper(
         apiService: apiService,
         cacheService: libraryCacheService,
+        inventoryCacheService: inventoryCacheService,
       ),
     ),
   );
@@ -161,8 +177,13 @@ void main() async {
 class MyAppWrapper extends StatefulWidget {
   final ApiService apiService;
   final LibraryCacheService cacheService;
+  final InventoryCacheService inventoryCacheService;
 
-  const MyAppWrapper({required this.apiService, required this.cacheService});
+  const MyAppWrapper({
+    required this.apiService,
+    required this.cacheService,
+    required this.inventoryCacheService,
+  });
 
   @override
   _MyAppWrapperState createState() => _MyAppWrapperState();

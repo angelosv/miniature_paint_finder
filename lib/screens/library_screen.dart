@@ -15,6 +15,7 @@ import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/components/brand_card.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:miniature_paint_finder/services/library_cache_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -928,20 +929,46 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     try {
-      await _inventoryService.addPaintToInventory(paint);
-
-      await _inventoryService.addInventoryRecord(
-        brandId: paint.brandId ?? '',
-        paintId: paint.id,
-        quantity: 1,
+      // Use cache service for optimistic updates and automatic sync
+      final cacheService = Provider.of<InventoryCacheService>(
+        context,
+        listen: false,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added ${paint.name} to your inventory'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (cacheService.isInitialized) {
+        // Use cache service for optimistic update
+        final success = await cacheService.addInventoryItem(
+          paint.brandId ?? '',
+          paint.id,
+          1,
+        );
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added ${paint.name} to your inventory'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          throw Exception('Failed to add to inventory');
+        }
+      } else {
+        // Fallback to direct service
+        await _inventoryService.addPaintToInventory(paint);
+        await _inventoryService.addInventoryRecord(
+          brandId: paint.brandId ?? '',
+          paintId: paint.id,
+          quantity: 1,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added ${paint.name} to your inventory'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
