@@ -15,6 +15,7 @@ import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/debug_analytics_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
+import 'package:miniature_paint_finder/services/library_cache_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -28,7 +29,6 @@ import 'package:miniature_paint_finder/services/push_notification_service.dart'
     show firebaseMessagingBackgroundHandler;
 import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
-import 'package:miniature_paint_finder/utils/analytics_route_observer.dart';
 import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -90,6 +90,22 @@ void main() async {
   final PaletteRepository paletteRepository = ApiPaletteRepository(apiService);
   final PaintApiService paintApiService = PaintApiService();
 
+  // Initialize the library cache service
+  final LibraryCacheService libraryCacheService = LibraryCacheService(
+    paintApiService,
+  );
+
+  // Initialize cache in background without blocking app startup
+  Future.microtask(() async {
+    try {
+      debugPrint('🚀 Starting library cache initialization...');
+      await libraryCacheService.initialize();
+      debugPrint('✅ Library cache service initialized successfully');
+    } catch (e) {
+      debugPrint('❌ Error initializing library cache service: $e');
+    }
+  });
+
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -114,12 +130,17 @@ void main() async {
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
         Provider<PaintApiService>.value(value: paintApiService),
+        ChangeNotifierProvider<LibraryCacheService>.value(
+          value: libraryCacheService,
+        ),
         Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
           create: (context) => PaletteController(paletteRepository),
         ),
         ChangeNotifierProvider(
-          create: (context) => PaintLibraryController(paintApiService),
+          create:
+              (context) =>
+                  PaintLibraryController(paintApiService, libraryCacheService),
         ),
         ChangeNotifierProvider(
           create: (context) => WishlistController(PaintService()),
@@ -128,7 +149,10 @@ void main() async {
           create: (_) => GuestLogicProvider()..guestLogic = guestLogic,
         ),
       ],
-      child: MyAppWrapper(apiService: apiService),
+      child: MyAppWrapper(
+        apiService: apiService,
+        cacheService: libraryCacheService,
+      ),
     ),
   );
 }
@@ -136,8 +160,9 @@ void main() async {
 /// Este widget maneja el ciclo de vida y observa el estado de la app
 class MyAppWrapper extends StatefulWidget {
   final ApiService apiService;
+  final LibraryCacheService cacheService;
 
-  const MyAppWrapper({required this.apiService});
+  const MyAppWrapper({required this.apiService, required this.cacheService});
 
   @override
   _MyAppWrapperState createState() => _MyAppWrapperState();
@@ -149,7 +174,8 @@ class _MyAppWrapperState extends State<MyAppWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Remove the auth state listener navigation logic that's causing issues
+    // Precargar datos esenciales en background cuando la app está lista
+    _preloadEssentialDataWhenReady();
   }
 
   void getGuestFlag() async {
@@ -175,6 +201,22 @@ class _MyAppWrapperState extends State<MyAppWrapper>
     }
   }
 
+  /// Precarga datos esenciales cuando la app está lista
+  Future<void> _preloadEssentialDataWhenReady() async {
+    // Esperar un poco para que la UI esté completamente renderizada
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    try {
+      debugPrint('🎯 Starting essential data preload...');
+      await widget.cacheService.preloadEssentialData();
+      debugPrint('✅ Essential data preload completed');
+    } catch (e) {
+      debugPrint('❌ Error preloading essential data: $e');
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -185,6 +227,8 @@ class _MyAppWrapperState extends State<MyAppWrapper>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       getGuestFlag();
+      // Trigger background cache update when app is resumed
+      widget.cacheService.updateCacheInBackground();
     }
   }
 
