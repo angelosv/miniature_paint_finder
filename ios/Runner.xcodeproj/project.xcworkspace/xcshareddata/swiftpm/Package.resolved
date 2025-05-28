@@ -1,0 +1,15 @@
+{
+  "originHash" : "163957c01f6f6e8118db6e242a56b4186a3746cdc7f6f9d21d508ff5eda67eb0",
+  "pins" : [
+    {
+      "identity" : "mixpanel-ios-session-replay-package",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mixpanel/mixpanel-ios-session-replay-package",
+      "state" : {
+        "branch" : "main",
+        "revision" : "223be5c4eb2d49629f7a2726da1540a40070ac7c"
+      }
+    }
+  ],
+  "version" : 3
+}

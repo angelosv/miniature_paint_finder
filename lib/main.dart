@@ -259,6 +259,82 @@ class _AuthSplashScreenState extends State<AuthSplashScreen> {
 
     final authService = Provider.of<IAuthService>(context, listen: false);
 
+    // Test Session Replay functionality with detailed logging
+    try {
+      final analyticsService = Provider.of<MixpanelService>(
+        context,
+        listen: false,
+      );
+      debugPrint('🧪 Starting Session Replay test from splash screen...');
+      debugPrint(
+        '🔍 Mixpanel service initialized: ${analyticsService.isInitialized}',
+      );
+
+      // Force initialization if needed
+      if (!analyticsService.isInitialized) {
+        debugPrint('🔄 Force initializing Mixpanel service...');
+        await analyticsService.init();
+      }
+
+      debugPrint('🔍 About to call testSessionReplay...');
+      await analyticsService.testSessionReplay();
+      debugPrint('🔍 testSessionReplay completed');
+
+      // Also test direct session start
+      debugPrint('🔍 Testing direct session start...');
+      await analyticsService.trackSessionStart();
+      debugPrint('🔍 Direct session start completed');
+
+      // Test with manual screenshots and Replay ID
+      debugPrint('🔍 Testing Session Replay with screenshots...');
+      await analyticsService.testSessionReplayWithScreenshots();
+      debugPrint('🔍 Screenshots test completed');
+
+      // Wait a moment and test if we can get replay ID
+      await Future.delayed(Duration(seconds: 2));
+      debugPrint('🔍 Checking for replay activity...');
+
+      // Track additional test event with checkpoint verification
+      debugPrint('🔍 Tracking \$mp_session_record checkpoint event...');
+      await analyticsService.trackEvent('\$mp_session_record', {
+        'manual_checkpoint': true,
+        'test_id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'device_info': analyticsService.deviceId,
+        'app_version': analyticsService.appVersion,
+        'debug_mode': true,
+      });
+      debugPrint('🔍 Session record checkpoint tracked');
+
+      // Track additional test event
+      debugPrint('🔍 Tracking additional test event...');
+      await analyticsService.trackEvent('Session Replay Debug Test', {
+        'test_id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'device_info': analyticsService.deviceId,
+        'app_version': analyticsService.appVersion,
+        'replay_test': 'manual_trigger',
+        'source': 'splash_screen',
+      });
+      debugPrint('🔍 Additional test event tracked');
+
+      // Force flush to ensure events are sent immediately
+      debugPrint('🔍 Force flushing events...');
+      // Note: We would need to add a flush method to MixpanelService
+
+      debugPrint('✅ Session Replay diagnostic test completed');
+      debugPrint('📍 Check Mixpanel dashboard for:');
+      debugPrint(
+        '   - \$mp_session_record event (Session Recording Checkpoint)',
+      );
+      debugPrint('   - Session Replay Debug Test event');
+      debugPrint('   - Latest Replays section on Home page');
+      debugPrint('   - Session Replay tab in project');
+    } catch (e) {
+      debugPrint('❌ Session Replay test failed in splash: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+    }
+
     // Check if user is already authenticated
     if (authService.currentUser != null) {
       // Navigate to home if already logged in

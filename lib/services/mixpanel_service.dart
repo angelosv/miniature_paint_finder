@@ -4,6 +4,7 @@ import 'package:mixpanel_flutter/mixpanel_flutter.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/widgets.dart';
+import 'session_replay_service.dart';
 
 class MixpanelService {
   static const String _token = '570d806261b36af574266b6256137b0d';
@@ -14,6 +15,7 @@ class MixpanelService {
   String? _appVersion;
   String? _deviceModel;
   String? _osVersion;
+  final SessionReplayService _sessionReplay = SessionReplayService.instance;
 
   static MixpanelService get instance => _instance ??= MixpanelService._();
 
@@ -39,6 +41,7 @@ class MixpanelService {
       );
 
       unawaited(_getDeviceInfo());
+      unawaited(_sessionReplay.init());
       _initialized = true;
 
       _mixpanel?.track(
@@ -123,6 +126,9 @@ class MixpanelService {
         people.set('user_id', userId);
         people.set('identified_at', DateTime.now().toIso8601String());
         people.increment('\$session_count', 1.0);
+
+        // Set user identifier for session replay
+        await _sessionReplay.setUserIdentifier(userId);
       } catch (e) {
         // Silently handle identification errors
       }
@@ -878,6 +884,9 @@ class MixpanelService {
 
         _mixpanel!.track('Session Start', properties: properties);
 
+        // Start session replay recording
+        await _sessionReplay.startRecording();
+
         Future.microtask(() {
           try {
             if (_mixpanel != null) {
@@ -921,6 +930,9 @@ class MixpanelService {
         };
 
         _mixpanel!.track('Session End', properties: properties);
+
+        // Stop session replay recording
+        await _sessionReplay.stopRecording();
 
         Future.microtask(() {
           try {
@@ -1439,5 +1451,67 @@ class MixpanelService {
         'os_version': _osVersion,
       },
     };
+  }
+
+  Future<void> testSessionReplay() async {
+    debugPrint('🧪 Testing Session Replay functionality...');
+
+    try {
+      // Initialize session replay
+      await _sessionReplay.init();
+
+      // Start recording
+      await _sessionReplay.startRecording();
+
+      // Track a test event
+      trackEvent('Session Replay Test', {
+        'test_timestamp': DateTime.now().toIso8601String(),
+        'test_type': 'manual_test',
+      });
+
+      debugPrint('✅ Session Replay test completed - check Mixpanel dashboard');
+    } catch (e) {
+      debugPrint('❌ Session Replay test failed: $e');
+    }
+  }
+
+  Future<void> testSessionReplayWithScreenshots() async {
+    debugPrint('🧪 Testing Session Replay with manual screenshots...');
+
+    try {
+      // Initialize session replay
+      await _sessionReplay.init();
+
+      // Start recording
+      await _sessionReplay.startRecording();
+
+      // Wait a moment for initialization
+      await Future.delayed(Duration(seconds: 1));
+
+      // Force multiple screenshot captures
+      for (int i = 0; i < 5; i++) {
+        debugPrint('📸 Capturing screenshot ${i + 1}/5...');
+        await _sessionReplay.captureScreenshot();
+        await Future.delayed(Duration(milliseconds: 500));
+      }
+
+      // Track a test event
+      trackEvent('Session Replay Screenshots Test', {
+        'test_timestamp': DateTime.now().toIso8601String(),
+        'test_type': 'manual_screenshots',
+        'screenshots_captured': 5,
+        'sdk_version': 'ios_beta',
+      });
+
+      debugPrint('✅ Session Replay screenshots test completed');
+      debugPrint(
+        '📍 Check Mixpanel dashboard for Session Replay Screenshots Test event',
+      );
+      debugPrint(
+        '📍 Look for replays in Session Replay section or Latest Replays on Home',
+      );
+    } catch (e) {
+      debugPrint('❌ Session Replay screenshots test failed: $e');
+    }
   }
 }

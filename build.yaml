@@ -1,0 +1,37 @@
+targets:
+  $default:
+    builders:
+      graphql_codegen:
+        options:
+          schema: lib/reachu_sdk/graphql/schema.graphql
+          output_directory: lib/reachu_sdk/models
+          scalar_mapping:
+            DateTime: DateTime
+            JSON: Map<String, dynamic>
+            Upload: MultipartFile
+          naming_scheme: snake_case
+          generate_helpers: true
+          generate_queries: true
+          generate_mutations: true
+          generate_fragments: true
+          generate_subscriptions: true
+          generate_typename: true
+          generate_serializers: true
+          generate_enum_fallbacks: true
+          generate_enum_values: true
+          generate_enum_names: true
+          generate_enum_descriptions: true
+          generate_enum_deprecation: true
+          generate_enum_deprecation_reason: true
+          generate_enum_deprecation_reason_enum: true
+          generate_enum_deprecation_reason_enum_values: true
+          generate_enum_deprecation_reason_enum_names: true
+          generate_enum_deprecation_reason_enum_descriptions: true
+          generate_enum_deprecation_reason_enum_deprecation: true
+          generate_enum_deprecation_reason_enum_deprecation_reason: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum_values: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum_names: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum_descriptions: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum_deprecation: true
+          generate_enum_deprecation_reason_enum_deprecation_reason_enum_deprecation_reason: true 

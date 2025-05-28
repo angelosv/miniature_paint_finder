@@ -32,6 +32,15 @@ dependencies:
     sdk: flutter
   google_fonts: ^4.0.4
   provider: ^6.0.5
+  # GraphQL dependencies
+  graphql_flutter: ^5.1.2
+  gql: ^1.0.0
+  gql_http_link: ^1.0.0
+  gql_dedupe_link: ^2.0.4-alpha+1715521079596
+  gql_error_link: ^1.0.0
+  gql_transform_link: ^1.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
   firebase_messaging: ^15.2.4
   flutter_local_notifications: ^12.0.4
   shared_preferences: ^2.5.3
@@ -53,10 +62,7 @@ dependencies:
   permission_handler: ^11.0.0
   cached_network_image: ^3.2.3
   flutter_cache_manager: ^3.3.1
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.2
+  # flutter_cache_manager: ^3.3.1
   mobile_scanner: ^6.0.7
   device_info_plus: ^10.1.2
   sign_in_with_apple: ^6.1.4  # Habilitado en esta rama - requerido para Apple Sign In
@@ -67,6 +73,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -74,7 +81,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -4,6 +4,7 @@ import UIKit
 import Flutter
 import Firebase
 import UserNotifications
+import Mixpanel
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -24,6 +25,10 @@ import UserNotifications
     }
 
     GeneratedPluginRegistrant.register(with: self)
+    
+    // Register SessionReplayPlugin
+    SessionReplayPluginHandler.register(with: self.registrar(forPlugin: "SessionReplayPluginHandler")!)
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
