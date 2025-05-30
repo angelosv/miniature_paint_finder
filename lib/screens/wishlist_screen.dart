@@ -5,6 +5,8 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/brand_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
@@ -15,7 +17,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 
 /// Screen that displays all paints in the user's wishlist
@@ -161,18 +162,38 @@ class _WishlistScreenState extends State<WishlistScreen> {
     int priorityLevel = 0,
   ]) async {
     try {
-      final controller = context.read<WishlistController>();
+      // Use cache service for optimistic updates and automatic sync
+      final cacheService = Provider.of<WishlistCacheService>(
+        context,
+        listen: false,
+      );
+      bool success = false;
+
       // Forzar que priorityLevel esté en el rango [0, 5]
       final int newPriority = priorityLevel.clamp(0, 5);
-      // Se considera prioritario si hay al menos 1 estrella.
-      final bool newPriorityFlag = newPriority >= 1;
-      final result = await controller.updatePriority(
-        paintId,
-        _id,
-        newPriorityFlag,
-        newPriority,
-      );
-      if (mounted && result) {
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimistic update
+        success = await cacheService.updateWishlistPriority(
+          paintId,
+          _id,
+          newPriority,
+        );
+        debugPrint('✅ Priority updated via cache service');
+      } else {
+        // Fallback to controller
+        final controller = context.read<WishlistController>();
+        final bool newPriorityFlag = newPriority >= 1;
+        success = await controller.updatePriority(
+          paintId,
+          _id,
+          newPriorityFlag,
+          newPriority,
+        );
+        debugPrint('✅ Priority updated via controller fallback');
+      }
+
+      if (mounted && success) {
         final message =
             newPriority >= 1
                 ? 'Priority set to $newPriority stars'
@@ -231,37 +252,67 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (confirmed != true) return;
     }
 
-    final controller = context.read<WishlistController>();
-    final result = await controller.removeFromWishlist(paintId, _id);
-    if (result && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$paintName removed from wishlist'),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () async {
-              final wishlistItems = controller.wishlistItems;
-              final item = wishlistItems.firstWhere(
-                (item) => (item['paint'] as Paint).id == paintId,
-                orElse: () => {'paint': null, 'isPriority': false},
-              );
-              if (item['paint'] != null) {
-                await controller.addToWishlist(
-                  item['paint'] as Paint,
-                  item['isPriority'] as bool,
+    try {
+      // Use cache service for optimistic updates and automatic sync
+      final cacheService = Provider.of<WishlistCacheService>(
+        context,
+        listen: false,
+      );
+      bool success = false;
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimistic delete
+        success = await cacheService.removeFromWishlist(paintId, _id);
+        debugPrint('✅ Paint removed from wishlist via cache service');
+      } else {
+        // Fallback to controller
+        final controller = context.read<WishlistController>();
+        success = await controller.removeFromWishlist(paintId, _id);
+        debugPrint('✅ Paint removed from wishlist via controller fallback');
+      }
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$paintName removed from wishlist'),
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                // TODO: Implement undo functionality with cache service
+                final controller = context.read<WishlistController>();
+                final wishlistItems = controller.wishlistItems;
+                final item = wishlistItems.firstWhere(
+                  (item) => (item['paint'] as Paint).id == paintId,
+                  orElse: () => {'paint': null, 'isPriority': false},
                 );
-              }
-            },
+                if (item['paint'] != null) {
+                  await controller.addToWishlist(
+                    item['paint'] as Paint,
+                    item['isPriority'] as bool,
+                  );
+                }
+              },
+            ),
           ),
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error removing paint from wishlist'),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing paint from wishlist'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error removing from wishlist: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing paint from wishlist: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -321,6 +372,41 @@ class _WishlistScreenState extends State<WishlistScreen> {
           );
           await context.read<WishlistController>().loadWishlist();
           await _loadBrandData();
+        }
+
+        // Remove from wishlist after adding to inventory using cache service
+        try {
+          final wishlistCacheService = Provider.of<WishlistCacheService>(
+            context,
+            listen: false,
+          );
+          bool removeSuccess = false;
+
+          if (wishlistCacheService.isInitialized) {
+            // Use cache service for optimistic delete
+            removeSuccess = await wishlistCacheService.removeFromWishlist(
+              paint.id,
+              _id,
+            );
+            debugPrint('✅ Paint removed from wishlist via cache service');
+          } else {
+            // Fallback to controller
+            final controller = context.read<WishlistController>();
+            removeSuccess = await controller.removeFromWishlist(paint.id, _id);
+            debugPrint('✅ Paint removed from wishlist via controller fallback');
+          }
+
+          if (removeSuccess) {
+            debugPrint(
+              '✅ Paint removed from wishlist after adding to inventory',
+            );
+          } else {
+            debugPrint(
+              '⚠️ Could not remove paint from wishlist after adding to inventory',
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ Error removing from wishlist: $e');
         }
       } catch (e) {
         print('❌ Error adding to inventory: $e');

@@ -32,6 +32,7 @@ import 'package:miniature_paint_finder/services/push_notification_service.dart'
 import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'dart:async';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -103,18 +104,29 @@ void main() async {
     inventoryService,
   );
 
+  // Initialize the wishlist cache service
+  final WishlistCacheService wishlistCacheService = WishlistCacheService(
+    PaintService(),
+  );
+
   // Initialize cache in background without blocking app startup
   Future.microtask(() async {
     try {
-      debugPrint('🚀 Starting library cache initialization...');
-      await libraryCacheService.initialize();
-      debugPrint('✅ Library cache service initialized successfully');
+      debugPrint('🚀 Starting cache initialization...');
 
-      debugPrint('🚀 Starting inventory cache initialization...');
+      // Initialize library cache
+      await libraryCacheService.initialize();
+      debugPrint('✅ Library cache initialized');
+
+      // Initialize inventory cache
       await inventoryCacheService.initialize();
-      debugPrint('✅ Inventory cache service initialized successfully');
+      debugPrint('✅ Inventory cache initialized');
+
+      // Initialize wishlist cache
+      await wishlistCacheService.initialize();
+      debugPrint('✅ Wishlist cache initialized');
     } catch (e) {
-      debugPrint('❌ Error initializing cache services: $e');
+      debugPrint('❌ Error during cache initialization: $e');
     }
   });
 
@@ -147,6 +159,9 @@ void main() async {
         ),
         ChangeNotifierProvider<InventoryCacheService>.value(
           value: inventoryCacheService,
+        ),
+        ChangeNotifierProvider<WishlistCacheService>.value(
+          value: wishlistCacheService,
         ),
         Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
