@@ -18,6 +18,7 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
@@ -635,6 +636,7 @@ class _InventoryScreenState extends State<InventoryScreen>
           onAddToWishlist: () async {
             final user = FirebaseAuth.instance.currentUser;
             if (user == null) return;
+
             Paint paint = item.paint;
             paint.id = item.paint.code;
 
@@ -645,20 +647,68 @@ class _InventoryScreenState extends State<InventoryScreen>
               paint.brand,
             );
 
-            await _paintService.addToWishlistDirect(
-              paint,
-              0,
-              user.uid,
-            ); // prioridad alta por defecto
-            // Lógica para añadir a wishlist
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${item.paint.name} added to wishlist'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            try {
+              // Use WishlistCacheService for optimistic updates and automatic sync
+              final wishlistCacheService = Provider.of<WishlistCacheService>(
+                context,
+                listen: false,
+              );
+              bool success = false;
 
+              if (wishlistCacheService.isInitialized) {
+                // Use cache service for optimistic update with high priority
+                success = await wishlistCacheService.addToWishlist(
+                  paint,
+                  3, // High priority (from inventory means user wants it)
+                  notes: 'Added from inventory',
+                );
+                debugPrint('✅ Paint added to wishlist via cache service');
+              } else {
+                // Fallback to direct service
+                await _paintService.addToWishlistDirect(
+                  paint,
+                  3, // High priority
+                  user.uid,
+                );
+                success = true;
+                debugPrint(
+                  '✅ Paint added to wishlist via direct service fallback',
+                );
+              }
+
+              if (success) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${item.paint.name} added to wishlist'),
+                    behavior: SnackBarBehavior.floating,
+                    action: SnackBarAction(
+                      label: 'VIEW',
+                      onPressed: () {
+                        // Navigate to wishlist screen using bottom navigation
+                        Navigator.of(
+                          context,
+                        ).popUntil((route) => route.isFirst);
+                        // The AppScaffold will handle the navigation to index 3 (wishlist)
+                      },
+                    ),
+                  ),
+                );
+              } else {
+                throw Exception('Failed to add to wishlist');
+              }
+            } catch (e) {
+              debugPrint('❌ Error adding to wishlist: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error adding to wishlist: $e'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+
+            // Refresh inventory after successful addition
             await _loadInventory();
           },
           getSafeBrandName: _getSafeBrandName,
