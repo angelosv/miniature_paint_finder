@@ -225,6 +225,26 @@ dependencies:
 - Medir tiempo de recuperación post-conexión
 - Analizar patrones de uso offline
 
+### ✅ **Operaciones Soportadas**:
+- **Agregar items**: `addInventoryItem()` - ✅ Implementado
+- **Actualizar stock/notas**: `updateInventoryItem()` - ✅ Implementado  
+- **Eliminar items**: `deleteInventoryItem()` - ✅ Implementado
+- **Obtener inventario**: `getInventory()` - ✅ Implementado
+
+### 📱 **Flujo de Eliminación Optimista**:
+1. **Usuario desliza para eliminar** item del inventario
+2. **Confirmación**: Dialog de confirmación estándar
+3. **Update optimista**: Item se remueve inmediatamente de la UI
+4. **Background sync**: Operación se envía al servidor por detrás
+5. **Error handling**: Si falla, recarga inventario para restaurar UI
+
+### 🔧 **Integración Completa**:
+- **InventoryScreen**: Dismissible widgets con eliminación optimista
+- **LibraryScreen**: Agregar pinturas desde library
+- **BarcodeScannerScreen**: Agregar pinturas desde scanner  
+- **WishlistScreen**: Mover de wishlist a inventario
+- **PaintCard**: Acciones rápidas de inventario
+
 ---
 
 **Estado**: ✅ Implementado y funcional

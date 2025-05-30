@@ -422,6 +422,19 @@ class InventoryCacheService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('❌ Error loading inventory from cache: $e');
+
+      // Si hay error de parsing, limpiar cache corrupto
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_keyInventoryItems);
+        await prefs.remove(_keyInventoryTimestamp);
+        debugPrint('🧹 Corrupted cache cleared, will reload from API');
+
+        _cachedInventory = null;
+        _lastCacheUpdate = null;
+      } catch (clearError) {
+        debugPrint('❌ Error clearing corrupted cache: $clearError');
+      }
     }
   }
 

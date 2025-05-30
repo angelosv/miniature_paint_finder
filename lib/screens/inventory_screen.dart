@@ -1149,19 +1149,30 @@ class _InventoryScreenState extends State<InventoryScreen>
         );
       },
       onDismissed: (direction) async {
-        final success = await _inventoryService.deleteInventoryRecord(item.id);
+        // Use cache service for optimistic delete and automatic sync
+        final cacheService = Provider.of<InventoryCacheService>(
+          context,
+          listen: false,
+        );
+        bool success = false;
+
+        if (cacheService.isInitialized) {
+          // Use cache service for optimistic delete
+          success = await cacheService.deleteInventoryItem(item.id);
+          debugPrint('🗑️ Cache service delete result: $success');
+        } else {
+          // Fallback to direct API call
+          success = await _inventoryService.deleteInventoryRecord(item.id);
+          debugPrint('🗑️ Direct service delete result: $success');
+        }
 
         if (success) {
+          // Update local state immediately (optimistic update already handled by cache service)
           setState(() {
-            final newFilteredInventory = List<PaintInventoryItem>.from(
-              _filteredInventory,
+            _filteredInventory.removeWhere(
+              (inventoryItem) => inventoryItem.id == item.id,
             );
-            final index = newFilteredInventory.indexOf(item);
-            if (index != -1) {
-              newFilteredInventory.removeAt(index);
-            }
-            _filteredInventory = newFilteredInventory;
-            _filterInventory();
+            _updatePaginatedInventory();
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1176,12 +1187,18 @@ class _InventoryScreenState extends State<InventoryScreen>
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error removing ${paint.name} from inventory'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          // If deletion failed, we need to reload the inventory to restore the UI
+          debugPrint('❌ Delete failed, reloading inventory');
+          await _loadInventory();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error removing ${paint.name} from inventory'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       },
       child: Card(
