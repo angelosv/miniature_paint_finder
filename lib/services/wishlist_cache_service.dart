@@ -199,9 +199,15 @@ class WishlistCacheService extends ChangeNotifier {
       // Optimistic update - agregar al cache local inmediatamente
       if (_cachedWishlist != null) {
         // Verificar si ya existe
-        final existingIndex = _cachedWishlist!.indexWhere(
-          (item) => (item['paint'] as Map<String, dynamic>)['id'] == paint.id,
-        );
+        final existingIndex = _cachedWishlist!.indexWhere((item) {
+          final itemPaint = item['paint'];
+          if (itemPaint is Paint) {
+            return itemPaint.id == paint.id;
+          } else if (itemPaint is Map<String, dynamic>) {
+            return itemPaint['id'] == paint.id;
+          }
+          return false;
+        });
 
         if (existingIndex >= 0) {
           // Actualizar prioridad existente
@@ -212,10 +218,10 @@ class WishlistCacheService extends ChangeNotifier {
             'isPriority': priority > 0,
           };
         } else {
-          // Crear nuevo item
+          // Crear nuevo item - mantener Paint como objeto en memoria
           final newItem = {
             'id': operation['id'],
-            'paint': paint.toJson(),
+            'paint': paint, // Keep as Paint object in memory
             'priority': priority,
             'notes': notes ?? '',
             'isPriority': priority > 0,
@@ -268,11 +274,16 @@ class WishlistCacheService extends ChangeNotifier {
 
       // Optimistic update - actualizar cache local inmediatamente
       if (_cachedWishlist != null) {
-        final itemIndex = _cachedWishlist!.indexWhere(
-          (item) =>
-              item['id'] == wishlistId ||
-              (item['paint'] as Map<String, dynamic>)['id'] == paintId,
-        );
+        final itemIndex = _cachedWishlist!.indexWhere((item) {
+          if (item['id'] == wishlistId) return true;
+          final itemPaint = item['paint'];
+          if (itemPaint is Paint) {
+            return itemPaint.id == paintId;
+          } else if (itemPaint is Map<String, dynamic>) {
+            return itemPaint['id'] == paintId;
+          }
+          return false;
+        });
 
         if (itemIndex >= 0) {
           _cachedWishlist![itemIndex] = {
@@ -318,11 +329,16 @@ class WishlistCacheService extends ChangeNotifier {
 
       // Optimistic update - eliminar del cache local inmediatamente
       if (_cachedWishlist != null) {
-        _cachedWishlist!.removeWhere(
-          (item) =>
-              item['id'] == wishlistId ||
-              (item['paint'] as Map<String, dynamic>)['id'] == paintId,
-        );
+        _cachedWishlist!.removeWhere((item) {
+          if (item['id'] == wishlistId) return true;
+          final itemPaint = item['paint'];
+          if (itemPaint is Paint) {
+            return itemPaint.id == paintId;
+          } else if (itemPaint is Map<String, dynamic>) {
+            return itemPaint['id'] == paintId;
+          }
+          return false;
+        });
       }
 
       // Agregar a la queue de operaciones pendientes
@@ -386,21 +402,38 @@ class WishlistCacheService extends ChangeNotifier {
     if (searchQuery != null && searchQuery.isNotEmpty) {
       filteredItems =
           filteredItems.where((item) {
-            final paint = item['paint'] as Map<String, dynamic>;
-            return paint['name'].toString().toLowerCase().contains(
+            final itemPaint = item['paint'];
+            String paintName = '';
+            String paintBrand = '';
+
+            if (itemPaint is Paint) {
+              paintName = itemPaint.name;
+              paintBrand = itemPaint.brand;
+            } else if (itemPaint is Map<String, dynamic>) {
+              paintName = itemPaint['name']?.toString() ?? '';
+              paintBrand = itemPaint['brand']?.toString() ?? '';
+            }
+
+            return paintName.toLowerCase().contains(
                   searchQuery.toLowerCase(),
                 ) ||
-                paint['brand'].toString().toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                );
+                paintBrand.toLowerCase().contains(searchQuery.toLowerCase());
           }).toList();
     }
 
     if (brandFilter != null && brandFilter != 'All') {
       filteredItems =
           filteredItems.where((item) {
-            final paint = item['paint'] as Map<String, dynamic>;
-            return paint['brand'].toString() == brandFilter;
+            final itemPaint = item['paint'];
+            String paintBrand = '';
+
+            if (itemPaint is Paint) {
+              paintBrand = itemPaint.brand;
+            } else if (itemPaint is Map<String, dynamic>) {
+              paintBrand = itemPaint['brand']?.toString() ?? '';
+            }
+
+            return paintBrand == brandFilter;
           }).toList();
     }
 
@@ -434,7 +467,7 @@ class WishlistCacheService extends ChangeNotifier {
       if (cachedData != null) {
         final List<dynamic> decoded = json.decode(cachedData);
 
-        // Convert string dates back to DateTime objects
+        // Convert string dates back to DateTime objects and Maps back to Paint objects
         _cachedWishlist =
             decoded
                 .map((item) {
@@ -455,8 +488,22 @@ class WishlistCacheService extends ChangeNotifier {
                     processedItem['addedAt'] = DateTime.now();
                   }
 
+                  // Convert paint Map back to Paint object if it's stored as Map
+                  if (processedItem['paint'] is Map<String, dynamic>) {
+                    try {
+                      processedItem['paint'] = Paint.fromJson(
+                        processedItem['paint'] as Map<String, dynamic>,
+                      );
+                    } catch (e) {
+                      debugPrint('❌ Error converting paint from JSON: $e');
+                      // If conversion fails, skip this item
+                      return null;
+                    }
+                  }
+
                   return processedItem;
                 })
+                .where((item) => item != null)
                 .cast<Map<String, dynamic>>()
                 .toList();
 
@@ -490,7 +537,7 @@ class WishlistCacheService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Convert DateTime objects to strings before saving
+      // Convert DateTime objects and Paint objects to serializable format
       final serializableItems =
           items.map((item) {
             final Map<String, dynamic> serializable = Map.from(item);
@@ -499,6 +546,11 @@ class WishlistCacheService extends ChangeNotifier {
             if (serializable['addedAt'] is DateTime) {
               serializable['addedAt'] =
                   (serializable['addedAt'] as DateTime).toIso8601String();
+            }
+
+            // Convert Paint object to JSON if present
+            if (serializable['paint'] is Paint) {
+              serializable['paint'] = (serializable['paint'] as Paint).toJson();
             }
 
             return serializable;
