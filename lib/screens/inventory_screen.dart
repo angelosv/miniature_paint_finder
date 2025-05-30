@@ -1079,7 +1079,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
 
     return Dismissible(
-      key: Key(item.paint.id),
+      key: Key('inventory_${item.id}'),
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
@@ -1149,47 +1149,81 @@ class _InventoryScreenState extends State<InventoryScreen>
         );
       },
       onDismissed: (direction) async {
-        // Use cache service for optimistic delete and automatic sync
+        // Immediately remove from UI to prevent the widget tree error
+        final itemToDelete = item;
+        final itemIndex = _filteredInventory.indexOf(item);
+
+        // Update UI immediately before any async operations
+        setState(() {
+          _filteredInventory = List<PaintInventoryItem>.from(_filteredInventory)
+            ..removeAt(itemIndex);
+          _updatePaginatedInventory();
+        });
+
+        // Now handle the backend deletion
         final cacheService = Provider.of<InventoryCacheService>(
           context,
           listen: false,
         );
         bool success = false;
 
-        if (cacheService.isInitialized) {
-          // Use cache service for optimistic delete
-          success = await cacheService.deleteInventoryItem(item.id);
-          debugPrint('🗑️ Cache service delete result: $success');
-        } else {
-          // Fallback to direct API call
-          success = await _inventoryService.deleteInventoryRecord(item.id);
-          debugPrint('🗑️ Direct service delete result: $success');
-        }
-
-        if (success) {
-          // Update local state immediately (optimistic update already handled by cache service)
-          setState(() {
-            _filteredInventory.removeWhere(
-              (inventoryItem) => inventoryItem.id == item.id,
+        try {
+          if (cacheService.isInitialized) {
+            // Use cache service for optimistic delete
+            success = await cacheService.deleteInventoryItem(itemToDelete.id);
+            debugPrint('🗑️ Cache service delete result: $success');
+          } else {
+            // Fallback to direct API call
+            success = await _inventoryService.deleteInventoryRecord(
+              itemToDelete.id,
             );
+            debugPrint('🗑️ Direct service delete result: $success');
+          }
+
+          if (success) {
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${paint.name} removed from inventory'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor:
+                      isDarkMode ? Colors.grey[800] : Colors.grey[900],
+                ),
+              );
+            }
+          } else {
+            // If deletion failed, restore the item to the list
+            debugPrint('❌ Delete failed, restoring item to UI');
+            setState(() {
+              _filteredInventory = List<PaintInventoryItem>.from(
+                _filteredInventory,
+              )..insert(itemIndex, itemToDelete);
+              _updatePaginatedInventory();
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error removing ${paint.name} from inventory'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ Exception during delete: $e');
+          // Restore the item on exception
+          setState(() {
+            _filteredInventory = List<PaintInventoryItem>.from(
+              _filteredInventory,
+            )..insert(itemIndex, itemToDelete);
             _updatePaginatedInventory();
           });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${paint.name} removed from inventory'),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
-            ),
-          );
-        } else {
-          // If deletion failed, we need to reload the inventory to restore the UI
-          debugPrint('❌ Delete failed, reloading inventory');
-          await _loadInventory();
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
