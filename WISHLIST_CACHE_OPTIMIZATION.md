@@ -118,13 +118,13 @@ await wishlistCacheService.initialize();
 ## 🔧 **Integración Completa**
 
 ### **Puntos de Integración**:
-1. **WishlistScreen**: Todas las operaciones CRUD
-2. **LibraryScreen**: Agregar a wishlist desde library
-3. **PaintCard Components**: Agregar/remover desde tarjetas
-4. **InventoryScreen**: Transferir de wishlist a inventory
+1. **WishlistScreen**: Todas las operaciones CRUD - ✅ **Completado**
+2. **LibraryScreen**: Agregar a wishlist desde library - 🔄 **Pendiente**
+3. **PaintCard Components**: Agregar/remover desde tarjetas - 🔄 **Pendiente**
+4. **InventoryScreen**: Transferir de wishlist a inventory - ✅ **Completado**
 
 ### **Backwards Compatibility**:
-- **Fallback automático** a controller tradicional si cache no disponible
+- **Fallback automático** a controller/service tradicional si cache no disponible
 - **No breaking changes** en APIs existentes
 - **Gradual adoption** - funciona con código existente
 
@@ -133,9 +133,10 @@ await wishlistCacheService.initialize();
 ### ✅ **Completado**:
 - [x] WishlistCacheService completo
 - [x] Integración en main.dart
-- [x] WishlistScreen actualizado con cache service
+- [x] WishlistScreen actualizado con cache service offline-first
+- [x] InventoryScreen "Add to wishlist" integrado con cache service
 - [x] Operaciones offline-first (CRUD completo)
-- [x] Error handling robusto
+- [x] Error handling robusto con casting seguro
 - [x] Documentación técnica
 
 ### 🔄 **Pendiente**:
