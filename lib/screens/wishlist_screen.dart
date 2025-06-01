@@ -42,13 +42,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   /// Carga los datos de marcas y logotipos.
   Future<void> _loadBrandData() async {
-    print('🔄 Initializing BrandService...');
     final success = await _brandService.initialize();
-    print(
-      success
-          ? '✅ BrandService initialized successfully'
-          : '❌ BrandService initialization failed',
-    );
   }
 
   /// Determinar el brandId correcto de forma segura.
@@ -66,7 +60,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       }
       return paint.brand;
     } catch (e) {
-      print('⚠️ Error determinando brandId: $e');
       return paint.brand;
     }
   }
@@ -77,7 +70,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       final name = _brandService.getBrandName(brandId);
       return name ?? fallbackName;
     } catch (e) {
-      print('⚠️ Error obteniendo nombre de marca: $e');
       return fallbackName;
     }
   }
@@ -123,7 +115,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             ),
                           ),
                       errorWidget: (ctx, url, err) {
-                        print('⚠️ Image load error for $brandId: $err');
                         return Text(
                           brandName.isNotEmpty
                               ? brandName[0].toUpperCase()
@@ -270,25 +261,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
     if (result != null) {
       try {
-        print(
-          '🔄 Adding ${paint.name} to inventory, quantity: ${result['quantity']}',
-        );
         final success = await _inventoryService.addInventoryRecord(
           brandId: brandId,
           paintId: paint.id,
           quantity: result['quantity'] as int,
           notes: result['note'] as String?,
         );
-        print('✅ Paint added to inventory');
+
         final controller = context.read<WishlistController>();
         await controller.removeFromWishlist(paint.id, _id);
         if (success) {
-          print('✅ Paint removed from wishlist');
-        } else {
-          print(
-            '⚠️ Could not remove paint from wishlist after adding to inventory',
-          );
-        }
+        } else {}
         if (mounted && success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -300,7 +283,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
           await _loadBrandData();
         }
       } catch (e) {
-        print('❌ Error adding to inventory: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -310,9 +292,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           );
         }
       }
-    } else {
-      print('ℹ️ User cancelled adding to inventory');
-    }
+    } else {}
   }
 
   @override

@@ -35,7 +35,6 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
       final String screenName = _getScreenName(route);
       _analytics.trackScreen(screenName);
     } catch (e) {
-      debugPrint('Error tracking screen view: $e');
       // No propagamos el error para no interrumpir la navegación
     }
   }

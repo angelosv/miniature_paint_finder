@@ -14,12 +14,11 @@ class PaintBrandService {
       // Primero intentamos cargar desde la caché
       final cachedBrands = await _getCachedBrands();
       if (cachedBrands != null) {
-        print('✅ Usando datos de marcas desde la caché local');
         return cachedBrands;
       }
 
       // Si no hay caché válida, llamamos al API
-      print('🔄 Fetching paint brands from API...');
+
       final response = await http.get(Uri.parse('$baseUrl/brand'));
 
       if (response.statusCode == 200) {
@@ -29,19 +28,11 @@ class PaintBrandService {
         final brands =
             data.map((json) {
               final brand = PaintBrand.fromJson(json);
-              // print(
-              // '🎨 Brand: ${brand.name}, Paint Count: ${brand.paintCount}, ID: ${brand.id}',
-              // );
               return brand;
             }).toList();
 
         // Sort brands by paintCount (descending)
         brands.sort((a, b) => b.paintCount.compareTo(a.paintCount));
-
-        // print('📋 Brands sorted by paint count (descending)');
-        // for (var brand in brands.take(5)) {
-        // print('  • ${brand.name}: ${brand.paintCount} paints');
-        // }
 
         // Calculate total paints
         final totalPaints = brands.fold(
@@ -54,14 +45,9 @@ class PaintBrandService {
 
         return brands;
       } else {
-        print(
-          '❌ API Error: Failed to load paint brands with status code: ${response.statusCode}',
-        );
-        print('📝 Response body: ${response.body}');
         throw Exception('Failed to load paint brands: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error fetching paint brands: $e');
       throw Exception('Failed to load paint brands: $e');
     }
   }
@@ -83,9 +69,7 @@ class PaintBrandService {
 
       // Guardar en SharedPreferences
       await prefs.setString(CACHE_KEY, json.encode(cacheData));
-      print('💾 Datos de marcas guardados en caché local');
     } catch (e) {
-      print('⚠️ Error guardando marcas en caché: $e');
       // Si hay error al guardar caché, simplemente continuamos
     }
   }
@@ -97,7 +81,6 @@ class PaintBrandService {
       final cachedData = prefs.getString(CACHE_KEY);
 
       if (cachedData == null) {
-        print('ℹ️ No hay datos en caché');
         return null;
       }
 
@@ -109,7 +92,6 @@ class PaintBrandService {
       // Verificar si la caché ha expirado
       final cacheDuration = DateTime.now().difference(cacheTime);
       if (cacheDuration.inHours > CACHE_DURATION_HOURS) {
-        print('ℹ️ Caché expirada (${cacheDuration.inHours} horas)');
         return null;
       }
 
@@ -120,16 +102,11 @@ class PaintBrandService {
               .map((brandJson) => PaintBrand.fromJson(brandJson))
               .toList();
 
-      print(
-        '📋 Recuperadas ${brands.length} marcas desde caché (edad: ${cacheDuration.inHours}h ${cacheDuration.inMinutes % 60}m)',
-      );
-
       // Ordenar por cantidad de pinturas (descendente)
       brands.sort((a, b) => b.paintCount.compareTo(a.paintCount));
 
       return brands;
     } catch (e) {
-      print('⚠️ Error leyendo caché de marcas: $e');
       return null;
     }
   }
@@ -140,12 +117,10 @@ class PaintBrandService {
       // Limpiar caché existente
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(CACHE_KEY);
-      print('🔄 Caché de marcas eliminada, forzando actualización desde API');
 
       // Llamar al método principal que ahora obtendrá datos frescos
       return await getPaintBrands();
     } catch (e) {
-      print('❌ Error al refrescar marcas: $e');
       throw Exception('Failed to refresh paint brands: $e');
     }
   }

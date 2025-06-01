@@ -132,8 +132,6 @@ class _BarcodeScannerCardState extends State<BarcodeScannerCard> {
     });
 
     try {
-      print('Opening scanner directly without permission checks');
-
       // Skip directly to scanner screen - it will handle permissions internally
       final Paint? scannedPaint = await Navigator.of(context).push(
         MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
@@ -156,7 +154,6 @@ class _BarcodeScannerCardState extends State<BarcodeScannerCard> {
         // );
       }
     } catch (e) {
-      print('Error in scanner opening process: $e');
       // Manejar cualquier error inesperado
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

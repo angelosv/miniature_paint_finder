@@ -30,7 +30,6 @@ void onNotificationTapBackground(NotificationResponse resp) {
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('📬 Background message: ${message.messageId}');
 }
 
 class PushNotificationService {
@@ -80,7 +79,6 @@ class PushNotificationService {
 
     // 6. Grab the FCM token
     final token = await _fcm.getToken();
-    print('🔑 FCM token: $token');
 
     // 7. Register your token with backend
     final user = _auth.currentUser;
@@ -90,10 +88,7 @@ class PushNotificationService {
           'userId': user.id,
           'token': token,
         });
-        print('✅ Token registered');
-      } catch (e) {
-        print('❌ Register‐token failed: $e');
-      }
+      } catch (e) {}
     }
 
     // 8. Show a native notification for foreground FCM messages
@@ -126,7 +121,6 @@ class PushNotificationService {
 
     // 9. Log taps on notifications when app is opened via them
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      print('👉 Notification opened: ${msg.messageId}');
       _handleRemoteMessage(msg); // ← navegamos
     });
 

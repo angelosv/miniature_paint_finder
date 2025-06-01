@@ -38,21 +38,16 @@ class ImageCacheService {
       if (lastClearTime == null || (now - lastClearTime) > clearInterval) {
         await clearCache();
         await prefs.setInt(_lastCacheClearKey, now);
-        debugPrint('✅ Caché de imágenes limpiada automáticamente');
 
         // Log de memoria después de limpiar
         _logMemoryUsage('After cache cleaning');
       }
-    } catch (e) {
-      debugPrint('⚠️ Error al verificar limpieza de caché: $e');
-    }
+    } catch (e) {}
   }
 
   /// Limpia toda la caché de imágenes
   Future<bool> clearCache() async {
     try {
-      debugPrint('🧹 Iniciando limpieza de caché de imágenes...');
-
       // Limpiar la caché de imágenes en memoria de Flutter
       PaintingBinding.instance.imageCache.clear();
 
@@ -70,13 +65,8 @@ class ImageCacheService {
       // Limpiar la caché de imágenes en disco
       await DefaultCacheManager().emptyCache();
 
-      // Intentar forzar la recolección de basura
-      debugPrint('🧹 Caché limpiada, pidiendo recolección de basura...');
-
-      debugPrint('✅ Caché de imágenes limpiada completamente');
       return true;
     } catch (e) {
-      debugPrint('⚠️ Error al limpiar caché de imágenes: $e');
       return false;
     }
   }
@@ -140,10 +130,7 @@ class ImageCacheService {
 
       // Usar la función de Flutter para precarga
       await precacheImage(provider, context);
-      debugPrint('✅ Imagen precargada: $imageUrl');
-    } catch (e) {
-      debugPrint('⚠️ Error al precargar imagen: $e');
-    }
+    } catch (e) {}
   }
 
   /// Registra uso de memoria (solo en modo debug)
@@ -152,8 +139,6 @@ class ImageCacheService {
 
     try {
       // En Flutter web esto mostrará información de memoria. En apps nativas solo para debug
-    } catch (e) {
-      debugPrint('⚠️ Error logging memory: $e');
-    }
+    } catch (e) {}
   }
 }

@@ -16,7 +16,6 @@ mixin ScreenAnalyticsMixin<T extends StatefulWidget> on State<T> {
     try {
       _analytics.trackScreen(screenName);
     } catch (e) {
-      debugPrint('Error tracking screen view: $e');
       // No propagamos el error para no interrumpir la UI
     }
   }
@@ -26,7 +25,6 @@ mixin ScreenAnalyticsMixin<T extends StatefulWidget> on State<T> {
     try {
       _analytics.trackEvent(eventName, properties);
     } catch (e) {
-      debugPrint('Error tracking event: $e');
       // No propagamos el error para no interrumpir la UI
     }
   }

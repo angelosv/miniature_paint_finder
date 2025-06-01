@@ -135,9 +135,6 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cargar todas las pinturas
   Future<void> loadPaints() async {
-    print(
-      'Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery, Category: $_selectedCategory',
-    );
     _isLoading = true;
     _hasError = false;
     _errorMessage = null;
@@ -152,7 +149,7 @@ class PaintLibraryController extends ChangeNotifier {
         );
         brandId = matchingBrand['id'] as String;
       }
-      print('*********brandId: $brandId');
+
       final result = await _apiService.getPaints(
         page: _currentPage,
         limit: _pageSize,
@@ -161,17 +158,12 @@ class PaintLibraryController extends ChangeNotifier {
         category: _selectedCategory == 'All' ? null : _selectedCategory,
       );
 
-      print(
-        'API Response - Total: ${result['totalPaints']}, Pages: ${result['totalPages']}, Current: ${result['currentPage']}',
-      );
-
       _allPaints = result['paints'] as List<Paint>;
       _filteredPaints = _allPaints;
       _currentPage = result['currentPage'] as int;
       _totalPages = result['totalPages'] as int;
       _totalPaints = result['totalPaints'] as int;
     } catch (e) {
-      print('Error loading paints: $e');
       _hasError = true;
       _errorMessage = 'Error al cargar las pinturas: $e';
     } finally {
@@ -189,13 +181,12 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Establecer el filtro de marca recibiendo el nombre de la marca y obteniendo su id.
   void filterByBrand(String brandName, bool reset) {
-    print('*********filterByBrand: $brandName');
     if (brandName == 'All') {
       _selectedBrand = 'All';
     } else {
       _selectedBrand = brandName;
     }
-    print('*********_selectedBrand: $_selectedBrand');
+
     if (reset) {
       _currentPage = 1;
       loadPaints();
@@ -236,7 +227,6 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cambiar a una página específica
   void goToPage(int page) {
-    print('Going to page: $page');
     if (page < 1 || page > _totalPages) return;
     _currentPage = page;
     loadPaints();
@@ -244,7 +234,6 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cambiar el tamaño de página
   void setPageSize(int size) {
-    print('Changing page size to: $size');
     _pageSize = size;
     _currentPage = 1; // Volver a la primera página
     loadPaints();
@@ -286,8 +275,6 @@ class PaintLibraryController extends ChangeNotifier {
 
       // Si al menos una marca no tiene count, obtenerlos manualmente
       if (needsCountUpdate) {
-        print('🎨 Obteniendo conteo de pinturas para cada marca...');
-
         // Intentar obtener recuentos para cada marca
         for (var brand in brands) {
           try {
@@ -300,7 +287,6 @@ class PaintLibraryController extends ChangeNotifier {
             // Actualizar el recuento de pinturas
             brand['paint_count'] = result['totalPaints'] as int;
           } catch (e) {
-            print('Error al obtener conteo para marca ${brand['name']}: $e');
             // Mantener el count en 0 si falla
           }
         }
@@ -341,7 +327,6 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Ir a la página anterior
   void goToPreviousPage() {
-    print('Going to previous page. Current page: $_currentPage');
     if (_currentPage > 1) {
       _currentPage--;
       loadPaints();
@@ -350,9 +335,6 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Ir a la página siguiente
   void goToNextPage() {
-    print(
-      'Going to next page. Current page: $_currentPage, Total pages: $_totalPages',
-    );
     if (_currentPage < _totalPages) {
       _currentPage++;
       loadPaints();

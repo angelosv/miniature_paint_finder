@@ -813,9 +813,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
                                       ),
                                     ),
                                 errorWidget: (context, error, stackTrace) {
-                                  print(
-                                    '❌ Error loading network image: $error',
-                                  );
                                   return _buildFallbackContent(
                                     isDarkMode,
                                     hasPaletteSwatch,

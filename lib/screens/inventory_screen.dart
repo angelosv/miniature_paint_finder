@@ -131,7 +131,6 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Future<void> _loadInventory() async {
-    print('>>> InventoryScreen: Entrando a _loadInventory()');
     setState(() {
       _isLoading = true;
     });
@@ -193,7 +192,6 @@ class _InventoryScreenState extends State<InventoryScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading inventory: $e');
       // Track el error
       _analytics.trackError('Inventory Load', e.toString(), {
         'page': _currentPage,
@@ -1537,7 +1535,6 @@ class _InventoryScreenState extends State<InventoryScreen>
   Future<void> _initializeServices() async {
     // Cargar datos de marcas en segundo plano para no bloquear la UI
     _loadBrandData().catchError((e) {
-      print('⚠️ Error inicializando servicio de marcas: $e');
       // La UI seguirá funcionando aunque falle la carga de marcas
     });
   }
@@ -1548,7 +1545,6 @@ class _InventoryScreenState extends State<InventoryScreen>
       final name = _brandManager.getBrandName(brandId);
       return name ?? fallbackName;
     } catch (e) {
-      print('⚠️ Error obteniendo nombre de marca: $e');
       return fallbackName;
     }
   }
@@ -1558,7 +1554,6 @@ class _InventoryScreenState extends State<InventoryScreen>
     try {
       return _brandLogos[brandId];
     } catch (e) {
-      print('⚠️ Error obteniendo logo URL: $e');
       return null;
     }
   }
@@ -1582,9 +1577,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ? DecorationImage(
                   image: NetworkImage(logoUrl),
                   fit: BoxFit.contain,
-                  onError: (exception, stackTrace) {
-                    print('⚠️ Error cargando imagen: $exception');
-                  },
+                  onError: (exception, stackTrace) {},
                 )
                 : null,
       ),
@@ -1654,13 +1647,10 @@ class _InventoryScreenState extends State<InventoryScreen>
       for (final brand in brands) {
         _brandLogos[brand.id] = brand.logoUrl;
       }
-      print('✅ Logotipos de marcas cargados: ${_brandLogos.length}');
 
       // Añadir logotipos predeterminados para marcas conocidas
       _addDefaultBrandLogos();
     } catch (e) {
-      print('❌ Error al cargar datos de marcas: $e');
-
       // Si falla la carga desde API, al menos cargar los logotipos predeterminados
       _addDefaultBrandLogos();
     }
@@ -1687,8 +1677,6 @@ class _InventoryScreenState extends State<InventoryScreen>
         _brandLogos[key] = value;
       }
     });
-
-    print('✅ Logotipos predeterminados añadidos: ${defaultLogos.length}');
   }
 
   /// Formatea la fecha de adición de forma amigable

@@ -1464,16 +1464,6 @@ class _PaintListTabState extends State<PaintListTab> {
                                                 });
 
                                                 try {
-                                                  debugPrint(
-                                                    '🎨 Iniciando proceso de guardado de paleta...',
-                                                  );
-                                                  debugPrint(
-                                                    '📝 Nombre de la paleta: ${_paletteNameController.text}',
-                                                  );
-                                                  debugPrint(
-                                                    '🖼️ URL de imagen: $_uploadedImageUrl',
-                                                  );
-
                                                   // Si venimos de crear una paleta desde otra pantalla,
                                                   // asegurarnos de usar el nombre correcto
                                                   final paletteName =
@@ -1510,10 +1500,6 @@ class _PaintListTabState extends State<PaintListTab> {
                                                             },
                                                           )
                                                           .toList();
-
-                                                  debugPrint(
-                                                    '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
-                                                  );
 
                                                   final _colorSearchService =
                                                       ColorSearchService();
@@ -1603,9 +1589,6 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     });
                                                   }
                                                 } catch (e) {
-                                                  debugPrint(
-                                                    '❌ Error al guardar la paleta: $e',
-                                                  );
                                                   if (context.mounted) {
                                                     setModalState(() {
                                                       _isSavingPalette = false;
@@ -3398,11 +3381,8 @@ class _PaintListTabState extends State<PaintListTab> {
   }
 
   Future<void> _loadPaintBrands() async {
-    print('🔄 Iniciando carga de marcas de pinturas en PaintListTab...');
     try {
-      print('📱 Llamando a PaintBrandService.getPaintBrands()');
       final brands = await _paintBrandService.getPaintBrands();
-      print('✅ Recibidas ${brands.length} marcas de pinturas del servicio');
 
       final mappedBrands =
           brands
@@ -3418,19 +3398,14 @@ class _PaintListTabState extends State<PaintListTab> {
               )
               .toList();
 
-      print('🎨 Mapped brands para UI:');
       for (var i = 0; i < min(5, mappedBrands.length); i++) {
         final brand = mappedBrands[i];
-        print(
-          '  • ${brand['name']}: ${brand['paintCount']} paints, ID: ${brand['id']}',
-        );
       }
 
       // Ordenar por contador (descendente)
       mappedBrands.sort(
         (a, b) => (b['paintCount'] as int).compareTo(a['paintCount'] as int),
       );
-      print('📋 Marcas ordenadas por cantidad de pinturas (descendente)');
 
       setState(() {
         _paintBrands = mappedBrands;
@@ -3440,14 +3415,8 @@ class _PaintListTabState extends State<PaintListTab> {
           0,
           (sum, brand) => sum + (brand['paintCount'] as int),
         );
-        print('🔢 Total de pinturas en todas las marcas: $totalPaints');
-        print(
-          '🎭 Mostrando ${_paintBrands.length} marcas en la sección de categorías',
-        );
       });
     } catch (e) {
-      print('❌ Error cargando marcas de pinturas: $e');
-      print('⚠️ Usando datos de fallback para las marcas');
       // Fallback a marcas por defecto en caso de error
       setState(() {
         _paintBrands = [
@@ -3677,8 +3646,6 @@ class _PaintListTabState extends State<PaintListTab> {
     try {
       final brands = await _paintBrandService.refreshPaintBrands();
 
-      print('✅ Marcas actualizadas correctamente: ${brands.length} marcas');
-
       final mappedBrands =
           brands
               .map(
@@ -3704,7 +3671,6 @@ class _PaintListTabState extends State<PaintListTab> {
         ),
       );
     } catch (e) {
-      print('❌ Error al actualizar marcas: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error updating categories: $e'),

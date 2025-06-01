@@ -6,9 +6,6 @@ class FirebaseService {
   static Future<void> initializeFirebase() async {
     try {
       await Firebase.initializeApp();
-      debugPrint('Firebase initialized successfully');
-    } catch (e) {
-      debugPrint('Error initializing Firebase: $e');
-    }
+    } catch (e) {}
   }
 }

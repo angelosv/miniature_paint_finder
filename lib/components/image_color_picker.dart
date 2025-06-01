@@ -143,9 +143,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
             _imageSize = Size(image.width.toDouble(), image.height.toDouble());
           });
         }
-      } catch (e) {
-        print('Error loading image dimensions: $e');
-      }
+      } catch (e) {}
     }
   }
 
@@ -268,9 +266,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
           pixel.b.toInt(),
         );
       }
-    } catch (e) {
-      print('Error obteniendo color: $e');
-    }
+    } catch (e) {}
 
     return null;
   }

@@ -57,9 +57,7 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
       setState(() {
         _brands = brands;
       });
-    } catch (e) {
-      print('Error al cargar las marcas: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _getImage() async {
@@ -86,11 +84,11 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
         setState(() {
           _isLoading = true;
         });
-        print('Uploading image');
+
         final String imageUrl = await _imageUploadService.uploadImage(
           _imageFile!,
         );
-        print('Image uploaded: $imageUrl');
+
         final firebaseUser = FirebaseAuth.instance.currentUser;
         final PaintSubmit paintSubmit = PaintSubmit(
           imageUrl: imageUrl,
@@ -100,7 +98,7 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
           status: 'pending',
           userId: firebaseUser?.uid ?? '',
         );
-        print('start setting values');
+
         if (_hexController.text != null && _hexController.text.isNotEmpty) {
           paintSubmit.hex = _hexController.text;
         }
@@ -123,10 +121,9 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
         if (_bController.text != null && _bController.text.isNotEmpty) {
           paintSubmit.b = int.parse(_bController.text);
         }
-        print('values set');
+
         final PaintApiService paintApiService = PaintApiService();
         final bool result = await paintApiService.submitPaint(paintSubmit);
-        print('Result of submitPaint: $result');
 
         // Trackear el envío de la nueva pintura
         if (result) {
@@ -193,7 +190,6 @@ class _AddPaintFormScreenState extends State<AddPaintFormScreen> {
       setState(() {
         _isLoading = false;
       });
-      print('Error submitting paint: $e');
 
       // Trackear el error de envío
       MixpanelService.instance.trackError('Paint Submission', e.toString(), {

@@ -3,6 +3,7 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/repositories/base_repository.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
+
 /// Repository interface for paint operations
 abstract class PaintRepository extends BaseRepository<Paint> {
   /// Find paints by color hex
@@ -34,7 +35,7 @@ class ApiPaintRepository implements PaintRepository {
       return (response as List).map((json) => Paint.fromJson(json)).toList();
     } catch (e) {
       // Fallback a datos de muestra si la API falla
-      print('Error getting paints from API: $e');
+
       return SampleData.getPaints();
     }
   }
@@ -45,7 +46,6 @@ class ApiPaintRepository implements PaintRepository {
       final response = await _apiService.get(ApiEndpoints.paintById(id));
       return Paint.fromJson(response);
     } catch (e) {
-      print('Error getting paint by ID from API: $e');
       try {
         return SampleData.getPaints().firstWhere((paint) => paint.id == id);
       } catch (_) {
@@ -63,7 +63,6 @@ class ApiPaintRepository implements PaintRepository {
       );
       return Paint.fromJson(response);
     } catch (e) {
-      print('Error creating paint in API: $e');
       return item; // Devolvemos el item sin cambios como fallback
     }
   }
@@ -77,7 +76,6 @@ class ApiPaintRepository implements PaintRepository {
       );
       return Paint.fromJson(response);
     } catch (e) {
-      print('Error updating paint in API: $e');
       return item;
     }
   }
@@ -88,7 +86,6 @@ class ApiPaintRepository implements PaintRepository {
       await _apiService.delete(ApiEndpoints.paintById(id));
       return true;
     } catch (e) {
-      print('Error deleting paint from API: $e');
       return false;
     }
   }
@@ -104,7 +101,6 @@ class ApiPaintRepository implements PaintRepository {
       );
       return (response as List).map((json) => Paint.fromJson(json)).toList();
     } catch (e) {
-      print('Error finding paints by color from API: $e');
       // Implementación temporal para datos de muestra
       final allPaints = SampleData.getPaints();
       // Filtrar por similitud de color (implementación simplificada)
@@ -118,7 +114,6 @@ class ApiPaintRepository implements PaintRepository {
       final response = await _apiService.get(ApiEndpoints.paintsByBrand(brand));
       return (response as List).map((json) => Paint.fromJson(json)).toList();
     } catch (e) {
-      print('Error finding paints by brand from API: $e');
       return SampleData.getPaints()
           .where((paint) => paint.brand.toLowerCase() == brand.toLowerCase())
           .toList();
@@ -133,7 +128,6 @@ class ApiPaintRepository implements PaintRepository {
       );
       return (response as List).map((json) => Paint.fromJson(json)).toList();
     } catch (e) {
-      print('Error finding paints by category from API: $e');
       return SampleData.getPaints()
           .where(
             (paint) => paint.category.toLowerCase() == category.toLowerCase(),
@@ -150,7 +144,6 @@ class ApiPaintRepository implements PaintRepository {
       );
       return Paint.fromJson(response);
     } catch (e) {
-      print('Error finding paint by barcode from API: $e');
       // Para demo, simplemente devolvemos el primer paint si hay barcode
       if (barcode.isNotEmpty) {
         return SampleData.getPaints().first;
@@ -169,7 +162,6 @@ class ApiPaintRepository implements PaintRepository {
       final response = await _apiService.get(ApiEndpoints.searchPaints(query));
       return (response as List).map((json) => Paint.fromJson(json)).toList();
     } catch (e) {
-      print('Error searching paints by name from API: $e');
       return SampleData.getPaints()
           .where(
             (paint) =>

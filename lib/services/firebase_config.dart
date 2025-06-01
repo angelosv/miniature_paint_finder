@@ -3,8 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 class FirebaseConfig {
   static Future<void> init() async {
     try {
-      print('Iniciando inicialización de Firebase...');
-
       await Firebase.initializeApp(
         options: const FirebaseOptions(
           apiKey: "AIzaSyDO9f1l9fuv5kSzwmvfZkn2LJcfqRWD35U",
@@ -17,11 +15,7 @@ class FirebaseConfig {
           iosBundleId: "com.angelosv.miniaturePaintFinder",
         ),
       );
-
-      print('Firebase inicializado exitosamente');
     } catch (e, stackTrace) {
-      print('Error al inicializar Firebase: $e');
-      print('Stack trace: $stackTrace');
       rethrow;
     }
   }

@@ -47,7 +47,6 @@ void main() async {
     );
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   } catch (e) {
-    print('Firebase initialization error: $e');
     // Continuamos con la app incluso si Firebase falla
   }
 
@@ -63,7 +62,6 @@ void main() async {
   // Configure Flutter's image cache directly as well
   PaintingBinding.instance.imageCache.maximumSizeBytes = 20 * 1024 * 1024;
   PaintingBinding.instance.imageCache.maximumSize = 50;
-  debugPrint('🔧 Flutter image cache configured with restrictive limits');
 
   // Initialize services
   final IAuthService authService = AuthService();
@@ -77,10 +75,6 @@ void main() async {
     // Configurar identificación automática de usuarios
     await analyticsService.setupAutoUserIdentification(
       authService.authStateChanges,
-    );
-
-    debugPrint(
-      'Analytics initialized with auto user identification in background',
     );
   });
 
@@ -100,10 +94,7 @@ void main() async {
   try {
     final response = await apiService.get(ApiEndpoints.guestLogic);
     guestLogic = response['value'];
-    print('GET Guest Logic MAIN: $guestLogic');
-  } catch (e) {
-    print('Error fetching guestLogic in main: $e');
-  }
+  } catch (e) {}
 
   runApp(
     MultiProvider(
@@ -154,7 +145,6 @@ class _MyAppWrapperState extends State<MyAppWrapper>
 
   void getGuestFlag() async {
     try {
-      print('GET Guest Flag');
       final response = await widget.apiService.get(ApiEndpoints.guestLogic);
       final guestLogicProvider = Provider.of<GuestLogicProvider>(
         context,
@@ -163,9 +153,7 @@ class _MyAppWrapperState extends State<MyAppWrapper>
       // Si no se puede obtener el flag, asumir que es true por defecto para evitar problemas
       final bool flagValue = response['value'] ?? true;
       guestLogicProvider.guestLogic = flagValue;
-      print('CALL Guest Logic: ${guestLogicProvider.guestLogic}');
     } catch (e) {
-      print('Error getting guest logic: $e');
       // En caso de error, establecer guestLogic a true para permitir la autenticación
       final guestLogicProvider = Provider.of<GuestLogicProvider>(
         context,

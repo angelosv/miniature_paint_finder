@@ -748,7 +748,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     // Process adding to palette
     try {
-      print("paletteName: $paletteName, paintId: $paintId, brandId: $brandId");
       final paletteService = PaletteService();
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId != null) {

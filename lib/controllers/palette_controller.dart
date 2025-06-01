@@ -64,7 +64,6 @@ class PaletteController extends ChangeNotifier {
       _totalPalettes = int.parse(result['totalPalettes'].toString());
       _limit = int.parse(result['limit'].toString());
     } catch (e) {
-      print('❌ Error loading palettes: $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
