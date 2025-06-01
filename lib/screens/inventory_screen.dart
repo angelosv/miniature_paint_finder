@@ -1090,17 +1090,14 @@ class _InventoryScreenState extends State<InventoryScreen>
 
         if (success) {
           setState(() {
-            // 1) Recrear _filteredInventory como lista mutable y quitar el ítem
             _filteredInventory = List<PaintInventoryItem>.from(
               _filteredInventory,
             )..remove(item);
 
-            // 2) Recrear _paginatedInventory como lista mutable y quitar el ítem
             _paginatedInventory = List<PaintInventoryItem>.from(
               _paginatedInventory,
             )..remove(item);
 
-            // 3) (Opcional) Si deseas recalcular páginas:
             _totalPages = (_filteredInventory.length / _currentPageSize).ceil();
             _updatePaginatedInventory(); // si quisieras re-empastar localmente
           });
