@@ -1090,15 +1090,19 @@ class _InventoryScreenState extends State<InventoryScreen>
 
         if (success) {
           setState(() {
-            final newFilteredInventory = List<PaintInventoryItem>.from(
+            // 1) Recrear _filteredInventory como lista mutable y quitar el ítem
+            _filteredInventory = List<PaintInventoryItem>.from(
               _filteredInventory,
-            );
-            final index = newFilteredInventory.indexOf(item);
-            if (index != -1) {
-              newFilteredInventory.removeAt(index);
-            }
-            _filteredInventory = newFilteredInventory;
-            _filterInventory();
+            )..remove(item);
+
+            // 2) Recrear _paginatedInventory como lista mutable y quitar el ítem
+            _paginatedInventory = List<PaintInventoryItem>.from(
+              _paginatedInventory,
+            )..remove(item);
+
+            // 3) (Opcional) Si deseas recalcular páginas:
+            _totalPages = (_filteredInventory.length / _currentPageSize).ceil();
+            _updatePaginatedInventory(); // si quisieras re-empastar localmente
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
