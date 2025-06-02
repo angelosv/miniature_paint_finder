@@ -16,6 +16,9 @@ import 'package:miniature_paint_finder/components/brand_card.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:miniature_paint_finder/services/library_cache_service.dart';
 import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -817,16 +820,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         isDarkMode
                             ? Colors.white
                             : Theme.of(context).primaryColor;
-                    final isInWishlist = controller.isPaintInWishlist(paint.id);
 
-                    return PaintGridCard(
-                      paint: paint,
-                      color: mainColor,
-                      onAddToWishlist: controller.toggleWishlist,
-                      onAddToInventory: _addToInventory,
-                      onAddToPalette: _handleAddToPalette,
-                      isInWishlist: isInWishlist,
-                      paletteName: _paletteName,
+                    return Consumer<WishlistCacheService>(
+                      builder: (context, wishlistCacheService, child) {
+                        final isInWishlist = _isPaintInWishlist(
+                          paint.id,
+                          wishlistCacheService,
+                        );
+
+                        return PaintGridCard(
+                          paint: paint,
+                          color: mainColor,
+                          onAddToWishlist:
+                              (String paintId) => _handleWishlistToggle(paint),
+                          onAddToInventory: _addToInventory,
+                          onAddToPalette: _handleAddToPalette,
+                          isInWishlist: isInWishlist,
+                          paletteName: _paletteName,
+                        );
+                      },
                     );
                   },
                 ),
@@ -996,39 +1008,104 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // Process adding to palette
     try {
       print("paletteName: $paletteName, paintId: $paintId, brandId: $brandId");
-      final paletteService = PaletteService();
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null) {
-        final result = await paletteService.addPaintToPaletteById(
-          paletteName,
-          userId,
-          paintId,
-          brandId,
-        );
 
-        if (result['executed']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Paint added to palette $paletteName'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${result['message']}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      // Use PaletteController with cache service for consistency
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
+      );
+
+      // Load palettes to find the one with matching name
+      await paletteController.loadPalettes();
+      final targetPalette = paletteController.palettes.firstWhere(
+        (palette) => palette.name == paletteName,
+        orElse: () => throw Exception('Palette "$paletteName" not found'),
+      );
+
+      // Create Paint object from the available data
+      final paint = Paint(
+        id: paintId,
+        brandId: brandId,
+        name: paintId, // Using paintId as name fallback
+        brand: brandId, // Using brandId as brand fallback
+        hex: '#000000', // Default hex, will be updated if needed
+        set: 'Library',
+        code: paintId,
+        r: 0,
+        g: 0,
+        b: 0,
+        category: 'Library',
+        isMetallic: false,
+        isTransparent: false,
+      );
+
+      // Add paint to palette using cache service
+      final success = await paletteController.addPaintToPalette(
+        targetPalette.id,
+        paint,
+        '#000000', // Default hex color
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Paint added to palette $paletteName'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add paint to palette'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding paint to palette: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      debugPrint('❌ Error adding paint to palette via cache service: $e');
+
+      // Fallback to direct service call if cache service fails
+      try {
+        final paletteService = PaletteService();
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId != null) {
+          final result = await paletteService.addPaintToPaletteById(
+            paletteName,
+            userId,
+            paintId,
+            brandId,
+          );
+
+          if (result['executed']) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Paint added to palette $paletteName'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${result['message']}'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (fallbackError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding paint to palette: $fallbackError'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -1331,5 +1408,145 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       backgroundColor: AppTheme.marineGold,
     );
+  }
+
+  bool _isPaintInWishlist(
+    String paintId,
+    WishlistCacheService wishlistCacheService,
+  ) {
+    if (!wishlistCacheService.isInitialized) {
+      return false;
+    }
+
+    final cachedWishlist = wishlistCacheService.cachedWishlist;
+    if (cachedWishlist == null) {
+      return false;
+    }
+
+    return cachedWishlist.any((item) {
+      final paint = item['paint'];
+      if (paint is Paint) {
+        return paint.id == paintId;
+      } else if (paint is Map<String, dynamic>) {
+        return paint['id'] == paintId;
+      }
+      return false;
+    });
+  }
+
+  Future<void> _handleWishlistToggle(Paint paint) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isGuestUser = currentUser == null || currentUser.isAnonymous;
+
+    if (isGuestUser) {
+      GuestPromoModal.showForRestrictedFeature(context, 'Wishlist');
+      return;
+    }
+
+    try {
+      final wishlistCacheService = Provider.of<WishlistCacheService>(
+        context,
+        listen: false,
+      );
+
+      if (!wishlistCacheService.isInitialized) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Wishlist service not ready, please try again'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final isCurrentlyInWishlist = _isPaintInWishlist(
+        paint.id,
+        wishlistCacheService,
+      );
+
+      if (isCurrentlyInWishlist) {
+        // Remove from wishlist
+        debugPrint(
+          '🗑️ Removing ${paint.name} from wishlist via library screen',
+        );
+
+        // First find the wishlist item to get the wishlist ID
+        final cachedWishlist = wishlistCacheService.cachedWishlist;
+        String? wishlistId;
+
+        if (cachedWishlist != null) {
+          final item = cachedWishlist.firstWhere((item) {
+            final itemPaint = item['paint'];
+            if (itemPaint is Paint) {
+              return itemPaint.id == paint.id;
+            } else if (itemPaint is Map<String, dynamic>) {
+              return itemPaint['id'] == paint.id;
+            }
+            return false;
+          }, orElse: () => {});
+          wishlistId = item['id']?.toString();
+        }
+
+        if (wishlistId != null) {
+          final success = await wishlistCacheService.removeFromWishlist(
+            paint.id,
+            wishlistId,
+          );
+
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${paint.name} removed from wishlist'),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } else {
+        // Add to wishlist with optimistic update
+        debugPrint('➕ Adding ${paint.name} to wishlist via library screen');
+
+        final success = await wishlistCacheService.addToWishlist(
+          paint,
+          2, // Medium priority from library
+          notes: 'Added from library',
+        );
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${paint.name} added to wishlist'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'VIEW',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Navigate to wishlist screen
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  // AppScaffold will handle navigation to wishlist tab
+                },
+              ),
+            ),
+          );
+        }
+      }
+
+      // Force sync after operation
+      if (wishlistCacheService.isInitialized) {
+        debugPrint('🔄 Forcing wishlist sync after library operation...');
+        await wishlistCacheService.forceSync();
+      }
+    } catch (e) {
+      debugPrint('❌ Error toggling wishlist from library: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating wishlist: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

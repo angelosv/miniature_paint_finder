@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/palette_service.dart';
+import 'package:provider/provider.dart';
 
 class PaletteSelectorModal extends StatefulWidget {
   final Paint paint;
@@ -14,149 +16,191 @@ class PaletteSelectorModal extends StatefulWidget {
 }
 
 class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
-  final List<Palette> _palettes = [];
-  final ScrollController _scrollCtrl = ScrollController();
-  final PaletteService _paletteService = PaletteService();
-
-  int _currentPage = 1;
-  int _totalPages = 1;
   bool _isLoading = false;
-  bool _isLoadingMore = false;
-
   final TextEditingController _newPaletteNameCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchPalettes();
-    _scrollCtrl.addListener(_onScroll);
+    _loadPalettes();
   }
 
-  void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-            _scrollCtrl.position.maxScrollExtent - 100 &&
-        !_isLoadingMore &&
-        _currentPage <= _totalPages) {
-      _fetchPalettes(loadMore: true);
-    }
-  }
-
-  /// New method: create a palette and immediately add the selected paint
-  Future<void> _createPaletteAndAdd(String name) async {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(strokeWidth: 2),
-            SizedBox(width: 12),
-            Text('Creating palette…'),
-          ],
-        ),
-        duration: Duration(minutes: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-
-    try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final token = await user.getIdToken();
-
-      // 1) Create the new palette
-      final created = await _paletteService.createPalette(name, token ?? '');
-      final paletteId = created['id'] as String;
-
-      // 2) Add the paint to that palette
-      await _paletteService.addPaintsToPalette(paletteId, [
-        {"paint_id": widget.paint.id, "brand_id": widget.paint.brandId},
-      ], token as String);
-
-      var result = true;
-
-      messenger.hideCurrentSnackBar();
-      if (result) {
-        messenger.showSnackBar(
-          SnackBar(content: Text("✔️ '$name' created and paint added")),
-        );
-      }
-    } catch (e) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  Future<void> _fetchPalettes({bool loadMore = false}) async {
+  /// Load palettes using PaletteController cache service (cache-first pattern)
+  Future<void> _loadPalettes() async {
     if (_isLoading) return;
+
     setState(() {
-      loadMore ? _isLoadingMore = true : _isLoading = true;
+      _isLoading = true;
     });
 
     try {
-      final result = await PaintService().getPalettes(
-        page: _currentPage,
-        limit: 10,
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
       );
 
-      setState(() {
-        _totalPages = result['totalPages'] as int;
-        _palettes.addAll(result['palettes'] as List<Palette>);
-        _currentPage++;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading pallets: $e'),
-          backgroundColor: Colors.red,
-        ),
+      // Load palettes using cache-first approach (same as wishlist/inventory)
+      await paletteController.loadPalettes();
+
+      debugPrint(
+        '🎨 Loaded ${paletteController.palettes.length} palettes via cache service',
       );
+    } catch (e) {
+      debugPrint('❌ Error loading palettes: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading palettes: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> _addToPalette(String paletteId) async {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(strokeWidth: 2),
-            SizedBox(width: 12),
-            Text('Adding paint…'),
-          ],
-        ),
-        duration: Duration(minutes: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-
+  /// Create a palette and immediately add the selected paint using cache service
+  Future<void> _createPaletteAndAdd(String name) async {
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final token = await user.getIdToken();
-      final result = await PaintService().addPaintToPalette(
-        widget.paint,
-        paletteId,
-        token as String,
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
       );
 
-      messenger.hideCurrentSnackBar();
-      if (result['success'] == true) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('✔️ ${widget.paint.name} added')),
+      // Create palette
+      final createdPalette = await paletteController.createPalette(
+        name: name,
+        imagePath: 'assets/images/placeholder.jpeg',
+        colors: [],
+      );
+
+      if (createdPalette != null) {
+        // Add paint to the newly created palette
+        final paintHex =
+            widget.paint.hex.startsWith('#')
+                ? widget.paint.hex
+                : '#${widget.paint.hex}';
+
+        final success = await paletteController.addPaintToPalette(
+          createdPalette.id,
+          widget.paint,
+          paintHex,
         );
+
+        if (success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Created palette "$name" and added ${widget.paint.name}',
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+
+          // Refresh palettes list
+          await _loadPalettes();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Palette created but failed to add paint'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } else {
-        throw Exception(result['message'] ?? 'Unknown error');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create palette'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(content: Text('❌ $e'), backgroundColor: Colors.red),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating palette: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
+    }
+  }
+
+  /// Add paint to existing palette using cache service
+  Future<void> _addToPalette(String paletteId) async {
+    try {
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
+      );
+
+      final paintHex =
+          widget.paint.hex.startsWith('#')
+              ? widget.paint.hex
+              : '#${widget.paint.hex}';
+
+      final success = await paletteController.addPaintToPalette(
+        paletteId,
+        widget.paint,
+        paintHex,
+      );
+
+      if (success) {
+        // Find palette name for success message
+        final palette = paletteController.palettes.firstWhere(
+          (p) => p.id == paletteId,
+          orElse:
+              () => Palette(
+                id: paletteId,
+                name: 'Selected Palette',
+                imagePath: '',
+                colors: [],
+                createdAt: DateTime.now(),
+                totalPaints: 0,
+              ),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added ${widget.paint.name} to ${palette.name}'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to add paint to palette'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding paint to palette: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -187,58 +231,57 @@ class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
           Text('Select a palette to add ${widget.paint.name}'),
           const SizedBox(height: 16),
 
-          if (_isLoading && _palettes.isEmpty)
-            const Center(child: CircularProgressIndicator()),
+          if (_isLoading) const Center(child: CircularProgressIndicator()),
 
-          if (_palettes.isNotEmpty)
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.5,
-              ),
-              child: ListView.builder(
-                controller: _scrollCtrl,
-                itemCount: _palettes.length + (_isLoadingMore ? 1 : 0),
-                itemBuilder: (_, i) {
-                  if (i == _palettes.length) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final p = _palettes[i];
-                  return ListTile(
-                    title: Text(p.name),
-                    subtitle: Text('${p.colors.length} colors'),
-                    leading: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children:
-                          p.colors
-                              .take(3)
-                              .map(
-                                (c) => Container(
-                                  width: 24,
-                                  height: 24,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: c,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1,
+          // Use Consumer to listen to palette controller changes
+          Consumer<PaletteController>(
+            builder: (context, paletteController, child) {
+              if (!_isLoading && paletteController.palettes.isNotEmpty) {
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: ListView.builder(
+                    itemCount: paletteController.palettes.length,
+                    itemBuilder: (_, i) {
+                      final palette = paletteController.palettes[i];
+                      return ListTile(
+                        title: Text(palette.name),
+                        subtitle: Text('${palette.colors.length} colors'),
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children:
+                              palette.colors
+                                  .take(3)
+                                  .map(
+                                    (c) => Container(
+                                      width: 24,
+                                      height: 24,
+                                      margin: const EdgeInsets.only(right: 4),
+                                      decoration: BoxDecoration(
+                                        color: c,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _addToPalette(p.id);
+                                  )
+                                  .toList(),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _addToPalette(palette.id);
+                        },
+                      );
                     },
-                  );
-                },
-              ),
-            ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
 
           const SizedBox(height: 16),
           OutlinedButton.icon(
@@ -293,7 +336,6 @@ class _PaletteSelectorModalState extends State<PaletteSelectorModal> {
 
   @override
   void dispose() {
-    _scrollCtrl.dispose();
     _newPaletteNameCtrl.dispose();
     super.dispose();
   }

@@ -37,6 +37,9 @@ import 'dart:math';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:provider/provider.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -69,6 +72,10 @@ class _PaintListTabState extends State<PaintListTab> {
   bool _isLoadingMostUsed = false;
   String? _mostUsedError;
   bool _isProcessingSelection = false; // Nueva variable de estado
+  DateTime? _mostUsedPaintsLastUpdate;
+
+  // Cache TTL for most used paints (30 minutes)
+  static const Duration _mostUsedPaintsTTL = Duration(minutes: 30);
 
   final Map<int, List<dynamic>> _matchingPaints = {};
   final Map<int, int> _currentPages = {};
@@ -83,6 +90,7 @@ class _PaintListTabState extends State<PaintListTab> {
   Color _selectedColor = Colors.white;
   final PaintBrandService _paintBrandService = PaintBrandService();
   final PaletteService _paletteService = PaletteService();
+  final PaintService _paintService = PaintService();
 
   // Track both colors and selected matching paints
   List<Map<String, dynamic>> _pickedColors = [];
@@ -627,7 +635,16 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === Most Used Paints ===
-            _buildMostUsedPaintsSection(context),
+            Consumer2<InventoryCacheService, WishlistCacheService>(
+              builder: (
+                context,
+                inventoryCacheService,
+                wishlistCacheService,
+                child,
+              ) {
+                return _buildMostUsedPaintsSection(context);
+              },
+            ),
           ],
         ),
       ),
@@ -1515,37 +1532,95 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
                                                   );
 
-                                                  final _colorSearchService =
-                                                      ColorSearchService();
-                                                  final token =
-                                                      await FirebaseAuth
-                                                          .instance
-                                                          .currentUser
-                                                          ?.getIdToken();
+                                                  // FIXED: Use PaletteController with cache service instead of ColorSearchService
 
-                                                  if (token == null) {
+                                                  // Convert the paint data to colors for the palette
+                                                  final List<Color>
+                                                  paletteColors =
+                                                      paintsToSend.map((paint) {
+                                                        final hexString =
+                                                            paint['hex']
+                                                                as String;
+                                                        final cleanHex =
+                                                            hexString
+                                                                    .startsWith(
+                                                                      '#',
+                                                                    )
+                                                                ? hexString
+                                                                    .substring(
+                                                                      1,
+                                                                    )
+                                                                : hexString;
+                                                        return Color(
+                                                          int.parse(
+                                                                cleanHex,
+                                                                radix: 16,
+                                                              ) +
+                                                              0xFF000000,
+                                                        );
+                                                      }).toList();
+
+                                                  // Create palette through cache service (same pattern as My Palettes screen)
+                                                  final createdPalette =
+                                                      await context
+                                                          .read<
+                                                            PaletteController
+                                                          >()
+                                                          .createPalette(
+                                                            name: paletteName,
+                                                            imagePath:
+                                                                _uploadedImageUrl ??
+                                                                '',
+                                                            colors:
+                                                                paletteColors,
+                                                          );
+
+                                                  if (createdPalette == null) {
                                                     throw Exception(
-                                                      'No se encontró el token de autenticación',
+                                                      'Failed to create palette through cache service',
                                                     );
                                                   }
 
-                                                  // Guardar una referencia al contexto actual antes de la operación asíncrona
-                                                  final currentContext =
-                                                      context;
-                                                  final scaffoldMessenger =
-                                                      ScaffoldMessenger.of(
-                                                        currentContext,
-                                                      );
+                                                  // Now add the selected paints to the palette using the cache service
+                                                  for (final paint
+                                                      in paintsToSend) {
+                                                    final paintObj = Paint.fromHex(
+                                                      id: paint['id'] as String,
+                                                      name:
+                                                          paint['name']
+                                                              as String,
+                                                      brand:
+                                                          paint['brand']
+                                                              as String,
+                                                      hex:
+                                                          paint['hex']
+                                                              as String,
+                                                      category:
+                                                          'Base', // Default category for color-matched paints
+                                                      set:
+                                                          paint['brand']
+                                                              as String, // Use brand as set fallback
+                                                      code:
+                                                          paint['colorCode']
+                                                              as String? ??
+                                                          paint['id'] as String,
+                                                    );
 
-                                                  await _colorSearchService
-                                                      .saveColorSearch(
-                                                        token: token,
-                                                        name: paletteName,
-                                                        paints: paintsToSend,
-                                                        imagePath:
-                                                            _uploadedImageUrl ??
-                                                            '',
-                                                      );
+                                                    await context
+                                                        .read<
+                                                          PaletteController
+                                                        >()
+                                                        .addPaintToPalette(
+                                                          createdPalette.id,
+                                                          paintObj,
+                                                          paint['hex']
+                                                              as String,
+                                                        );
+                                                  }
+
+                                                  debugPrint(
+                                                    '✅ Palette created through cache service: ${createdPalette.name}',
+                                                  );
 
                                                   // Verificar si el widget sigue montado después de la operación asíncrona
                                                   if (!mounted) return;
@@ -1567,14 +1642,15 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     Navigator.pop(context);
                                                     // ** ACAAAAAA
                                                     // Usar un post-frame callback para mostrar el snackbar y resetear
-                                                    WidgetsBinding.instance.addPostFrameCallback((
-                                                      _,
-                                                    ) {
-                                                      // Verificar si el contexto sigue montado antes de mostrar el snackbar
-                                                      if (currentContext
-                                                          .mounted) {
-                                                        scaffoldMessenger
-                                                            .showSnackBar(
+                                                    WidgetsBinding.instance
+                                                        .addPostFrameCallback((
+                                                          _,
+                                                        ) {
+                                                          // Verificar si el contexto sigue montado antes de mostrar el snackbar
+                                                          if (context.mounted) {
+                                                            ScaffoldMessenger.of(
+                                                              context,
+                                                            ).showSnackBar(
                                                               SnackBar(
                                                                 content: Text(
                                                                   'Color search "${_paletteNameController.text}" saved!',
@@ -1582,25 +1658,21 @@ class _PaintListTabState extends State<PaintListTab> {
                                                               ),
                                                             );
 
-                                                        // Resetear el estado después de un pequeño retraso
-                                                        Future.delayed(
-                                                          const Duration(
-                                                            milliseconds: 100,
-                                                          ),
-                                                          () {
-                                                            if (mounted) {
-                                                              _reset();
-                                                              // Refrescar el widget de paletas recientes
-                                                              context
-                                                                  .read<
-                                                                    PaletteController
-                                                                  >()
-                                                                  .loadPalettes();
-                                                            }
-                                                          },
-                                                        );
-                                                      }
-                                                    });
+                                                            // Resetear el estado después de un pequeño retraso
+                                                            Future.delayed(
+                                                              const Duration(
+                                                                milliseconds:
+                                                                    100,
+                                                              ),
+                                                              () {
+                                                                if (mounted) {
+                                                                  _reset();
+                                                                  // Cache service automatically notifies listeners - no need to manually reload
+                                                                }
+                                                              },
+                                                            );
+                                                          }
+                                                        });
                                                   }
                                                 } catch (e) {
                                                   debugPrint(
@@ -3269,7 +3341,6 @@ class _PaintListTabState extends State<PaintListTab> {
       paint: paint,
       onAddToWishlist: (paint, priority, _) async {
         final scaffoldMessenger = ScaffoldMessenger.of(context);
-        final paintService = PaintService();
 
         // Show loading indicator
         scaffoldMessenger.showSnackBar(
@@ -3290,42 +3361,47 @@ class _PaintListTabState extends State<PaintListTab> {
         );
 
         try {
-          // Get current Firebase user
-          final firebaseUser = FirebaseAuth.instance.currentUser;
-          if (firebaseUser == null) {
-            // Show error if not logged in
-            scaffoldMessenger.hideCurrentSnackBar();
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('You need to be logged in to add to wishlist'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            return;
-          }
-
-          final userId = firebaseUser.uid;
-
-          // Call API directly
-          final result = await paintService.addToWishlistDirect(
-            paint,
-            priority,
-            userId,
+          // Use WishlistCacheService for optimistic updates and automatic sync
+          final wishlistCacheService = Provider.of<WishlistCacheService>(
+            context,
+            listen: false,
           );
+
+          bool success;
+          if (wishlistCacheService.isInitialized) {
+            // Use cache service for optimistic update
+            success = await wishlistCacheService.addToWishlist(paint, priority);
+          } else {
+            // Fallback to direct service
+            final firebaseUser = FirebaseAuth.instance.currentUser;
+            if (firebaseUser == null) {
+              scaffoldMessenger.hideCurrentSnackBar();
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(
+                  content: Text('You need to be logged in to add to wishlist'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+
+            final result = await _paintService.addToWishlistDirect(
+              paint,
+              priority,
+              firebaseUser.uid,
+            );
+            success = result['success'] == true;
+          }
 
           scaffoldMessenger.hideCurrentSnackBar();
 
-          if (result['success'] == true) {
-            // Determine the correct message based on if the paint was already in the wishlist
-            final String message =
-                result['alreadyExists'] == true
-                    ? '${paint.name} is already in your wishlist'
-                    : 'Added ${paint.name} to wishlist${priority > 0 ? " with priority $priority" : ""}';
-
+          if (success) {
             scaffoldMessenger.showSnackBar(
               SnackBar(
-                content: Text(message),
+                content: Text(
+                  'Added ${paint.name} to wishlist${priority > 0 ? " with priority $priority" : ""}',
+                ),
                 backgroundColor: Colors.green,
                 action: SnackBarAction(
                   label: 'VIEW',
@@ -3341,14 +3417,16 @@ class _PaintListTabState extends State<PaintListTab> {
                 ),
               ),
             );
+
+            // Invalidate cache to refresh data
+            _invalidateMostUsedPaintsCache();
           } else {
-            // Show error with details
             scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text('Error: ${result['message']}'),
+              const SnackBar(
+                content: Text('Error adding to wishlist'),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 5),
+                duration: Duration(seconds: 5),
               ),
             );
           }
@@ -3359,7 +3437,7 @@ class _PaintListTabState extends State<PaintListTab> {
               content: Text('Error: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 5),
+              duration: Duration(seconds: 5),
             ),
           );
         }
@@ -3372,27 +3450,100 @@ class _PaintListTabState extends State<PaintListTab> {
     AddToInventoryModal.show(
       context: context,
       paint: paint,
-      onAddToInventory: (paint, quantity, notes, _) {
-        // Aquí manejamos la lógica para añadir al inventario
-        // Por ahora solo mostramos un mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added $quantity ${paint.name} to inventory'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'VIEW',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const InventoryScreen(),
-                  ),
-                );
-              },
+      onAddToInventory: (paint, quantity, notes, _) async {
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+        // Show loading indicator
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 2,
+                ),
+                SizedBox(width: 16),
+                Text('Adding to inventory...'),
+              ],
             ),
+            duration: Duration(seconds: 10),
+            behavior: SnackBarBehavior.floating,
           ),
         );
+
+        try {
+          // Use InventoryCacheService for optimistic updates and automatic sync
+          final inventoryCacheService = Provider.of<InventoryCacheService>(
+            context,
+            listen: false,
+          );
+
+          bool success;
+          if (inventoryCacheService.isInitialized) {
+            // Use cache service for optimistic update
+            success = await inventoryCacheService.addInventoryItem(
+              paint.brandId ?? 'unknown',
+              paint.id,
+              quantity,
+              notes: notes ?? '',
+            );
+          } else {
+            // Fallback to direct service
+            final inventoryService = InventoryService();
+            final result = await inventoryService.addInventoryRecordReturningId(
+              brandId: paint.brandId ?? 'unknown',
+              paintId: paint.id,
+              quantity: quantity,
+              notes: notes ?? '',
+            );
+            success = result != null;
+          }
+
+          scaffoldMessenger.hideCurrentSnackBar();
+
+          if (success) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Added $quantity ${paint.name} to inventory'),
+                backgroundColor: Colors.green,
+                action: SnackBarAction(
+                  label: 'VIEW',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const InventoryScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+
+            // Invalidate cache to refresh data
+            _invalidateMostUsedPaintsCache();
+          } else {
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Error adding to inventory'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        } catch (e) {
+          scaffoldMessenger.hideCurrentSnackBar();
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
       },
     );
   }
@@ -3670,6 +3821,8 @@ class _PaintListTabState extends State<PaintListTab> {
 
   // Método para forzar la actualización de las marcas
   Future<void> _refreshPaintBrands() async {
+    if (!mounted) return; // Check if widget is still mounted
+
     setState(() {
       _paintBrands = []; // Vaciar para mostrar el cargador
     });
@@ -3693,9 +3846,13 @@ class _PaintListTabState extends State<PaintListTab> {
               )
               .toList();
 
+      if (!mounted) return; // Check again before setState
+
       setState(() {
         _paintBrands = mappedBrands;
       });
+
+      if (!mounted) return; // Check before showing SnackBar
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -3705,6 +3862,9 @@ class _PaintListTabState extends State<PaintListTab> {
       );
     } catch (e) {
       print('❌ Error al actualizar marcas: $e');
+
+      if (!mounted) return; // Check before showing error SnackBar
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error updating categories: $e'),
@@ -3715,12 +3875,7 @@ class _PaintListTabState extends State<PaintListTab> {
     }
   }
 
-  Future<void> _loadMostUsedPaints() async {
-    setState(() {
-      _isLoadingMostUsed = true;
-      _mostUsedError = null;
-    });
-
+  Future<void> _loadMostUsedPaints({bool forceRefresh = false}) async {
     // Check if user is a guest
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
@@ -3734,13 +3889,43 @@ class _PaintListTabState extends State<PaintListTab> {
       return;
     }
 
+    // Check if we have valid cache and don't need to refresh
+    if (!forceRefresh &&
+        _mostUsedPaints != null &&
+        _mostUsedPaintsLastUpdate != null &&
+        DateTime.now().difference(_mostUsedPaintsLastUpdate!) <
+            _mostUsedPaintsTTL) {
+      debugPrint(
+        '✅ Using cached most used paints (${_mostUsedPaints!.length} items)',
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoadingMostUsed = true;
+      _mostUsedError = null;
+    });
+
     try {
+      debugPrint('🔄 Loading most used paints from API...');
       final token = await currentUser!.getIdToken();
-      _mostUsedPaints = await _paletteService.getMostUsedPaints(
+      final mostUsedPaints = await _paletteService.getMostUsedPaints(
         token as String,
       );
+
+      setState(() {
+        _mostUsedPaints = mostUsedPaints;
+        _mostUsedPaintsLastUpdate = DateTime.now();
+      });
+
+      debugPrint(
+        '✅ Most used paints loaded and cached (${mostUsedPaints.length} items)',
+      );
     } catch (e) {
-      _mostUsedError = e.toString();
+      debugPrint('❌ Error loading most used paints: $e');
+      setState(() {
+        _mostUsedError = e.toString();
+      });
     } finally {
       setState(() => _isLoadingMostUsed = false);
     }
@@ -3755,9 +3940,23 @@ class _PaintListTabState extends State<PaintListTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Your most used paints',
-          style: Theme.of(context).textTheme.titleMedium,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Your most used paints',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (!isGuestUser && _mostUsedPaints != null)
+              TextButton.icon(
+                onPressed: () => _loadMostUsedPaints(forceRefresh: true),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Refresh'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 12),
 
@@ -3863,5 +4062,18 @@ class _PaintListTabState extends State<PaintListTab> {
           ),
       ],
     );
+  }
+
+  // Method to invalidate most used paints cache when collections change
+  void _invalidateMostUsedPaintsCache() {
+    if (_mostUsedPaintsLastUpdate != null) {
+      debugPrint(
+        '🔄 Invalidating most used paints cache due to collection changes',
+      );
+      setState(() {
+        _mostUsedPaintsLastUpdate =
+            null; // This will force a refresh on next load
+      });
+    }
   }
 }

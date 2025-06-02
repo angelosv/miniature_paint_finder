@@ -1225,10 +1225,13 @@ class PaintService {
         return {'success': false, 'message': 'Paint object is null'};
       }
 
-      if (userId == null || userId.isEmpty) {
-        return {'success': false, 'message': 'User ID is required'};
+      // Get Firebase Auth token instead of using userId
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'User not authenticated'};
       }
 
+      final token = await user.getIdToken();
       final baseUrl = '${Env.apiBaseUrl}';
       final url = Uri.parse('$baseUrl/wishlist');
 
@@ -1254,11 +1257,21 @@ class PaintService {
         "priority": priority,
       };
 
+      debugPrint('🌐 Sending wishlist request to: $url');
+      debugPrint('📦 Request body: ${jsonEncode(requestBody)}');
+      debugPrint('🔑 Using brand_id: $brandId for paint: ${paint.name}');
+
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json', 'x-user-uid': userId},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use proper auth header
+        },
         body: jsonEncode(requestBody),
       );
+
+      debugPrint('📡 Response status: ${response.statusCode}');
+      debugPrint('📡 Response body: ${response.body}');
 
       Map<String, dynamic> responseData = {};
       if (response.body != null && response.body.isNotEmpty) {
@@ -1279,6 +1292,7 @@ class PaintService {
           'addedAt': DateTime.now(),
         };
 
+        debugPrint('✅ Paint already in wishlist: ${paint.name}');
         return {
           'success': true,
           'id': 'already-exists',
@@ -1294,6 +1308,7 @@ class PaintService {
           'addedAt': DateTime.now(),
         };
 
+        debugPrint('✅ Paint added to wishlist successfully: ${paint.name}');
         return {
           'success': true,
           'id': responseData['id'] ?? 'unknown-id',
@@ -1301,6 +1316,9 @@ class PaintService {
           'response': responseData,
         };
       } else {
+        debugPrint(
+          '❌ Failed to add to wishlist: ${response.statusCode} - ${response.body}',
+        );
         return {
           'success': false,
           'message':
@@ -1310,6 +1328,8 @@ class PaintService {
         };
       }
     } catch (e, stackTrace) {
+      debugPrint('❌ Exception adding to wishlist: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       return {
         'success': false,
         'message': 'Error: $e',

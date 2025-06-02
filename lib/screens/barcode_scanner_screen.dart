@@ -22,6 +22,7 @@ import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'package:http/http.dart' as http; // Para las peticiones HTTP
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
@@ -620,24 +621,67 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
             },
             onAddToPalette: (paint, palette) async {
-              final user = FirebaseAuth.instance.currentUser;
-              final token = await user?.getIdToken();
-              final _palette = await _paletteService.createPalette(
-                palette.name,
-                token ?? '',
-              );
-              final paletteId = _palette['id'];
-              await _paletteService.addPaintsToPalette(paletteId, [
-                {"paint_id": paint.id, "brand_id": paint.brandId},
-              ], token ?? '');
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Paint added to palette ${palette.name}!'),
-                    backgroundColor: Colors.purple,
-                  ),
+              try {
+                // Use PaletteController with cache service for consistency
+                final paletteController = Provider.of<PaletteController>(
+                  context,
+                  listen: false,
                 );
+
+                // Create palette using cache service
+                final createdPalette = await paletteController.createPalette(
+                  name: palette.name,
+                  imagePath: 'assets/images/placeholder.jpeg',
+                  colors: [],
+                );
+
+                if (createdPalette != null) {
+                  // Add paint to the newly created palette
+                  final paintHex =
+                      paint.hex.startsWith('#') ? paint.hex : '#${paint.hex}';
+                  final success = await paletteController.addPaintToPalette(
+                    createdPalette.id,
+                    paint,
+                    paintHex,
+                  );
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Paint added to palette ${palette.name}!'
+                              : 'Palette created but failed to add paint',
+                        ),
+                        backgroundColor: success ? Colors.green : Colors.orange,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to create palette'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('❌ Error in barcode scanner palette creation: $e');
+
+                // Show error message - no direct API fallback to maintain cache consistency
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating palette: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
 
               Navigator.of(context).pushAndRemoveUntil(

@@ -33,8 +33,56 @@ import 'package:miniature_paint_finder/platform_config/linux_plugins_config.dart
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'dart:async';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
+import 'package:miniature_paint_finder/services/palette_cache_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Handle cache migration for app updates
+Future<void> _handleCacheMigration() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    const currentCacheVersion = '1.0.0';
+    const cacheVersionKey = 'cache_version';
+
+    final storedVersion = prefs.getString(cacheVersionKey);
+
+    if (storedVersion == null) {
+      // First time using cache services - mark as current version
+      await prefs.setString(cacheVersionKey, currentCacheVersion);
+      debugPrint('🎯 Cache migration: First time setup completed');
+    } else if (storedVersion != currentCacheVersion) {
+      // Future: Handle schema changes here
+      debugPrint(
+        '🔄 Cache migration: Updating from $storedVersion to $currentCacheVersion',
+      );
+
+      // Clear all cache keys to force fresh load with new schema
+      final keys =
+          prefs
+              .getKeys()
+              .where(
+                (key) =>
+                    key.startsWith('library_cache_') ||
+                    key.startsWith('inventory_cache_') ||
+                    key.startsWith('wishlist_cache_') ||
+                    key.startsWith('palette_cache_'),
+              )
+              .toList();
+
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+
+      await prefs.setString(cacheVersionKey, currentCacheVersion);
+      debugPrint('✅ Cache migration completed successfully');
+    } else {
+      debugPrint('✅ Cache version up to date: $currentCacheVersion');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Cache migration error (continuing anyway): $e');
+  }
+}
 
 /// App entry point
 void main() async {
@@ -109,10 +157,16 @@ void main() async {
     PaintService(),
   );
 
+  // Initialize the palette cache service
+  final PaletteCacheService paletteCacheService = PaletteCacheService();
+
   // Initialize cache in background without blocking app startup
   Future.microtask(() async {
     try {
       debugPrint('🚀 Starting cache initialization...');
+
+      // Check and handle cache migration if needed
+      await _handleCacheMigration();
 
       // Initialize library cache
       await libraryCacheService.initialize();
@@ -125,8 +179,15 @@ void main() async {
       // Initialize wishlist cache
       await wishlistCacheService.initialize();
       debugPrint('✅ Wishlist cache initialized');
+
+      // Initialize palette cache (wait for it to complete)
+      while (!paletteCacheService.isInitialized) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      debugPrint('✅ Palette cache initialized');
     } catch (e) {
       debugPrint('❌ Error during cache initialization: $e');
+      // App continues to work even if cache initialization fails
     }
   });
 
@@ -163,9 +224,14 @@ void main() async {
         ChangeNotifierProvider<WishlistCacheService>.value(
           value: wishlistCacheService,
         ),
+        ChangeNotifierProvider<PaletteCacheService>.value(
+          value: paletteCacheService,
+        ),
         Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
-          create: (context) => PaletteController(paletteRepository),
+          create:
+              (context) =>
+                  PaletteController(paletteRepository, paletteCacheService),
         ),
         ChangeNotifierProvider(
           create:
@@ -245,7 +311,7 @@ class _MyAppWrapperState extends State<MyAppWrapper>
     if (!mounted) return;
 
     try {
-      debugPrint('🎯 Starting essential data preload...');
+      debugPrint('�� Starting essential data preload...');
       await widget.cacheService.preloadEssentialData();
       debugPrint('✅ Essential data preload completed');
     } catch (e) {

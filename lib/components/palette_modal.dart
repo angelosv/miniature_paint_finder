@@ -8,6 +8,8 @@ import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
+import 'package:miniature_paint_finder/services/brand_service.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
@@ -37,12 +39,15 @@ class PaletteModal extends StatefulWidget {
 class _PaletteModalState extends State<PaletteModal> {
   // Trigger para forzar la reconstrucción
   int _refreshCounter = 0;
+  final BrandService _brandService = BrandService();
+  final Map<String, String?> _brandLogos = {};
 
   // Precargar imagen al inicializar
   @override
   void initState() {
     super.initState();
     _precacheHeaderImage();
+    _loadBrandLogos();
   }
 
   // Precarga la imagen del encabezado para mejorar la experiencia
@@ -54,6 +59,27 @@ class _PaletteModalState extends State<PaletteModal> {
         context,
         cacheKey: 'palette_modal_${widget.paletteId}',
       );
+    }
+  }
+
+  /// Carga los logos de marcas
+  Future<void> _loadBrandLogos() async {
+    try {
+      await _brandService.loadBrands();
+
+      // Cargar logos para las marcas de las pinturas en esta paleta
+      for (final paint in widget.paints) {
+        if (paint.paintBrandId != null) {
+          final logoUrl = _brandService.getLogoUrl(paint.paintBrandId!);
+          _brandLogos[paint.paintBrandId!] = logoUrl;
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading brand logos: $e');
     }
   }
 
@@ -304,24 +330,11 @@ class _PaletteModalState extends State<PaletteModal> {
                                   ),
                                   child: Row(
                                     children: [
-                                      // Brand avatar
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFFEDEDED),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            paint.brandAvatar,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                        ),
+                                      // Brand logo
+                                      _buildBrandLogo(
+                                        paint.paintBrandId ?? '',
+                                        paint.paintBrand,
+                                        isDarkMode,
                                       ),
                                       const SizedBox(width: 16),
                                       // Paint info
@@ -822,6 +835,24 @@ class _PaletteModalState extends State<PaletteModal> {
                 ],
               ),
               const SizedBox(height: 16),
+              // Botón para eliminar de la paleta
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showRemovePaintDialog(context, paint);
+                  },
+                  icon: const Icon(Icons.remove_circle_outline),
+                  label: const Text("Remove from Palette"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               // Botón para ver el inventario
               SizedBox(
                 width: double.infinity,
@@ -1314,6 +1345,298 @@ class _PaletteModalState extends State<PaletteModal> {
       return Colors.red;
     } catch (e) {
       return Colors.red;
+    }
+  }
+
+  /// Obtiene el logoUrl para un brandId de forma segura
+  String? _getSafeLogoUrl(String brandId) {
+    if (_brandLogos.containsKey(brandId)) {
+      return _brandLogos[brandId];
+    }
+    return null;
+  }
+
+  /// Construye el widget del logo de la marca
+  Widget _buildBrandLogo(String brandId, String brandName, bool isDarkMode) {
+    final String? logoUrl = _getSafeLogoUrl(brandId);
+
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color:
+                isDarkMode
+                    ? Colors.grey.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(7),
+          child: CachedNetworkImage(
+            imageUrl: logoUrl,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            cacheKey: 'brand_logo_$brandId',
+            placeholder:
+                (context, url) => Container(
+                  width: 48,
+                  height: 48,
+                  color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: isDarkMode ? Colors.orange : Colors.blue,
+                    ),
+                  ),
+                ),
+            errorWidget: (context, error, stackTrace) {
+              debugPrint('❌ Error loading brand logo for $brandId: $error');
+              return _buildFallbackBrandLogo(brandName, isDarkMode);
+            },
+          ),
+        ),
+      );
+    } else {
+      return _buildFallbackBrandLogo(brandName, isDarkMode);
+    }
+  }
+
+  /// Construye un logo de fallback con las iniciales de la marca
+  Widget _buildFallbackBrandLogo(String brandName, bool isDarkMode) {
+    final initials =
+        brandName.isNotEmpty
+            ? brandName.length >= 2
+                ? brandName.substring(0, 2).toUpperCase()
+                : brandName.substring(0, 1).toUpperCase()
+            : 'P';
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[700] : const Color(0xFFEDEDED),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color:
+              isDarkMode
+                  ? Colors.grey.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mostrar diálogo de confirmación para eliminar pintura de la paleta
+  void _showRemovePaintDialog(BuildContext context, PaintSelection paint) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF101823) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Remove Paint',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _getColorFromHex(paint.paintColorHex),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color:
+                            isDarkMode
+                                ? Colors.grey.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          paint.paintName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          paint.paintBrand,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Are you sure you want to remove "${paint.paintName}" from "${widget.paletteName}"?',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: isDarkMode ? Colors.white70 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'This action cannot be undone.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDarkMode ? Colors.red[300] : Colors.red[700],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _removePaintFromPalette(paint);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDarkMode ? Colors.red[300] : Colors.red[600],
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Remove',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        );
+      },
+    );
+  }
+
+  /// Eliminar pintura de la paleta usando cache service
+  Future<void> _removePaintFromPalette(PaintSelection paint) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Mostrar indicador de carga
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 2,
+              ),
+              SizedBox(width: 16),
+              Text('Removing paint from palette...'),
+            ],
+          ),
+          duration: Duration(seconds: 10),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // Usar PaletteController que internamente usa cache service
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
+      );
+      final success = await paletteController.removePaintFromPalette(
+        widget.paletteId,
+        paint.paintId,
+      );
+
+      scaffoldMessenger.hideCurrentSnackBar();
+
+      if (success) {
+        // Cerrar el modal y refrescar la pantalla
+        if (mounted) {
+          Navigator.of(context).pop(); // Cerrar PaletteModal
+
+          // Mostrar mensaje de éxito
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Removed "${paint.paintName}" from palette'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+
+          // Forzar actualización de la lista de paletas
+          paletteController.refreshPalettes();
+        }
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to remove "${paint.paintName}" from palette'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.hideCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error removing paint: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 }

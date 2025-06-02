@@ -183,7 +183,10 @@ class WishlistCacheService extends ChangeNotifier {
   /// Agrega un item a la wishlist (optimistic update)
   Future<bool> addToWishlist(Paint paint, int priority, {String? notes}) async {
     try {
-      debugPrint('➕ Adding to wishlist: ${paint.id} (priority: $priority)');
+      debugPrint(
+        '➕ Adding to wishlist: ${paint.id} (${paint.name}) priority: $priority',
+      );
+      debugPrint('🔍 Connection status: $_hasConnection');
 
       // Crear operación pendiente
       final operation = {
@@ -195,6 +198,8 @@ class WishlistCacheService extends ChangeNotifier {
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'paint': paint.toJson(), // Guardar paint completo para UI optimista
       };
+
+      debugPrint('📝 Created operation: ${operation['id']}');
 
       // Optimistic update - agregar al cache local inmediatamente
       if (_cachedWishlist != null) {
@@ -211,6 +216,7 @@ class WishlistCacheService extends ChangeNotifier {
 
         if (existingIndex >= 0) {
           // Actualizar prioridad existente
+          debugPrint('🔄 Updating existing item at index $existingIndex');
           _cachedWishlist![existingIndex] = {
             ..._cachedWishlist![existingIndex],
             'priority': priority,
@@ -230,20 +236,45 @@ class WishlistCacheService extends ChangeNotifier {
             'palettes': <String>[],
           };
           _cachedWishlist!.add(newItem);
+          debugPrint(
+            '➕ Added new item to cache. Total items: ${_cachedWishlist!.length}',
+          );
         }
+      } else {
+        debugPrint('⚠️ Cached wishlist is null, initializing with new item');
+        _cachedWishlist = [
+          {
+            'id': operation['id'],
+            'paint': paint,
+            'priority': priority,
+            'notes': notes ?? '',
+            'isPriority': priority > 0,
+            'addedAt': DateTime.now(),
+            'brand': {'name': paint.brand, 'logo_url': paint.brandLogo},
+            'palettes': <String>[],
+          },
+        ];
       }
 
       // Agregar a la queue de operaciones pendientes
       _pendingOperations.add(operation);
       await _savePendingOperations();
+      debugPrint(
+        '📋 Added to pending operations. Queue size: ${_pendingOperations.length}',
+      );
 
       notifyListeners();
+      debugPrint('🔔 Notified listeners');
 
       // Intentar sincronizar inmediatamente si hay conexión
       if (_hasConnection) {
+        debugPrint('🌐 Has connection - attempting immediate sync');
         unawaited(_syncWithBackend());
+      } else {
+        debugPrint('📱 No connection - operation queued for later sync');
       }
 
+      debugPrint('✅ addToWishlist completed successfully');
       return true;
     } catch (e) {
       debugPrint('❌ Error adding to wishlist: $e');
@@ -693,36 +724,59 @@ class WishlistCacheService extends ChangeNotifier {
 
   Future<void> _processOperation(Map<String, dynamic> operation) async {
     final type = operation['type'] as String;
+    debugPrint('🔄 Processing wishlist operation: $type');
 
     switch (type) {
       case 'add':
         final paintData = operation['paint'] as Map<String, dynamic>;
         final paint = Paint.fromJson(paintData);
-        await _paintService.addToWishlistDirect(
+        debugPrint('➕ Syncing add operation for paint: ${paint.name}');
+
+        final result = await _paintService.addToWishlistDirect(
           paint,
           operation['priority'] as int,
-          '', // userId se maneja internamente en PaintService
+          '', // No longer needed - handled internally
         );
+
+        if (result['success'] != true) {
+          throw Exception('Failed to sync add operation: ${result['message']}');
+        }
+        debugPrint('✅ Add operation synced successfully');
         break;
 
       case 'update':
-        // Actualizar prioridad usando el método existente
-        await _paintService.updateWishlistPriority(
+        debugPrint(
+          '✏️ Syncing update operation for paint: ${operation['paintId']}',
+        );
+
+        // Get token for update operation
+        final token = await _getAuthToken();
+        final success = await _paintService.updateWishlistPriority(
           operation['paintId'] as String,
           operation['wishlistId'] as String,
           (operation['priority'] as int) > 0,
-          '', // token se maneja internamente
+          token, // Use proper token
           operation['priority'] as int,
         );
+
+        if (!success) {
+          throw Exception('Failed to sync update operation');
+        }
+        debugPrint('✅ Update operation synced successfully');
         break;
 
       case 'delete':
+        debugPrint(
+          '🗑️ Syncing delete operation for paint: ${operation['paintId']}',
+        );
+
         final token = await _getAuthToken();
         await _paintService.removeFromWishlist(
           operation['paintId'] as String,
           operation['wishlistId'] as String,
           token,
         );
+        debugPrint('✅ Delete operation synced successfully');
         break;
 
       default:
@@ -748,5 +802,42 @@ class WishlistCacheService extends ChangeNotifier {
     _connectivitySubscription?.cancel();
     _syncTimer?.cancel();
     super.dispose();
+  }
+
+  /// Debug method to check cache service state
+  void debugCacheState() {
+    debugPrint('🔍 ========== WISHLIST CACHE DEBUG ==========');
+    debugPrint('🔍 Initialized: $_isInitialized');
+    debugPrint('🔍 Has connection: $_hasConnection');
+    debugPrint('🔍 Is syncing: $_isSyncing');
+    debugPrint('🔍 Cached items: ${_cachedWishlist?.length ?? 0}');
+    debugPrint('🔍 Pending operations: ${_pendingOperations.length}');
+    debugPrint('🔍 Last cache update: $_lastCacheUpdate');
+    debugPrint('🔍 Cache valid: ${_isCacheValid()}');
+
+    if (_cachedWishlist != null && _cachedWishlist!.isNotEmpty) {
+      debugPrint('🔍 First 3 cached items:');
+      for (int i = 0; i < _cachedWishlist!.length && i < 3; i++) {
+        final item = _cachedWishlist![i];
+        final paint = item['paint'];
+        String paintName = 'Unknown';
+        if (paint is Paint) {
+          paintName = paint.name;
+        } else if (paint is Map<String, dynamic>) {
+          paintName = paint['name']?.toString() ?? 'Unknown';
+        }
+        debugPrint(
+          '🔍   - ${item['id']}: $paintName (priority: ${item['priority']})',
+        );
+      }
+    }
+
+    if (_pendingOperations.isNotEmpty) {
+      debugPrint('🔍 Pending operations:');
+      for (final op in _pendingOperations) {
+        debugPrint('🔍   - ${op['type']}: ${op['paintId']} (${op['id']})');
+      }
+    }
+    debugPrint('🔍 ==========================================');
   }
 }
