@@ -61,17 +61,32 @@ class _PaletteScreenState extends State<PaletteScreen> {
     super.initState();
     // Get controller from provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Ensure we get a fresh load of palettes when screen initializes
-      context.read<PaletteController>().loadPalettes();
+      final paletteController = context.read<PaletteController>();
+
+      // Only load if we haven't loaded yet
+      if (!paletteController.hasInitialLoaded) {
+        paletteController.loadPalettes();
+      }
 
       // Precarga las imágenes para mejorar la experiencia
       _precacheImages();
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // No need to force refresh - cache service handles background sync automatically
+    // This follows the same pattern as wishlist and inventory screens
+  }
+
   /// Precarga las imágenes de paletas para acelerar la renderización
   void _precacheImages() async {
-    final palettes = _paletteController.palettes;
+    final paletteController = Provider.of<PaletteController>(
+      context,
+      listen: false,
+    );
+    final palettes = paletteController.palettes;
     final imageCacheService = ImageCacheService();
 
     for (final palette in palettes) {
@@ -438,7 +453,11 @@ class _PaletteScreenState extends State<PaletteScreen> {
           );
 
           // Luego creamos la paleta con la URL de la imagen
-          final success = await _paletteController.createPalette(
+          final paletteController = Provider.of<PaletteController>(
+            context,
+            listen: false,
+          );
+          final success = await paletteController.createPalette(
             name: name,
             imagePath: imageUrl,
             colors: [], // Colors will be extracted from image
@@ -543,32 +562,17 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
 
     if (confirmed == true) {
-      final success = await _paletteController.deletePalette(palette.id);
+      final paletteController = Provider.of<PaletteController>(
+        context,
+        listen: false,
+      );
+      final success = await paletteController.deletePalette(palette.id);
 
       if (mounted) {
-        // Mostrar mensaje de éxito o error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success
-                  ? 'Palette "${palette.name}" deleted'
-                  : 'Failed to delete palette',
-            ),
-            backgroundColor: success ? Colors.green : Colors.red,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-
-        // Si la eliminación fue exitosa y estamos en la última página con una sola paleta,
-        // cargar la página anterior
-        if (success &&
-            _paletteController.palettes.isEmpty &&
-            _paletteController.currentPage > 1) {
-          await _paletteController.loadPreviousPage();
+        // Si la eliminación fue exitosa, simplemente refrescar la lista
+        if (success) {
+          // La lista se actualiza automáticamente a través del cache service
+          debugPrint('✅ Palette deleted successfully');
         }
       }
     }
@@ -578,22 +582,27 @@ class _PaletteScreenState extends State<PaletteScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = Provider.of<ThemeProvider>(context);
-    _paletteController = Provider.of<PaletteController>(context);
 
-    return AppScaffold(
-      scaffoldKey: _scaffoldKey,
-      title: 'My Palettes',
-      selectedIndex: 4,
-      body: _buildBody(context, isDarkMode),
-      drawer: const SharedDrawer(currentScreen: 'palettes'),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreatePaletteOptions,
-        backgroundColor:
-            isDarkMode ? AppTheme.marineOrange : Theme.of(context).primaryColor,
-        foregroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    return Consumer<PaletteController>(
+      builder: (context, paletteController, child) {
+        return AppScaffold(
+          scaffoldKey: _scaffoldKey,
+          title: 'My Palettes',
+          selectedIndex: 4,
+          body: _buildBody(context, isDarkMode, paletteController),
+          drawer: const SharedDrawer(currentScreen: 'palettes'),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _showCreatePaletteOptions,
+            backgroundColor:
+                isDarkMode
+                    ? AppTheme.marineOrange
+                    : Theme.of(context).primaryColor,
+            foregroundColor: isDarkMode ? AppTheme.marineBlue : Colors.white,
+            child: const Icon(Icons.add),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
     );
   }
 
@@ -623,125 +632,79 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, bool isDarkMode) {
-    return Column(
-      children: [
-        Expanded(
-          child:
-              _paletteController.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _paletteController.error != null
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _paletteController.error!,
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.red[300] : Colors.red,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => _paletteController.loadPalettes(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                  : _paletteController.palettes.isEmpty
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/images/palette_palceholder.png',
-                          width: 200,
-                          height: 200,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No palettes yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color:
-                                isDarkMode ? Colors.white : AppTheme.marineBlue,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Create your first palette to get started',
-                          style: TextStyle(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: _paletteController.palettes.length,
-                    itemBuilder: (context, index) {
-                      final palette = _paletteController.palettes[index];
-                      return _buildPaletteCard(palette);
-                    },
-                  ),
-        ),
-        if (_paletteController.totalPages > 1)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[900] : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
+  Widget _buildBody(
+    BuildContext context,
+    bool isDarkMode,
+    PaletteController paletteController,
+  ) {
+    return paletteController.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : paletteController.error != null
+        ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                paletteController.error!,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.red[300] : Colors.red,
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed:
-                      _paletteController.currentPage > 1
-                          ? () => _paletteController.loadPreviousPage()
-                          : null,
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  'Page ${_paletteController.currentPage} of ${_paletteController.totalPages}',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed:
-                      _paletteController.currentPage <
-                              _paletteController.totalPages
-                          ? () => _paletteController.loadNextPage()
-                          : null,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => paletteController.loadPalettes(),
+                child: const Text('Retry'),
+              ),
+            ],
           ),
-      ],
-    );
+        )
+        : paletteController.palettes.isEmpty
+        ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/palette_palceholder.png',
+                width: 200,
+                height: 200,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                paletteController.hasInitialLoaded
+                    ? 'No palettes yet'
+                    : 'Loading palettes...',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: isDarkMode ? Colors.white : AppTheme.marineBlue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                paletteController.hasInitialLoaded
+                    ? 'Create your first palette to get started'
+                    : 'Please wait while we load your palettes',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        )
+        : GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+            childAspectRatio: 0.8,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: paletteController.palettes.length,
+          itemBuilder: (context, index) {
+            final palette = paletteController.palettes[index];
+            return _buildPaletteCard(palette);
+          },
+        );
   }
 
   Widget _buildPaletteCard(Palette palette) {

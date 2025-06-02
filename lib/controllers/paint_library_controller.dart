@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
+import 'package:miniature_paint_finder/services/library_cache_service.dart';
 
 /// Controlador para manejar la lógica de la pantalla de biblioteca de pinturas
+/// Ahora optimizado con cache inteligente para mejor performance
 class PaintLibraryController extends ChangeNotifier {
-  /// Repositorio para acceder a datos de pinturas
+  /// Servicios para acceder a datos de pinturas
   final PaintApiService _apiService;
+  final LibraryCacheService _cacheService;
 
   /// Lista completa de pinturas cargadas
   List<Paint> _allPaints = [];
@@ -49,8 +52,8 @@ class PaintLibraryController extends ChangeNotifier {
   /// Lista de tamaños de página disponibles
   List<int> pageSizeOptions = [25, 50, 100];
 
-  /// Constructor que recibe el repositorio
-  PaintLibraryController(this._apiService);
+  /// Constructor que recibe los servicios
+  PaintLibraryController(this._apiService, this._cacheService);
 
   /// Getters para acceder a los datos desde la UI
   List<Paint> get allPaints => _allPaints;
@@ -63,6 +66,9 @@ class PaintLibraryController extends ChangeNotifier {
   String get selectedBrand => _selectedBrand;
   bool get showingBrandsView => _showingBrandsView;
   List<Map<String, dynamic>> get brands => _brands;
+
+  /// Getter para saber si el cache está precargando datos
+  bool get isPreloading => _cacheService.isPreloading;
 
   set selectedBrand(String value) {
     _selectedBrand = value;
@@ -133,8 +139,11 @@ class PaintLibraryController extends ChangeNotifier {
     return _brands;
   }
 
-  /// Cargar todas las pinturas
-  Future<void> loadPaints() async {
+  /// Cargar todas las pinturas usando el cache inteligente
+  Future<void> loadPaints({bool forceRefresh = false}) async {
+    debugPrint(
+      '🎨 Loading paints - Page: $_currentPage, Size: $_pageSize, Brand: $_selectedBrand, Search: $_searchQuery, Category: $_selectedCategory',
+    );
     _isLoading = true;
     _hasError = false;
     _errorMessage = null;
@@ -149,13 +158,20 @@ class PaintLibraryController extends ChangeNotifier {
         );
         brandId = matchingBrand['id'] as String;
       }
+      debugPrint('🏷️ brandId: $brandId');
 
-      final result = await _apiService.getPaints(
+      // Usar el cache service para obtener las pinturas
+      final result = await _cacheService.getPaints(
         page: _currentPage,
         limit: _pageSize,
-        brandId: brandId,
+        brandId: brandId.isEmpty ? null : brandId,
         name: _searchQuery.isNotEmpty ? _searchQuery : null,
         category: _selectedCategory == 'All' ? null : _selectedCategory,
+        forceRefresh: forceRefresh,
+      );
+
+      debugPrint(
+        '✅ API Response - Total: ${result['totalPaints']}, Pages: ${result['totalPages']}, Current: ${result['currentPage']}',
       );
 
       _allPaints = result['paints'] as List<Paint>;
@@ -164,6 +180,7 @@ class PaintLibraryController extends ChangeNotifier {
       _totalPages = result['totalPages'] as int;
       _totalPaints = result['totalPaints'] as int;
     } catch (e) {
+      debugPrint('❌ Error loading paints: $e');
       _hasError = true;
       _errorMessage = 'Error al cargar las pinturas: $e';
     } finally {
@@ -181,12 +198,13 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Establecer el filtro de marca recibiendo el nombre de la marca y obteniendo su id.
   void filterByBrand(String brandName, bool reset) {
+    debugPrint('🏷️ filterByBrand: $brandName');
     if (brandName == 'All') {
       _selectedBrand = 'All';
     } else {
       _selectedBrand = brandName;
     }
-
+    debugPrint('🏷️ _selectedBrand: $_selectedBrand');
     if (reset) {
       _currentPage = 1;
       loadPaints();
@@ -227,6 +245,7 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cambiar a una página específica
   void goToPage(int page) {
+    debugPrint('📄 Going to page: $page');
     if (page < 1 || page > _totalPages) return;
     _currentPage = page;
     loadPaints();
@@ -234,6 +253,7 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Cambiar el tamaño de página
   void setPageSize(int size) {
+    debugPrint('📏 Changing page size to: $size');
     _pageSize = size;
     _currentPage = 1; // Volver a la primera página
     loadPaints();
@@ -249,48 +269,14 @@ class PaintLibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Guardar los datos persistentes al cerrar
-  void dispose() {
-    // Aquí se podrían guardar las preferencias como la wishlist
-    // _saveWishlist();
-    super.dispose();
-  }
-
-  Future<void> loadBrands() async {
+  /// Cargar marcas usando el cache inteligente
+  Future<void> loadBrands({bool forceRefresh = false}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final brands = await _apiService.getBrands();
-
-      // Verificar si los brands ya incluyen el paint_count
-      bool needsCountUpdate = false;
-      for (var brand in brands) {
-        if (!brand.containsKey('paint_count') || brand['paint_count'] == null) {
-          needsCountUpdate = true;
-          // Asegurar que todos tengan un paint_count inicial
-          brand['paint_count'] = 0;
-        }
-      }
-
-      // Si al menos una marca no tiene count, obtenerlos manualmente
-      if (needsCountUpdate) {
-        // Intentar obtener recuentos para cada marca
-        for (var brand in brands) {
-          try {
-            // Obtener el recuento total de pinturas para esta marca
-            final result = await _apiService.getPaints(
-              brandId: brand['id'] as String,
-              limit: 1, // Solo necesitamos el total, no las pinturas reales
-            );
-
-            // Actualizar el recuento de pinturas
-            brand['paint_count'] = result['totalPaints'] as int;
-          } catch (e) {
-            // Mantener el count en 0 si falla
-          }
-        }
-      }
+      // Usar el cache service para obtener las marcas
+      final brands = await _cacheService.getBrands(forceRefresh: forceRefresh);
 
       // Actualizar el estado
       _brands = brands;
@@ -305,9 +291,14 @@ class PaintLibraryController extends ChangeNotifier {
     }
   }
 
-  Future<void> loadCategories() async {
+  /// Cargar categorías usando el cache inteligente
+  Future<void> loadCategories({bool forceRefresh = false}) async {
     try {
-      final categories = await _apiService.getCategories();
+      // Usar el cache service para obtener las categorías
+      final categories = await _cacheService.getCategories(
+        forceRefresh: forceRefresh,
+      );
+
       _categories = categories;
       _availableCategories = [
         'All',
@@ -321,12 +312,35 @@ class PaintLibraryController extends ChangeNotifier {
     }
   }
 
+  /// Refresca los datos forzando una nueva carga desde el API
+  Future<void> refreshData() async {
+    debugPrint('🔄 Forcing data refresh...');
+    await Future.wait([
+      loadBrands(forceRefresh: true),
+      loadCategories(forceRefresh: true),
+      loadPaints(forceRefresh: true),
+    ]);
+  }
+
+  /// Limpia el cache y recarga los datos
+  Future<void> clearCacheAndReload() async {
+    debugPrint('🗑️ Clearing cache and reloading...');
+    await _cacheService.clearCache();
+    await refreshData();
+  }
+
+  /// Precarga datos esenciales para mejorar la experiencia del usuario
+  Future<void> preloadEssentialData() async {
+    await _cacheService.preloadEssentialData();
+  }
+
   Color _getColorFromHex(Paint paint) {
     return Color(int.parse(paint.hex.substring(1, 7), radix: 16) + 0xFF000000);
   }
 
   /// Ir a la página anterior
   void goToPreviousPage() {
+    debugPrint('◀️ Going to previous page. Current page: $_currentPage');
     if (_currentPage > 1) {
       _currentPage--;
       loadPaints();
@@ -335,9 +349,20 @@ class PaintLibraryController extends ChangeNotifier {
 
   /// Ir a la página siguiente
   void goToNextPage() {
+    debugPrint(
+      '▶️ Going to next page. Current page: $_currentPage, Total pages: $_totalPages',
+    );
     if (_currentPage < _totalPages) {
       _currentPage++;
       loadPaints();
     }
+  }
+
+  /// Guardar los datos persistentes al cerrar
+  @override
+  void dispose() {
+    // Aquí se podrían guardar las preferencias como la wishlist
+    // _saveWishlist();
+    super.dispose();
   }
 }

@@ -5,6 +5,8 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/brand_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
@@ -15,6 +17,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 
 /// Screen that displays all paints in the user's wishlist
 class WishlistScreen extends StatefulWidget {
@@ -33,9 +36,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar wishlist cuando se inicia el widget.
+    // Load brand data for UI
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<WishlistController>().loadWishlist();
       _loadBrandData();
     });
   }
@@ -150,18 +152,38 @@ class _WishlistScreenState extends State<WishlistScreen> {
     int priorityLevel = 0,
   ]) async {
     try {
-      final controller = context.read<WishlistController>();
+      // Use cache service for optimistic updates and automatic sync
+      final cacheService = Provider.of<WishlistCacheService>(
+        context,
+        listen: false,
+      );
+      bool success = false;
+
       // Forzar que priorityLevel esté en el rango [0, 5]
       final int newPriority = priorityLevel.clamp(0, 5);
-      // Se considera prioritario si hay al menos 1 estrella.
-      final bool newPriorityFlag = newPriority >= 1;
-      final result = await controller.updatePriority(
-        paintId,
-        _id,
-        newPriorityFlag,
-        newPriority,
-      );
-      if (mounted && result) {
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimistic update
+        success = await cacheService.updateWishlistPriority(
+          paintId,
+          _id,
+          newPriority,
+        );
+        debugPrint('✅ Priority updated via cache service');
+      } else {
+        // Fallback to controller
+        final controller = context.read<WishlistController>();
+        final bool newPriorityFlag = newPriority >= 1;
+        success = await controller.updatePriority(
+          paintId,
+          _id,
+          newPriorityFlag,
+          newPriority,
+        );
+        debugPrint('✅ Priority updated via controller fallback');
+      }
+
+      if (mounted && success) {
         final message =
             newPriority >= 1
                 ? 'Priority set to $newPriority stars'
@@ -220,37 +242,67 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (confirmed != true) return;
     }
 
-    final controller = context.read<WishlistController>();
-    final result = await controller.removeFromWishlist(paintId, _id);
-    if (result && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$paintName removed from wishlist'),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () async {
-              final wishlistItems = controller.wishlistItems;
-              final item = wishlistItems.firstWhere(
-                (item) => (item['paint'] as Paint).id == paintId,
-                orElse: () => {'paint': null, 'isPriority': false},
-              );
-              if (item['paint'] != null) {
-                await controller.addToWishlist(
-                  item['paint'] as Paint,
-                  item['isPriority'] as bool,
+    try {
+      // Use cache service for optimistic updates and automatic sync
+      final cacheService = Provider.of<WishlistCacheService>(
+        context,
+        listen: false,
+      );
+      bool success = false;
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimistic delete
+        success = await cacheService.removeFromWishlist(paintId, _id);
+        debugPrint('✅ Paint removed from wishlist via cache service');
+      } else {
+        // Fallback to controller
+        final controller = context.read<WishlistController>();
+        success = await controller.removeFromWishlist(paintId, _id);
+        debugPrint('✅ Paint removed from wishlist via controller fallback');
+      }
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$paintName removed from wishlist'),
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                // TODO: Implement undo functionality with cache service
+                final controller = context.read<WishlistController>();
+                final wishlistItems = controller.wishlistItems;
+                final item = wishlistItems.firstWhere(
+                  (item) => (item['paint'] as Paint).id == paintId,
+                  orElse: () => {'paint': null, 'isPriority': false},
                 );
-              }
-            },
+                if (item['paint'] != null) {
+                  await controller.addToWishlist(
+                    item['paint'] as Paint,
+                    item['isPriority'] as bool,
+                  );
+                }
+              },
+            ),
           ),
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error removing paint from wishlist'),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing paint from wishlist'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error removing from wishlist: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing paint from wishlist: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -261,17 +313,47 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
     if (result != null) {
       try {
-        final success = await _inventoryService.addInventoryRecord(
-          brandId: brandId,
-          paintId: paint.id,
-          quantity: result['quantity'] as int,
-          notes: result['note'] as String?,
+        print(
+          '🔄 Adding ${paint.name} to inventory, quantity: ${result['quantity']}',
         );
+
+        // Use cache service for optimistic updates and automatic sync
+        final cacheService = Provider.of<InventoryCacheService>(
+          context,
+          listen: false,
+        );
+        bool success = false;
+
+        if (cacheService.isInitialized) {
+          // Use cache service for optimistic update
+          success = await cacheService.addInventoryItem(
+            brandId,
+            paint.id,
+            result['quantity'] as int,
+            notes: result['note'] as String?,
+          );
+          print('✅ Paint added to inventory via cache');
+        } else {
+          // Fallback to direct service
+          success = await _inventoryService.addInventoryRecord(
+            brandId: brandId,
+            paintId: paint.id,
+            quantity: result['quantity'] as int,
+            notes: result['note'] as String?,
+          );
+          print('✅ Paint added to inventory');
+        }
 
         final controller = context.read<WishlistController>();
         await controller.removeFromWishlist(paint.id, _id);
         if (success) {
-        } else {}
+          print('✅ Paint removed from wishlist');
+        } else {
+          print(
+            '⚠️ Could not remove paint from wishlist after adding to inventory',
+          );
+        }
+
         if (mounted && success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -279,8 +361,51 @@ class _WishlistScreenState extends State<WishlistScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          await context.read<WishlistController>().loadWishlist();
-          await _loadBrandData();
+          // Trigger UI refresh by calling setState
+          setState(() {});
+        }
+
+        // Remove from wishlist after adding to inventory using cache service
+        try {
+          final wishlistCacheService = Provider.of<WishlistCacheService>(
+            context,
+            listen: false,
+          );
+          bool removeSuccess = false;
+
+          if (wishlistCacheService.isInitialized) {
+            // Use cache service for optimistic delete
+            removeSuccess = await wishlistCacheService.removeFromWishlist(
+              paint.id,
+              _id,
+            );
+            debugPrint('✅ Paint removed from wishlist via cache service');
+          } else {
+            // Fallback to PaintService directly
+            try {
+              final token =
+                  await FirebaseAuth.instance.currentUser?.getIdToken();
+              if (token != null) {
+                await _paintService.removeFromWishlist(paint.id, _id, token);
+                removeSuccess = true;
+                debugPrint('✅ Paint removed from wishlist via direct service');
+              }
+            } catch (e) {
+              debugPrint('❌ Error removing from wishlist directly: $e');
+            }
+          }
+
+          if (removeSuccess) {
+            debugPrint(
+              '✅ Paint removed from wishlist after adding to inventory',
+            );
+          } else {
+            debugPrint(
+              '⚠️ Could not remove paint from wishlist after adding to inventory',
+            );
+          }
+        } catch (e) {
+          debugPrint('❌ Error removing from wishlist: $e');
         }
       } catch (e) {
         if (mounted) {
@@ -322,716 +447,86 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Widget _buildBody() {
-    return Consumer<WishlistController>(
-      builder: (context, controller, child) {
-        if (controller.isLoading) {
+    return Consumer<WishlistCacheService>(
+      builder: (context, cacheService, child) {
+        if (!cacheService.isInitialized) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (controller.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: cacheService.getWishlist(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading wishlist',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(snapshot.error.toString()),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {}); // Trigger rebuild to retry
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final wishlistItems = snapshot.data ?? [];
+
+            if (wishlistItems.isEmpty) {
+              return _buildEmptyState();
+            }
+
+            return Column(
               children: [
-                Icon(Icons.error_outline, color: Colors.red, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading wishlist',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(controller.errorMessage ?? 'Unknown error'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => controller.loadWishlist(),
-                  child: const Text('Retry'),
-                ),
+                // Simple search bar (without controller dependency)
+                _buildSimpleSearchBar(),
+                // Wishlist content
+                Expanded(child: _buildWishlistContent(wishlistItems)),
               ],
-            ),
-          );
-        }
-        if (controller.isEmpty) {
-          return _buildEmptyState();
-        }
-        return Column(
-          children: [
-            // Barra de búsqueda
-            _buildSearchBar(controller),
-            // Filtros activos
-            _buildActiveFilters(controller),
-            // Barra de filtro y ordenamiento
-            _buildFilterAndSortBar(controller),
-            // Contenido de la wishlist
-            Expanded(child: _buildWishlistContent(controller.wishlistItems)),
-          ],
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildSearchBar(WishlistController controller) {
+  Widget _buildSimpleSearchBar() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final searchController = TextEditingController(
-      text: controller.searchQuery,
-    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: TextField(
-        controller: searchController,
         decoration: InputDecoration(
           hintText: 'Search paints...',
           prefixIcon: const Icon(Icons.search),
-          suffixIcon:
-              controller.searchQuery.isNotEmpty
-                  ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      searchController.clear();
-                      controller.setSearchQuery('');
-                    },
-                  )
-                  : null,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           filled: true,
           fillColor:
               isDarkMode ? AppTheme.darkSurface : Theme.of(context).cardColor,
         ),
-        onChanged: (value) => controller.setSearchQuery(value),
+        onChanged: (value) {
+          // TODO: Implement search with cache service
+          debugPrint('Search query: $value');
+        },
       ),
-    );
-  }
-
-  Widget _buildActiveFilters(WishlistController controller) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Si no hay filtros activos, no mostramos esta sección
-    if (controller.selectedBrand == null &&
-        controller.selectedPalette == null &&
-        controller.selectedPriority == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // Filtro de marca
-            if (controller.selectedBrand != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(controller.selectedBrand!),
-                  onDeleted: () => controller.setBrandFilter(null),
-                  backgroundColor:
-                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
-                  deleteIconColor:
-                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  avatar: Icon(
-                    Icons.business,
-                    size: 16,
-                    color:
-                        isDarkMode
-                            ? AppTheme.marineOrange
-                            : AppTheme.primaryBlue,
-                  ),
-                ),
-              ),
-
-            // Filtro de paleta
-            if (controller.selectedPalette != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(controller.selectedPalette!),
-                  onDeleted: () => controller.setPaletteFilter(null),
-                  backgroundColor:
-                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
-                  deleteIconColor:
-                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  avatar: Icon(
-                    Icons.palette,
-                    size: 16,
-                    color:
-                        isDarkMode
-                            ? AppTheme.marineOrange
-                            : AppTheme.primaryBlue,
-                  ),
-                ),
-              ),
-
-            // Filtro de prioridad
-            if (controller.selectedPriority != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text('Priority: ${controller.selectedPriority}'),
-                  onDeleted: () => controller.setPriorityFilter(null),
-                  backgroundColor:
-                      isDarkMode ? AppTheme.darkSurface : Colors.grey[200],
-                  deleteIconColor:
-                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  avatar: Icon(
-                    Icons.star,
-                    size: 16,
-                    color:
-                        isDarkMode
-                            ? AppTheme.marineOrange
-                            : AppTheme.primaryBlue,
-                  ),
-                ),
-              ),
-
-            // Botón para limpiar todos los filtros
-            TextButton.icon(
-              onPressed: controller.clearFilters,
-              icon: Icon(
-                Icons.clear_all,
-                size: 16,
-                color:
-                    isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-              ),
-              label: Text(
-                'Clear filters',
-                style: TextStyle(
-                  fontSize: 12,
-                  color:
-                      isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-                ),
-              ),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterAndSortBar(WishlistController controller) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          // Botón de filtro
-          OutlinedButton.icon(
-            onPressed: () => _showFilterDialog(controller),
-            icon: const Icon(Icons.filter_list, size: 18),
-            label: const Text('Filter'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              visualDensity: VisualDensity.compact,
-              foregroundColor:
-                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // Botón de ordenamiento
-          OutlinedButton.icon(
-            onPressed: () => _showSortDialog(controller),
-            icon: const Icon(Icons.sort, size: 18),
-            label: const Text('Sort'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              visualDensity: VisualDensity.compact,
-              foregroundColor:
-                  isDarkMode ? AppTheme.marineOrange : AppTheme.primaryBlue,
-            ),
-          ),
-
-          const Spacer(),
-
-          // Indicador de total de pinturas
-          Text(
-            '${controller.wishlistItems.length} paints',
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterDialog(WishlistController controller) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Obtener listas de filtros disponibles
-    final brands = controller.getAvailableBrands();
-    final palettes = controller.getAvailablePalettes();
-    final priorities = controller.getAvailablePriorities();
-
-    // Si no hay datos para filtrar, mostramos un mensaje
-    if (brands.isEmpty && palettes.isEmpty && priorities.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No filters available'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setState) {
-              return Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag handle
-                      Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[600]
-                                    : Colors.grey.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          margin: const EdgeInsets.only(bottom: 20),
-                        ),
-                      ),
-
-                      // Título
-                      Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Filter Wishlist',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Filtro por marca
-                      if (brands.isNotEmpty) ...[
-                        Text(
-                          'Brand',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...brands.map(
-                              (brand) => ChoiceChip(
-                                label: Text(brand),
-                                selected: controller.selectedBrand == brand,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      controller.setBrandFilter(brand);
-                                    } else {
-                                      controller.setBrandFilter(null);
-                                    }
-                                  });
-                                },
-                                backgroundColor:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                selectedColor:
-                                    isDarkMode
-                                        ? AppTheme.marineOrange.withOpacity(0.3)
-                                        : AppTheme.primaryBlue.withOpacity(0.2),
-                                labelStyle: TextStyle(
-                                  color:
-                                      controller.selectedBrand == brand
-                                          ? isDarkMode
-                                              ? AppTheme.marineOrange
-                                              : AppTheme.primaryBlue
-                                          : isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Filtro por paleta
-                      if (palettes.isNotEmpty) ...[
-                        Text(
-                          'Palette',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...palettes.map(
-                              (palette) => ChoiceChip(
-                                label: Text(palette),
-                                selected: controller.selectedPalette == palette,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      controller.setPaletteFilter(palette);
-                                    } else {
-                                      controller.setPaletteFilter(null);
-                                    }
-                                  });
-                                },
-                                backgroundColor:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                selectedColor:
-                                    isDarkMode
-                                        ? AppTheme.marineOrange.withOpacity(0.3)
-                                        : AppTheme.primaryBlue.withOpacity(0.2),
-                                labelStyle: TextStyle(
-                                  color:
-                                      controller.selectedPalette == palette
-                                          ? isDarkMode
-                                              ? AppTheme.marineOrange
-                                              : AppTheme.primaryBlue
-                                          : isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Filtro por prioridad
-                      if (priorities.isNotEmpty) ...[
-                        Text(
-                          'Priority',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...priorities.map(
-                              (priority) => ChoiceChip(
-                                label: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: List.generate(
-                                    priority,
-                                    (index) => Icon(
-                                      Icons.star,
-                                      size: 16,
-                                      color:
-                                          controller.selectedPriority ==
-                                                  priority
-                                              ? isDarkMode
-                                                  ? AppTheme.marineOrange
-                                                  : AppTheme.primaryBlue
-                                              : isDarkMode
-                                              ? Colors.white
-                                              : Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                                selected:
-                                    controller.selectedPriority == priority,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      controller.setPriorityFilter(priority);
-                                    } else {
-                                      controller.setPriorityFilter(null);
-                                    }
-                                  });
-                                },
-                                backgroundColor:
-                                    isDarkMode
-                                        ? Colors.grey[800]
-                                        : Colors.grey[200],
-                                selectedColor:
-                                    isDarkMode
-                                        ? AppTheme.marineOrange.withOpacity(0.3)
-                                        : AppTheme.primaryBlue.withOpacity(0.2),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Botones de acción
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              controller.clearFilters();
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Clear All'),
-                          ),
-                          const SizedBox(width: 16),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Apply'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  isDarkMode
-                                      ? AppTheme.marineOrange
-                                      : AppTheme.primaryBlue,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-    );
-  }
-
-  void _showSortDialog(WishlistController controller) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Opciones de ordenamiento
-    final sortOptions = {
-      'date': 'Date Added',
-      'name': 'Paint Name',
-      'brand': 'Brand',
-      'priority': 'Priority',
-    };
-
-    String tempSortBy = controller.sortBy;
-    bool tempSortAscending = controller.sortAscending;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setState) {
-              return Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? AppTheme.darkSurface : Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Drag handle
-                    Align(
-                      alignment: Alignment.center,
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color:
-                              isDarkMode
-                                  ? Colors.grey[600]
-                                  : Colors.grey.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        margin: const EdgeInsets.only(bottom: 20),
-                      ),
-                    ),
-
-                    // Título
-                    Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Sort Wishlist',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Opciones de ordenamiento
-                    Text(
-                      'Sort by',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    ...sortOptions.entries.map(
-                      (entry) => RadioListTile<String>(
-                        title: Text(entry.value),
-                        value: entry.key,
-                        groupValue: tempSortBy,
-                        onChanged: (value) {
-                          setState(() {
-                            tempSortBy = value!;
-                          });
-                        },
-                        activeColor:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.primaryBlue,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Dirección de ordenamiento
-                    Text(
-                      'Direction',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    RadioListTile<bool>(
-                      title: Text(
-                        tempSortBy == 'date'
-                            ? 'Newest First'
-                            : 'Ascending (A-Z)',
-                      ),
-                      value: false,
-                      groupValue: tempSortAscending,
-                      onChanged: (value) {
-                        setState(() {
-                          tempSortAscending = value!;
-                        });
-                      },
-                      activeColor:
-                          isDarkMode
-                              ? AppTheme.marineOrange
-                              : AppTheme.primaryBlue,
-                    ),
-
-                    RadioListTile<bool>(
-                      title: Text(
-                        tempSortBy == 'date'
-                            ? 'Oldest First'
-                            : 'Descending (Z-A)',
-                      ),
-                      value: true,
-                      groupValue: tempSortAscending,
-                      onChanged: (value) {
-                        setState(() {
-                          tempSortAscending = value!;
-                        });
-                      },
-                      activeColor:
-                          isDarkMode
-                              ? AppTheme.marineOrange
-                              : AppTheme.primaryBlue,
-                    ),
-
-                    // Botones de acción
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            controller.setSorting(
-                              tempSortBy,
-                              tempSortAscending,
-                            );
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Apply'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isDarkMode
-                                    ? AppTheme.marineOrange
-                                    : AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
     );
   }
 

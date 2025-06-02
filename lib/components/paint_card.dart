@@ -4,14 +4,17 @@ import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/brand_service_manager.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
+import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_dimensions.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
-import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 class PaintCard extends StatefulWidget {
   final Paint paint;
@@ -204,19 +207,49 @@ class _PaintCardState extends State<PaintCard> {
                               return null;
                             }
                           } else {
-                            final brandId = _brandManager
-                                .determineBrandIdForPaint(paint);
-                            final inventoryId = await _inventoryService
-                                .addInventoryRecordReturningId(
-                                  brandId: brandId,
-                                  paintId: paint.id,
-                                  quantity: quantity,
-                                  notes: (notes as String?) ?? '',
+                            // Use cache service for optimistic updates and automatic sync
+                            final cacheService =
+                                Provider.of<InventoryCacheService>(
+                                  context,
+                                  listen: false,
                                 );
-                            if (inventoryId != null) {
-                              newId = inventoryId;
+
+                            if (cacheService.isInitialized) {
+                              // Use cache service for optimistic update
+                              final success = await cacheService
+                                  .addInventoryItem(
+                                    _brandManager.determineBrandIdForPaint(
+                                      paint,
+                                    ),
+                                    paint.id,
+                                    quantity,
+                                    notes: (notes as String?) ?? '',
+                                  );
+
+                              if (success) {
+                                // For UI consistency, we need an ID - using timestamp as placeholder
+                                newId =
+                                    DateTime.now().millisecondsSinceEpoch
+                                        .toString();
+                              } else {
+                                return null;
+                              }
                             } else {
-                              return null;
+                              // Fallback to direct service
+                              final brandId = _brandManager
+                                  .determineBrandIdForPaint(paint);
+                              final inventoryId = await _inventoryService
+                                  .addInventoryRecordReturningId(
+                                    brandId: brandId,
+                                    paintId: paint.id,
+                                    quantity: quantity,
+                                    notes: (notes as String?) ?? '',
+                                  );
+                              if (inventoryId != null) {
+                                newId = inventoryId;
+                              } else {
+                                return null;
+                              }
                             }
                           }
 
@@ -306,71 +339,106 @@ class _PaintCardState extends State<PaintCard> {
                           priority,
                           existingWishlistId,
                         ) async {
-                          String? newId = existingWishlistId;
-                          final user = FirebaseAuth.instance.currentUser!;
-                          final token = await user.getIdToken();
-
-                          if (existingWishlistId != null) {
-                            // ─── ACTUALIZAR EXISTENTE ───
-                            bool success = await _paintService
-                                .updateWishlistPriority(
-                                  paint.id,
-                                  existingWishlistId,
-                                  priority > 0,
-                                  token as String,
-                                  priority,
+                          try {
+                            // Use WishlistCacheService for optimistic updates and automatic sync
+                            final wishlistCacheService =
+                                Provider.of<WishlistCacheService>(
+                                  context,
+                                  listen: false,
                                 );
-                            if (!success) {
-                              return null;
-                            }
-                          } else {
-                            // ─── AÑADIR NUEVO ───
-                            final result = await _paintService
-                                .addToWishlistDirect(paint, priority, user.uid);
-                            if (result['success'] == true) {
-                              newId = result['id']?.toString();
+
+                            bool success;
+                            if (wishlistCacheService.isInitialized) {
+                              if (existingWishlistId != null) {
+                                // Update existing using cache service
+                                success = await wishlistCacheService
+                                    .updateWishlistPriority(
+                                      paint.id,
+                                      existingWishlistId,
+                                      priority,
+                                    );
+                              } else {
+                                // Add new using cache service
+                                success = await wishlistCacheService
+                                    .addToWishlist(paint, priority);
+                              }
                             } else {
-                              return null;
+                              // Fallback to direct service
+                              final user = FirebaseAuth.instance.currentUser!;
+                              final token = await user.getIdToken();
+
+                              if (existingWishlistId != null) {
+                                success = await _paintService
+                                    .updateWishlistPriority(
+                                      paint.id,
+                                      existingWishlistId,
+                                      priority > 0,
+                                      token as String,
+                                      priority,
+                                    );
+                              } else {
+                                final result = await _paintService
+                                    .addToWishlistDirect(
+                                      paint,
+                                      priority,
+                                      user.uid,
+                                    );
+                                success = result['success'] == true;
+                              }
                             }
+
+                            if (success) {
+                              // Clear inventory state
+                              setState(() {
+                                _inInventory = false;
+                                _inventoryId = null;
+                              });
+
+                              // Update wishlist state
+                              setState(() {
+                                _inWishlist = true;
+                                _wishlistId =
+                                    existingWishlistId ??
+                                    DateTime.now().millisecondsSinceEpoch
+                                        .toString();
+                              });
+
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    existingWishlistId != null
+                                        ? 'Wishlist updated'
+                                        : 'Added ${paint.name} to wishlist',
+                                  ),
+                                  backgroundColor: Colors.pink,
+                                  action: SnackBarAction(
+                                    label: 'VIEW',
+                                    textColor: Colors.white,
+                                    onPressed:
+                                        () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => const WishlistScreen(),
+                                          ),
+                                        ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return null; // Return null as expected by the modal
+                          } catch (e) {
+                            debugPrint('❌ Error in wishlist operation: $e');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating wishlist: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return null;
                           }
-
-                          // ─── LIMPIAR ESTADO DE INVENTARIO ───
-                          setState(() {
-                            _inInventory = false;
-                            _inventoryId = null;
-                          });
-
-                          // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
-                          setState(() {
-                            _inWishlist = true;
-                            _wishlistId = newId;
-                          });
-
-                          // ─── MOSTRAR SNACKBAR ───
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                existingWishlistId != null
-                                    ? 'Wishlist updated'
-                                    : 'Added ${paint.name} to wishlist',
-                              ),
-                              backgroundColor: Colors.pink,
-                              action: SnackBarAction(
-                                label: 'VIEW',
-                                textColor: Colors.white,
-                                onPressed:
-                                    () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const WishlistScreen(),
-                                      ),
-                                    ),
-                              ),
-                            ),
-                          );
-
-                          // igual que en inventario, no devolvemos nada
-                          return null;
                         },
                       );
                     },
@@ -556,17 +624,49 @@ class _PaintCardState extends State<PaintCard> {
                                 return null;
                               }
                             } else {
-                              final inventoryId = await _inventoryService
-                                  .addInventoryRecordReturningId(
-                                    brandId: paint.brandId as String,
-                                    paintId: paint.id,
-                                    quantity: quantity,
-                                    notes: notes as String,
+                              // Use cache service for optimistic updates and automatic sync
+                              final cacheService =
+                                  Provider.of<InventoryCacheService>(
+                                    context,
+                                    listen: false,
                                   );
-                              if (inventoryId != null) {
-                                newId = inventoryId;
+
+                              if (cacheService.isInitialized) {
+                                // Use cache service for optimistic update
+                                final success = await cacheService
+                                    .addInventoryItem(
+                                      _brandManager.determineBrandIdForPaint(
+                                        paint,
+                                      ),
+                                      paint.id,
+                                      quantity,
+                                      notes: (notes as String?) ?? '',
+                                    );
+
+                                if (success) {
+                                  // For UI consistency, we need an ID - using timestamp as placeholder
+                                  newId =
+                                      DateTime.now().millisecondsSinceEpoch
+                                          .toString();
+                                } else {
+                                  return null;
+                                }
                               } else {
-                                return null;
+                                // Fallback to direct service
+                                final brandId = _brandManager
+                                    .determineBrandIdForPaint(paint);
+                                final inventoryId = await _inventoryService
+                                    .addInventoryRecordReturningId(
+                                      brandId: brandId,
+                                      paintId: paint.id,
+                                      quantity: quantity,
+                                      notes: (notes as String?) ?? '',
+                                    );
+                                if (inventoryId != null) {
+                                  newId = inventoryId;
+                                } else {
+                                  return null;
+                                }
                               }
                             }
 
@@ -656,76 +756,106 @@ class _PaintCardState extends State<PaintCard> {
                             priority,
                             existingWishlistId,
                           ) async {
-                            String? newId = existingWishlistId;
-                            final user = FirebaseAuth.instance.currentUser!;
-                            final token = await user.getIdToken();
+                            try {
+                              // Use WishlistCacheService for optimistic updates and automatic sync
+                              final wishlistCacheService =
+                                  Provider.of<WishlistCacheService>(
+                                    context,
+                                    listen: false,
+                                  );
 
-                            if (existingWishlistId != null) {
-                              // ─── ACTUALIZAR EXISTENTE ───
-                              bool success = await _paintService
-                                  .updateWishlistPriority(
-                                    paint.id,
-                                    existingWishlistId,
-                                    priority > 0,
-                                    token as String,
-                                    priority,
-                                  );
-                              if (!success) {
-                                return null;
-                              }
-                            } else {
-                              // ─── AÑADIR NUEVO ───
-                              final result = await _paintService
-                                  .addToWishlistDirect(
-                                    paint,
-                                    priority,
-                                    user.uid,
-                                  );
-                              if (result['success'] == true) {
-                                newId = result['id']?.toString();
+                              bool success;
+                              if (wishlistCacheService.isInitialized) {
+                                if (existingWishlistId != null) {
+                                  // Update existing using cache service
+                                  success = await wishlistCacheService
+                                      .updateWishlistPriority(
+                                        paint.id,
+                                        existingWishlistId,
+                                        priority,
+                                      );
+                                } else {
+                                  // Add new using cache service
+                                  success = await wishlistCacheService
+                                      .addToWishlist(paint, priority);
+                                }
                               } else {
-                                return null;
+                                // Fallback to direct service
+                                final user = FirebaseAuth.instance.currentUser!;
+                                final token = await user.getIdToken();
+
+                                if (existingWishlistId != null) {
+                                  success = await _paintService
+                                      .updateWishlistPriority(
+                                        paint.id,
+                                        existingWishlistId,
+                                        priority > 0,
+                                        token as String,
+                                        priority,
+                                      );
+                                } else {
+                                  final result = await _paintService
+                                      .addToWishlistDirect(
+                                        paint,
+                                        priority,
+                                        user.uid,
+                                      );
+                                  success = result['success'] == true;
+                                }
                               }
+
+                              if (success) {
+                                // Clear inventory state
+                                setState(() {
+                                  _inInventory = false;
+                                  _inventoryId = null;
+                                });
+
+                                // Update wishlist state
+                                setState(() {
+                                  _inWishlist = true;
+                                  _wishlistId =
+                                      existingWishlistId ??
+                                      DateTime.now().millisecondsSinceEpoch
+                                          .toString();
+                                });
+
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      existingWishlistId != null
+                                          ? 'Wishlist updated'
+                                          : 'Added ${paint.name} to wishlist',
+                                    ),
+                                    backgroundColor: Colors.pink,
+                                    action: SnackBarAction(
+                                      label: 'VIEW',
+                                      textColor: Colors.white,
+                                      onPressed:
+                                          () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => const WishlistScreen(),
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return null; // Return null as expected by the modal
+                            } catch (e) {
+                              debugPrint('❌ Error in wishlist operation: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error updating wishlist: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return null;
                             }
-
-                            // ─── LIMPIAR ESTADO DE INVENTARIO ───
-                            setState(() {
-                              _inInventory = false;
-                              _inventoryId = null;
-                            });
-
-                            // ─── ACTUALIZAR ESTADO LOCAL DE WISHLIST ───
-                            setState(() {
-                              _inWishlist = true;
-                              _wishlistId = newId;
-                            });
-
-                            // ─── MOSTRAR SNACKBAR ───
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  existingWishlistId != null
-                                      ? 'Wishlist updated'
-                                      : 'Added ${paint.name} to wishlist',
-                                ),
-                                backgroundColor: Colors.pink,
-                                action: SnackBarAction(
-                                  label: 'VIEW',
-                                  textColor: Colors.white,
-                                  onPressed:
-                                      () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (_) => const WishlistScreen(),
-                                        ),
-                                      ),
-                                ),
-                              ),
-                            );
-
-                            // igual que en inventario, no devolvemos nada
-                            return null;
                           },
                         );
                       },

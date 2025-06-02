@@ -170,6 +170,70 @@ class PaletteService {
     }
   }
 
+  /// Deletes a palette by its ID
+  Future<Map<String, dynamic>> deletePalette(
+    String paletteId,
+    String token,
+  ) async {
+    try {
+      final url = Uri.parse('$baseUrl/palettes/$paletteId');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (responseData['executed'] == false) {
+        return {
+          'executed': false,
+          'message': responseData['message'] ?? 'Error deleting palette',
+        };
+      }
+
+      return {'executed': true, 'data': responseData['data'] ?? {}};
+    } catch (e) {
+      return {'executed': false, 'message': 'Exception: $e'};
+    }
+  }
+
+  /// Removes a paint from a palette
+  Future<Map<String, dynamic>> removePaintFromPalette(
+    String paletteId,
+    String paintId,
+    String token,
+  ) async {
+    try {
+      final url = Uri.parse('$baseUrl/palettes/$paletteId/paints/$paintId');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (responseData['executed'] == false) {
+        return {
+          'executed': false,
+          'message':
+              responseData['message'] ?? 'Error removing paint from palette',
+        };
+      }
+
+      return {'executed': true, 'data': responseData['data'] ?? {}};
+    } catch (e) {
+      return {'executed': false, 'message': 'Exception: $e'};
+    }
+  }
+
   /// Obtiene la lista de pinturas más usadas en todas las paletas
   Future<List<MostUsedPaint>> getMostUsedPaints(String token) async {
     final url = Uri.parse('$baseUrl/palettes/most-used-paints');
