@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final FirebaseAuth? auth;
+
+  const LoginScreen({super.key, this.auth});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -31,7 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        final auth = widget.auth ?? FirebaseAuth.instance;
+
+        await auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
