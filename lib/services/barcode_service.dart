@@ -10,7 +10,19 @@ import 'package:miniature_paint_finder/utils/auth_utils.dart';
 
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
-  static final String baseUrl = '${Env.apiBaseUrl}';
+  /// Base URL for API endpoints, injected or from Env.
+  final String baseUrl;
+
+  /// HTTP client used for requests, allows mocking.
+  final http.Client client;
+
+  /// FirebaseAuth instance, allows mocking.
+  final FirebaseAuth auth;
+
+  BarcodeService({String? baseUrl, http.Client? client, FirebaseAuth? auth})
+    : baseUrl = baseUrl ?? Env.apiBaseUrl,
+      client = client ?? http.Client(),
+      auth = auth ?? FirebaseAuth.instance;
 
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
@@ -30,7 +42,7 @@ class BarcodeService {
       String token = '';
       if (!isGuestUser) {
         // Get Firebase token
-        final user = FirebaseAuth.instance.currentUser;
+        final user = auth.currentUser;
         if (user == null) {
           return null;
         }
@@ -41,7 +53,7 @@ class BarcodeService {
       // Make API call to find paint by barcode
       final url = Uri.parse('$baseUrl/paint/barcode/$normalized');
 
-      final response = await http.get(
+      final response = await client.get(
         url,
         headers: {
           'Authorization': 'Bearer $token',

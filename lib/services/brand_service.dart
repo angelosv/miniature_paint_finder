@@ -9,11 +9,23 @@ class BrandService {
   /// Singleton instance
   static final BrandService _instance = BrandService._internal();
 
+  factory BrandService({String? baseUrl, http.Client? client}) {
+    // allow passing client and baseUrl only for testing
+    _instance._baseUrl = baseUrl ?? _instance._baseUrl;
+    _instance._client = client ?? _instance._client;
+    return _instance;
+  }
+
   /// Factory constructor para obtener la instancia singleton
-  factory BrandService() => _instance;
 
   /// Constructor interno privado
   BrandService._internal();
+
+  /// Base URL for API endpoints (mutable for tests)
+  String _baseUrl = Env.apiBaseUrl;
+
+  /// HTTP client for API calls (mutable for tests)
+  http.Client _client = http.Client();
 
   /// Mapa de marcas oficiales (nombre a id)
   final Map<String, String> brands = {};
@@ -226,10 +238,10 @@ class BrandService {
   /// Carga las marcas desde la API
   Future<bool> _loadFromApi() async {
     try {
-      final baseUrl = '${Env.apiBaseUrl}';
+      final baseUrl = '${_baseUrl}';
       final url = Uri.parse('$baseUrl/brand');
 
-      final response = await http.get(
+      final response = await _client.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );

@@ -5,7 +5,15 @@ import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class PaletteService {
-  static final String baseUrl = '${Env.apiBaseUrl}';
+  final String baseUrl;
+
+  /// HTTP client for making requests (injected for testing)
+  final http.Client _client;
+
+  /// Constructor allowing dependency injection for baseUrl and client
+  PaletteService({String? baseUrl, http.Client? client})
+    : baseUrl = baseUrl ?? Env.apiBaseUrl,
+      _client = client ?? http.Client();
 
   Future<Map<String, dynamic>> uploadImage(
     String imagePath,
@@ -13,7 +21,7 @@ class PaletteService {
   ) async {
     final url = Uri.parse('$baseUrl/image/upload');
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         'Authorization': 'Bearer $token',
@@ -34,7 +42,7 @@ class PaletteService {
   Future<Map<String, dynamic>> createPalette(String name, String token) async {
     final url = Uri.parse('$baseUrl/palettes');
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         'Authorization': 'Bearer $token',
@@ -59,7 +67,7 @@ class PaletteService {
   ) async {
     final url = Uri.parse('$baseUrl/image/$imageId/picks');
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         'Authorization': 'Bearer $token',
@@ -86,7 +94,7 @@ class PaletteService {
   ) async {
     final url = Uri.parse('$baseUrl/palettes/simple-list');
 
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: {
         'Authorization': 'Bearer $token',
@@ -114,7 +122,7 @@ class PaletteService {
   ) async {
     final url = Uri.parse('$baseUrl/palettes/$paletteId/paints');
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         'Authorization': 'Bearer $token',
@@ -149,7 +157,7 @@ class PaletteService {
         'brand_id': brandId,
       };
 
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(paintData),
@@ -178,7 +186,7 @@ class PaletteService {
     try {
       final url = Uri.parse('$baseUrl/palettes/$paletteId');
 
-      final response = await http.delete(
+      final response = await _client.delete(
         url,
         headers: {
           'Authorization': 'Bearer $token',
@@ -210,7 +218,7 @@ class PaletteService {
     try {
       final url = Uri.parse('$baseUrl/palettes/$paletteId/paints/$paintId');
 
-      final response = await http.delete(
+      final response = await _client.delete(
         url,
         headers: {
           'Authorization': 'Bearer $token',
@@ -237,7 +245,7 @@ class PaletteService {
   /// Obtiene la lista de pinturas más usadas en todas las paletas
   Future<List<MostUsedPaint>> getMostUsedPaints(String token) async {
     final url = Uri.parse('$baseUrl/palettes/most-used-paints');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: {
         'Authorization': 'Bearer $token',
