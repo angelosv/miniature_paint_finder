@@ -35,6 +35,7 @@ import 'dart:async';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/palette_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -87,6 +88,10 @@ Future<void> _handleCacheMigration() async {
 /// App entry point
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {}
 
   // Configure platform-specific behavior
   configureLinuxPlugins();

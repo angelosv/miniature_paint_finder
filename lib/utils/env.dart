@@ -1,13 +1,20 @@
-class Env {
-  static const bool isQA = bool.fromEnvironment('QA', defaultValue: false);
-  static const bool isLocal = bool.fromEnvironment(
-    'LOCAL',
-    defaultValue: false,
-  );
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+class Env {
   static String get apiBaseUrl {
-    if (isLocal) return 'http://localhost:8000';
-    if (isQA) return 'https://paints-api.reachu.io/qa-api';
+    const fromBuild = String.fromEnvironment('API_BASE_URL');
+    if (fromBuild.isNotEmpty) {
+      print('🚀 Using API_BASE_URL from --dart-define (build time).');
+      return fromBuild;
+    }
+
+    final fromEnv = dotenv.env['API_BASE_URL'];
+    if (fromEnv != null && fromEnv.isNotEmpty) {
+      print('📄 Using API_BASE_URL from .env (dotenv).');
+      return fromEnv;
+    }
+
+    print('🛟 Using default API_BASE_URL (fallback).');
     return 'https://paints-api.reachu.io/api';
   }
 }
