@@ -36,6 +36,7 @@ import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/palette_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'config/app_config.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -89,9 +90,17 @@ Future<void> _handleCacheMigration() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
   try {
     await dotenv.load(fileName: '.env');
-  } catch (_) {}
+    debugPrint('✅ Environment variables loaded successfully');
+  } catch (e) {
+    debugPrint('⚠️ Could not load .env file: $e');
+  }
+
+  // Initialize app configuration
+  AppConfig.initialize(env: Environment.development);
+  AppConfig.printConfig();
 
   // Configure platform-specific behavior
   configureLinuxPlugins();
