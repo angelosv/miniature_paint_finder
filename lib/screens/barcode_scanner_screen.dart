@@ -10,6 +10,7 @@ import 'package:miniature_paint_finder/services/barcode_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,7 @@ import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/screens/add_paint_form_screen.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'package:http/http.dart' as http; // Para las peticiones HTTP
+import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 
 /// A screen that allows users to scan paint barcodes to find paints
 class BarcodeScannerScreen extends StatefulWidget {
@@ -63,7 +65,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print('App resumed, force initializing camera...');
       _directCameraInitialization();
     }
   }
@@ -78,8 +79,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   Future<void> _forceInitializeCamera() async {
-    print("FORCING camera initialization regardless of permission state");
-
     // Intentar hasta 3 veces con diferentes configuraciones
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -87,9 +86,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           try {
             await _scannerController!.stop();
             await _scannerController!.dispose();
-          } catch (e) {
-            print("Error stopping existing controller: $e");
-          }
+          } catch (e) {}
           _scannerController = null;
         }
 
@@ -98,8 +95,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           _isInitialized = false;
           _hasScanAttempt = false;
         });
-
-        print("Creating scanner controller (intento $attempt)");
 
         // Probar diferentes configuraciones según el intento
         if (attempt == 1) {
@@ -125,9 +120,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           );
         }
 
-        print("Starting camera (intento $attempt)");
         await _scannerController!.start();
-        print("Camera inicializada con éxito en intento $attempt");
 
         setState(() {
           _hasPermission = true;
@@ -138,23 +131,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         // Si llegamos aquí, la cámara está funcionando, salir del bucle
         return;
       } catch (e) {
-        print("Error en intento $attempt de inicialización: $e");
-
         // En el último intento, procesar errores de permisos
         if (attempt == 3) {
           if (e.toString().toLowerCase().contains("permission") ||
               e.toString().toLowerCase().contains("denied")) {
-            print(
-              "Problema persistente de permisos - solicitando explícitamente",
-            );
             try {
               final status = await Permission.camera.request();
-              print("Resultado solicitud de permisos: ${status.toString()}");
 
               if (status.isGranted) {
-                print(
-                  "Permiso finalmente concedido, reiniciando inicialización",
-                );
                 return _forceInitializeCamera();
               } else if (status.isPermanentlyDenied) {
                 setState(() {
@@ -176,7 +160,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 return _forceInitializeCamera();
               }
             } catch (permError) {
-              print("Error solicitando permisos: $permError");
               // Asumir que tenemos permisos de todos modos
               setState(() {
                 _hasPermission = true;
@@ -225,8 +208,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     final Barcode barcode = barcodes.first;
     final String? code = barcode.rawValue;
 
-    print('Barcode detected: $code');
-
     setState(() {
       _hasScanAttempt = true;
     });
@@ -235,7 +216,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-    print("barcode_scanner_screen.dart isGuestUser: $isGuestUser");
+
     if (code == null || !_barcodeService.isValidBarcode(code)) {
       setState(() {
         _errorMessage = 'Invalid barcode format: ${code ?? "unknown"}';
@@ -269,7 +250,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     });
 
     try {
-      print('🔍 Searching for paint with barcode: $code');
       final List<Paint>? paints = await _barcodeService.findPaintByBarcode(
         code,
         isGuestUser,
@@ -342,8 +322,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         });
       }
     } catch (e) {
-      print('❌ Error searching for paint: $e');
-
       _analytics.trackScannerActivity(
         'error',
         barcode: code,
@@ -462,10 +440,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        debugPrint('👨‍💻 paint: $paint');
-        print('👨‍💻 isInInventory: $isInInventory');
-        print('👨‍💻 isInWishlist: $isInWishlist');
-
         return Container(
           height: MediaQuery.of(context).size.height * 0.9,
           decoration: const BoxDecoration(color: Colors.transparent),
@@ -482,27 +456,59 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             paletteName: widget.paletteName,
             onAddToInventory: (paint, quantity, note) async {
               try {
-                final success = await _inventoryService.addInventoryRecord(
-                  brandId: paint.brandId ?? '',
-                  paintId: paint.id,
-                  quantity: quantity,
-                  notes: note ?? '',
+                // Use cache service for optimistic updates and automatic sync
+                final cacheService = Provider.of<InventoryCacheService>(
+                  context,
+                  listen: false,
                 );
-                print('✅ Inventory add result: $success');
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Paint added to inventory!'),
-                      backgroundColor: Colors.green,
-                    ),
+                if (cacheService.isInitialized) {
+                  // Use cache service for optimistic update
+                  final success = await cacheService.addInventoryItem(
+                    paint.brandId ?? '',
+                    paint.id,
+                    quantity,
+                    notes: note,
                   );
+
+                  if (success) {
+                    print('✅ Inventory add result via cache: $success');
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Paint added to inventory!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    throw Exception('Failed to add to inventory');
+                  }
+                } else {
+                  // Fallback to direct service
+                  final success = await _inventoryService.addInventoryRecord(
+                    brandId: paint.brandId ?? '',
+                    paintId: paint.id,
+                    quantity: quantity,
+                    notes: note ?? '',
+                  );
+
+                  print('✅ Inventory add result: $success');
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Paint added to inventory!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 }
 
                 Navigator.pop(context);
                 Navigator.pop(context, paint);
               } catch (e) {
-                print('❌ Error adding to inventory: $e');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -522,7 +528,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 if (note != null) {
                   await _inventoryService.updateNotesFromApi(inventoryId, note);
                 }
-                print('✅ Inventory update result: $success');
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -536,7 +541,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 Navigator.pop(context);
                 Navigator.pop(context, paint);
               } catch (e) {
-                print('❌ Error updating inventory: $e');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -574,7 +578,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 Navigator.pop(context);
                 Navigator.pop(context, paint);
               } catch (e) {
-                print('❌ Error adding to inventory: $e');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -586,24 +589,67 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               }
             },
             onAddToPalette: (paint, palette) async {
-              final user = FirebaseAuth.instance.currentUser;
-              final token = await user?.getIdToken();
-              final _palette = await _paletteService.createPalette(
-                palette.name,
-                token ?? '',
-              );
-              final paletteId = _palette['id'];
-              await _paletteService.addPaintsToPalette(paletteId, [
-                {"paint_id": paint.id, "brand_id": paint.brandId},
-              ], token ?? '');
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Paint added to palette ${palette.name}!'),
-                    backgroundColor: Colors.purple,
-                  ),
+              try {
+                // Use PaletteController with cache service for consistency
+                final paletteController = Provider.of<PaletteController>(
+                  context,
+                  listen: false,
                 );
+
+                // Create palette using cache service
+                final createdPalette = await paletteController.createPalette(
+                  name: palette.name,
+                  imagePath: 'assets/images/placeholder.jpeg',
+                  colors: [],
+                );
+
+                if (createdPalette != null) {
+                  // Add paint to the newly created palette
+                  final paintHex =
+                      paint.hex.startsWith('#') ? paint.hex : '#${paint.hex}';
+                  final success = await paletteController.addPaintToPalette(
+                    createdPalette.id,
+                    paint,
+                    paintHex,
+                  );
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Paint added to palette ${palette.name}!'
+                              : 'Palette created but failed to add paint',
+                        ),
+                        backgroundColor: success ? Colors.green : Colors.orange,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to create palette'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('❌ Error in barcode scanner palette creation: $e');
+
+                // Show error message - no direct API fallback to maintain cache consistency
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating palette: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
 
               Navigator.of(context).pushAndRemoveUntil(
@@ -728,7 +774,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         };
       }
     } catch (e) {
-      print('❌ Exception in fetchPaintInfo: $e');
       return {'executed': false, 'message': 'Exception: $e', 'data': null};
     }
   }
@@ -752,7 +797,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           IconButton(
             icon: const Icon(Icons.camera_enhance),
             onPressed: () {
-              print('Forcing camera initialization from UI button');
               _directCameraInitialization();
             },
             tooltip: 'Force camera',
@@ -826,10 +870,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 default:
                   selectedPaint = paints.first;
               }
-
-              print(
-                'Simulating paint scan: ${selectedPaint.name} (${selectedPaint.brand})',
-              );
               _showScanResultSheet(selectedPaint);
             },
             itemBuilder:
@@ -867,7 +907,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              print('Manual camera refresh requested');
               // Forzar directamente sin verificar permisos
               _directCameraInitialization();
             },

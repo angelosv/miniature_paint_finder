@@ -1,13 +1,23 @@
-class Env {
-  static const bool isQA = bool.fromEnvironment('QA', defaultValue: false);
-  static const bool isLocal = bool.fromEnvironment(
-    'LOCAL',
-    defaultValue: false,
-  );
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../config/app_config.dart';
 
+class Env {
+  // Legacy method - now uses AppConfig
   static String get apiBaseUrl {
-    if (isLocal) return 'http://localhost:8000';
-    if (isQA) return 'https://paints-api.reachu.io/qa-api';
-    return 'https://paints-api.reachu.io/api';
+    return AppConfig.apiBaseUrl;
   }
+
+  // Additional convenience methods
+  static String get mixpanelToken => AppConfig.mixpanelToken;
+  static bool get debugMode => AppConfig.debugMode;
+  static int get cacheTTL => AppConfig.cacheTTL;
+  static int get syncInterval => AppConfig.syncInterval;
+  static bool get sessionReplayEnabled => AppConfig.sessionReplayEnabled;
+  static int get sessionReplaySamplingRate =>
+      AppConfig.sessionReplaySamplingRate;
+
+  // Environment helpers
+  static bool get isDevelopment => AppConfig.isDevelopment;
+  static bool get isStaging => AppConfig.isStaging;
+  static bool get isProduction => AppConfig.isProduction;
 }

@@ -112,7 +112,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         });
       }
     } catch (e) {
-      print('Error loading image: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -164,8 +163,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         _exactPixelX < _decodedImage!.width &&
         _exactPixelY >= 0 &&
         _exactPixelY < _decodedImage!.height) {
-      print('Pixel seleccionado en: ($_exactPixelX, $_exactPixelY)');
-
       // Obtener el color del pixel
       final pixel = _decodedImage!.getPixel(_exactPixelX, _exactPixelY);
       return Color.fromARGB(
@@ -210,8 +207,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
   void _handleImageTap(TapDownDetails details) {
     if (_isLoading || _decodedImage == null) return;
 
-    print('Tap detected at: ${details.localPosition}');
-
     // Verificar primero si estamos tocando un punto existente
     _checkTapOnExistingPoint(details.localPosition);
 
@@ -252,15 +247,8 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
     // Obtener el color del pixel (esto también guarda _exactPixelX y _exactPixelY)
     final Color? color = _getPixelColor(details.localPosition);
     if (color == null) {
-      print(
-        'No se pudo obtener el color en la posición: ${details.localPosition}',
-      );
       return;
     }
-
-    print(
-      'Color obtained: ${color.toString()} in pixel ($_exactPixelX, $_exactPixelY)',
-    );
 
     // Guardar la posición del toque
     setState(() {
@@ -311,10 +299,6 @@ class _ColorSelectionModalState extends State<ColorSelectionModal>
         // Crear el punto usando las coordenadas exactas del pixel
         final double pixelToImageX = _exactPixelX.toDouble();
         final double pixelToImageY = _exactPixelY.toDouble();
-
-        print(
-          'Adding point at pixel coordinates: ($_exactPixelX, $_exactPixelY)',
-        );
 
         // Crear el punto
         final newPoint = ColorPoint(

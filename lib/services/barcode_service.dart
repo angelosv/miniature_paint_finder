@@ -10,7 +10,19 @@ import 'package:miniature_paint_finder/utils/auth_utils.dart';
 
 /// A service for handling barcode scanning and paint lookup functionality
 class BarcodeService {
-  static final String baseUrl = '${Env.apiBaseUrl}';
+  /// Base URL for API endpoints, injected or from Env.
+  final String baseUrl;
+
+  /// HTTP client used for requests, allows mocking.
+  final http.Client client;
+
+  /// FirebaseAuth instance, allows mocking.
+  final FirebaseAuth auth;
+
+  BarcodeService({String? baseUrl, http.Client? client, FirebaseAuth? auth})
+    : baseUrl = baseUrl ?? Env.apiBaseUrl,
+      client = client ?? http.Client(),
+      auth = auth ?? FirebaseAuth.instance;
 
   /// Encuentra una pintura por su código de barras en la base de datos
   ///
@@ -20,41 +32,34 @@ class BarcodeService {
     bool isGuestUser,
   ) async {
     if (barcode.isEmpty) {
-      print('❌ Barcode is empty');
       return null;
     }
 
     try {
       // Normalize barcode (remove spaces, dashes, etc.)
       final normalized = _normalizeBarcode(barcode);
-      print('🔍 Searching for paint with barcode: $normalized');
 
       String token = '';
       if (!isGuestUser) {
         // Get Firebase token
-        final user = FirebaseAuth.instance.currentUser;
+        final user = auth.currentUser;
         if (user == null) {
-          print('❌ No user logged in');
           return null;
         }
 
         token = await user.getIdToken() ?? '';
-        print('🔑 Got Firebase token');
       }
 
       // Make API call to find paint by barcode
       final url = Uri.parse('$baseUrl/paint/barcode/$normalized');
-      print('🌐API URL: $url');
 
-      final response = await http.get(
+      final response = await client.get(
         url,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
-      print('📡 API Response Status: ${response.statusCode}');
-      print('📡 API Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -65,18 +70,12 @@ class BarcodeService {
           final List<Paint> paints = [];
 
           for (final paintData in data['data']) {
-            print(
-              '✅ Found paint: ${paintData['name']} (${paintData['brand']})',
-            );
-
             // Asegurarse de que las paletas vengan exactamente como la API las envía
             final List<String> palettes =
                 (paintData['palettes'] as List<dynamic>?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 [];
-
-            print('📦 Palettes from API: $palettes');
 
             // Crear el objeto Paint con las paletas exactamente como vienen de la API
             final paint = Paint(
@@ -97,21 +96,17 @@ class BarcodeService {
                   palettes, // Usar las paletas exactamente como vienen de la API
             );
 
-            print('🎨 Created Paint object with palettes: ${paint.palettes}');
             paints.add(paint);
           }
 
           return paints;
         } else {
-          print('⚠️ No paint found in API response');
           return null;
         }
       } else {
-        print('❌ API Error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
-      print('❌ Error finding paint by barcode: $e');
       return null;
     }
   }
@@ -145,7 +140,6 @@ class BarcodeService {
 
       return false;
     } catch (e) {
-      print('Error validating barcode: $e');
       return false;
     }
   }

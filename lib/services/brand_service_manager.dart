@@ -72,7 +72,6 @@ class BrandServiceManager {
       _loadingCompleter!.complete(false);
       return false;
     } catch (e) {
-      print('❌ BrandManager: Error cargando marcas: $e');
       _loadingCompleter!.complete(false);
       return false;
     } finally {
@@ -92,7 +91,6 @@ class BrandServiceManager {
       );
 
       if (response.statusCode != 200) {
-        print('❌ BrandManager: Error API (${response.statusCode})');
         return false;
       }
 
@@ -135,7 +133,6 @@ class BrandServiceManager {
 
       return true;
     } catch (e) {
-      print('❌ BrandManager: Error cargando desde API: $e');
       return false;
     }
   }
@@ -226,7 +223,6 @@ class BrandServiceManager {
 
       return true;
     } catch (e) {
-      print('⚠️ BrandManager: Error cargando caché: $e');
       return false;
     }
   }
@@ -252,7 +248,6 @@ class BrandServiceManager {
       await prefs.setString(_cacheKey, serialized);
       return true;
     } catch (e) {
-      print('⚠️ BrandManager: Error guardando caché: $e');
       return false;
     }
   }

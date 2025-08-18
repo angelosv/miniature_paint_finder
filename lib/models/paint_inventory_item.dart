@@ -37,7 +37,7 @@ class PaintInventoryItem {
     return PaintInventoryItem(
       id: json['id'] as String,
       paint: Paint.fromJson(json['paint'] as Map<String, dynamic>),
-      stock: json['quantity'] as int,
+      stock: (json['stock'] ?? json['quantity'] ?? 0) as int,
       notes: json['notes'] as String? ?? '',
       palettes: (json['palettes'] as List?)?.cast<String>(),
     );

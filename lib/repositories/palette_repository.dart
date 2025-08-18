@@ -87,7 +87,6 @@ class ApiPaletteRepository implements PaletteRepository {
           .map((apiPalette) => _convertApiPaletteToPalette(apiPalette))
           .toList();
     } catch (e) {
-      print('Error getting all palettes from API: $e');
       return [];
     }
   }
@@ -116,7 +115,6 @@ class ApiPaletteRepository implements PaletteRepository {
                 .toList(),
       };
     } catch (e) {
-      print('❌ Error getting user palettes from API: $e');
       return {
         'currentPage': 1,
         'totalPages': 1,
@@ -128,29 +126,30 @@ class ApiPaletteRepository implements PaletteRepository {
   }
 
   Palette _convertApiPaletteToPalette(ApiPalette apiPalette) {
-    final colors = apiPalette.palettesPaints.map((paint) {
-      if (paint.paint != null) {
-        return Color.fromRGBO(
-          paint.paint!.r,
-          paint.paint!.g,
-          paint.paint!.b,
-          1,
-        );
-      } else if (paint.imageColorPicks != null) {
-        if (paint.imageColorPicks!.r == null || 
-            paint.imageColorPicks!.g == null || 
-            paint.imageColorPicks!.b == null) {
-          return Colors.grey;
-        }
-        return Color.fromRGBO(
-          paint.imageColorPicks!.r,
-          paint.imageColorPicks!.g,
-          paint.imageColorPicks!.b,
-          1,
-        );
-      }
-      return Colors.grey; // Color por defecto si no hay pintura
-    }).toList();
+    final colors =
+        apiPalette.palettesPaints.map((paint) {
+          if (paint.paint != null) {
+            return Color.fromRGBO(
+              paint.paint!.r,
+              paint.paint!.g,
+              paint.paint!.b,
+              1,
+            );
+          } else if (paint.imageColorPicks != null) {
+            if (paint.imageColorPicks!.r == null ||
+                paint.imageColorPicks!.g == null ||
+                paint.imageColorPicks!.b == null) {
+              return Colors.grey;
+            }
+            return Color.fromRGBO(
+              paint.imageColorPicks!.r,
+              paint.imageColorPicks!.g,
+              paint.imageColorPicks!.b,
+              1,
+            );
+          }
+          return Colors.grey; // Color por defecto si no hay pintura
+        }).toList();
 
     final convertedPalette = Palette(
       id: apiPalette.id,
@@ -160,36 +159,40 @@ class ApiPaletteRepository implements PaletteRepository {
       createdAt: apiPalette.createdAt,
       totalPaints: apiPalette.totalPaints,
       createdAtText: apiPalette.createdAtText,
-      paintSelections: apiPalette.palettesPaints.map((paint) {
-        if (paint.paint != null) {
-          return PaintSelection(
-            paintId: paint.paint!.code,
-            paintName: paint.paint!.name,
-            paintBrand: paint.paint!.set,
-            brandAvatar: paint.paint!.set[0],
-            matchPercentage: 100,
-            colorHex: paint.paint!.hex,
-            paintColorHex: paint.paint!.hex,
-            paintBrandId: paint.brandId,
-            paintBarcode: paint.paint?.barcode ?? '',
-            paintCode: paint.paint?.code ?? '',
-          );
-        } else if (paint.imageColorPicks != null) {
-          return PaintSelection(
-            paintId: paint.paintId,
-            paintName: 'Color from image',
-            paintBrand: 'Image',
-            brandAvatar: 'I',
-            matchPercentage: 100,
-            colorHex: paint.imageColorPicks!.hexColor,
-            paintColorHex: paint.imageColorPicks!.hexColor,
-            paintBrandId: paint.brandId,
-            paintBarcode: paint.paint?.barcode ?? '',
-            paintCode: paint.paint?.code ?? '',
-          );
-        }
-        return null;
-      }).whereType<PaintSelection>().toList(),
+      paintSelections:
+          apiPalette.palettesPaints
+              .map((paint) {
+                if (paint.paint != null) {
+                  return PaintSelection(
+                    paintId: paint.paint!.code,
+                    paintName: paint.paint!.name,
+                    paintBrand: paint.paint!.set,
+                    brandAvatar: paint.paint!.set[0],
+                    matchPercentage: 100,
+                    colorHex: paint.paint!.hex,
+                    paintColorHex: paint.paint!.hex,
+                    paintBrandId: paint.brandId,
+                    paintBarcode: paint.paint?.barcode ?? '',
+                    paintCode: paint.paint?.code ?? '',
+                  );
+                } else if (paint.imageColorPicks != null) {
+                  return PaintSelection(
+                    paintId: paint.paintId,
+                    paintName: 'Color from image',
+                    paintBrand: 'Image',
+                    brandAvatar: 'I',
+                    matchPercentage: 100,
+                    colorHex: paint.imageColorPicks!.hexColor,
+                    paintColorHex: paint.imageColorPicks!.hexColor,
+                    paintBrandId: paint.brandId,
+                    paintBarcode: paint.paint?.barcode ?? '',
+                    paintCode: paint.paint?.code ?? '',
+                  );
+                }
+                return null;
+              })
+              .whereType<PaintSelection>()
+              .toList(),
     );
 
     return convertedPalette;
@@ -202,7 +205,6 @@ class ApiPaletteRepository implements PaletteRepository {
       final apiPalette = ApiPalette.fromJson(response);
       return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
-      print('Error getting palette by ID from API: $e');
       return null;
     }
   }
@@ -217,7 +219,6 @@ class ApiPaletteRepository implements PaletteRepository {
       final apiPalette = ApiPalette.fromJson(response);
       return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
-      print('Error creating palette in API: $e');
       return item;
     }
   }
@@ -232,7 +233,6 @@ class ApiPaletteRepository implements PaletteRepository {
       final apiPalette = ApiPalette.fromJson(response);
       return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
-      print('Error updating palette in API: $e');
       return item;
     }
   }
@@ -243,7 +243,6 @@ class ApiPaletteRepository implements PaletteRepository {
       final response = await _apiService.delete(ApiEndpoints.paletteById(id));
       return response['executed'] == true;
     } catch (e) {
-      print('Error deleting palette from API: $e');
       return false;
     }
   }
@@ -261,7 +260,6 @@ class ApiPaletteRepository implements PaletteRepository {
       });
       return true;
     } catch (e) {
-      print('Error adding paint to palette in API: $e');
       return false;
     }
   }
@@ -274,7 +272,6 @@ class ApiPaletteRepository implements PaletteRepository {
       );
       return true;
     } catch (e) {
-      print('Error removing paint from palette in API: $e');
       return false;
     }
   }
@@ -292,7 +289,7 @@ class PaletteRepositoryImpl implements PaletteRepository {
 
     if (_palettes == null) {
       _palettes = SampleData.getPalettes();
-    } 
+    }
 
     return _palettes!;
   }

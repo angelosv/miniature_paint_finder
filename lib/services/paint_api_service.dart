@@ -7,15 +7,15 @@ import 'package:miniature_paint_finder/models/paint_submit.dart';
 
 class PaintApiService {
   static final String baseUrl = '${Env.apiBaseUrl}';
+  final http.Client _client;
+  PaintApiService({http.Client? client}) : _client = client ?? http.Client();
 
   // Flag para habilitar logs detallados
   final bool _enableDetailedLogs = false;
 
   // Método para imprimir logs
   void _log(String message) {
-    if (_enableDetailedLogs) {
-      debugPrint('🔵 PaintAPI: $message');
-    }
+    if (_enableDetailedLogs) {}
   }
 
   // Método para imprimir logs largos con formato JSON
@@ -26,14 +26,8 @@ class PaintApiService {
         final String prettyJson = encoder.convert(json);
         // Dividir por líneas para mejor legibilidad en la consola
         final lines = prettyJson.split('\n');
-        debugPrint('🟢 PaintAPI $prefix JSON:');
-        for (var line in lines) {
-          debugPrint('🟢 $line');
-        }
-      } catch (e) {
-        debugPrint('🔴 PaintAPI: Error al formatear JSON: $e');
-        debugPrint('🔴 PaintAPI: JSON sin formato: $json');
-      }
+        for (var line in lines) {}
+      } catch (e) {}
     }
   }
 
@@ -62,7 +56,7 @@ class PaintApiService {
     ).replace(queryParameters: queryParams);
 
     try {
-      final response = await http.get(uri);
+      final response = await _client.get(uri);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -90,7 +84,7 @@ class PaintApiService {
     final uri = Uri.parse('$baseUrl/brand');
 
     try {
-      final response = await http.get(uri);
+      final response = await _client.get(uri);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -133,7 +127,7 @@ class PaintApiService {
   Future<List<Map<String, dynamic>>> getCategories() async {
     final uri = Uri.parse('$baseUrl/paint/category');
     try {
-      final response = await http.get(uri);
+      final response = await _client.get(uri);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decoded = json.decode(response.body);
@@ -154,7 +148,7 @@ class PaintApiService {
       final url = Uri.parse(
         '${Env.apiBaseUrl}/paint/pending-paint-submissions',
       );
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(item.toJson()),

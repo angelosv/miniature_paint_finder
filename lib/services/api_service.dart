@@ -43,7 +43,6 @@ class ApiService {
 
       return parsedResponse;
     } catch (e) {
-      print('❌ Error in ApiService.get(): $e');
       rethrow;
     }
   }

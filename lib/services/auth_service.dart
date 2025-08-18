@@ -176,7 +176,6 @@ class AuthService implements IAuthService {
 
       _authStateController.add(_currentUser);
     } catch (e) {
-      print('Error initializing auth service: $e');
       throw AuthException(
         AuthErrorCode.unknown,
         'Failed to initialize auth service: $e',
@@ -207,19 +206,12 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithEmailPassword(String email, String password) async {
     try {
-      print('Attempting to sign in with email: $email');
-
       // Validate email and password
       _validateCredentials(email, password);
 
       // Sign in with Firebase
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
-
-      print('Firebase sign in successful');
-      print('User ID: ${userCredential.user?.uid}');
-      print('User Email: ${userCredential.user?.email}');
-      print('User Display Name: ${userCredential.user?.displayName}');
 
       // Convert Firebase user to our User model
       _currentUser = User(
@@ -235,11 +227,6 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } on firebase.FirebaseAuthException catch (e) {
-      print('Firebase Auth Error:');
-      print('Code: ${e.code}');
-      print('Message: ${e.message}');
-      print('Stack trace: ${e.stackTrace}');
-
       switch (e.code) {
         case 'user-not-found':
           throw AuthException(
@@ -263,9 +250,6 @@ class AuthService implements IAuthService {
           );
       }
     } catch (e) {
-      print('General error during sign in:');
-      print('Error: $e');
-      print('Stack trace: ${StackTrace.current}');
       throw AuthException(AuthErrorCode.unknown, 'Authentication failed: $e');
     }
   }
@@ -363,7 +347,6 @@ class AuthService implements IAuthService {
         await GoogleSignIn().signOut();
       } catch (e) {
         // Ignore errors from Google sign out
-        print('Error signing out from Google: $e');
       }
 
       // Clear local user data
@@ -441,9 +424,6 @@ class AuthService implements IAuthService {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      print('Access Token: ${googleAuth.accessToken}');
-      print('ID Token: ${googleAuth.idToken}');
-
       // Create a new credential
       final credential = firebase.GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -455,10 +435,6 @@ class AuthService implements IAuthService {
           .FirebaseAuth
           .instance
           .signInWithCredential(credential);
-
-      print('Firebase User ID: ${userCredential.user!.uid}');
-      print('Firebase User Email: ${userCredential.user!.email}');
-      print('Firebase User Display Name: ${userCredential.user!.displayName}');
 
       // Hacer el POST al endpoint para crear usuario
       try {
@@ -479,10 +455,7 @@ class AuthService implements IAuthService {
             responseData['message'] ?? 'Error creating user',
           );
         }
-
-        print('Server response create-user: ${response.body}');
       } catch (e) {
-        print('Error making POST request to create-user server: $e');
         throw AuthException(
           AuthErrorCode.unknown,
           e is AuthException ? e.message : 'Error creating user on server',
@@ -503,7 +476,6 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } catch (e) {
-      print('Error en Google Sign In: $e');
       if (e is AuthException) {
         rethrow;
       }
@@ -518,13 +490,9 @@ class AuthService implements IAuthService {
   @override
   Future<User> signInWithApple() async {
     try {
-      print('Starting Apple Sign In process v2');
-
       // Generate nonce for Apple sign-in
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
-
-      print('Generated secure nonce: ${nonce.substring(0, 10)}...');
 
       // Request credential from Apple
       final appleCredential = await apple.SignInWithApple.getAppleIDCredential(
@@ -535,16 +503,7 @@ class AuthService implements IAuthService {
         nonce: nonce,
       );
 
-      print('Received credential from Apple');
-      print(
-        'Authorization code available: ${appleCredential.authorizationCode != null}',
-      );
-      print(
-        'Identity token available: ${appleCredential.identityToken != null}',
-      );
-
       if (appleCredential.identityToken == null) {
-        print('Error: Apple returned null identity token');
         throw AuthException(
           AuthErrorCode.unknown,
           'Apple sign in failed: No identity token returned',
@@ -556,10 +515,6 @@ class AuthService implements IAuthService {
       final familyName = appleCredential.familyName;
       final email = appleCredential.email;
 
-      print(
-        'Got data from Apple - Name: ${givenName ?? "null"} ${familyName ?? "null"}, Email: ${email ?? "null"}',
-      );
-
       // Directly creating auth credential for Firebase
       final credential = firebase.OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken!,
@@ -567,13 +522,9 @@ class AuthService implements IAuthService {
         rawNonce: rawNonce,
       );
 
-      print('Created Firebase credential, attempting sign in');
-
       // Sign in with Firebase
       final userCredential = await firebase.FirebaseAuth.instance
           .signInWithCredential(credential);
-
-      print('Firebase sign in successful: ${userCredential.user?.uid}');
 
       // Get or update display name
       String displayName = 'User';
@@ -593,7 +544,6 @@ class AuthService implements IAuthService {
               (userCredential.user!.displayName == null ||
                   userCredential.user!.displayName!.isEmpty)) {
             await userCredential.user!.updateDisplayName(displayName);
-            print('Updated Firebase user display name to: $displayName');
           }
         }
       }
@@ -615,14 +565,9 @@ class AuthService implements IAuthService {
 
       _authStateController.add(_currentUser);
 
-      print('Apple sign in completed successfully');
       return _currentUser!;
     } catch (e) {
-      print('Apple Sign In Error: $e');
       if (e is apple.SignInWithAppleAuthorizationException) {
-        print(
-          'SignInWithAppleAuthorizationException: ${e.code} - ${e.message}',
-        );
         if (e.code == apple.AuthorizationErrorCode.canceled) {
           throw AuthException(
             AuthErrorCode.cancelled,
@@ -635,7 +580,6 @@ class AuthService implements IAuthService {
           );
         }
       } else if (e is firebase.FirebaseAuthException) {
-        print('Firebase Auth Error: ${e.code} - ${e.message}');
         throw AuthException(e.code, 'Firebase auth error: ${e.message}');
       } else if (e is AuthException) {
         rethrow;
@@ -667,7 +611,6 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } catch (e) {
-      print('Error signing in with custom token: $e');
       throw AuthException(
         AuthErrorCode.unknown,
         'Failed to sign in with custom token: $e',
@@ -697,7 +640,6 @@ class AuthService implements IAuthService {
 
       return _currentUser!;
     } catch (e) {
-      print('Error creating guest user: $e');
       throw AuthException(
         AuthErrorCode.unknown,
         'Failed to continue as guest: $e',

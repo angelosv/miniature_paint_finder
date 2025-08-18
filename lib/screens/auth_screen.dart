@@ -144,10 +144,6 @@ class _AuthScreenState extends State<AuthScreen>
     });
 
     try {
-      print(
-        '🔒 Login: Intentando iniciar sesión con email: ${_emailController.text}',
-      );
-
       if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
         throw AuthException(
           AuthErrorCode.invalidEmail,
@@ -160,8 +156,6 @@ class _AuthScreenState extends State<AuthScreen>
         _emailController.text,
         _passwordController.text,
       );
-
-      print('✅ Login exitoso: ${user.email} (${user.id})');
 
       // Use our safe navigation method
       _safeNavigateToHome();
@@ -221,9 +215,6 @@ class _AuthScreenState extends State<AuthScreen>
       });
 
       try {
-        print('Starting registration process...');
-        print('Email: ${_emailController.text}');
-
         // First, make the POST request to the registration endpoint
         final response = await http.post(
           Uri.parse('${Env.apiBaseUrl}/auth/register'),
@@ -235,36 +226,28 @@ class _AuthScreenState extends State<AuthScreen>
           }),
         );
 
-        print('Backend response: ${response.body}');
         final responseData = jsonDecode(response.body);
 
         if (responseData['executed'] == true) {
-          print('Backend registration successful');
-
           // Check if we got a custom token from the backend
           if (responseData['data'] != null &&
               responseData['data']['customToken'] != null) {
-            print('Custom token received, signing in with Firebase...');
             // Sign in with the custom token
             await _authService.signInWithCustomToken(
               responseData['data']['customToken'],
             );
-            print('Firebase login successful');
 
             // Use our safe navigation method
             _safeNavigateToHome();
           } else {
-            print('No custom token received in response');
             throw Exception('No custom token received from server');
           }
         } else {
-          print('Backend registration failed: ${responseData['message']}');
           if (mounted) {
             _showErrorDialog(responseData['message'] ?? 'Registration failed');
           }
         }
       } catch (e) {
-        print('Registration process error: $e');
         if (mounted) {
           _showErrorDialog('Registration failed: ${e.toString()}');
         }

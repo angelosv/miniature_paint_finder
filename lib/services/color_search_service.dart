@@ -7,7 +7,13 @@ import 'package:miniature_paint_finder/utils/env.dart';
 
 class ColorSearchService {
   static final String baseUrl = '${Env.apiBaseUrl}';
-  final PaletteService _paletteService = PaletteService();
+
+  /// Underlying palette service, injected for testing
+  final PaletteService _paletteService;
+
+  /// Constructor with optional injection of PaletteService
+  ColorSearchService({PaletteService? paletteService})
+    : _paletteService = paletteService ?? PaletteService();
 
   Future<void> saveColorSearch({
     required String token,

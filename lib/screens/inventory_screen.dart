@@ -17,6 +17,8 @@ import 'package:miniature_paint_finder/data/sample_data.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/models/paint_inventory_item.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/components/app_header.dart';
@@ -28,6 +30,7 @@ import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'package:miniature_paint_finder/screens/screen_analytics.dart';
+import 'package:provider/provider.dart';
 
 /// A screen for managing the user's paint inventory.
 ///
@@ -131,7 +134,6 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   Future<void> _loadInventory() async {
-    print('>>> InventoryScreen: Entrando a _loadInventory()');
     setState(() {
       _isLoading = true;
     });
@@ -140,16 +142,43 @@ class _InventoryScreenState extends State<InventoryScreen>
       // Track el inicio de la carga del inventario
       final startTime = DateTime.now().millisecondsSinceEpoch;
 
-      await _inventoryService.loadInventory(
-        limit: _currentPageSize,
-        page: _currentPage,
-        searchQuery: _searchController.text,
-        onlyInStock: _onlyShowInStock,
-        brand: _selectedBrand,
-        category: _selectedCategory,
-        minStock: _stockRange.start.toInt(),
-        maxStock: _stockRange.end.toInt(),
+      // Use cache service if available, fallback to direct service
+      final cacheService = Provider.of<InventoryCacheService>(
+        context,
+        listen: false,
       );
+      List<PaintInventoryItem> inventoryItems;
+
+      if (cacheService.isInitialized) {
+        // Use cache service for optimized loading
+        inventoryItems = await cacheService.getInventory(
+          limit: _currentPageSize,
+          page: _currentPage,
+          searchQuery:
+              _searchController.text.isNotEmpty ? _searchController.text : null,
+          onlyInStock: _onlyShowInStock,
+          brand: _selectedBrand,
+          category: _selectedCategory,
+        );
+
+        // Update UI with cache status indicators
+        setState(() {
+          // Add cache status to UI if needed
+        });
+      } else {
+        // Fallback to direct API call
+        await _inventoryService.loadInventory(
+          limit: _currentPageSize,
+          page: _currentPage,
+          searchQuery: _searchController.text,
+          onlyInStock: _onlyShowInStock,
+          brand: _selectedBrand,
+          category: _selectedCategory,
+          minStock: _stockRange.start.toInt(),
+          maxStock: _stockRange.end.toInt(),
+        );
+        inventoryItems = _inventoryService.inventory;
+      }
 
       // Calcular tiempo de carga
       final endTime = DateTime.now().millisecondsSinceEpoch;
@@ -163,14 +192,17 @@ class _InventoryScreenState extends State<InventoryScreen>
         'filter_brand': _selectedBrand,
         'filter_category': _selectedCategory,
         'filter_stock_only': _onlyShowInStock,
-        'item_count': _inventoryService.inventory.length,
+        'item_count': inventoryItems.length,
         'total_pages': _inventoryService.totalPages,
+        'cache_used': cacheService.isInitialized,
+        'has_connection': cacheService.hasConnection,
+        'pending_operations': cacheService.pendingOperationsCount,
       });
 
       // Nuevo tracking detallado de actividad en el inventario
       _analytics.trackInventoryActivity(
         'load',
-        itemsAffected: _inventoryService.inventory.length,
+        itemsAffected: inventoryItems.length,
         timeTakenSeconds: (loadTimeMs / 1000).round(),
         additionalInfo: {
           'page': _currentPage,
@@ -181,10 +213,12 @@ class _InventoryScreenState extends State<InventoryScreen>
               _selectedBrand != null ||
               _selectedCategory != null ||
               _onlyShowInStock,
+          'cache_used': cacheService.isInitialized,
+          'offline_mode': !cacheService.hasConnection,
         },
       );
 
-      _filteredInventory = _inventoryService.inventory;
+      _filteredInventory = inventoryItems;
       _uniqueCategories = _inventoryService.getUniqueCategories();
       _uniqueBrands = await _inventoryService.getUniqueBrands();
       _totalPages = _inventoryService.totalPages;
@@ -193,7 +227,6 @@ class _InventoryScreenState extends State<InventoryScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading inventory: $e');
       // Track el error
       _analytics.trackError('Inventory Load', e.toString(), {
         'page': _currentPage,
@@ -435,11 +468,24 @@ class _InventoryScreenState extends State<InventoryScreen>
       'action': stockAction,
     });
 
-    // Update stock through service
-    bool success = await _inventoryService.updateStockFromApi(
-      item.id,
-      newStock,
+    // Use cache service for optimistic updates if available
+    final cacheService = Provider.of<InventoryCacheService>(
+      context,
+      listen: false,
     );
+    bool success = false;
+
+    if (cacheService.isInitialized) {
+      // Use cache service for optimistic update and automatic sync
+      success = await cacheService.updateInventoryItem(
+        item.id,
+        newStock,
+        notes: item.notes,
+      );
+    } else {
+      // Fallback to direct API call
+      success = await _inventoryService.updateStockFromApi(item.id, newStock);
+    }
 
     if (success) {
       setState(() {
@@ -486,8 +532,24 @@ class _InventoryScreenState extends State<InventoryScreen>
       'notes_length': notes.length,
     });
 
-    // Update notes through service
-    bool success = await _inventoryService.updateNotesFromApi(item.id, notes);
+    // Use cache service for optimistic updates if available
+    final cacheService = Provider.of<InventoryCacheService>(
+      context,
+      listen: false,
+    );
+    bool success = false;
+
+    if (cacheService.isInitialized) {
+      // Use cache service for optimistic update and automatic sync
+      success = await cacheService.updateInventoryItem(
+        item.id,
+        item.stock,
+        notes: notes,
+      );
+    } else {
+      // Fallback to direct API call
+      success = await _inventoryService.updateNotesFromApi(item.id, notes);
+    }
 
     if (success) {
       setState(() {
@@ -572,8 +634,31 @@ class _InventoryScreenState extends State<InventoryScreen>
           onAddToWishlist: () async {
             final user = FirebaseAuth.instance.currentUser;
             if (user == null) return;
-            Paint paint = item.paint;
-            paint.id = item.paint.code;
+
+            // Don't modify the original paint object - create a proper copy
+            Paint paint = Paint(
+              id: item.paint.code, // Use code as ID
+              name: item.paint.name,
+              brand: item.paint.brand,
+              hex: item.paint.hex,
+              set: item.paint.set,
+              code: item.paint.code,
+              r: item.paint.r,
+              g: item.paint.g,
+              b: item.paint.b,
+              category: item.paint.category,
+              isMetallic: item.paint.isMetallic,
+              isTransparent: item.paint.isTransparent,
+              brandId: item.paint.brandId,
+              brandLogo: item.paint.brandLogo,
+            );
+
+            debugPrint('🎨 Paint to add to wishlist:');
+            debugPrint('  - ID: ${paint.id}');
+            debugPrint('  - Name: ${paint.name}');
+            debugPrint('  - Brand: ${paint.brand}');
+            debugPrint('  - BrandId: ${paint.brandId}');
+            debugPrint('  - Code: ${paint.code}');
 
             // Track adición a wishlist
             _analytics.trackPaintAddedToWishlist(
@@ -582,21 +667,172 @@ class _InventoryScreenState extends State<InventoryScreen>
               paint.brand,
             );
 
-            await _paintService.addToWishlistDirect(
-              paint,
-              0,
-              user.uid,
-            ); // prioridad alta por defecto
-            // Lógica para añadir a wishlist
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${item.paint.name} added to wishlist'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            try {
+              // Show loading indicator
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text('Moving to wishlist...'),
+                    ],
+                  ),
+                  duration: const Duration(seconds: 30),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
 
-            await _loadInventory();
+              // STEP 1: Add to wishlist first and wait for success
+              final wishlistCacheService = Provider.of<WishlistCacheService>(
+                context,
+                listen: false,
+              );
+              bool wishlistSuccess = false;
+
+              debugPrint(
+                '🔍 WishlistCacheService initialized: ${wishlistCacheService.isInitialized}',
+              );
+              debugPrint(
+                '🔍 Current wishlist cache: ${wishlistCacheService.cachedWishlist?.length ?? 0} items',
+              );
+
+              if (wishlistCacheService.isInitialized) {
+                // Use cache service for optimistic update with high priority
+                wishlistSuccess = await wishlistCacheService.addToWishlist(
+                  paint,
+                  3, // High priority (from inventory means user wants it)
+                  notes: 'Added from inventory',
+                );
+                debugPrint(
+                  '✅ Paint added to wishlist via cache service: $wishlistSuccess',
+                );
+                debugPrint(
+                  '🔍 Wishlist cache after add: ${wishlistCacheService.cachedWishlist?.length ?? 0} items',
+                );
+              } else {
+                // Fallback to direct service
+                await _paintService.addToWishlistDirect(
+                  paint,
+                  3, // High priority
+                  user.uid,
+                );
+                wishlistSuccess = true;
+                debugPrint(
+                  '✅ Paint added to wishlist via direct service fallback',
+                );
+              }
+
+              if (!wishlistSuccess) {
+                throw Exception('Failed to add to wishlist');
+              }
+
+              // STEP 2: Wait a brief moment to ensure wishlist operation completes
+              await Future.delayed(const Duration(milliseconds: 500));
+
+              // STEP 3: Remove from inventory only after wishlist success
+              final inventoryCacheService = Provider.of<InventoryCacheService>(
+                context,
+                listen: false,
+              );
+              bool inventoryRemoved = false;
+
+              if (inventoryCacheService.isInitialized) {
+                // Use cache service for optimistic removal
+                inventoryRemoved = await inventoryCacheService
+                    .deleteInventoryItem(item.id);
+                debugPrint('✅ Paint removed from inventory via cache service');
+              } else {
+                // Fallback to direct service removal
+                inventoryRemoved = await _inventoryService
+                    .deleteInventoryRecord(item.id);
+                debugPrint('✅ Paint removed from inventory via direct service');
+              }
+
+              if (!inventoryRemoved) {
+                debugPrint(
+                  '⚠️ Failed to remove from inventory, but item is in wishlist',
+                );
+                // Don't throw error here since the paint is already in wishlist
+                // The user can manually remove from inventory if needed
+              }
+
+              // STEP 4: Update UI immediately by removing from local lists
+              setState(() {
+                _filteredInventory.removeWhere(
+                  (inventoryItem) => inventoryItem.id == item.id,
+                );
+                _updatePaginatedInventory();
+              });
+
+              // Hide loading and show success
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${item.paint.name} moved to wishlist'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.green,
+                  action: SnackBarAction(
+                    label: 'VIEW',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Navigate to wishlist screen using bottom navigation
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      // The AppScaffold will handle the navigation to index 3 (wishlist)
+                    },
+                  ),
+                ),
+              );
+
+              // STEP 5: Force refresh both cache services to ensure sync
+              if (wishlistCacheService.isInitialized) {
+                debugPrint('🔄 Forcing wishlist cache sync...');
+                await wishlistCacheService.forceSync();
+
+                // Force refresh wishlist to trigger UI update
+                debugPrint('🔄 Force refreshing wishlist cache...');
+                await wishlistCacheService.getWishlist(forceRefresh: true);
+
+                // Debug cache state
+                debugPrint(
+                  '🔍 Debugging wishlist cache state after operations:',
+                );
+                wishlistCacheService.debugCacheState();
+              }
+
+              if (inventoryCacheService.isInitialized) {
+                debugPrint('🔄 Forcing inventory cache sync...');
+                // Note: Add forceSync method to InventoryCacheService if it doesn't exist
+                // await inventoryCacheService.forceSync();
+              }
+            } catch (e) {
+              debugPrint('❌ Error moving to wishlist: $e');
+
+              // Hide loading indicator
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error moving to wishlist: $e'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+
+            // No need to refresh inventory since we updated UI optimistically
+            // await _loadInventory();
           },
           getSafeBrandName: _getSafeBrandName,
           buildBrandLogo: _buildBrandLogo,
@@ -1016,7 +1252,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     final palettesUsingPaint = _getPalettesUsingPaint(paint.id);
 
     return Dismissible(
-      key: Key(item.paint.id),
+      key: Key('inventory_${item.id}'),
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
@@ -1086,39 +1322,90 @@ class _InventoryScreenState extends State<InventoryScreen>
         );
       },
       onDismissed: (direction) async {
-        final success = await _inventoryService.deleteInventoryRecord(item.id);
+        // Immediately remove from UI to prevent the widget tree error
+        final itemToDelete = item;
+        final itemIndex = _filteredInventory.indexOf(item);
 
-        if (success) {
-          setState(() {
-            final newFilteredInventory = List<PaintInventoryItem>.from(
-              _filteredInventory,
+        // Update UI immediately before any async operations
+        setState(() {
+          _filteredInventory = List<PaintInventoryItem>.from(_filteredInventory)
+            ..removeAt(itemIndex);
+          _updatePaginatedInventory();
+        });
+
+        // Now handle the backend deletion
+        final cacheService = Provider.of<InventoryCacheService>(
+          context,
+          listen: false,
+        );
+        bool success = false;
+
+        try {
+          if (cacheService.isInitialized) {
+            // Use cache service for optimistic delete
+            success = await cacheService.deleteInventoryItem(itemToDelete.id);
+            debugPrint('🗑️ Cache service delete result: $success');
+          } else {
+            // Fallback to direct API call
+            success = await _inventoryService.deleteInventoryRecord(
+              itemToDelete.id,
             );
-            final index = newFilteredInventory.indexOf(item);
-            if (index != -1) {
-              newFilteredInventory.removeAt(index);
+            debugPrint('🗑️ Direct service delete result: $success');
+          }
+
+          if (success) {
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${paint.name} removed from inventory'),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor:
+                      isDarkMode ? Colors.grey[800] : Colors.grey[900],
+                ),
+              );
             }
-            _filteredInventory = newFilteredInventory;
-            _filterInventory();
+          } else {
+            // If deletion failed, restore the item to the list
+            debugPrint('❌ Delete failed, restoring item to UI');
+            setState(() {
+              _filteredInventory = List<PaintInventoryItem>.from(
+                _filteredInventory,
+              )..insert(itemIndex, itemToDelete);
+              _updatePaginatedInventory();
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error removing ${paint.name} from inventory'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ Exception during delete: $e');
+          // Restore the item on exception
+          setState(() {
+            _filteredInventory = List<PaintInventoryItem>.from(
+              _filteredInventory,
+            )..insert(itemIndex, itemToDelete);
+            _updatePaginatedInventory();
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${paint.name} removed from inventory'),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error removing ${paint.name} from inventory'),
+                backgroundColor: Colors.red,
               ),
-              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[900],
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error removing ${paint.name} from inventory'),
-              backgroundColor: Colors.red,
-            ),
-          );
+            );
+          }
         }
       },
       child: Card(
@@ -1536,7 +1823,6 @@ class _InventoryScreenState extends State<InventoryScreen>
   Future<void> _initializeServices() async {
     // Cargar datos de marcas en segundo plano para no bloquear la UI
     _loadBrandData().catchError((e) {
-      print('⚠️ Error inicializando servicio de marcas: $e');
       // La UI seguirá funcionando aunque falle la carga de marcas
     });
   }
@@ -1547,7 +1833,6 @@ class _InventoryScreenState extends State<InventoryScreen>
       final name = _brandManager.getBrandName(brandId);
       return name ?? fallbackName;
     } catch (e) {
-      print('⚠️ Error obteniendo nombre de marca: $e');
       return fallbackName;
     }
   }
@@ -1557,7 +1842,6 @@ class _InventoryScreenState extends State<InventoryScreen>
     try {
       return _brandLogos[brandId];
     } catch (e) {
-      print('⚠️ Error obteniendo logo URL: $e');
       return null;
     }
   }
@@ -1581,9 +1865,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 ? DecorationImage(
                   image: NetworkImage(logoUrl),
                   fit: BoxFit.contain,
-                  onError: (exception, stackTrace) {
-                    print('⚠️ Error cargando imagen: $exception');
-                  },
+                  onError: (exception, stackTrace) {},
                 )
                 : null,
       ),
@@ -1653,13 +1935,10 @@ class _InventoryScreenState extends State<InventoryScreen>
       for (final brand in brands) {
         _brandLogos[brand.id] = brand.logoUrl;
       }
-      print('✅ Logotipos de marcas cargados: ${_brandLogos.length}');
 
       // Añadir logotipos predeterminados para marcas conocidas
       _addDefaultBrandLogos();
     } catch (e) {
-      print('❌ Error al cargar datos de marcas: $e');
-
       // Si falla la carga desde API, al menos cargar los logotipos predeterminados
       _addDefaultBrandLogos();
     }
@@ -1686,8 +1965,6 @@ class _InventoryScreenState extends State<InventoryScreen>
         _brandLogos[key] = value;
       }
     });
-
-    print('✅ Logotipos predeterminados añadidos: ${defaultLogos.length}');
   }
 
   /// Formatea la fecha de adición de forma amigable

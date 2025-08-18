@@ -129,7 +129,6 @@ class _ScanResultSheetState extends State<ScanResultSheet> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading palettes: $e');
     } finally {
       setState(() {
         _isLoadingPalettes = false;

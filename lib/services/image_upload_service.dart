@@ -5,13 +5,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
 class ImageUploadService {
-  static final String _baseUrl = '${Env.apiBaseUrl}';
+  /// Base URL for API endpoints
+  final String baseUrl;
+
+  /// HTTP client for making requests (injected for testing)
+  final http.Client _client;
+
+  /// FirebaseAuth instance (injected for testing)
+  final FirebaseAuth _auth;
+
+  /// Constructs the service, allowing dependency injection of baseUrl, client, and auth
+  ImageUploadService({String? baseUrl, http.Client? client, FirebaseAuth? auth})
+    : baseUrl = baseUrl ?? Env.apiBaseUrl,
+      _client = client ?? http.Client(),
+      _auth = auth ?? FirebaseAuth.instance;
 
   Future<String> uploadImage(File imageFile) async {
     try {
       String token = '';
       // Get Firebase token
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _auth.currentUser;
       if (user != null) {
         token = await user.getIdToken() ?? '';
       }
@@ -19,7 +32,7 @@ class ImageUploadService {
       // Create multipart request
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('$_baseUrl/image/upload-file'),
+        Uri.parse('$baseUrl/image/upload-file'),
       );
 
       // Add image file
@@ -31,7 +44,7 @@ class ImageUploadService {
       request.headers['Authorization'] = 'Bearer $token';
 
       // Send request
-      var response = await request.send();
+      var response = await _client.send(request);
       var responseData = await response.stream.bytesToString();
       var jsonResponse = json.decode(responseData);
 

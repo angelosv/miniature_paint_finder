@@ -285,7 +285,6 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
     } catch (e) {
-      print('Error tracking user properties: $e');
       // No propagar error para no afectar la experiencia del usuario
     }
   }

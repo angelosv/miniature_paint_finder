@@ -70,7 +70,6 @@ class PaletteCard extends StatelessWidget {
                                 ),
                               ),
                           errorWidget: (context, error, stackTrace) {
-                            print('❌ Error loading network image: $error');
                             return _buildFallbackImage(context);
                           },
                         )
