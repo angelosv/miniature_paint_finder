@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
@@ -11,6 +12,9 @@ void main() {
     late Paint testPaint;
 
     setUpAll(() async {
+      // Initialize Flutter binding for tests
+      TestWidgetsFlutterBinding.ensureInitialized();
+      
       // Initialize app configuration for testing
       AppConfig.initialize(env: Environment.development);
     });
