@@ -5,6 +5,7 @@ import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
+import 'package:miniature_paint_finder/screens/projects_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/widgets/custom_bottom_nav.dart';
 import 'package:provider/provider.dart';
@@ -102,6 +103,12 @@ class _AppScaffoldState extends State<AppScaffold> {
         case 4:
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const PaletteScreen()),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 5:
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const ProjectsScreen()),
             (Route<dynamic> route) => false,
           );
           break;

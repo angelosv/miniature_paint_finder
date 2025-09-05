@@ -41,6 +41,7 @@ import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/components/project_card.dart';
 import 'package:miniature_paint_finder/data/sample_projects.dart';
+import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -434,11 +435,10 @@ class _PaintListTabState extends State<PaintListTab> {
               title: 'My Projects',
               projects: SampleProjects.getUserProjects(),
               onProjectTap: (project) {
-                // TODO: Navigate to project detail screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Opening ${project.name}...'),
-                    duration: const Duration(seconds: 1),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectDetailScreen(project: project),
                   ),
                 );
               },
