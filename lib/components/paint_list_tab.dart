@@ -36,10 +36,11 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
-import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/components/project_card.dart';
+import 'package:miniature_paint_finder/data/sample_projects.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -425,6 +426,32 @@ class _PaintListTabState extends State<PaintListTab> {
 
             // === Barcode Scanner ===
             const BarcodeScannerCard(),
+
+            const SizedBox(height: 24),
+
+            // === My Projects ===
+            ProjectHorizontalList(
+              title: 'My Projects',
+              projects: SampleProjects.getUserProjects(),
+              onProjectTap: (project) {
+                // TODO: Navigate to project detail screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Opening ${project.name}...'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+              onSeeAll: () {
+                // TODO: Navigate to all projects screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening all projects...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
 
             const SizedBox(height: 24),
 
