@@ -8,6 +8,7 @@ import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
 import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
@@ -143,6 +144,7 @@ void main() async {
   final PaintRepository paintRepository = PaintRepositoryImpl();
   final ApiService apiService = ApiService(baseUrl: ApiEndpoints.baseUrl);
   final PaletteRepository paletteRepository = ApiPaletteRepository(apiService);
+  final ProjectRepository projectRepository = ApiProjectRepository(apiService);
   final PaintApiService paintApiService = PaintApiService();
 
   // Initialize the library cache service
@@ -215,6 +217,7 @@ void main() async {
         Provider<IAuthService>.value(value: authService),
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
+        Provider<ProjectRepository>.value(value: projectRepository),
         Provider<PaintApiService>.value(value: paintApiService),
         ChangeNotifierProvider<LibraryCacheService>.value(
           value: libraryCacheService,

@@ -3,12 +3,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/models/project.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:provider/provider.dart';
 
 class CreateProjectModal extends StatefulWidget {
   const CreateProjectModal({super.key});
 
-  static Future<void> show(BuildContext context) {
-    return showModalBottomSheet(
+  static Future<bool?> show(BuildContext context) {
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -287,7 +289,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
     );
   }
 
-  void _createProject() {
+  void _createProject() async {
     if (!_formKey.currentState!.validate()) return;
 
     final now = DateTime.now();
@@ -304,27 +306,31 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
       createdAt: now,
       updatedAt: now,
       status: _selectedStatus,
-      userId: 'user1', // TODO: Get from auth service
+      userId: 'user1',
       tags: List.from(_selectedTags),
     );
-
-    // TODO: Save project using a service/controller
-    Navigator.pop(context);
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Project "${project.name}" created successfully!'),
-        backgroundColor: AppTheme.greenColor,
-        duration: const Duration(seconds: 2),
-        action: SnackBarAction(
-          label: 'Open',
-          textColor: Colors.white,
-          onPressed: () {
-            // TODO: Navigate to project detail screen
-          },
-        ),
-      ),
-    );
+    try {
+      final repo = Provider.of<ProjectRepository>(context, listen: false);
+      await repo.create(project);
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Project "${project.name}" created successfully!'),
+            backgroundColor: AppTheme.greenColor,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to create project'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

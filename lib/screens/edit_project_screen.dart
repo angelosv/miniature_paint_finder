@@ -6,6 +6,8 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/screens/paint_selector_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_selector_screen.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:provider/provider.dart';
 
 class EditProjectScreen extends StatefulWidget {
   final Project project;
@@ -1130,9 +1132,6 @@ class _EditProjectScreenState extends State<EditProjectScreen>
       _isSaving = true;
     });
 
-    // Simulate save delay
-    await Future.delayed(const Duration(seconds: 1));
-
     final updatedProject = widget.project.copyWith(
       name: _nameController.text.trim(),
       description:
@@ -1146,24 +1145,35 @@ class _EditProjectScreenState extends State<EditProjectScreen>
       paletteIds: List.from(_linkedPaletteIds),
       updatedAt: DateTime.now(),
     );
-
-    // TODO: Save to actual service/database
-    setState(() {
-      _isSaving = false;
-      _hasChanges = false;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Project "${updatedProject.name}" saved successfully!'),
-          backgroundColor: AppTheme.greenColor,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      // Return the updated project
-      Navigator.pop(context, updatedProject);
+    try {
+      final repo = Provider.of<ProjectRepository>(context, listen: false);
+      await repo.update(updatedProject);
+      setState(() {
+        _isSaving = false;
+        _hasChanges = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Project "${updatedProject.name}" saved successfully!'),
+            backgroundColor: AppTheme.greenColor,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.pop(context, updatedProject);
+      }
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save project'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

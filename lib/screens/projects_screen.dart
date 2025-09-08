@@ -6,9 +6,11 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/components/create_project_modal.dart';
-import 'package:miniature_paint_finder/data/sample_projects.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
 import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
+import 'dart:convert';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -25,6 +27,12 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   List<Project> _allProjects = [];
   List<Project> _filteredProjects = [];
+  bool _isLoading = false;
+  int _currentPage = 1;
+  int _totalProjects = 0;
+  int _totalDone = 0;
+  int _totalActive = 0;
+  int _totalShown = 0;
   ProjectStatus? _selectedStatus;
   String _selectedSortOption = 'Recent';
 
@@ -40,7 +48,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _loadProjects();
+    _fetchProjects();
   }
 
   @override
@@ -50,12 +58,74 @@ class _ProjectsScreenState extends State<ProjectsScreen>
     super.dispose();
   }
 
-  void _loadProjects() {
+  Future<void> _fetchProjects({int page = 1, int limit = 10}) async {
     setState(() {
-      _allProjects = SampleProjects.getUserProjects();
-      _filteredProjects = List.from(_allProjects);
+      _isLoading = true;
     });
-    _applyFiltersAndSort();
+
+    try {
+      final repo = Provider.of<ProjectRepository>(context, listen: false);
+      final result = await repo.getUserProjects(page: page, limit: limit);
+      final List<Project> parsed = (result['projects'] as List)
+          .map((raw) {
+            final map = raw as Map<String, dynamic>;
+            print(' project: ${map}');
+            
+            // Map items to palettes and paints
+            final items = map['items'] as List? ?? [];
+            final paletteIds = items
+                .where((item) => item['table'] == 'palettes')
+                .map((item) => item['table_id'] as String)
+                .toList();
+            
+            final paints = items
+                .where((item) => item['table'] == 'paints')
+                .map((item) => ProjectPaint(
+                  paintId: item['table_id'] as String,
+                  paintName: 'Paint ${item['table_id']}',
+                  paintBrand: item['brand_id'] as String? ?? 'Unknown',
+                  brandAvatar: (item['brand_id'] as String? ?? 'U')[0],
+                  colorHex: '#000000',
+                  addedAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
+                ))
+                .toList();
+            
+            return Project(
+              id: map['id'] ?? '',
+              name: map['name'] ?? 'Untitled',
+              description: map['description'],
+              images: const [],
+              paletteIds: paletteIds,
+              paints: paints,
+              createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+              updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
+              status: ProjectStatus.inProgress,
+              userId: map['user_id'] ?? '',
+              tags: const [],
+            );
+          })
+          .toList();
+
+      setState(() {
+        _currentPage = result['currentPage'] ?? page;
+        _totalProjects = result['totalProjects'] ?? 0;
+        _totalDone = result['totalDone'] ?? 0;
+        _totalActive = result['totalActive'] ?? 0;
+        _totalShown = result['totalShown'] ?? parsed.length;
+        _allProjects = parsed;
+        _filteredProjects = List.from(_allProjects);
+      });
+
+      _applyFiltersAndSort();
+    } catch (e) {
+      // keep empty state on error
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _applyFiltersAndSort() {
@@ -249,9 +319,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   Widget _buildStatsBar() {
-    final totalProjects = _allProjects.length;
-    final completedProjects = _allProjects.where((p) => p.status == ProjectStatus.completed).length;
-    final inProgressProjects = _allProjects.where((p) => p.status == ProjectStatus.inProgress).length;
+    final totalProjects = _totalProjects;
+    final completedProjects = _totalDone;
+    final inProgressProjects = _totalActive;
     
     return Container(
       padding: EdgeInsets.symmetric(
@@ -274,7 +344,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           _buildStatItem(Icons.folder, totalProjects.toString(), 'Total'),
           _buildStatItem(Icons.play_circle, inProgressProjects.toString(), 'Active'),
           _buildStatItem(Icons.check_circle, completedProjects.toString(), 'Done'),
-          _buildStatItem(Icons.filter_list, _filteredProjects.length.toString(), 'Shown'),
+          _buildStatItem(Icons.filter_list, _totalShown.toString(), 'Shown'),
         ],
       ),
     );
@@ -979,7 +1049,11 @@ class _ProjectsScreenState extends State<ProjectsScreen>
       MaterialPageRoute(
         builder: (context) => EditProjectScreen(project: project),
       ),
-    );
+    ).then((result) {
+      if (result != null) {
+        _fetchProjects(page: _currentPage);
+      }
+    });
   }
 
   void _deleteProject(Project project) {
@@ -994,19 +1068,21 @@ class _ProjectsScreenState extends State<ProjectsScreen>
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                _allProjects.removeWhere((p) => p.id == project.id);
-              });
-              _applyFiltersAndSort();
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Project "${project.name}" deleted'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              try {
+                final repo = Provider.of<ProjectRepository>(context, listen: false);
+                final ok = await repo.delete(project.id);
+                if (ok && mounted) {
+                  await _fetchProjects(page: _currentPage);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Project "${project.name}" deleted'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (_) {}
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -1016,6 +1092,10 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   void _showCreateProjectModal() {
-    CreateProjectModal.show(context);
+    CreateProjectModal.show(context).then((created) {
+      if (created == true) {
+        _fetchProjects(page: _currentPage);
+      }
+    });
   }
 }
