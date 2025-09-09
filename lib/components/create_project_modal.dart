@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/models/project.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 class CreateProjectModal extends StatefulWidget {
@@ -292,6 +293,19 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
   void _createProject() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final authService = Provider.of<IAuthService>(context, listen: false);
+    final currentUser = authService.currentUser;
+    
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You must be logged in to create a project'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     final project = Project(
       id: 'project_${now.millisecondsSinceEpoch}',
@@ -306,9 +320,10 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
       createdAt: now,
       updatedAt: now,
       status: _selectedStatus,
-      userId: 'user1',
+      userId: currentUser.id,
       tags: List.from(_selectedTags),
     );
+    
     try {
       final repo = Provider.of<ProjectRepository>(context, listen: false);
       await repo.create(project);
@@ -323,10 +338,11 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
         );
       }
     } catch (e) {
+      print('Error creating project: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to create project'),
+            content: Text('Failed to create project: $e'),
             backgroundColor: Colors.red,
           ),
         );

@@ -68,9 +68,9 @@ class Project {
       'paints': paints.map((paint) => paint.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'status': status.toString(),
+      'status': _statusToSnakeCase(status),
       'userId': userId,
-      'tags': tags,
+      'tags': List<String>.from(tags),
     };
   }
 
@@ -91,12 +91,9 @@ class Project {
               .toList(),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-      status: ProjectStatus.values.firstWhere(
-        (e) => e.toString() == json['status'],
-        orElse: () => ProjectStatus.planning,
-      ),
+      status: _statusFromJson(json['status']),
       userId: json['userId'],
-      tags: List<String>.from(json['tags'] ?? []),
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     );
   }
 
@@ -311,5 +308,42 @@ class ProjectPaint {
       notes: json['notes'],
       addedAt: DateTime.parse(json['addedAt']),
     );
+  }
+}
+
+/// Helper functions for status conversion
+String _statusToSnakeCase(ProjectStatus status) {
+  switch (status) {
+    case ProjectStatus.planning:
+      return 'planning';
+    case ProjectStatus.inProgress:
+      return 'in_progress';
+    case ProjectStatus.completed:
+      return 'completed';
+    case ProjectStatus.onHold:
+      return 'on_hold';
+  }
+}
+
+ProjectStatus _statusFromJson(dynamic statusValue) {
+  if (statusValue == null) return ProjectStatus.planning;
+  
+  final statusString = statusValue.toString().toLowerCase().trim();
+  
+  switch (statusString) {
+    case 'planning':
+      return ProjectStatus.planning;
+    case 'in_progress':
+      return ProjectStatus.inProgress;
+    case 'completed':
+      return ProjectStatus.completed;
+    case 'on_hold':
+      return ProjectStatus.onHold;
+    default:
+      // Fallback for old format or unknown values
+      return ProjectStatus.values.firstWhere(
+        (e) => e.toString().split('.').last.toLowerCase() == statusString,
+        orElse: () => ProjectStatus.planning,
+      );
   }
 }

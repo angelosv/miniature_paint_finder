@@ -93,8 +93,11 @@ class ApiProjectRepository implements ProjectRepository {
         ApiEndpoints.projects,
         item.toJson(),
       );
+      print('**** create project response: $response');
       return Project.fromJson(response as Map<String, dynamic>);
+      print('**** create project response: $response');
     } catch (e) {
+      print('**** error creating project: $e');
       return item;
     }
   }

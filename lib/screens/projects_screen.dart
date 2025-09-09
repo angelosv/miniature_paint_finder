@@ -70,7 +70,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           .map((raw) {
             final map = raw as Map<String, dynamic>;
             print(' project: ${map}');
-            
+            print(' status from backend: ${map['status']}');
             // Map items to palettes and paints
             final items = map['items'] as List? ?? [];
             final paletteIds = items
