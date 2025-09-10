@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:miniature_paint_finder/theme/app_theme.dart';
+import 'package:miniature_paint_finder/utils/cache.dart';
 
 class BrandCard extends StatelessWidget {
   final String id;
@@ -44,9 +44,11 @@ class BrandCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 child: Container(
-                  color: Colors.white,
+                  color: isDarkMode ? AppTheme.darkSurface : Colors.white,
                   child: Center(child: _buildBrandLogo(context)),
                 ),
               ),
@@ -54,68 +56,70 @@ class BrandCard extends StatelessWidget {
 
             // Brand info container
             Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color:
                     isDarkMode
                         ? AppTheme.marineBlue.withOpacity(0.1)
                         : Colors.grey[50],
-                borderRadius: BorderRadius.vertical(
+                borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(16),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color:
-                          isDarkMode
-                              ? AppTheme.marineOrange
-                              : AppTheme.marineBlue,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.palette_outlined,
-                            size: 14,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                             color:
                                 isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
+                                    ? AppTheme.marineOrange
+                                    : AppTheme.marineBlue,
                           ),
-                          SizedBox(width: 4),
-                          Text(
-                            _formatPaintCount(paintCount),
-                            style: TextStyle(
-                              fontSize: 12,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.palette_outlined,
+                              size: 14,
                               color:
                                   isDarkMode
                                       ? Colors.grey[400]
                                       : Colors.grey[600],
                             ),
-                          ),
-                        ],
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color:
-                            isDarkMode
-                                ? AppTheme.marineOrange
-                                : AppTheme.marineBlue,
-                      ),
-                    ],
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatPaintCount(paintCount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isDarkMode
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color:
+                        isDarkMode
+                            ? AppTheme.marineOrange
+                            : AppTheme.marineBlue,
                   ),
                 ],
               ),
@@ -126,68 +130,54 @@ class BrandCard extends StatelessWidget {
     );
   }
 
+  /// Logo con cache en disco y fallback sin spinner (evita logs offline)
   Widget _buildBrandLogo(BuildContext context) {
-    if (logoUrl == null || logoUrl!.isEmpty) {
-      return Container(
-        width: 80,
-        height: 80,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Text(
-            name.isEmpty ? '?' : name[0].toUpperCase(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    Widget fallbackAvatar() => Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          name.isEmpty ? '?' : name[0].toUpperCase(),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white70 : Colors.grey[700],
           ),
         ),
-      );
+      ),
+    );
+
+    if (logoUrl == null || logoUrl!.trim().isEmpty) {
+      return fallbackAvatar();
     }
 
     return Padding(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       child: CachedNetworkImage(
-        imageUrl: logoUrl!,
-        placeholder:
-            (context, url) =>
-                Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        errorWidget:
-            (context, url, error) => Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  name.isEmpty ? '?' : name[0].toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ),
-            ),
+        imageUrl: logoUrl!.trim(),
+        cacheManager: LogosCacheManager.instance, // <- cache disco (TTL largo)
         fit: BoxFit.contain,
-        width: double.infinity,
-        height: double.infinity,
+        useOldImageOnUrlChange: true,
+        fadeInDuration: const Duration(milliseconds: 120),
+        fadeOutDuration: const Duration(milliseconds: 120),
+        placeholder: (_, __) => fallbackAvatar(), // no spinner offline
+        errorWidget: (_, __, ___) => fallbackAvatar(),
+        // hints de memoria para listas
+        memCacheWidth: 160,
+        memCacheHeight: 160,
       ),
     );
   }
 
   String _formatPaintCount(int count) {
-    if (count < 1000) {
-      return '$count paints';
-    } else if (count < 1000000) {
-      return '${(count / 1000).toStringAsFixed(1)}k paints';
-    } else {
-      return '${(count / 1000000).toStringAsFixed(1)}M paints';
-    }
+    if (count < 1000) return '$count paints';
+    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k paints';
+    return '${(count / 1000000).toStringAsFixed(1)}M paints';
   }
 }

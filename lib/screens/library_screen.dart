@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:miniature_paint_finder/utils/cache.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
@@ -591,6 +593,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ],
         ),
       );
+    }
+
+    for (final brand in filteredBrands.take(12)) {
+      final url = brand['logo_url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        precacheImage(
+          CachedNetworkImageProvider(
+            url,
+            cacheManager: LogosCacheManager.instance,
+          ),
+          context,
+        );
+      }
     }
 
     return GridView.builder(
