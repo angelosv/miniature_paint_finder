@@ -103,7 +103,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
               updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
               status: _parseStatus(map['status']),
               userId: map['user_id'] ?? '',
-              tags: const [],
+              tags: (map['tags'] is List)
+                  ? List<String>.from(map['tags'] as List)
+                  : const [],
             );
           })
           .toList();
