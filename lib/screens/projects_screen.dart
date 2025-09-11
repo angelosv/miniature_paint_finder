@@ -101,7 +101,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
               paints: paints,
               createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
               updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
-              status: ProjectStatus.inProgress,
+              status: _parseStatus(map['status']),
               userId: map['user_id'] ?? '',
               tags: const [],
             );
@@ -669,6 +669,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   Widget _buildProjectListCard(Project project) {
+    print('Project object: ${jsonEncode(project.toJson())}');
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
@@ -802,10 +803,10 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   Widget _buildStatsView() {
-    final statusCounts = <ProjectStatus, int>{};
-    for (final status in ProjectStatus.values) {
-      statusCounts[status] = _allProjects.where((p) => p.status == status).length;
-    }
+    final statusCounts = <ProjectStatus, int>{
+      for (final status in ProjectStatus.values)
+        status: _allProjects.where((p) => p.status == status).length,
+    };
 
     return Padding(
       padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
@@ -1059,6 +1060,22 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   // Actions
+  ProjectStatus _parseStatus(dynamic value) {
+    if (value == null) return ProjectStatus.planning;
+    final v = value.toString().toLowerCase().trim();
+    switch (v) {
+      case 'planning':
+        return ProjectStatus.planning;
+      case 'in_progress':
+        return ProjectStatus.inProgress;
+      case 'completed':
+        return ProjectStatus.completed;
+      case 'on_hold':
+        return ProjectStatus.onHold;
+      default:
+        return ProjectStatus.planning;
+    }
+  }
   void _openProjectDetail(Project project) {
     Navigator.push(
       context,
