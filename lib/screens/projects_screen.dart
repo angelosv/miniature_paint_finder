@@ -29,10 +29,12 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   List<Project> _filteredProjects = [];
   bool _isLoading = false;
   int _currentPage = 1;
+  int _totalPages = 1;
   int _totalProjects = 0;
   int _totalDone = 0;
   int _totalActive = 0;
   int _totalShown = 0;
+  int _limit = 10;
   ProjectStatus? _selectedStatus;
   String _selectedSortOption = 'Recent';
 
@@ -108,10 +110,12 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
       setState(() {
         _currentPage = result['currentPage'] ?? page;
+        _totalPages = result['totalPages'] ?? 1;
         _totalProjects = result['totalProjects'] ?? 0;
         _totalDone = result['totalDone'] ?? 0;
         _totalActive = result['totalActive'] ?? 0;
         _totalShown = result['totalShown'] ?? parsed.length;
+        _limit = result['limit'] ?? limit;
         _allProjects = parsed;
         _filteredProjects = List.from(_allProjects);
       });
@@ -126,6 +130,12 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         });
       }
     }
+  }
+
+  void _goToPage(int page) {
+    if (_isLoading) return;
+    if (page < 1 || page > _totalPages) return;
+    _fetchProjects(page: page, limit: _limit);
   }
 
   void _applyFiltersAndSort() {
@@ -186,6 +196,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           // Stats bar
           _buildStatsBar(),
           
+          // Pagination controls (top)
+          _buildPaginationBar(),
+
           // Tab bar
           _buildTabBar(),
           
@@ -201,6 +214,8 @@ class _ProjectsScreenState extends State<ProjectsScreen>
               ],
             ),
           ),
+          // Pagination controls (bottom)
+          _buildPaginationBar(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -405,6 +420,54 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           Tab(icon: Icon(Icons.list), text: 'List'),
           Tab(icon: Icon(Icons.analytics), text: 'Stats'),
           Tab(icon: Icon(Icons.tag), text: 'Tags'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationBar() {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: ResponsiveGuidelines.spacingL,
+        vertical: ResponsiveGuidelines.spacingS,
+      ),
+      child: Row(
+        children: [
+          // Page info
+          Text(
+            'Page $_currentPage of $_totalPages',
+            style: TextStyle(
+              fontSize: ResponsiveGuidelines.bodySmall,
+              color: AppTheme.textGrey,
+            ),
+          ),
+          const Spacer(),
+          // Controls
+          IconButton(
+            tooltip: 'First page',
+            onPressed: _currentPage > 1 && !_isLoading ? () => _goToPage(1) : null,
+            icon: const Icon(Icons.first_page),
+          ),
+          IconButton(
+            tooltip: 'Previous page',
+            onPressed:
+                _currentPage > 1 && !_isLoading ? () => _goToPage(_currentPage - 1) : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          IconButton(
+            tooltip: 'Next page',
+            onPressed: _currentPage < _totalPages && !_isLoading
+                ? () => _goToPage(_currentPage + 1)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+          IconButton(
+            tooltip: 'Last page',
+            onPressed: _currentPage < _totalPages && !_isLoading
+                ? () => _goToPage(_totalPages)
+                : null,
+            icon: const Icon(Icons.last_page),
+          ),
         ],
       ),
     );
