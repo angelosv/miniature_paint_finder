@@ -6,6 +6,8 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:provider/provider.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final Project project;
@@ -27,12 +29,26 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _currentProject = widget.project;
+    _loadFullProject();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFullProject() async {
+    try {
+      final repo = Provider.of<ProjectRepository>(context, listen: false);
+      final full = await repo.getById(_currentProject.id);
+      if (full != null && mounted) {
+        setState(() {
+          _currentProject = full;
+          _selectedImageIndex = 0;
+        });
+      }
+    } catch (_) {}
   }
 
   @override

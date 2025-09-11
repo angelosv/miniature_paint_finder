@@ -80,7 +80,77 @@ class ApiProjectRepository implements ProjectRepository {
   Future<Project?> getById(String id) async {
     try {
       final response = await _apiService.get(ApiEndpoints.projectById(id));
-      return Project.fromJson(response as Map<String, dynamic>);
+      // Map API project (with items.data) to UI Project model
+      if (response is Map<String, dynamic>) {
+        final map = response;
+        final List<dynamic> items = (map['items'] as List?) ?? [];
+
+        final paletteIds = items
+            .where((item) => item['table'] == 'palettes')
+            .map((item) => item['table_id'] as String)
+            .toList();
+
+        final images = items
+            .where((item) => item['table'] == 'user_color_images')
+            .map((item) {
+              final data = item['data'] as Map<String, dynamic>? ?? {};
+              return ProjectImage(
+                id: (item['table_id'] ?? item['id'] ?? '') as String,
+                imagePath: (data['image_path'] ?? '') as String,
+                caption: null,
+                type: ProjectImageType.reference,
+                isMain: false,
+                createdAt:
+                    DateTime.tryParse((data['created_at'] ?? '') as String) ??
+                    DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                    DateTime.now(),
+              );
+            })
+            .toList();
+
+        final paints = items
+            .where((item) => item['table'] == 'paints')
+            .map((item) {
+              final data = item['data'] as Map<String, dynamic>? ?? {};
+              final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
+              return ProjectPaint(
+                paintId: (data['id'] ?? item['table_id'] ?? '') as String,
+                paintName: (data['name'] ?? 'Paint') as String,
+                paintBrand: (data['set'] ?? brandId) as String,
+                brandAvatar: brandId.isNotEmpty ? brandId[0] : 'U',
+                colorHex: (data['hex'] ?? '#000000') as String,
+                notes: null,
+                addedAt:
+                    DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                    DateTime.now(),
+              );
+            })
+            .toList();
+
+        String statusStr = (map['status'] ?? 'planning').toString().toLowerCase();
+        final status = statusStr == 'in_progress'
+            ? ProjectStatus.inProgress
+            : statusStr == 'completed'
+                ? ProjectStatus.completed
+                : statusStr == 'on_hold'
+                    ? ProjectStatus.onHold
+                    : ProjectStatus.planning;
+
+        return Project(
+          id: map['id'] ?? id,
+          name: map['name'] ?? 'Untitled',
+          description: map['description'],
+          images: images,
+          paletteIds: paletteIds,
+          paints: paints,
+          createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+          updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
+          status: status,
+          userId: map['user_id'] ?? '',
+          tags: (map['tags'] is List) ? List<String>.from(map['tags'] as List) : const [],
+        );
+      }
+      return null;
     } catch (e) {
       return null;
     }

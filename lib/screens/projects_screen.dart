@@ -71,32 +71,57 @@ class _ProjectsScreenState extends State<ProjectsScreen>
       final List<Project> parsed = (result['projects'] as List)
           .map((raw) {
             final map = raw as Map<String, dynamic>;
-            print(' project: ${map}');
-            print(' status from backend: ${map['status']}');
-            // Map items to palettes and paints
+            // Map items to palettes, images and paints
             final items = map['items'] as List? ?? [];
             final paletteIds = items
                 .where((item) => item['table'] == 'palettes')
                 .map((item) => item['table_id'] as String)
                 .toList();
             
+            final images = items
+                .where((item) => item['table'] == 'user_color_images')
+                .map((item) {
+                  print('**** item: ${item}');
+                  final data = item['data'] as Map<String, dynamic>? ?? {};
+                  print('**** data: ${data['image_path']}');
+                  return ProjectImage(
+                    id: (item['table_id'] ?? item['id'] ?? '') as String,
+                    imagePath: (data['image_path'] ?? '') as String,
+                    caption: null,
+                    type: ProjectImageType.reference,
+                    isMain: false,
+                    createdAt:
+                        DateTime.tryParse((data['created_at'] ?? '') as String) ??
+                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                        DateTime.now(),
+                  );
+                })
+                .toList();
+
             final paints = items
                 .where((item) => item['table'] == 'paints')
-                .map((item) => ProjectPaint(
-                  paintId: item['table_id'] as String,
-                  paintName: 'Paint ${item['table_id']}',
-                  paintBrand: item['brand_id'] as String? ?? 'Unknown',
-                  brandAvatar: (item['brand_id'] as String? ?? 'U')[0],
-                  colorHex: '#000000',
-                  addedAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
-                ))
+                .map((item) {
+                  final data = item['data'] as Map<String, dynamic>? ?? {};
+                  final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
+                  return ProjectPaint(
+                    paintId: (data['id'] ?? item['table_id'] ?? '') as String,
+                    paintName: (data['name'] ?? 'Paint') as String,
+                    paintBrand: (data['set'] ?? brandId) as String,
+                    brandAvatar: brandId.isNotEmpty ? brandId[0] : 'U',
+                    colorHex: (data['hex'] ?? '#000000') as String,
+                    notes: null,
+                    addedAt:
+                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                        DateTime.now(),
+                  );
+                })
                 .toList();
-            
+
             return Project(
               id: map['id'] ?? '',
               name: map['name'] ?? 'Untitled',
               description: map['description'],
-              images: const [],
+              images: images,
               paletteIds: paletteIds,
               paints: paints,
               createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
