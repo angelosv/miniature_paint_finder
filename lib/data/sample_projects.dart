@@ -31,7 +31,20 @@ class SampleProjects {
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ],
-      paletteIds: ['palette1', 'palette2'],
+      palettes: [
+        ProjectPalette(
+          itemId: 'item1',
+          paletteId: 'palette1',
+          name: 'Space Marine Colors',
+          linkedAt: DateTime.now().subtract(const Duration(days: 5)),
+        ),
+        ProjectPalette(
+          itemId: 'item2',
+          paletteId: 'palette2',
+          name: 'Battle Damage',
+          linkedAt: DateTime.now().subtract(const Duration(days: 3)),
+        ),
+      ],
       paints: [
         ProjectPaint(
           paintId: 'paint1',
@@ -102,7 +115,20 @@ class SampleProjects {
           createdAt: DateTime.now().subtract(const Duration(days: 9)),
         ),
       ],
-      paletteIds: ['palette3', 'palette7'],
+      palettes: [
+        ProjectPalette(
+          itemId: 'item3',
+          paletteId: 'palette3',
+          name: 'Ork Colors',
+          linkedAt: DateTime.now().subtract(const Duration(days: 7)),
+        ),
+        ProjectPalette(
+          itemId: 'item4',
+          paletteId: 'palette7',
+          name: 'Rust Effects',
+          linkedAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      ],
       paints: [
         ProjectPaint(
           paintId: 'paint4',
@@ -161,7 +187,7 @@ class SampleProjects {
           createdAt: DateTime.now().subtract(const Duration(days: 2)),
         ),
       ],
-      paletteIds: [],
+      palettes: [],
       paints: [
         ProjectPaint(
           paintId: 'paint6',
@@ -193,7 +219,14 @@ class SampleProjects {
           createdAt: DateTime.now().subtract(const Duration(days: 30)),
         ),
       ],
-      paletteIds: ['palette4'],
+      palettes: [
+        ProjectPalette(
+          itemId: 'item5',
+          paletteId: 'palette4',
+          name: 'Necron Colors',
+          linkedAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ],
       paints: [
         ProjectPaint(
           paintId: 'paint7',

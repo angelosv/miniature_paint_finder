@@ -297,7 +297,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               SizedBox(width: 24.w),
               _buildStatItem(
                 Icons.palette_outlined,
-                '${_currentProject.paletteIds.length}',
+                '${_currentProject.palettes.length}',
                 'Palettes',
               ),
               SizedBox(width: 24.w),
@@ -742,7 +742,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   }
 
   Widget _buildPalettesTab() {
-    if (_currentProject.paletteIds.isEmpty) {
+    if (_currentProject.palettes.isEmpty) {
       return _buildEmptyState(
         icon: Icons.palette_outlined,
         title: 'No palettes linked',
@@ -752,15 +752,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: ResponsiveGuidelines.spacingL),
-      itemCount: _currentProject.paletteIds.length,
+      itemCount: _currentProject.palettes.length,
       itemBuilder: (context, index) {
-        final paletteId = _currentProject.paletteIds[index];
-        return _buildPaletteListItem(paletteId);
+        final palette = _currentProject.palettes[index];
+        return _buildPaletteListItem(palette);
       },
     );
   }
 
-  Widget _buildPaletteListItem(String paletteId) {
+  Widget _buildPaletteListItem(ProjectPalette palette) {
     // TODO: Get actual palette data from service
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -826,14 +826,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Palette $paletteId',
+                  'Palette ${palette.name}',
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  '5 colors • Used for main scheme',
+                  '${palette.total_paints} colors • Used for main scheme',
                   style: TextStyle(
                     fontSize: ResponsiveGuidelines.bodySmall,
                     color: AppTheme.textGrey,
@@ -844,11 +844,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           ),
 
           // Arrow icon
-          Icon(
-            Icons.arrow_forward_ios,
-            size: ResponsiveGuidelines.iconXS,
-            color: AppTheme.textGrey,
-          ),
+          // Icon(
+            // Icons.arrow_forward_ios,
+            // size: ResponsiveGuidelines.iconXS,
+            // color: AppTheme.textGrey,
+          // ),
         ],
       ),
     );

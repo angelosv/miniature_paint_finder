@@ -108,7 +108,7 @@ class ProjectCard extends StatelessWidget {
                       ],
 
                       // Número de paletas
-                      if (project.paletteIds.isNotEmpty) ...[
+                      if (project.palettes.isNotEmpty) ...[
                         Icon(
                           Icons.palette_outlined,
                           size: ResponsiveGuidelines.iconXS,
@@ -116,7 +116,7 @@ class ProjectCard extends StatelessWidget {
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          '${project.paletteIds.length}',
+                          '${project.palettes.length}',
                           style: TextStyle(
                             fontSize: ResponsiveGuidelines.labelSmall,
                             color: AppTheme.textGrey,

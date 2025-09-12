@@ -315,7 +315,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
               ? null
               : _descriptionController.text.trim(),
       images: [],
-      paletteIds: [],
+      palettes: [],
       paints: [],
       createdAt: now,
       updatedAt: now,

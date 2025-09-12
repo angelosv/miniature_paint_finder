@@ -97,9 +97,20 @@ class ApiProjectRepository implements ProjectRepository {
         final map = response;
         final List<dynamic> items = (map['items'] as List?) ?? [];
 
-        final paletteIds = items
+        final palettes = items
             .where((item) => item['table'] == 'palettes')
-            .map((item) => item['table_id'] as String)
+            .map((item) {
+              final data = item['data'] as Map<String, dynamic>? ?? {};
+              return ProjectPalette(
+                itemId: (item['id'] ?? '') as String,
+                paletteId: (item['table_id'] ?? item['id'] ?? '') as String,
+                name: (data['name'] ?? 'Palette') as String,
+                linkedAt: DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                    DateTime.now(),
+                total_paints: (data['total_paints'] ?? 0) as int,
+
+              );
+            })
             .toList();
 
         final images = items
@@ -154,7 +165,7 @@ class ApiProjectRepository implements ProjectRepository {
           name: map['name'] ?? 'Untitled',
           description: map['description'],
           images: images,
-          paletteIds: paletteIds,
+          palettes: palettes,
           paints: paints,
           createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
           updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),

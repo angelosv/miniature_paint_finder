@@ -13,7 +13,7 @@ class Project {
   final List<ProjectImage> images;
 
   /// List of palettes associated with this project
-  final List<String> paletteIds;
+  final List<ProjectPalette> palettes;
 
   /// List of specific paints used in this project
   final List<ProjectPaint> paints;
@@ -48,7 +48,7 @@ class Project {
     required this.name,
     this.description,
     required this.images,
-    required this.paletteIds,
+    required this.palettes,
     required this.paints,
     required this.createdAt,
     required this.updatedAt,
@@ -64,7 +64,7 @@ class Project {
       'name': name,
       'description': description,
       'images': images.map((img) => img.toJson()).toList(),
-      'paletteIds': paletteIds,
+      'palettes': palettes.map((palette) => palette.toJson()).toList(),
       'paints': paints.map((paint) => paint.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -84,7 +84,9 @@ class Project {
           (json['images'] as List)
               .map((item) => ProjectImage.fromJson(item))
               .toList(),
-      paletteIds: List<String>.from(json['paletteIds'] ?? []),
+      palettes: (json['palettes'] as List?)
+          ?.map((item) => ProjectPalette.fromJson(item))
+          .toList() ?? [],
       paints:
           (json['paints'] as List)
               .map((item) => ProjectPaint.fromJson(item))
@@ -103,7 +105,7 @@ class Project {
     String? name,
     String? description,
     List<ProjectImage>? images,
-    List<String>? paletteIds,
+    List<ProjectPalette>? palettes,
     List<ProjectPaint>? paints,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -116,7 +118,7 @@ class Project {
       name: name ?? this.name,
       description: description ?? this.description,
       images: images ?? this.images,
-      paletteIds: paletteIds ?? this.paletteIds,
+      palettes: palettes ?? this.palettes,
       paints: paints ?? this.paints,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -217,6 +219,53 @@ class ProjectImage {
       ),
       isMain: json['isMain'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
+    );
+  }
+}
+
+/// A model representing a palette linked to a project
+class ProjectPalette {
+  /// ID of the project item (for deletion)
+  final String itemId;
+
+  /// ID of the palette
+  final String paletteId;
+
+  /// Name of the palette
+  final String name;
+
+  /// When the palette was linked to the project
+  final DateTime linkedAt;
+
+  final int? total_paints;
+
+  ProjectPalette({
+    required this.itemId,
+    required this.paletteId,
+    required this.name,
+    required this.linkedAt,
+     this.total_paints,
+  });
+
+  /// Convert to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'itemId': itemId,
+      'paletteId': paletteId,
+      'name': name,
+      'linkedAt': linkedAt.toIso8601String(),
+      'total_paints': total_paints,
+    };
+  }
+
+  /// Create from JSON
+  factory ProjectPalette.fromJson(Map<String, dynamic> json) {
+    return ProjectPalette(
+      itemId: json['itemId'] ?? '',
+      paletteId: json['paletteId'],
+      name: json['name'],
+      linkedAt: DateTime.parse(json['linkedAt']),
+      total_paints: json['total_paints'] ?? 0,
     );
   }
 }

@@ -33,13 +33,15 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   late List<String> _selectedTags;
   late List<ProjectImage> _projectImages;
   late List<ProjectPaint> _projectPaints;
-  late List<String> _linkedPaletteIds;
+  late List<ProjectPalette> _projectPalettes;
 
   bool _hasChanges = false;
   bool _isSaving = false;
   bool _isUploadingImage = false;
   final List<String> _newImageRecordIds = [];
   final List<String> _deletedImageItemIds = [];
+  final List<String> _newPaletteRecordIds = [];
+  final List<String> _deletedPaletteItemIds = [];
 
   final List<String> _availableTags = [
     'warhammer-40k',
@@ -76,7 +78,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     _selectedTags = List.from(widget.project.tags);
     _projectImages = List.from(widget.project.images);
     _projectPaints = List.from(widget.project.paints);
-    _linkedPaletteIds = List.from(widget.project.paletteIds);
+    _projectPalettes = List.from(widget.project.palettes);
 
     // Listen for changes
     _nameController.addListener(_onDataChanged);
@@ -723,7 +725,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _showLinkPaletteDialog,
+              onPressed: _showPaletteSelector,
               icon: const Icon(Icons.add),
               label: const Text('Link Palette'),
             ),
@@ -732,9 +734,9 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           SizedBox(height: ResponsiveGuidelines.spacingL),
 
           // Linked palettes
-          if (_linkedPaletteIds.isNotEmpty) ...[
+          if (_projectPalettes.isNotEmpty) ...[
             Text(
-              'Linked Palettes (${_linkedPaletteIds.length})',
+              'Linked Palettes (${_projectPalettes.length})',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -743,10 +745,10 @@ class _EditProjectScreenState extends State<EditProjectScreen>
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _linkedPaletteIds.length,
+              itemCount: _projectPalettes.length,
               itemBuilder: (context, index) {
-                final paletteId = _linkedPaletteIds[index];
-                return _buildEditablePaletteCard(paletteId, index);
+                final palette = _projectPalettes[index];
+                return _buildEditablePaletteCard(palette, index);
               },
             ),
           ] else ...[
@@ -757,7 +759,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     );
   }
 
-  Widget _buildEditablePaletteCard(String paletteId, int index) {
+  Widget _buildEditablePaletteCard(ProjectPalette palette, int index) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
@@ -822,14 +824,14 @@ class _EditProjectScreenState extends State<EditProjectScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Palette $paletteId',
+                  palette.name,
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  '5 colors • Main color scheme',
+                  '${palette.total_paints} colors • Main color scheme',
                   style: TextStyle(
                     fontSize: ResponsiveGuidelines.bodySmall,
                     color: AppTheme.textGrey,
@@ -947,38 +949,6 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     );
   }
 
-  void _showLinkPaletteDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Link Palettes'),
-            content: const Text(
-              'Choose how you want to link palettes to your project.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _linkDemoPalette();
-                },
-                child: const Text('Demo Palette'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showPaletteSelector();
-                },
-                child: const Text('From Saved'),
-              ),
-            ],
-          ),
-    );
-  }
 
   // Action methods
   void _addImageFromGallery() {
@@ -1148,19 +1118,15 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     _markChanged();
   }
 
-  void _linkDemoPalette() {
-    final newPaletteId = 'palette_${DateTime.now().millisecondsSinceEpoch}';
-    setState(() {
-      _linkedPaletteIds.add(newPaletteId);
-    });
-    _markChanged();
-  }
-
   void _unlinkPalette(int index) {
+    final removed = _projectPalettes[index];
     setState(() {
-      _linkedPaletteIds.removeAt(index);
+      _projectPalettes.removeAt(index);
     });
     _markChanged();
+    if ((removed.itemId).isNotEmpty) {
+      _deletedPaletteItemIds.add(removed.itemId);
+    }
   }
 
   Future<bool> _onWillPop() async {
@@ -1205,7 +1171,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
       tags: List.from(_selectedTags),
       images: List.from(_projectImages),
       paints: List.from(_projectPaints),
-      paletteIds: List.from(_linkedPaletteIds),
+      palettes: List.from(_projectPalettes),
       updatedAt: DateTime.now(),
     );
     try {
@@ -1221,8 +1187,22 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         );
       }
 
+      // Link new palettes to the project
+      for (final recordId in _newPaletteRecordIds) {
+        await repo.addProjectItem(
+          projectId: updatedProject.id,
+          table: 'palettes',
+          tableId: recordId,
+        );
+      }
+
       // Delete removed image links from the project
       for (final itemId in _deletedImageItemIds) {
+        await repo.deleteProjectItem(itemId: itemId);
+      }
+
+      // Delete removed palette links from the project
+      for (final itemId in _deletedPaletteItemIds) {
         await repo.deleteProjectItem(itemId: itemId);
       }
 
@@ -1231,6 +1211,8 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         _hasChanges = false;
         _deletedImageItemIds.clear();
         _newImageRecordIds.clear();
+        _deletedPaletteItemIds.clear();
+        _newPaletteRecordIds.clear();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1297,19 +1279,52 @@ class _EditProjectScreenState extends State<EditProjectScreen>
 
   // Palette selector integration
   Future<void> _showPaletteSelector() async {
+    final currentPaletteIds = _projectPalettes.map((p) => p.paletteId).toList();
     final result = await Navigator.push<List<String>>(
       context,
       MaterialPageRoute(
         builder:
             (context) =>
-                PaletteSelectorScreen(selectedPaletteIds: _linkedPaletteIds),
+                PaletteSelectorScreen(selectedPaletteIds: currentPaletteIds),
       ),
     );
 
     if (result != null) {
+      // Find newly added palettes
+      final newPaletteIds = result.where((id) => !currentPaletteIds.contains(id)).toList();
+      final removedPalettes = _projectPalettes.where((p) => !result.contains(p.paletteId)).toList();
+      
+      // Track removed palettes for deletion
+      for (final removed in removedPalettes) {
+        if (removed.itemId.isNotEmpty) {
+          _deletedPaletteItemIds.add(removed.itemId);
+        }
+      }
+
+      // Create new ProjectPalette objects for newly added palettes
+      final newPalettes = newPaletteIds.map((paletteId) => ProjectPalette(
+        itemId: '', // Will be set when saved
+        paletteId: paletteId,
+        name: 'Palette $paletteId', // Will be updated with real name
+        linkedAt: DateTime.now(),
+      )).toList();
+
       setState(() {
-        _linkedPaletteIds = result;
+        _projectPalettes = result.map((paletteId) {
+          // Find existing palette or create new one
+          final existing = _projectPalettes.firstWhere(
+            (p) => p.paletteId == paletteId,
+            orElse: () => newPalettes.firstWhere((p) => p.paletteId == paletteId),
+          );
+          return existing;
+        }).toList();
+        
+        // Track new palette record IDs
+        for (final palette in newPalettes) {
+          _newPaletteRecordIds.add(palette.paletteId);
+        }
       });
+      
       _markChanged();
 
       ScaffoldMessenger.of(context).showSnackBar(

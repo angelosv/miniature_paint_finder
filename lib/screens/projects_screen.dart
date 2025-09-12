@@ -73,17 +73,25 @@ class _ProjectsScreenState extends State<ProjectsScreen>
             final map = raw as Map<String, dynamic>;
             // Map items to palettes, images and paints
             final items = map['items'] as List? ?? [];
-            final paletteIds = items
+            final palettes = items
                 .where((item) => item['table'] == 'palettes')
-                .map((item) => item['table_id'] as String)
+                .map((item) {
+                  final data = item['data'] as Map<String, dynamic>? ?? {};
+                  return ProjectPalette(
+                    itemId: (item['id'] ?? '') as String,
+                    paletteId: (item['table_id'] ?? item['id'] ?? '') as String,
+                    name: (data['name'] ?? 'Palette') as String,
+                    linkedAt: DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                        DateTime.now(),
+                    total_paints: (data['total_paints'] ?? 0) as int,
+                  );
+                })
                 .toList();
             
             final images = items
                 .where((item) => item['table'] == 'user_color_images')
                 .map((item) {
-                  print('**** item: ${item}');
                   final data = item['data'] as Map<String, dynamic>? ?? {};
-                  print('**** data: ${data['image_path']}');
                   return ProjectImage(
                     id: (item['table_id'] ?? item['id'] ?? '') as String,
                     imagePath: (data['image_path'] ?? '') as String,
@@ -122,7 +130,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
               name: map['name'] ?? 'Untitled',
               description: map['description'],
               images: images,
-              paletteIds: paletteIds,
+              palettes: palettes,
               paints: paints,
               createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
               updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
@@ -610,7 +618,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                         
                         Icon(Icons.palette, size: 14.r, color: AppTheme.textGrey),
                         SizedBox(width: 2.w),
-                        Text('${project.paletteIds.length}', style: TextStyle(fontSize: ResponsiveGuidelines.labelSmall, color: AppTheme.textGrey)),
+                        Text('${project.palettes.length}', style: TextStyle(fontSize: ResponsiveGuidelines.labelSmall, color: AppTheme.textGrey)),
                         
                         SizedBox(width: 8.w),
                         
