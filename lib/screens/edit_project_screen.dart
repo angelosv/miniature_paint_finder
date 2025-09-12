@@ -42,6 +42,8 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   final List<String> _deletedImageItemIds = [];
   final List<String> _newPaletteRecordIds = [];
   final List<String> _deletedPaletteItemIds = [];
+  final List<Map<String, String>> _newPaintRecordIds = [];
+  final List<Map<String, String>> _deletedPaintItemIds = [];
 
   final List<String> _availableTags = [
     'warhammer-40k',
@@ -556,7 +558,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _showAddPaintDialog,
+              onPressed: _showPaintSelector,
               icon: const Icon(Icons.add),
               label: const Text('Add Paint'),
             ),
@@ -916,38 +918,6 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     );
   }
 
-  void _showAddPaintDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Add Paints'),
-            content: const Text(
-              'Choose how you want to add paints to your project.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _addDemoPaint();
-                },
-                child: const Text('Demo Paint'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showPaintSelector();
-                },
-                child: const Text('From Library'),
-              ),
-            ],
-          ),
-    );
-  }
 
 
   // Action methods
@@ -1033,34 +1003,6 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     }
   }
 
-  void _addDemoPaint() {
-    final colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33F1', '#F1FF33'];
-    final names = [
-      'Demo Red',
-      'Demo Green',
-      'Demo Blue',
-      'Demo Purple',
-      'Demo Yellow',
-    ];
-    final brands = ['Citadel', 'Vallejo', 'Army Painter', 'Scale75', 'P3'];
-
-    final random = DateTime.now().millisecondsSinceEpoch % 5;
-
-    final newPaint = ProjectPaint(
-      paintId: 'paint_${DateTime.now().millisecondsSinceEpoch}',
-      paintName: names[random],
-      paintBrand: brands[random],
-      brandAvatar: brands[random][0],
-      colorHex: colors[random],
-      notes: 'Added for demonstration',
-      addedAt: DateTime.now(),
-    );
-
-    setState(() {
-      _projectPaints.add(newPaint);
-    });
-    _markChanged();
-  }
 
   void _editPaintNotes(int index) {
     final controller = TextEditingController(
@@ -1089,6 +1031,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
                 onPressed: () {
                   setState(() {
                     _projectPaints[index] = ProjectPaint(
+                      itemId: _projectPaints[index].itemId,
                       paintId: _projectPaints[index].paintId,
                       paintName: _projectPaints[index].paintName,
                       paintBrand: _projectPaints[index].paintBrand,
@@ -1112,10 +1055,17 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   }
 
   void _removePaint(int index) {
+    final removed = _projectPaints[index];
     setState(() {
       _projectPaints.removeAt(index);
     });
     _markChanged();
+    if ((removed.paintId).isNotEmpty) {
+      _deletedPaintItemIds.add({
+        "paintId": removed.paintId,
+        "itemId": removed.itemId ?? ''
+      });
+    }
   }
 
   void _unlinkPalette(int index) {
@@ -1184,6 +1134,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           projectId: updatedProject.id,
           table: 'user_color_images',
           tableId: recordId,
+          brandId: '',
         );
       }
 
@@ -1193,6 +1144,17 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           projectId: updatedProject.id,
           table: 'palettes',
           tableId: recordId,
+          brandId: '',
+        );
+      }
+
+      // Link new paints to the project
+      for (final reacordPaint in _newPaintRecordIds) {
+        await repo.addProjectItem(
+          projectId: updatedProject.id,
+          table: 'paints',
+          tableId: reacordPaint["paintId"] as String,
+          brandId: reacordPaint["brandId"] as String,
         );
       }
 
@@ -1206,6 +1168,11 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         await repo.deleteProjectItem(itemId: itemId);
       }
 
+      // Delete removed paint links from the project
+      for (final paintItem in _deletedPaintItemIds) {
+        await repo.deleteProjectItem(itemId: paintItem["itemId"] ?? '');
+      }
+
       setState(() {
         _isSaving = false;
         _hasChanges = false;
@@ -1213,6 +1180,8 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         _newImageRecordIds.clear();
         _deletedPaletteItemIds.clear();
         _newPaletteRecordIds.clear();
+        _deletedPaintItemIds.clear();
+        _newPaintRecordIds.clear();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1225,6 +1194,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         Navigator.pop(context, updatedProject);
       }
     } catch (e) {
+      print("Error: $e");
       setState(() {
         _isSaving = false;
       });
@@ -1263,6 +1233,29 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     );
 
     if (result != null) {
+      // Find newly added paints
+      final currentPaintIds = _projectPaints.map((p) => p.paintId).toList();
+      final newPaintIds = result.where((p) => !currentPaintIds.contains(p.paintId)).toList();
+      final removedPaints = _projectPaints.where((p) => !result.any((r) => r.paintId == p.paintId)).toList();
+      
+      // Track removed paints for deletion
+      for (final removed in removedPaints) {
+        if (removed.paintId.isNotEmpty) {
+          _deletedPaintItemIds.add({
+            "paintId": removed.paintId,
+            "itemId": removed.itemId ?? ''
+          });
+        }
+      }
+
+      // Track new paint record IDs
+      for (final paint in newPaintIds) {
+        _newPaintRecordIds.add({
+          "brandId": paint.paintBrand,
+          "paintId": paint.paintId,
+        });
+      }
+
       setState(() {
         _projectPaints = result;
       });

@@ -308,6 +308,7 @@ extension ProjectImageTypeExtension on ProjectImageType {
 
 /// A model representing a paint used in a project
 class ProjectPaint {
+  String? itemId;
   /// ID of the paint
   final String paintId;
 
@@ -330,6 +331,7 @@ class ProjectPaint {
   final DateTime addedAt;
 
   ProjectPaint({
+    this.itemId,
     required this.paintId,
     required this.paintName,
     required this.paintBrand,
@@ -342,6 +344,7 @@ class ProjectPaint {
   /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
+      'itemId': itemId,
       'paintId': paintId,
       'paintName': paintName,
       'paintBrand': paintBrand,
@@ -355,6 +358,7 @@ class ProjectPaint {
   /// Create from JSON
   factory ProjectPaint.fromJson(Map<String, dynamic> json) {
     return ProjectPaint(
+      itemId: json['itemId'],
       paintId: json['paintId'],
       paintName: json['paintName'],
       paintBrand: json['paintBrand'],

@@ -112,6 +112,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                   final data = item['data'] as Map<String, dynamic>? ?? {};
                   final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
                   return ProjectPaint(
+                    itemId: (item['id'] ?? '') as String,
                     paintId: (data['id'] ?? item['table_id'] ?? '') as String,
                     paintName: (data['name'] ?? 'Paint') as String,
                     paintBrand: (data['set'] ?? brandId) as String,
@@ -704,7 +705,6 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   Widget _buildProjectListCard(Project project) {
-    print('Project object: ${jsonEncode(project.toJson())}');
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(

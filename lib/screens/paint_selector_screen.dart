@@ -7,8 +7,10 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/controllers/paint_library_controller.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
+import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
+import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
+import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:provider/provider.dart';
-
 class PaintSelectorScreen extends StatefulWidget {
   final List<ProjectPaint> selectedPaints;
 
@@ -22,6 +24,8 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final PaintService _paintService = PaintService();
+  late final InventoryCacheService _inventoryService;
+  late final WishlistCacheService _wishlistService;
 
   List<ProjectPaint> _selectedPaints = [];
   Map<String, String> _paintNotes = {};
@@ -32,6 +36,9 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
   void initState() {
     super.initState();
     _selectedPaints = List.from(widget.selectedPaints);
+    _wishlistService = WishlistCacheService(_paintService);
+      final InventoryService inventoryService = InventoryService();
+    _inventoryService = InventoryCacheService(inventoryService );
 
     // Initialize notes from existing selected paints
     for (final paint in _selectedPaints) {
@@ -40,11 +47,15 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
       }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final controller = context.read<PaintLibraryController>();
       controller.loadBrands();
       controller.loadCategories();
       controller.loadPaints();
+      
+      // Initialize inventory and wishlist services
+      await _inventoryService.initialize();
+      await _wishlistService.initialize();
     });
   }
 
@@ -236,8 +247,8 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
             final isSelected = _selectedPaints.any(
               (p) => p.paintId == paint.id,
             );
-            final isInInventory = _paintService.isInInventory(paint.id);
-            final isInWishlist = _paintService.isInWishlist(paint.id);
+            final isInInventory = _isPaintInInventory(paint.id);
+            final isInWishlist = _isPaintInWishlist(paint.id);
 
             return _buildPaintCard(
               paint,
@@ -253,14 +264,34 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
 
   List<Paint> _filterPaints(List<Paint> paints) {
     return paints.where((paint) {
-      if (_showOnlyInventory && !_paintService.isInInventory(paint.id)) {
+      if (_showOnlyInventory && !_isPaintInInventory(paint.id)) {
         return false;
       }
-      if (_showOnlyWishlist && !_paintService.isInWishlist(paint.id)) {
+      if (_showOnlyWishlist && !_isPaintInWishlist(paint.id)) {
         return false;
       }
       return true;
     }).toList();
+  }
+
+  bool _isPaintInInventory(String paintId) {
+    final inventory = _inventoryService.cachedInventory;
+    if (inventory == null) return false;
+    return inventory.any((item) => item.paint.id == paintId);
+  }
+
+  bool _isPaintInWishlist(String paintId) {
+    final wishlist = _wishlistService.cachedWishlist;
+    if (wishlist == null) return false;
+    return wishlist.any((item) {
+      final paint = item['paint'];
+      if (paint is Paint) {
+        return paint.id == paintId;
+      } else if (paint is Map<String, dynamic>) {
+        return paint['id'] == paintId;
+      }
+      return false;
+    });
   }
 
   Widget _buildPaintCard(
@@ -546,6 +577,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
       } else {
         // Add to selection
         final projectPaint = ProjectPaint(
+          itemId: '',
           paintId: paint.id,
           paintName: paint.name,
           paintBrand: paint.brand,
@@ -596,6 +628,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
                     );
                     if (index != -1) {
                       _selectedPaints[index] = ProjectPaint(
+                        itemId: _selectedPaints[index].itemId,
                         paintId: _selectedPaints[index].paintId,
                         paintName: _selectedPaints[index].paintName,
                         paintBrand: _selectedPaints[index].paintBrand,

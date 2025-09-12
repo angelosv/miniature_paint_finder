@@ -13,6 +13,7 @@ abstract class ProjectRepository extends BaseRepository<Project> {
     required String projectId,
     required String table,
     required String tableId,
+    required String brandId,
   });
 
   /// Elimina un item ligado al proyecto
@@ -138,6 +139,7 @@ class ApiProjectRepository implements ProjectRepository {
               final data = item['data'] as Map<String, dynamic>? ?? {};
               final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
               return ProjectPaint(
+                itemId: (item['id'] ?? '') as String,
                 paintId: (data['id'] ?? item['table_id'] ?? '') as String,
                 paintName: (data['name'] ?? 'Paint') as String,
                 paintBrand: (data['set'] ?? brandId) as String,
@@ -187,9 +189,7 @@ class ApiProjectRepository implements ProjectRepository {
         ApiEndpoints.projects,
         item.toJson(),
       );
-      print('**** create project response: $response');
       return Project.fromJson(response as Map<String, dynamic>);
-      print('**** create project response: $response');
     } catch (e) {
       print('**** error creating project: $e');
       return item;
@@ -227,6 +227,7 @@ class ApiProjectRepository implements ProjectRepository {
     required String projectId,
     required String table,
     required String tableId,
+    required String brandId,
   }) async {
     try {
       final payload = {
@@ -234,6 +235,10 @@ class ApiProjectRepository implements ProjectRepository {
         'table': table,
         'table_id': tableId,
       };
+      if (brandId != null && brandId.isNotEmpty) {
+        payload['brand_id'] = brandId;
+      } 
+
       final response = await _apiService.post(
         '${ApiEndpoints.createProjectItem}',
         payload,
