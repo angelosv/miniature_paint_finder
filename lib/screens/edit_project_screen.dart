@@ -6,6 +6,11 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/screens/paint_selector_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_selector_screen.dart';
+import 'package:miniature_paint_finder/services/image_upload_service.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
 import 'package:provider/provider.dart';
 
@@ -32,6 +37,9 @@ class _EditProjectScreenState extends State<EditProjectScreen>
 
   bool _hasChanges = false;
   bool _isSaving = false;
+  bool _isUploadingImage = false;
+  final List<String> _newImageRecordIds = [];
+  final List<String> _deletedImageItemIds = [];
 
   final List<String> _availableTags = [
     'warhammer-40k',
@@ -307,13 +315,48 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _showAddImageDialog,
+              onPressed: _isUploadingImage ? null : _showAddImageDialog,
               icon: const Icon(Icons.add_photo_alternate),
-              label: const Text('Add Image'),
+              label:
+                  _isUploadingImage
+                      ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            height: 16.r,
+                            width: 16.r,
+                            child: const CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8.w),
+                          const Text('Uploading...'),
+                        ],
+                      )
+                      : const Text('Add Image'),
             ),
           ),
 
           SizedBox(height: ResponsiveGuidelines.spacingL),
+
+          if (_isUploadingImage) ...[
+            Row(
+              children: [
+                SizedBox(
+                  height: 16.r,
+                  width: 16.r,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  'Uploading image... please wait',
+                  style: TextStyle(
+                    fontSize: ResponsiveGuidelines.bodySmall,
+                    color: AppTheme.textGrey,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ResponsiveGuidelines.spacingM),
+          ],
 
           // Images grid
           if (_projectImages.isNotEmpty) ...[
@@ -859,11 +902,6 @@ class _EditProjectScreenState extends State<EditProjectScreen>
                   title: const Text('Take Photo'),
                   onTap: () => _addImageFromCamera(),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.image),
-                  title: const Text('Demo Image'),
-                  onTap: () => _addDemoImage(),
-                ),
               ],
             ),
             actions: [
@@ -945,35 +983,52 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   // Action methods
   void _addImageFromGallery() {
     Navigator.pop(context);
-    // TODO: Implement image picker
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gallery picker coming soon!')),
-    );
+    _pickAndUploadImage(ImageSource.gallery);
   }
 
   void _addImageFromCamera() {
     Navigator.pop(context);
-    // TODO: Implement camera
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Camera functionality coming soon!')),
-    );
+    _pickAndUploadImage(ImageSource.camera);
   }
 
-  void _addDemoImage() {
-    Navigator.pop(context);
-    final newImage = ProjectImage(
-      id: 'img_${DateTime.now().millisecondsSinceEpoch}',
-      imagePath:
-          'assets/images/placeholder${(_projectImages.length % 15) + 1}.jpg',
-      caption: 'Added from edit screen',
-      type: ProjectImageType.process,
-      createdAt: DateTime.now(),
-    );
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 90);
+      if (picked == null) return;
 
-    setState(() {
-      _projectImages.add(newImage);
-    });
-    _markChanged();
+      final file = File(picked.path);
+      setState(() {
+        _isUploadingImage = true;
+      });
+
+      final imageService = ImageUploadService();
+      final uploadedUrl = await imageService.uploadImage(file);
+      final recordId = await imageService.registerImage(uploadedUrl);
+      setState(() {
+        _projectImages.add(
+          ProjectImage(
+            id: recordId,
+            imagePath: uploadedUrl,
+            caption: null,
+            type: ProjectImageType.reference,
+            createdAt: DateTime.now(),
+          ),
+        );
+        _newImageRecordIds.add(recordId);
+        _isUploadingImage = false;
+      });
+      _markChanged();
+    } catch (e) {
+      setState(() {
+        _isUploadingImage = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image upload failed: $e')),
+        );
+      }
+    }
   }
 
   void _setMainImage(int index) {
@@ -994,10 +1049,18 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   }
 
   void _removeImage(int index) {
+    final removed = _projectImages[index];
     setState(() {
       _projectImages.removeAt(index);
     });
     _markChanged();
+    final recordId = removed.id;
+    if ((removed.itemId ?? '').isNotEmpty) {
+      _deletedImageItemIds.add(removed.itemId!);
+    }
+    if (recordId.isNotEmpty) {
+      _newImageRecordIds.remove(recordId);
+    }
   }
 
   void _addDemoPaint() {
@@ -1148,9 +1211,26 @@ class _EditProjectScreenState extends State<EditProjectScreen>
     try {
       final repo = Provider.of<ProjectRepository>(context, listen: false);
       await repo.update(updatedProject);
+
+      // Link new uploaded images to the project
+      for (final recordId in _newImageRecordIds) {
+        await repo.addProjectItem(
+          projectId: updatedProject.id,
+          table: 'user_color_images',
+          tableId: recordId,
+        );
+      }
+
+      // Delete removed image links from the project
+      for (final itemId in _deletedImageItemIds) {
+        await repo.deleteProjectItem(itemId: itemId);
+      }
+
       setState(() {
         _isSaving = false;
         _hasChanges = false;
+        _deletedImageItemIds.clear();
+        _newImageRecordIds.clear();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

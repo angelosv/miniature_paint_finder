@@ -7,6 +7,18 @@ import 'dart:convert';
 abstract class ProjectRepository extends BaseRepository<Project> {
   /// Obtiene los proyectos del usuario autenticado con paginación
   Future<Map<String, dynamic>> getUserProjects({int page = 1, int limit = 10});
+
+  /// Crea un item ligado al proyecto (e.g., user_color_images)
+  Future<bool> addProjectItem({
+    required String projectId,
+    required String table,
+    required String tableId,
+  });
+
+  /// Elimina un item ligado al proyecto
+  Future<bool> deleteProjectItem({
+    required String itemId,
+  });
 }
 
 /// Implementación del repositorio de proyectos usando API
@@ -95,6 +107,7 @@ class ApiProjectRepository implements ProjectRepository {
             .map((item) {
               final data = item['data'] as Map<String, dynamic>? ?? {};
               return ProjectImage(
+                itemId: (item['id'] ?? '') as String,
                 id: (item['table_id'] ?? item['id'] ?? '') as String,
                 imagePath: (data['image_path'] ?? '') as String,
                 caption: null,
@@ -193,6 +206,48 @@ class ApiProjectRepository implements ProjectRepository {
         return response['executed'] == true || response['success'] == true;
       }
       return true; // No content
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> addProjectItem({
+    required String projectId,
+    required String table,
+    required String tableId,
+  }) async {
+    try {
+      final payload = {
+        'project_id': projectId,
+        'table': table,
+        'table_id': tableId,
+      };
+      final response = await _apiService.post(
+        '${ApiEndpoints.createProjectItem}',
+        payload,
+      );
+      if (response is Map<String, dynamic>) {
+        return response['executed'] == true || response['success'] == true;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> deleteProjectItem({
+    required String itemId,
+  }) async {
+    try {
+      final endpoint =
+          '${ApiEndpoints.deleteProjectItem(itemId)}';
+      final response = await _apiService.delete(endpoint);
+      if (response is Map<String, dynamic>) {
+        return response['executed'] == true || response['success'] == true;
+      }
+      return true;
     } catch (e) {
       return false;
     }

@@ -160,6 +160,9 @@ extension ProjectStatusExtension on ProjectStatus {
 
 /// A model representing an image in a project
 class ProjectImage {
+  /// Unique identifier for the item
+  final String? itemId;
+
   /// Unique identifier for the image
   final String id;
 
@@ -179,6 +182,7 @@ class ProjectImage {
   final DateTime createdAt;
 
   ProjectImage({
+    this.itemId,
     required this.id,
     required this.imagePath,
     this.caption,
@@ -190,6 +194,7 @@ class ProjectImage {
   /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {
+      'itemId': itemId,
       'id': id,
       'imagePath': imagePath,
       'caption': caption,
@@ -202,6 +207,7 @@ class ProjectImage {
   /// Create from JSON
   factory ProjectImage.fromJson(Map<String, dynamic> json) {
     return ProjectImage(
+      itemId: json['itemId'] ?? '',
       id: json['id'],
       imagePath: json['imagePath'],
       caption: json['caption'],
