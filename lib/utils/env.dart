@@ -1,20 +1,23 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../config/app_config.dart';
 
 class Env {
+  // Legacy method - now uses AppConfig
   static String get apiBaseUrl {
-    const fromBuild = String.fromEnvironment('API_BASE_URL');
-    if (fromBuild.isNotEmpty) {
-      print('🚀 Using API_BASE_URL from --dart-define (build time).');
-      return fromBuild;
-    }
-
-    final fromEnv = dotenv.env['API_BASE_URL'];
-    if (fromEnv != null && fromEnv.isNotEmpty) {
-      print('📄 Using API_BASE_URL from .env (dotenv).');
-      return fromEnv;
-    }
-
-    print('🛟 Using default API_BASE_URL (fallback).');
-    return 'https://paints-api.reachu.io/api';
+    return AppConfig.apiBaseUrl;
   }
+
+  // Additional convenience methods
+  static String get mixpanelToken => AppConfig.mixpanelToken;
+  static bool get debugMode => AppConfig.debugMode;
+  static int get cacheTTL => AppConfig.cacheTTL;
+  static int get syncInterval => AppConfig.syncInterval;
+  static bool get sessionReplayEnabled => AppConfig.sessionReplayEnabled;
+  static int get sessionReplaySamplingRate =>
+      AppConfig.sessionReplaySamplingRate;
+
+  // Environment helpers
+  static bool get isDevelopment => AppConfig.isDevelopment;
+  static bool get isStaging => AppConfig.isStaging;
+  static bool get isProduction => AppConfig.isProduction;
 }

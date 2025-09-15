@@ -180,9 +180,7 @@ class PaintLibraryController extends ChangeNotifier {
       _totalPages = result['totalPages'] as int;
       _totalPaints = result['totalPaints'] as int;
     } catch (e) {
-      debugPrint('❌ Error loading paints: $e');
-      _hasError = true;
-      _errorMessage = 'Error al cargar las pinturas: $e';
+      _errorMessage = '';
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -111,16 +111,28 @@ class PaintBrandService {
     }
   }
 
-  // Método para forzar la actualización de la caché
   Future<List<PaintBrand>> refreshPaintBrands() async {
-    try {
-      // Limpiar caché existente
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(CACHE_KEY);
+    final cached = await _getCachedBrands();
 
-      // Llamar al método principal que ahora obtendrá datos frescos
-      return await getPaintBrands();
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/brand'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        final brands = data.map((json) => PaintBrand.fromJson(json)).toList();
+
+        brands.sort((a, b) => b.paintCount.compareTo(a.paintCount));
+
+        await _saveBrandsToCache(brands);
+        return brands;
+      } else {
+        if (cached != null) return cached;
+        throw Exception(
+          'Failed to refresh paint brands: ${response.statusCode}',
+        );
+      }
     } catch (e) {
+      if (cached != null) return cached;
       throw Exception('Failed to refresh paint brands: $e');
     }
   }
