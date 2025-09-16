@@ -460,6 +460,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                   ResponsiveGuidelines.radiusM,
                 ),
               ),
+              indicatorSize: TabBarIndicatorSize.tab,
               indicatorPadding: EdgeInsets.all(4.w),
               labelColor: Colors.white,
               unselectedLabelColor: AppTheme.textGrey,
@@ -881,19 +882,19 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 24.h),
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Add functionality coming soon!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add'),
-          ),
+          //SizedBox(height: 24.h),
+          //OutlinedButton.icon(
+            //onPressed: () {
+              //ScaffoldMessenger.of(context).showSnackBar(
+                //const SnackBar(
+                  //content: Text('Add functionality coming soon!'),
+                  //duration: Duration(seconds: 2),
+                //),
+              //);
+            //},
+            //icon: const Icon(Icons.add),
+            //label: const Text('Add'),
+          //),
         ],
       ),
     );

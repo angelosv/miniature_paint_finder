@@ -240,18 +240,21 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           
           // Content
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildGridView(),
-                _buildListView(),
-                _buildStatsView(),
-                _buildTagsView(),
-              ],
-            ),
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildGridView(),
+                          _buildListView(),
+                          _buildStatsView(),
+                          _buildTagsView(),
+                        ],
+                      ),
           ),
           // Pagination controls (bottom)
-          _buildPaginationBar(),
+          //_buildPaginationBar(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -444,6 +447,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           color: AppTheme.marineBlue,
           borderRadius: BorderRadius.circular(ResponsiveGuidelines.radiusM),
         ),
+        indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.all(4.w),
         labelColor: Colors.white,
         unselectedLabelColor: AppTheme.textGrey,

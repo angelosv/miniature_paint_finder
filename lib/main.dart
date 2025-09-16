@@ -321,7 +321,7 @@ class _MyAppWrapperState extends State<MyAppWrapper>
     if (!mounted) return;
 
     try {
-      debugPrint('�� Starting essential data preload...');
+      debugPrint('Starting essential data preload...');
       await widget.cacheService.preloadEssentialData();
       debugPrint('✅ Essential data preload completed');
     } catch (e) {

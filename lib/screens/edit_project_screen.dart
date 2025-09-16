@@ -137,6 +137,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
                     ResponsiveGuidelines.radiusM,
                   ),
                 ),
+                indicatorSize: TabBarIndicatorSize.tab,
                 indicatorPadding: EdgeInsets.all(4.w),
                 labelColor: Colors.white,
                 unselectedLabelColor: AppTheme.textGrey,
@@ -648,17 +649,17 @@ class _EditProjectScreenState extends State<EditProjectScreen>
                     color: AppTheme.textGrey,
                   ),
                 ),
-                if (paint.notes != null) ...[
-                  SizedBox(height: 4.h),
-                  Text(
-                    paint.notes!,
-                    style: TextStyle(
-                      fontSize: ResponsiveGuidelines.labelSmall,
-                      color: AppTheme.textGrey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
+                //if (paint.notes != null) ...[
+                  //SizedBox(height: 4.h),
+                  //Text(
+                    //paint.notes!,
+                    //style: TextStyle(
+                      //fontSize: ResponsiveGuidelines.labelSmall,
+                      //color: AppTheme.textGrey,
+                      //fontStyle: FontStyle.italic,
+                    //),
+                  //),
+                //],
               ],
             ),
           ),
@@ -667,11 +668,11 @@ class _EditProjectScreenState extends State<EditProjectScreen>
           Row(
             children: [
               // Edit notes button
-              IconButton(
-                onPressed: () => _editPaintNotes(index),
-                icon: const Icon(Icons.edit_note),
-                color: AppTheme.marineBlue,
-              ),
+              // IconButton(
+                // onPressed: () => _editPaintNotes(index),
+                // icon: const Icon(Icons.edit_note),
+                // color: AppTheme.marineBlue,
+              // ),
               // Remove button
               IconButton(
                 onPressed: () => _removePaint(index),
@@ -1004,55 +1005,55 @@ class _EditProjectScreenState extends State<EditProjectScreen>
   }
 
 
-  void _editPaintNotes(int index) {
-    final controller = TextEditingController(
-      text: _projectPaints[index].notes ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Edit Notes - ${_projectPaints[index].paintName}'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'How did you use this paint?',
-              ),
-              maxLines: 3,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _projectPaints[index] = ProjectPaint(
-                      itemId: _projectPaints[index].itemId,
-                      paintId: _projectPaints[index].paintId,
-                      paintName: _projectPaints[index].paintName,
-                      paintBrand: _projectPaints[index].paintBrand,
-                      brandAvatar: _projectPaints[index].brandAvatar,
-                      colorHex: _projectPaints[index].colorHex,
-                      notes:
-                          controller.text.trim().isEmpty
-                              ? null
-                              : controller.text.trim(),
-                      addedAt: _projectPaints[index].addedAt,
-                    );
-                  });
-                  _markChanged();
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-    );
-  }
+  //void _editPaintNotes(int index) {
+    //final controller = TextEditingController(
+      //text: _projectPaints[index].notes ?? '',
+    //);
+//
+    //showDialog(
+      //context: context,
+      //builder:
+          //(context) => AlertDialog(
+            //title: Text('Edit Notes - ${_projectPaints[index].paintName}'),
+            //content: TextField(
+              //controller: controller,
+              //decoration: const InputDecoration(
+                //labelText: 'Notes',
+                //hintText: 'How did you use this paint?',
+              //),
+              //maxLines: 3,
+            //),
+            //actions: [
+              //TextButton(
+                //onPressed: () => Navigator.pop(context),
+                //child: const Text('Cancel'),
+              //),
+              //TextButton(
+                //onPressed: () {
+                  //setState(() {
+                    //_projectPaints[index] = ProjectPaint(
+                      //itemId: _projectPaints[index].itemId,
+                      //paintId: _projectPaints[index].paintId,
+                      //paintName: _projectPaints[index].paintName,
+                      //paintBrand: _projectPaints[index].paintBrand,
+                      //brandAvatar: _projectPaints[index].brandAvatar,
+                      //colorHex: _projectPaints[index].colorHex,
+                      //notes:
+                          //controller.text.trim().isEmpty
+                              //? null
+                              //: controller.text.trim(),
+                      //addedAt: _projectPaints[index].addedAt,
+                    //);
+                  //});
+                  //_markChanged();
+                  //Navigator.pop(context);
+                //},
+                //child: const Text('Save'),
+              //),
+            //],
+          //),
+    //);
+  //}
 
   void _removePaint(int index) {
     final removed = _projectPaints[index];

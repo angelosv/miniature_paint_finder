@@ -31,6 +31,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
   Map<String, String> _paintNotes = {};
   bool _showOnlyInventory = true;
   bool _showOnlyWishlist = false;
+  bool _isLoadingWishlist = false;
 
   @override
   void initState() {
@@ -53,9 +54,28 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
       controller.loadCategories();
       controller.loadPaints();
       
-      // Initialize inventory and wishlist services
       await _inventoryService.initialize();
       await _wishlistService.initialize();
+
+      // Prefetch inventory so the initial "In Inventory" view has data
+      try {
+        await _inventoryService.getInventory(
+          forceRefresh: false,
+          limit: 1000,
+          page: 1,
+        );
+      } catch (_) {}
+
+      // Prefetch wishlist so switching to "In Wishlist" is instant
+      try {
+        await _wishlistService.getWishlist(forceRefresh: false);
+      } catch (_) {}
+
+      // Refresh UI and re-run filters
+      if (mounted) {
+        setState(() {});
+        _performSearch();
+      }
     });
   }
 
@@ -138,11 +158,26 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
                 FilterChip(
                   label: const Text('In Wishlist'),
                   selected: _showOnlyWishlist,
-                  onSelected: (selected) {
+                  onSelected: (selected) async {
                     setState(() {
                       _showOnlyWishlist = selected;
                       if (selected) _showOnlyInventory = false;
                     });
+
+                    if (selected) {
+                      setState(() {
+                        _isLoadingWishlist = true;
+                      });
+                      try {
+                        await _wishlistService.getWishlist(forceRefresh: false);
+                      } catch (_) {}
+                      if (mounted) {
+                        setState(() {
+                          _isLoadingWishlist = false;
+                        });
+                      }
+                    }
+
                     _performSearch();
                   },
                   selectedColor: AppTheme.marineOrange.withOpacity(0.2),
@@ -222,7 +257,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
   Widget _buildPaintList() {
     return Consumer<PaintLibraryController>(
       builder: (context, controller, child) {
-        if (controller.isLoading) {
+        if (controller.isLoading || _isLoadingWishlist) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -483,25 +518,25 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
                       ),
 
                     // Notes button for selected paints
-                    if (isSelected) ...[
-                      SizedBox(height: 4.h),
-                      IconButton(
-                        onPressed: () => _editPaintNotes(paint),
-                        icon: Icon(
-                          _paintNotes.containsKey(paint.id) &&
-                                  _paintNotes[paint.id]!.isNotEmpty
-                              ? Icons.note
-                              : Icons.note_add,
-                          color: AppTheme.marineBlue,
-                        ),
-                        iconSize: 20.r,
-                        constraints: BoxConstraints(
-                          minWidth: 32.w,
-                          minHeight: 32.h,
-                        ),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
+                    //if (isSelected) ...[
+                      //SizedBox(height: 4.h),
+                      //IconButton(
+                        //onPressed: () => _editPaintNotes(paint),
+                        //icon: Icon(
+                          //_paintNotes.containsKey(paint.id) &&
+                                  //_paintNotes[paint.id]!.isNotEmpty
+                              //? Icons.note
+                              //: Icons.note_add,
+                          //color: AppTheme.marineBlue,
+                        //),
+                        //iconSize: 20.r,
+                        //constraints: BoxConstraints(
+                          //minWidth: 32.w,
+                          //minHeight: 32.h,
+                        //),
+                        //padding: EdgeInsets.zero,
+                      //),
+                    //],
                   ],
                 ),
               ],
@@ -591,7 +626,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
       if (existingIndex != -1) {
         // Remove from selection
         _selectedPaints.removeAt(existingIndex);
-        _paintNotes.remove(paint.id);
+        //_paintNotes.remove(paint.id);
       } else {
         // Add to selection
         final projectPaint = ProjectPaint(
@@ -602,7 +637,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
           brandAvatar:
               paint.brand.isNotEmpty ? paint.brand[0].toUpperCase() : 'P',
           colorHex: paint.hex,
-          notes: _paintNotes[paint.id],
+          //notes: _paintNotes[paint.id],
           addedAt: DateTime.now(),
         );
         _selectedPaints.add(projectPaint);
@@ -610,64 +645,64 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
     });
   }
 
-  void _editPaintNotes(Paint paint) {
-    final controller = TextEditingController(text: _paintNotes[paint.id] ?? '');
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Notes - ${paint.name}'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'How will you use this paint in the project?',
-              ),
-              maxLines: 3,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    if (controller.text.trim().isEmpty) {
-                      _paintNotes.remove(paint.id);
-                    } else {
-                      _paintNotes[paint.id] = controller.text.trim();
-                    }
-
-                    // Update the selected paint if it exists
-                    final index = _selectedPaints.indexWhere(
-                      (p) => p.paintId == paint.id,
-                    );
-                    if (index != -1) {
-                      _selectedPaints[index] = ProjectPaint(
-                        itemId: _selectedPaints[index].itemId,
-                        paintId: _selectedPaints[index].paintId,
-                        paintName: _selectedPaints[index].paintName,
-                        paintBrand: _selectedPaints[index].paintBrand,
-                        brandAvatar: _selectedPaints[index].brandAvatar,
-                        colorHex: _selectedPaints[index].colorHex,
-                        notes:
-                            controller.text.trim().isEmpty
-                                ? null
-                                : controller.text.trim(),
-                        addedAt: _selectedPaints[index].addedAt,
-                      );
-                    }
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
-    );
-  }
+  //void _editPaintNotes(Paint paint) {
+    //final controller = TextEditingController(text: _paintNotes[paint.id] ?? '');
+//
+    //showDialog(
+      //context: context,
+      //builder:
+          //(context) => AlertDialog(
+            //title: Text('Notes - ${paint.name}'),
+            //content: TextField(
+              //controller: controller,
+              //decoration: const InputDecoration(
+                //labelText: 'Notes',
+                //hintText: 'How will you use this paint in the project?',
+              //),
+              //maxLines: 3,
+            //),
+            //actions: [
+              //TextButton(
+                //onPressed: () => Navigator.pop(context),
+                //child: const Text('Cancel'),
+              //),
+              //TextButton(
+                //onPressed: () {
+                  //setState(() {
+                    //if (controller.text.trim().isEmpty) {
+                      //_paintNotes.remove(paint.id);
+                    //} else {
+                      //_paintNotes[paint.id] = controller.text.trim();
+                    //}
+//
+                    //// Update the selected paint if it exists
+                    //final index = _selectedPaints.indexWhere(
+                      //(p) => p.paintId == paint.id,
+                    //);
+                    //if (index != -1) {
+                      //_selectedPaints[index] = ProjectPaint(
+                        //itemId: _selectedPaints[index].itemId,
+                        //paintId: _selectedPaints[index].paintId,
+                        //paintName: _selectedPaints[index].paintName,
+                        //paintBrand: _selectedPaints[index].paintBrand,
+                        //brandAvatar: _selectedPaints[index].brandAvatar,
+                        //colorHex: _selectedPaints[index].colorHex,
+                        //notes:
+                            //controller.text.trim().isEmpty
+                                //? null
+                                //: controller.text.trim(),
+                        //addedAt: _selectedPaints[index].addedAt,
+                      //);
+                    //}
+                  //});
+                  //Navigator.pop(context);
+                //},
+                //child: const Text('Save'),
+              //),
+            //],
+          //),
+    //);
+  //}
 
   void _confirmSelection() {
     Navigator.pop(context, _selectedPaints);
