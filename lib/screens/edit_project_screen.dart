@@ -1153,8 +1153,8 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         await repo.addProjectItem(
           projectId: updatedProject.id,
           table: 'paints',
-          tableId: reacordPaint["paintId"] as String,
-          brandId: reacordPaint["brandId"] as String,
+          tableId: reacordPaint["paintId"] as String ?? '',
+          brandId: reacordPaint["brandId"] as String ?? '',
         );
       }
 

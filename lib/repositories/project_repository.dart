@@ -235,6 +235,8 @@ class ApiProjectRepository implements ProjectRepository {
         'table': table,
         'table_id': tableId,
       };
+
+      print("tableId " +tableId+ " brandId "+ brandId);
       if (brandId != null && brandId.isNotEmpty) {
         payload['brand_id'] = brandId;
       } 

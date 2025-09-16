@@ -226,15 +226,33 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.filteredPaints.isEmpty) {
-          return _buildEmptyState();
+
+        List<Paint> paints;
+
+        if (_showOnlyInventory) {
+          // Mostrar directamente las del inventario
+          final inventory = _inventoryService.cachedInventory ?? [];
+          paints = inventory.map((item) => item.paint).toList();
+        } else if (_showOnlyWishlist) {
+          // Mostrar directamente las del wishlist
+          final wishlist = _wishlistService.cachedWishlist ?? [];
+          paints = wishlist.map((item) {
+            final paint = item['paint'];
+            if (paint is Paint) return paint;
+            if (paint is Map<String, dynamic>) {
+              return Paint.fromJson(paint);
+            }
+            throw Exception("Formato desconocido en wishlist");
+          }).toList();
+        } else {
+          // Mostrar catálogo completo
+          paints = controller.filteredPaints;
         }
 
-        final filteredPaints = _filterPaints(controller.filteredPaints);
-
-        if (filteredPaints.isEmpty) {
+        if (paints.isEmpty) {
           return _buildEmptyState();
         }
+        final filteredPaints = paints;
 
         return ListView.builder(
           controller: _scrollController,
@@ -580,7 +598,7 @@ class _PaintSelectorScreenState extends State<PaintSelectorScreen> {
           itemId: '',
           paintId: paint.id,
           paintName: paint.name,
-          paintBrand: paint.brand,
+          paintBrand: paint.brandId ?? '',
           brandAvatar:
               paint.brand.isNotEmpty ? paint.brand[0].toUpperCase() : 'P',
           colorHex: paint.hex,
