@@ -5,6 +5,8 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/models/project.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
+import 'package:miniature_paint_finder/components/project_status_selector.dart';
+import 'package:miniature_paint_finder/components/project_tags_selector.dart';
 import 'package:provider/provider.dart';
 
 class CreateProjectModal extends StatefulWidget {
@@ -15,6 +17,7 @@ class CreateProjectModal extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (context) => const CreateProjectModal(),
     );
   }
@@ -30,26 +33,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
   ProjectStatus _selectedStatus = ProjectStatus.planning;
   final List<String> _selectedTags = [];
 
-  final List<String> _availableTags = [
-    'warhammer-40k',
-    'space-marines',
-    'fantasy',
-    'orks',
-    'elves',
-    'chaos',
-    'necrons',
-    'custodes',
-    'weathering',
-    'osl',
-    'tmm',
-    'nmm',
-    'dragon',
-    'knight',
-    'large-miniature',
-    'army',
-    'character',
-    'vehicle',
-  ];
+
 
   @override
   void dispose() {
@@ -61,9 +45,11 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: MediaQuery.of(context).size.height * 0.90,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.vertical(
@@ -110,8 +96,10 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
           // Form
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: ResponsiveGuidelines.spacingL,
+              padding: EdgeInsets.only(
+                left: ResponsiveGuidelines.spacingL,
+                right: ResponsiveGuidelines.spacingL,
+                bottom: MediaQuery.of(context).viewInsets.bottom + ResponsiveGuidelines.spacingXL,
               ),
               child: Form(
                 key: _formKey,
@@ -143,84 +131,35 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
                         labelText: 'Description (Optional)',
                         hintText: 'Tell us about your project...',
                         prefixIcon: Icon(Icons.description),
+                        alignLabelWithHint: true,
                       ),
                       maxLines: 3,
+                      textInputAction: TextInputAction.newline,
                     ),
 
                     SizedBox(height: ResponsiveGuidelines.spacingL),
 
                     // Status Selection
-                    Text(
-                      'Status',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: ResponsiveGuidelines.spacingS),
-                    Wrap(
-                      spacing: 8.w,
-                      children:
-                          ProjectStatus.values.map((status) {
-                            final isSelected = _selectedStatus == status;
-                            return FilterChip(
-                              label: Text(
-                                '${status.emoji} ${status.displayName}',
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  _selectedStatus = status;
-                                });
-                              },
-                              selectedColor: AppTheme.marineBlue.withOpacity(
-                                0.2,
-                              ),
-                              checkmarkColor: AppTheme.marineBlue,
-                            );
-                          }).toList(),
+                    ProjectStatusSelector(
+                      selectedStatus: _selectedStatus,
+                      onStatusChanged: (status) {
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                      },
                     ),
 
                     SizedBox(height: ResponsiveGuidelines.spacingL),
 
                     // Tags Selection
-                    Text(
-                      'Tags (Optional)',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: ResponsiveGuidelines.spacingS),
-                    Text(
-                      'Select relevant tags to help categorize your project',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.textGrey),
-                    ),
-                    SizedBox(height: ResponsiveGuidelines.spacingM),
-                    Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children:
-                          _availableTags.map((tag) {
-                            final isSelected = _selectedTags.contains(tag);
-                            return FilterChip(
-                              label: Text(tag),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedTags.add(tag);
-                                  } else {
-                                    _selectedTags.remove(tag);
-                                  }
-                                });
-                              },
-                              selectedColor: AppTheme.marineOrange.withOpacity(
-                                0.2,
-                              ),
-                              checkmarkColor: AppTheme.marineOrange,
-                            );
-                          }).toList(),
+                    ProjectTagsSelector(
+                      selectedTags: _selectedTags,
+                      onTagsChanged: (tags) {
+                        setState(() {
+                          _selectedTags.clear();
+                          _selectedTags.addAll(tags);
+                        });
+                      },
                     ),
 
                     SizedBox(height: ResponsiveGuidelines.spacingXL),
@@ -265,24 +204,31 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
 
           // Action buttons
           Container(
-            padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel'),
+            padding: EdgeInsets.only(
+              left: ResponsiveGuidelines.spacingL,
+              right: ResponsiveGuidelines.spacingL,
+              bottom: ResponsiveGuidelines.spacingL,
+              top: ResponsiveGuidelines.spacingM,
+            ),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
                   ),
-                ),
-                SizedBox(width: ResponsiveGuidelines.spacingM),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: _createProject,
-                    child: Text('Create Project'),
+                  SizedBox(width: ResponsiveGuidelines.spacingM),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _createProject,
+                      child: Text('Create Project'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

@@ -74,13 +74,23 @@ class ProjectCard extends StatelessWidget {
                       color: _getStatusColor(project.status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
-                    child: Text(
-                      '${project.status.emoji} ${project.status.displayName}',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w500,
-                        color: _getStatusColor(project.status),
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(project.status),
+                          size: 12.r,
+                          color: _getStatusColor(project.status),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          project.status.displayName,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w500,
+                            color: _getStatusColor(project.status),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -260,6 +270,19 @@ class ProjectCard extends StatelessWidget {
         return AppTheme.greenColor;
       case ProjectStatus.onHold:
         return AppTheme.textGrey;
+    }
+  }
+
+  IconData _getStatusIcon(ProjectStatus status) {
+    switch (status) {
+      case ProjectStatus.planning:
+        return Icons.assignment;
+      case ProjectStatus.inProgress:
+        return Icons.palette;
+      case ProjectStatus.completed:
+        return Icons.check_circle;
+      case ProjectStatus.onHold:
+        return Icons.pause_circle;
     }
   }
 }

@@ -134,13 +134,23 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
                 color: _getStatusColor(_currentProject.status).withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20.r),
               ),
-              child: Text(
-                '${_currentProject.status.emoji} ${_currentProject.status.displayName}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: ResponsiveGuidelines.labelMedium,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                children: [
+                  Icon(
+                    _getStatusIcon(_currentProject.status),
+                    color: Colors.white,
+                    size: 16.r,
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    _currentProject.status.displayName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: ResponsiveGuidelines.labelMedium,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -910,6 +920,19 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         return AppTheme.greenColor;
       case ProjectStatus.onHold:
         return AppTheme.textGrey;
+    }
+  }
+
+  IconData _getStatusIcon(ProjectStatus status) {
+    switch (status) {
+      case ProjectStatus.planning:
+        return Icons.assignment;
+      case ProjectStatus.inProgress:
+        return Icons.palette;
+      case ProjectStatus.completed:
+        return Icons.check_circle;
+      case ProjectStatus.onHold:
+        return Icons.pause_circle;
     }
   }
 
