@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// Widget personalizado para la barra de navegación inferior
@@ -20,9 +18,57 @@ class CustomBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double itemWidth =
-        screenWidth / 5; // Dividir el ancho entre 5 elementos
+    final double itemWidth = 90.0; // Ancho fijo para cada item
+    
+    // Lista de items de navegación
+    final List<Map<String, dynamic>> navItems = [
+      {
+        'icon': Icons.home_outlined,
+        'activeIcon': Icons.home,
+        'label': 'Home',
+        'index': 0,
+        'isRestricted': false,
+      },
+      {
+        'icon': Icons.grid_view_outlined,
+        'activeIcon': Icons.grid_view,
+        'label': 'Library',
+        'index': 1,
+        'isRestricted': false,
+      },
+      {
+        'icon': Icons.art_track_outlined,
+        'activeIcon': Icons.art_track,
+        'label': 'Projects',
+        'index': 5,
+        'isRestricted': true,
+        'featureName': 'Projects',
+      },
+      {
+        'icon': Icons.inventory_outlined,
+        'activeIcon': Icons.inventory,
+        'label': 'Inventory',
+        'index': 2,
+        'isRestricted': true,
+        'featureName': 'Inventory',
+      },
+      {
+        'icon': Icons.favorite_outline,
+        'activeIcon': Icons.favorite,
+        'label': 'Wishlist',
+        'index': 3,
+        'isRestricted': true,
+        'featureName': 'Wishlist',
+      },
+      {
+        'icon': Icons.palette_outlined,
+        'activeIcon': Icons.palette,
+        'label': 'Palettes',
+        'index': 4,
+        'isRestricted': true,
+        'featureName': 'Palettes',
+      },
+    ];
 
     // Obtener el padding inferior para evitar que se oculte por la barra de navegación
     final EdgeInsets viewPadding = MediaQuery.of(context).viewPadding;
@@ -44,63 +90,24 @@ class CustomBottomNav extends StatelessWidget {
       padding: EdgeInsets.only(
         bottom: bottomPadding,
       ), // Aplicar padding inferior
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(
-            context: context,
-            icon: Icons.home_outlined,
-            activeIcon: Icons.home,
-            label: 'Home',
-            index: 0,
-            isDarkMode: isDarkMode,
-            width: itemWidth,
-            isRestricted: false,
-          ),
-          _buildNavItem(
-            context: context,
-            icon: Icons.grid_view_outlined,
-            activeIcon: Icons.grid_view,
-            label: 'Library',
-            index: 1,
-            isDarkMode: isDarkMode,
-            width: itemWidth,
-            isRestricted: false,
-          ),
-          _buildNavItem(
-            context: context,
-            icon: Icons.inventory_outlined,
-            activeIcon: Icons.inventory,
-            label: 'My Inventory',
-            index: 2,
-            isDarkMode: isDarkMode,
-            width: itemWidth,
-            isRestricted: true,
-            featureName: 'Inventory',
-          ),
-          _buildNavItem(
-            context: context,
-            icon: Icons.favorite_outline,
-            activeIcon: Icons.favorite,
-            label: 'Wishlist',
-            index: 3,
-            isDarkMode: isDarkMode,
-            width: itemWidth,
-            isRestricted: true,
-            featureName: 'Wishlist',
-          ),
-          _buildNavItem(
-            context: context,
-            icon: Icons.palette_outlined,
-            activeIcon: Icons.palette,
-            label: 'My Palettes',
-            index: 4,
-            isDarkMode: isDarkMode,
-            width: itemWidth,
-            isRestricted: true,
-            featureName: 'Palettes',
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Row(
+          children: navItems.map((item) {
+            return _buildNavItem(
+              context: context,
+              icon: item['icon'],
+              activeIcon: item['activeIcon'],
+              label: item['label'],
+              index: item['index'],
+              isDarkMode: isDarkMode,
+              width: itemWidth,
+              isRestricted: item['isRestricted'],
+              featureName: item['featureName'],
+            );
+          }).toList(),
+        ),
       ),
     );
   }

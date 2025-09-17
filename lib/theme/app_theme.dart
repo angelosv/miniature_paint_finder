@@ -113,7 +113,7 @@ class AppTheme {
         fontSize: 18.sp,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       color: Colors.white,
@@ -211,7 +211,7 @@ class AppTheme {
         fontSize: 18.sp,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       color: darkSurface,

@@ -229,9 +229,9 @@ class LibraryCacheService extends ChangeNotifier {
       _paintsTimestamps[cacheKey] = DateTime.now();
       await _savePaintsToCache(cacheKey, result);
 
-      debugPrint(
-        '✅ Paints loaded and cached (${result['totalPaints']} total, ${(result['paints'] as List).length} in page)',
-      );
+      //debugPrint(
+        //'✅ Paints loaded and cached (${result['totalPaints']} total, ${(result['paints'] as List).length} in page)',
+      //);
       return result;
     } catch (e) {
       debugPrint('❌ Error loading paints: $e');

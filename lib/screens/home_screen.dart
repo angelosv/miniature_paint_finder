@@ -20,6 +20,7 @@ import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/providers/guest_logic.dart';
 import 'package:miniature_paint_finder/screens/screen_analytics.dart';
 import 'package:miniature_paint_finder/services/mixpanel_service.dart';
+import 'package:miniature_paint_finder/components/create_project_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -179,7 +180,10 @@ class _HomeScreenState extends State<HomeScreen>
         }
         return false; // Let AppScaffold handle navigation to other screens
       },
-      floatingActionButton: _showPromoButton ? _buildGuestPromoButton() : null,
+      floatingActionButton:
+          _showPromoButton
+              ? _buildGuestPromoButton()
+              : _buildCreateProjectButton(),
     );
   }
 
@@ -212,6 +216,20 @@ class _HomeScreenState extends State<HomeScreen>
       icon: Icon(Icons.star),
       backgroundColor: AppTheme.marineGold,
       foregroundColor: Colors.black87,
+    );
+  }
+
+  Widget _buildCreateProjectButton() {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        // Trackear clic en botón de crear proyecto
+        trackEvent('Create Project Button Clicked');
+        CreateProjectModal.show(context);
+      },
+      label: Text('New Project'),
+      icon: Icon(Icons.add),
+      backgroundColor: AppTheme.marineOrange,
+      foregroundColor: Colors.white,
     );
   }
 

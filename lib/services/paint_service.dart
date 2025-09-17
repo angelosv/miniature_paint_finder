@@ -354,8 +354,7 @@ class PaintService {
               item['paint'] == null && item['paint_id'] != null;
           String paintId =
               isDirectFormat ? item['paint_id'] : item['paint']?['code'];
-          String brandId =
-              isDirectFormat ? item['brand_id'] : item['brand']?['name'];
+          String brandId = item['brand_id'] ?? '';
 
           if (paintId == null || brandId == null) {
             skippedCount++;
@@ -411,6 +410,7 @@ class PaintService {
               id: paintJson['code'],
               name: paintJson['name'],
               brand: brandJson['name'],
+              brandId: brandId,
               hex: paintJson['hex'],
               set: paintJson['set'] ?? 'Unknown',
               code: paintJson['code'],

@@ -30,7 +30,6 @@ class ApiService {
       final token = await _auth.currentUser?.getIdToken();
 
       final url = Uri.parse('$baseUrl$endpoint');
-
       final requestHeaders = {
         ..._defaultHeaders,
         ...?headers,
