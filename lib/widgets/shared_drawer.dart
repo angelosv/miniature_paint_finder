@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
+import 'package:miniature_paint_finder/screens/projects_screen.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/utils/auth_utils.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:provider/provider.dart';
@@ -101,6 +100,9 @@ class _SharedDrawerState extends State<SharedDrawer>
       case 'palettes':
         featureName = 'Palettes';
         break;
+      case 'projects':
+        featureName = 'Projects';
+        break;
       case 'profile_settings':
         featureName = 'Profile';
         break;
@@ -182,6 +184,12 @@ class _SharedDrawerState extends State<SharedDrawer>
         'icon': Icons.palette_outlined,
         'text': 'My Palettes',
         'screen': 'palettes',
+        'restricted': true,
+      },
+      {
+        'icon': Icons.art_track_outlined,
+        'text': 'My Projects',
+        'screen': 'projects',
         'restricted': true,
       },
     ];
@@ -643,6 +651,18 @@ class _SharedDrawerState extends State<SharedDrawer>
               pageBuilder:
                   (context, animation, secondaryAnimation) =>
                       const PaletteScreen(),
+              transitionsBuilder: _buildTransition,
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+            (Route<dynamic> route) => false,
+          );
+          break;
+        case 'projects':
+          Navigator.of(context).pushAndRemoveUntil(
+            PageRouteBuilder(
+              pageBuilder:
+                  (context, animation, secondaryAnimation) =>
+                      const ProjectsScreen(),
               transitionsBuilder: _buildTransition,
               transitionDuration: const Duration(milliseconds: 300),
             ),

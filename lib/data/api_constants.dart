@@ -68,4 +68,12 @@ class ApiEndpoints {
   /// Construye un endpoint para remover una pintura de una paleta
   static String removePaintFromPalette(String paletteId, String paintId) =>
       '/palettes/$paletteId/paints/$paintId';
+
+  static String get projects => '/project';
+  static String projectById(String id) => '/project/$id';
+  static String get createProject => '/project';
+  static String get createProjectItem => '/project/item';
+  static String deleteProjectItem(String itemId) => '/project/item/$itemId';
+  static String updateProject(String id) => '/project/$id';
+  static String deleteProject(String id) => '/project/$id';    
 }

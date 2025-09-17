@@ -8,11 +8,17 @@ import 'package:miniature_paint_finder/controllers/wishlist_controller.dart';
 import 'package:miniature_paint_finder/providers/theme_provider.dart';
 import 'package:miniature_paint_finder/repositories/paint_repository.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
+import 'package:miniature_paint_finder/repositories/project_repository.dart';
 import 'package:miniature_paint_finder/screens/auth_screen.dart';
 import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/debug_analytics_screen.dart';
+import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
+import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
+import 'package:miniature_paint_finder/screens/paint_selector_screen.dart';
+import 'package:miniature_paint_finder/screens/palette_selector_screen.dart';
+import 'package:miniature_paint_finder/screens/projects_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/services/library_cache_service.dart';
@@ -147,6 +153,7 @@ void main() async {
   final PaintRepository paintRepository = PaintRepositoryImpl();
   final ApiService apiService = ApiService(baseUrl: ApiEndpoints.baseUrl);
   final PaletteRepository paletteRepository = ApiPaletteRepository(apiService);
+  final ProjectRepository projectRepository = ApiProjectRepository(apiService);
   final PaintApiService paintApiService = PaintApiService();
 
   // Initialize the library cache service
@@ -219,6 +226,7 @@ void main() async {
         Provider<IAuthService>.value(value: authService),
         Provider<PaintRepository>.value(value: paintRepository),
         Provider<PaletteRepository>.value(value: paletteRepository),
+        Provider<ProjectRepository>.value(value: projectRepository),
         Provider<PaintApiService>.value(value: paintApiService),
         ChangeNotifierProvider<LibraryCacheService>.value(
           value: libraryCacheService,
@@ -313,7 +321,7 @@ class _MyAppWrapperState extends State<MyAppWrapper>
     if (!mounted) return;
 
     try {
-      debugPrint('�� Starting essential data preload...');
+      debugPrint('Starting essential data preload...');
       await widget.cacheService.preloadEssentialData();
       debugPrint('✅ Essential data preload completed');
     } catch (e) {

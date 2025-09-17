@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/components/barcode_scanner_card.dart';
@@ -27,6 +28,7 @@ import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
 import 'package:miniature_paint_finder/screens/wishlist_screen.dart';
 import 'package:miniature_paint_finder/screens/inventory_screen.dart';
+import 'package:miniature_paint_finder/utils/cache.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -36,10 +38,12 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:miniature_paint_finder/widgets/guest_promo_modal.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
-import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
+import 'package:miniature_paint_finder/components/project_card.dart';
+import 'package:miniature_paint_finder/data/sample_projects.dart';
+import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -68,9 +72,10 @@ class PaintListTab extends StatefulWidget {
 }
 
 class _PaintListTabState extends State<PaintListTab> {
+  static List<MostUsedPaint>? _mostUsedMem;
+  static DateTime? _mostUsedMemAt;
   List<MostUsedPaint>? _mostUsedPaints;
   bool _isLoadingMostUsed = false;
-  String? _mostUsedError;
   bool _isProcessingSelection = false; // Nueva variable de estado
   DateTime? _mostUsedPaintsLastUpdate;
 
@@ -109,7 +114,7 @@ class _PaintListTabState extends State<PaintListTab> {
   void initState() {
     super.initState();
     // Forzar una carga fresca desde la API la primera vez
-    _refreshPaintBrands();
+    _loadPaintBrands();
     _loadMostUsedPaints();
 
     // Verificar si hay argumentos para crear una paleta automáticamente
@@ -216,6 +221,25 @@ class _PaintListTabState extends State<PaintListTab> {
           _showColorPicker
               ? _buildSearchStepsView(context)
               : _buildHomeView(context),
+    );
+  }
+
+  Widget _brandFallbackAvatar(String name, bool isDarkMode) {
+    return Container(
+      color: Colors.transparent,
+      child: Center(
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+          child: Text(
+            name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -425,6 +449,31 @@ class _PaintListTabState extends State<PaintListTab> {
 
             // === Barcode Scanner ===
             const BarcodeScannerCard(),
+
+            const SizedBox(height: 24),
+
+            // === My Projects ===
+            ProjectHorizontalList(
+              title: 'My Projects',
+              projects: SampleProjects.getUserProjects(),
+              onProjectTap: (project) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectDetailScreen(project: project),
+                  ),
+                );
+              },
+              onSeeAll: () {
+                // TODO: Navigate to all projects screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening all projects...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
 
             const SizedBox(height: 24),
 
@@ -1006,6 +1055,28 @@ class _PaintListTabState extends State<PaintListTab> {
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    Widget _fallbackAvatar() {
+      return Container(
+        height: 40,
+        width: 40,
+        margin: const EdgeInsets.only(top: 2),
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       width: 100,
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1027,33 +1098,31 @@ class _PaintListTabState extends State<PaintListTab> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (logoUrl != null)
+          if (logoUrl != null && logoUrl.trim().isNotEmpty)
             Container(
               height: 40,
               width: 40,
               margin: const EdgeInsets.only(top: 2),
-              child: Image.network(logoUrl, fit: BoxFit.contain),
-            )
-          else
-            Container(
-              height: 40,
-              width: 40,
-              margin: const EdgeInsets.only(top: 2),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  name.substring(0, 1),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
-                  ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: CachedNetworkImage(
+                  imageUrl: logoUrl,
+                  cacheManager: LogosCacheManager.instance, // <- cache disco
+                  fit: BoxFit.contain,
+                  useOldImageOnUrlChange: true,
+                  fadeInDuration: const Duration(milliseconds: 120),
+                  fadeOutDuration: const Duration(milliseconds: 120),
+                  placeholder: (_, __) => _fallbackAvatar(), // offline/cargando
+                  errorWidget:
+                      (_, __, ___) => _fallbackAvatar(), // host lookup fail
+                  // hints de memoria (reduce RAM en listas)
+                  memCacheWidth: 80,
+                  memCacheHeight: 80,
                 ),
               ),
-            ),
+            )
+          else
+            _fallbackAvatar(),
           const SizedBox(height: 4),
           Text(
             name,
@@ -1063,6 +1132,8 @@ class _PaintListTabState extends State<PaintListTab> {
               fontSize: 12,
               color: isDarkMode ? Colors.white : null,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           if (isSelected) Icon(Icons.check_circle, color: color, size: 14),
         ],
@@ -2594,16 +2665,54 @@ class _PaintListTabState extends State<PaintListTab> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    if (brand['logoUrl'] != null)
+                                    if (brand['logoUrl'] != null &&
+                                        (brand['logoUrl'] as String)
+                                            .trim()
+                                            .isNotEmpty)
                                       Container(
                                         height: 40,
                                         width: 40,
                                         margin: const EdgeInsets.only(
                                           bottom: 8,
                                         ),
-                                        child: Image.network(
-                                          brand['logoUrl'],
-                                          fit: BoxFit.contain,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                          child: CachedNetworkImage(
+                                            imageUrl:
+                                                brand['logoUrl'] as String,
+                                            cacheManager:
+                                                LogosCacheManager
+                                                    .instance, // cache en disco
+                                            fit: BoxFit.contain,
+                                            useOldImageOnUrlChange: true,
+                                            fadeInDuration: const Duration(
+                                              milliseconds: 120,
+                                            ),
+                                            fadeOutDuration: const Duration(
+                                              milliseconds: 120,
+                                            ),
+                                            placeholder:
+                                                (_, __) => _brandFallbackAvatar(
+                                                  brand['name'] as String,
+                                                  Theme.of(
+                                                        context,
+                                                      ).brightness ==
+                                                      Brightness.dark,
+                                                ),
+                                            errorWidget:
+                                                (_, __, ___) =>
+                                                    _brandFallbackAvatar(
+                                                      brand['name'] as String,
+                                                      Theme.of(
+                                                            context,
+                                                          ).brightness ==
+                                                          Brightness.dark,
+                                                    ),
+                                            memCacheWidth: 80,
+                                            memCacheHeight: 80,
+                                          ),
                                         ),
                                       )
                                     else
@@ -2619,6 +2728,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                           ),
                                         ),
                                       ),
+
                                     Flexible(
                                       child: Text(
                                         brand['name'] as String,
@@ -3564,6 +3674,18 @@ class _PaintListTabState extends State<PaintListTab> {
 
       setState(() {
         _paintBrands = mappedBrands;
+        for (final b in _paintBrands.take(12)) {
+          final url = (b['logoUrl'] as String?);
+          if (url != null && url.isNotEmpty) {
+            precacheImage(
+              CachedNetworkImageProvider(
+                url,
+                cacheManager: LogosCacheManager.instance,
+              ),
+              context,
+            );
+          }
+        }
 
         // Log del total de pinturas que se mostrarán en la UI
         final totalPaints = _paintBrands.fold(
@@ -3608,6 +3730,19 @@ class _PaintListTabState extends State<PaintListTab> {
             'paintCount': 0,
           },
         ];
+
+        for (final b in _paintBrands.take(12)) {
+          final url = (b['logoUrl'] as String?);
+          if (url != null && url.isNotEmpty) {
+            precacheImage(
+              CachedNetworkImageProvider(
+                url,
+                cacheManager: LogosCacheManager.instance,
+              ),
+              context,
+            );
+          }
+        }
       });
     }
   }
@@ -3794,13 +3929,10 @@ class _PaintListTabState extends State<PaintListTab> {
 
   // Método para forzar la actualización de las marcas
   Future<void> _refreshPaintBrands() async {
-    if (!mounted) return; // Check if widget is still mounted
-
-    setState(() {
-      _paintBrands = []; // Vaciar para mostrar el cargador
-    });
+    if (!mounted) return;
 
     try {
+      // Intenta red; si falla, el service devolverá caché (ver cambio #3)
       final brands = await _paintBrandService.refreshPaintBrands();
 
       final mappedBrands =
@@ -3817,88 +3949,182 @@ class _PaintListTabState extends State<PaintListTab> {
               )
               .toList();
 
-      if (!mounted) return; // Check again before setState
-
+      if (!mounted) return;
       setState(() {
+        // OJO: ya no vaciamos antes. La lista visible nunca desaparece.
         _paintBrands = mappedBrands;
+
+        for (final b in _paintBrands.take(12)) {
+          final url = (b['logoUrl'] as String?);
+          if (url != null && url.isNotEmpty) {
+            precacheImage(
+              CachedNetworkImageProvider(
+                url,
+                cacheManager: LogosCacheManager.instance,
+              ),
+              context,
+            );
+          }
+        }
       });
-
-      if (!mounted) return; // Check before showing SnackBar
-
+      // (opcional) Snackbar suave de actualizado OK
+      // ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Categories refreshed')));
+    } catch (e) {
+      if (!mounted) return;
+      // Mantén lo que ya hay en pantalla y avisa suave
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Categories refreshed successfully'),
+          content: Text('Offline: showing cached categories'),
           duration: Duration(seconds: 2),
         ),
       );
-    } catch (e) {
-      print('❌ Error al actualizar marcas: $e');
 
-      if (!mounted) return; // Check before showing error SnackBar
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating categories: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      // Si era primer arranque y no había nada, usa fallback básico
+      if (_paintBrands.isEmpty) {
+        setState(() {
+          _paintBrands = [
+            {
+              'id': 'citadel',
+              'name': 'Citadel',
+              'color': AppTheme.primaryBlue,
+              'selected': false,
+              'logoUrl': null,
+              'paintCount': 0,
+            },
+            {
+              'id': 'vallejo',
+              'name': 'Vallejo',
+              'color': AppTheme.pinkColor,
+              'selected': false,
+              'logoUrl': null,
+              'paintCount': 0,
+            },
+            {
+              'id': 'army_painter',
+              'name': 'Army Painter',
+              'color': AppTheme.purpleColor,
+              'selected': false,
+              'logoUrl': null,
+              'paintCount': 0,
+            },
+            {
+              'id': 'scale75',
+              'name': 'Scale75',
+              'color': AppTheme.orangeColor,
+              'selected': false,
+              'logoUrl': null,
+              'paintCount': 0,
+            },
+          ];
+          for (final b in _paintBrands.take(12)) {
+            final url = (b['logoUrl'] as String?);
+            if (url != null && url.isNotEmpty) {
+              precacheImage(
+                CachedNetworkImageProvider(
+                  url,
+                  cacheManager: LogosCacheManager.instance,
+                ),
+                context,
+              );
+            }
+          }
+        });
+      }
     }
   }
 
   Future<void> _loadMostUsedPaints({bool forceRefresh = false}) async {
-    // Check if user is a guest
+    if (_isLoadingMostUsed) return;
+
     final currentUser = FirebaseAuth.instance.currentUser;
     final isGuestUser = currentUser == null || currentUser.isAnonymous;
-
     if (isGuestUser) {
-      // For guest users, don't try to load data
-      setState(() {
-        _isLoadingMostUsed = false;
-        _mostUsedPaints = null; // Keep it null to show the guest UI
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingMostUsed = false;
+          _mostUsedPaints = null;
+        });
+      }
       return;
     }
 
-    // Check if we have valid cache and don't need to refresh
-    if (!forceRefresh &&
+    // ✅ Primero: usa caché EN MEMORIA si está vigente y no se fuerza refresh
+    final memValid =
+        _mostUsedMem != null &&
+        _mostUsedMemAt != null &&
+        DateTime.now().difference(_mostUsedMemAt!) < _mostUsedPaintsTTL;
+
+    if (!forceRefresh && memValid) {
+      if (mounted) {
+        setState(() {
+          _mostUsedPaints = _mostUsedMem!;
+          _mostUsedPaintsLastUpdate = _mostUsedMemAt;
+        });
+      }
+      debugPrint(
+        '✅ Using in-memory cached most used paints (${_mostUsedPaints!.length} items)',
+      );
+      return;
+    }
+
+    // ♻️ Segundo: valida caché local del widget (por si no hubiera memoria)
+    final now = DateTime.now();
+    Duration? age;
+    if (_mostUsedPaintsLastUpdate != null) {
+      age = now.difference(_mostUsedPaintsLastUpdate!);
+      debugPrint('age: $age   age<TTL? ${age < _mostUsedPaintsTTL}');
+    }
+    final hasValidCache =
         _mostUsedPaints != null &&
         _mostUsedPaintsLastUpdate != null &&
-        DateTime.now().difference(_mostUsedPaintsLastUpdate!) <
-            _mostUsedPaintsTTL) {
+        age != null &&
+        age < _mostUsedPaintsTTL;
+
+    if (!forceRefresh && hasValidCache) {
       debugPrint(
         '✅ Using cached most used paints (${_mostUsedPaints!.length} items)',
       );
       return;
     }
 
-    setState(() {
-      _isLoadingMostUsed = true;
-      _mostUsedError = null;
-    });
-
     try {
       debugPrint('🔄 Loading most used paints from API...');
-      final token = await currentUser!.getIdToken();
+      final token = await currentUser.getIdToken();
       final mostUsedPaints = await _paletteService.getMostUsedPaints(
         token as String,
       );
 
-      setState(() {
-        _mostUsedPaints = mostUsedPaints;
-        _mostUsedPaintsLastUpdate = DateTime.now();
-      });
-
+      if (mounted) {
+        final ts = DateTime.now();
+        setState(() {
+          _mostUsedPaints = mostUsedPaints;
+          _mostUsedPaintsLastUpdate = ts;
+        });
+        // 🧠 guarda en caché de memoria
+        _mostUsedMem = mostUsedPaints;
+        _mostUsedMemAt = ts;
+      }
       debugPrint(
         '✅ Most used paints loaded and cached (${mostUsedPaints.length} items)',
       );
     } catch (e) {
-      debugPrint('❌ Error loading most used paints: $e');
-      setState(() {
-        _mostUsedError = e.toString();
-      });
+      if (_mostUsedPaints == null && _mostUsedMem != null) {
+        if (mounted) {
+          setState(() {
+            _mostUsedPaints = _mostUsedMem!;
+            _mostUsedPaintsLastUpdate = _mostUsedMemAt;
+          });
+        }
+        debugPrint(
+          '📦 Using IN-MEMORY cache for most used paints due to error/offline',
+        );
+      } else if (_mostUsedPaints != null) {
+        debugPrint('📦 Keeping current on-screen data');
+      }
     } finally {
-      setState(() => _isLoadingMostUsed = false);
+      if (mounted) {
+        setState(() => _isLoadingMostUsed = false);
+      }
     }
   }
 
@@ -3999,8 +4225,6 @@ class _PaintListTabState extends State<PaintListTab> {
           )
         else if (_isLoadingMostUsed)
           const Center(child: CircularProgressIndicator())
-        else if (_mostUsedError != null)
-          Center(child: Text('Error: $_mostUsedError'))
         else if (_mostUsedPaints == null || _mostUsedPaints!.isEmpty)
           const Center(child: Text('No paints found.'))
         else
@@ -4035,16 +4259,15 @@ class _PaintListTabState extends State<PaintListTab> {
     );
   }
 
-  // Method to invalidate most used paints cache when collections change
   void _invalidateMostUsedPaintsCache() {
-    if (_mostUsedPaintsLastUpdate != null) {
-      debugPrint(
-        '🔄 Invalidating most used paints cache due to collection changes',
-      );
+    debugPrint(
+      '🔄 Invalidating most used paints cache due to collection changes',
+    );
+    if (mounted) {
       setState(() {
-        _mostUsedPaintsLastUpdate =
-            null; // This will force a refresh on next load
+        _mostUsedPaintsLastUpdate = null;
       });
     }
+    _mostUsedMemAt = null;
   }
 }

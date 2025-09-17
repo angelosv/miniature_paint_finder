@@ -57,4 +57,44 @@ class ImageUploadService {
       throw Exception('Error uploading image: $e');
     }
   }
+
+  /// Register an uploaded image path into user_color_images and return its record ID
+  Future<String> registerImage(String imagePath) async {
+    try {
+      String token = '';
+      final user = _auth.currentUser;
+      if (user != null) {
+        token = await user.getIdToken() ?? '';
+      }
+
+      final url = Uri.parse('$baseUrl/image/upload');
+      final response = await _client.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'image_path': imagePath,
+        }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          // Try common shapes
+          if (decoded['id'] is String) return decoded['id'];
+          if (decoded['data'] is Map && decoded['data']['id'] is String) {
+            return decoded['data']['id'] as String;
+          }
+        }
+        throw Exception('Unexpected response registering image');
+      } else {
+        throw Exception('Error registering image: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error registering image: $e');
+    }
+  }
 }
