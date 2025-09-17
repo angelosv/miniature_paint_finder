@@ -221,7 +221,8 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      key: _scaffoldKey,
+      scaffoldKey: _scaffoldKey,
+      selectedIndex: 5,
       title: 'My Projects',
       drawer: const SharedDrawer(currentScreen: 'projects'),
       body: Column(
