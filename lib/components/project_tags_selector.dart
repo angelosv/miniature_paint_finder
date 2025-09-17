@@ -70,18 +70,18 @@ class ProjectTagsSelector extends StatelessWidget {
             SizedBox(width: ResponsiveGuidelines.spacingS),
             Text(
               'Tags (Optional)',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ],
         ),
         SizedBox(height: ResponsiveGuidelines.spacingS),
         Text(
           'Select relevant tags to help categorize your project',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textGrey,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textGrey),
         ),
         SizedBox(height: ResponsiveGuidelines.spacingM),
         _buildTagsGrid(context),
@@ -96,17 +96,19 @@ class ProjectTagsSelector extends StatelessWidget {
         child: Wrap(
           spacing: 8.w,
           runSpacing: 8.h,
-          children: _availableTags.map((tag) {
-            final isSelected = selectedTags.contains(tag);
-            final tagStyle = _tagStyles[tag] ?? const _TagStyle(Colors.grey, Icons.tag);
-            
-            return _TagChip(
-              tag: tag,
-              isSelected: isSelected,
-              tagStyle: tagStyle,
-              onTap: () => _toggleTag(tag),
-            );
-          }).toList(),
+          children:
+              _availableTags.map((tag) {
+                final isSelected = selectedTags.contains(tag);
+                final tagStyle =
+                    _tagStyles[tag] ?? const _TagStyle(Colors.grey, Icons.tag);
+
+                return _TagChip(
+                  tag: tag,
+                  isSelected: isSelected,
+                  tagStyle: tagStyle,
+                  onTap: () => _toggleTag(tag),
+                );
+              }).toList(),
         ),
       ),
     );
@@ -142,19 +144,15 @@ class _TagChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: 12.w,
-          vertical: 8.h,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? tagStyle.color.withOpacity(0.2)
-              : Colors.grey.withOpacity(0.1),
+          color:
+              isSelected
+                  ? tagStyle.color.withOpacity(0.2)
+                  : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
-            color: isSelected 
-                ? tagStyle.color
-                : Colors.grey.withOpacity(0.3),
+            color: isSelected ? tagStyle.color : Colors.grey.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -164,9 +162,7 @@ class _TagChip extends StatelessWidget {
             Icon(
               tagStyle.icon,
               size: 16.r,
-              color: isSelected 
-                  ? tagStyle.color
-                  : Colors.grey[600],
+              color: isSelected ? tagStyle.color : Colors.grey[600],
             ),
             SizedBox(width: 6.w),
             Text(
@@ -174,18 +170,12 @@ class _TagChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.sp,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected 
-                    ? tagStyle.color
-                    : Colors.grey[700],
+                color: isSelected ? tagStyle.color : Colors.grey[700],
               ),
             ),
             if (isSelected) ...[
               SizedBox(width: 4.w),
-              Icon(
-                Icons.check_circle,
-                size: 14.r,
-                color: tagStyle.color,
-              ),
+              Icon(Icons.check_circle, size: 14.r, color: tagStyle.color),
             ],
           ],
         ),

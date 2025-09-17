@@ -52,9 +52,9 @@ class ProjectStatusSelector extends StatelessWidget {
             SizedBox(width: ResponsiveGuidelines.spacingS),
             Text(
               'Status',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -62,17 +62,18 @@ class ProjectStatusSelector extends StatelessWidget {
         Wrap(
           spacing: 8.w,
           runSpacing: 8.h,
-          children: ProjectStatus.values.map((status) {
-            final isSelected = selectedStatus == status;
-            final statusStyle = _statusStyles[status]!;
-            
-            return _StatusChip(
-              status: status,
-              isSelected: isSelected,
-              statusStyle: statusStyle,
-              onTap: () => onStatusChanged(status),
-            );
-          }).toList(),
+          children:
+              ProjectStatus.values.map((status) {
+                final isSelected = selectedStatus == status;
+                final statusStyle = _statusStyles[status]!;
+
+                return _StatusChip(
+                  status: status,
+                  isSelected: isSelected,
+                  statusStyle: statusStyle,
+                  onTap: () => onStatusChanged(status),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -98,19 +99,16 @@ class _StatusChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: 16.w,
-          vertical: 10.h,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? statusStyle.color.withOpacity(0.15)
-              : Colors.grey.withOpacity(0.1),
+          color:
+              isSelected
+                  ? statusStyle.color.withOpacity(0.15)
+                  : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(25.r),
           border: Border.all(
-            color: isSelected 
-                ? statusStyle.color
-                : Colors.grey.withOpacity(0.3),
+            color:
+                isSelected ? statusStyle.color : Colors.grey.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -120,9 +118,7 @@ class _StatusChip extends StatelessWidget {
             Icon(
               statusStyle.icon,
               size: 18.r,
-              color: isSelected 
-                  ? statusStyle.color
-                  : Colors.grey[600],
+              color: isSelected ? statusStyle.color : Colors.grey[600],
             ),
             SizedBox(width: 8.w),
             Text(
@@ -130,18 +126,12 @@ class _StatusChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected 
-                    ? statusStyle.color
-                    : Colors.grey[700],
+                color: isSelected ? statusStyle.color : Colors.grey[700],
               ),
             ),
             if (isSelected) ...[
               SizedBox(width: 6.w),
-              Icon(
-                Icons.check,
-                size: 16.r,
-                color: statusStyle.color,
-              ),
+              Icon(Icons.check, size: 16.r, color: statusStyle.color),
             ],
           ],
         ),

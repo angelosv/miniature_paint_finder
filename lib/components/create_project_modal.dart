@@ -33,8 +33,6 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
   ProjectStatus _selectedStatus = ProjectStatus.planning;
   final List<String> _selectedTags = [];
 
-
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -99,7 +97,9 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
               padding: EdgeInsets.only(
                 left: ResponsiveGuidelines.spacingL,
                 right: ResponsiveGuidelines.spacingL,
-                bottom: MediaQuery.of(context).viewInsets.bottom + ResponsiveGuidelines.spacingXL,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom +
+                    ResponsiveGuidelines.spacingXL,
               ),
               child: Form(
                 key: _formKey,
@@ -241,7 +241,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
 
     final authService = Provider.of<IAuthService>(context, listen: false);
     final currentUser = authService.currentUser;
-    
+
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -269,7 +269,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
       userId: currentUser.id,
       tags: List.from(_selectedTags),
     );
-    
+
     try {
       final repo = Provider.of<ProjectRepository>(context, listen: false);
       await repo.create(project);

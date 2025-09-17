@@ -856,9 +856,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
           // Arrow icon
           // Icon(
-            // Icons.arrow_forward_ios,
-            // size: ResponsiveGuidelines.iconXS,
-            // color: AppTheme.textGrey,
+          // Icons.arrow_forward_ios,
+          // size: ResponsiveGuidelines.iconXS,
+          // color: AppTheme.textGrey,
           // ),
         ],
       ),
@@ -894,16 +894,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           ),
           //SizedBox(height: 24.h),
           //OutlinedButton.icon(
-            //onPressed: () {
-              //ScaffoldMessenger.of(context).showSnackBar(
-                //const SnackBar(
-                  //content: Text('Add functionality coming soon!'),
-                  //duration: Duration(seconds: 2),
-                //),
-              //);
-            //},
-            //icon: const Icon(Icons.add),
-            //label: const Text('Add'),
+          //onPressed: () {
+          //ScaffoldMessenger.of(context).showSnackBar(
+          //const SnackBar(
+          //content: Text('Add functionality coming soon!'),
+          //duration: Duration(seconds: 2),
+          //),
+          //);
+          //},
+          //icon: const Icon(Icons.add),
+          //label: const Text('Add'),
           //),
         ],
       ),
