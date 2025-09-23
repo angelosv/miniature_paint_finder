@@ -1020,48 +1020,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
       return;
     }
 
-    // Process adding to palette
     try {
-      print("paletteName: $paletteName, paintId: $paintId, brandId: $brandId");
+      debugPrint(
+        "paletteName: $paletteName, paintId: $paintId, brandId: $brandId",
+      );
 
-      // Use PaletteController with cache service for consistency
       final paletteController = Provider.of<PaletteController>(
         context,
         listen: false,
       );
 
-      // Load palettes to find the one with matching name
       await paletteController.loadPalettes();
       final targetPalette = paletteController.palettes.firstWhere(
-        (palette) => palette.name == paletteName,
+        (p) => p.name == paletteName,
         orElse: () => throw Exception('Palette "$paletteName" not found'),
       );
 
-      // Create Paint object from the available data
-      final paint = Paint(
-        id: paintId,
-        brandId: brandId,
-        name: paintId, // Using paintId as name fallback
-        brand: brandId, // Using brandId as brand fallback
-        hex: '#000000', // Default hex, will be updated if needed
-        set: 'Library',
-        code: paintId,
-        r: 0,
-        g: 0,
-        b: 0,
-        category: 'Library',
-        isMetallic: false,
-        isTransparent: false,
-      );
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) throw Exception('Auth token not available');
 
-      // Add paint to palette using cache service
-      final success = await paletteController.addPaintToPalette(
-        targetPalette.id,
-        paint,
-        '#000000', // Default hex color
-      );
+      final paletteService = PaletteService();
+      await paletteService.addPaintsToPalette(targetPalette.id, [
+        {'paint_id': paintId, 'brand_id': brandId},
+      ], token);
 
-      if (success) {
+      await paletteController.refreshPalettes();
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Paint added to palette $paletteName'),
@@ -1070,56 +1055,77 @@ class _LibraryScreenState extends State<LibraryScreen> {
             duration: const Duration(seconds: 3),
           ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add paint to palette'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
     } catch (e) {
-      debugPrint('❌ Error adding paint to palette via cache service: $e');
-
-      // Fallback to direct service call if cache service fails
       try {
         final paletteService = PaletteService();
-        final userId = FirebaseAuth.instance.currentUser?.uid;
-        if (userId != null) {
-          final result = await paletteService.addPaintToPaletteById(
-            paletteName,
-            userId,
-            paintId,
-            brandId,
-          );
+        final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+        if (token == null) throw Exception('Auth token not available');
 
-          if (result['executed']) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Paint added to palette $paletteName'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: ${result['message']}'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+        final list = await paletteService.getAllPalettesNamesAndIds(token);
+        String? paletteId;
+        for (final p in list) {
+          final n = (p['name'] as String?) ?? '';
+          if (n.toLowerCase() == paletteName.toLowerCase()) {
+            paletteId = p['id'] as String?;
+            break;
           }
         }
-      } catch (fallbackError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding paint to palette: $fallbackError'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+
+        if (paletteId == null || paletteId.isEmpty) {
+          final created = await paletteService.createPalette(
+            paletteName,
+            token,
+          );
+          paletteId = (created['id'] as String?) ?? '';
+
+          if (paletteId.isEmpty) {
+            final after = await paletteService.getAllPalettesNamesAndIds(token);
+            final matches = after.where(
+              (p) =>
+                  ((p['name'] as String?)?.toLowerCase() ?? '') ==
+                  paletteName.toLowerCase(),
+            );
+            if (matches.isNotEmpty) {
+              paletteId = matches.first['id'] as String?;
+            }
+          }
+        }
+
+        if (paletteId == null || paletteId.isEmpty) {
+          throw Exception('Unable to resolve palette id for "$paletteName"');
+        }
+
+        await paletteService.addPaintsToPalette(paletteId, [
+          {'paint_id': paintId, 'brand_id': brandId},
+        ], token);
+
+        final paletteController = Provider.of<PaletteController>(
+          context,
+          listen: false,
         );
+        await paletteController.refreshPalettes();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paint added to palette $paletteName'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (fallbackError) {
+        debugPrint('❌ Fallback failed: $fallbackError');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error adding paint to palette: $fallbackError'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }
