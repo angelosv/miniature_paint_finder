@@ -334,6 +334,7 @@ class PaletteController extends ChangeNotifier {
           paletteId,
           paint.id,
           hex,
+          brandId: paint.brandId ?? paint.brand,
         );
 
         if (success) {
