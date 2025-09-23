@@ -350,14 +350,18 @@ class PaletteController extends ChangeNotifier {
   }
 
   /// Remove a paint from a palette
-  Future<bool> removePaintFromPalette(String paletteId, String paintId) async {
+  Future<bool> removePaintFromPalette(
+    String paletteId,
+    String paintId, {
+    bool useCache = true,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       // Use cache service if available and initialized
-      if (_cacheService?.isInitialized == true) {
+      if (_cacheService?.isInitialized == true && useCache) {
         debugPrint('🎨 Removing paint from palette via cache service');
         final success = await _cacheService!.removePaintFromPalette(
           paletteId,

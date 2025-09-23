@@ -1595,6 +1595,7 @@ class _PaletteModalState extends State<PaletteModal> {
       final success = await paletteController.removePaintFromPalette(
         widget.paletteId,
         paint.paintId,
+        useCache: false,
       );
 
       scaffoldMessenger.hideCurrentSnackBar();
