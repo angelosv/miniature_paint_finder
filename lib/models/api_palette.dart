@@ -8,6 +8,7 @@ class ApiPalette {
   final String? image;
   final int totalPaints;
   final String? createdAtText;
+  final String? doc_id;
 
   ApiPalette({
     required this.id,
@@ -17,6 +18,7 @@ class ApiPalette {
     this.image,
     required this.totalPaints,
     this.createdAtText,
+    this.doc_id,
   });
 
   factory ApiPalette.fromJson(Map<String, dynamic> json) {
@@ -24,12 +26,16 @@ class ApiPalette {
       id: json['id'],
       name: json['name'],
       createdAt: DateTime.parse(json['created_at']),
-      palettesPaints: (json['palettes_paints'] as List)
-          .map((paint) => ApiPalettePaint.fromJson(paint))
-          .toList(),
+      palettesPaints:
+          (json['palettes_paints'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(ApiPalettePaint.fromJson)
+              .toList() ??
+          const [],
       image: json['image'],
       totalPaints: json['total_paints'] ?? 0,
       createdAtText: json['created_at_text'],
+      doc_id: json['doc_id'] ?? '',
     );
   }
 }
@@ -69,9 +75,10 @@ class ApiPalettePaint {
       addedAt: DateTime.parse(json['added_at']),
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      imageColorPicks: json['image_color_picks'] != null
-          ? ApiImageColorPick.fromJson(json['image_color_picks'])
-          : null,
+      imageColorPicks:
+          json['image_color_picks'] != null
+              ? ApiImageColorPick.fromJson(json['image_color_picks'])
+              : null,
       paint: json['paint'] != null ? ApiPaint.fromJson(json['paint']) : null,
     );
   }
@@ -166,4 +173,4 @@ class ApiPaint {
       updatedAt: DateTime.parse(json['updated_at']),
     );
   }
-} 
+}

@@ -207,6 +207,7 @@ class PaletteController extends ChangeNotifier {
     required String name,
     required String imagePath,
     required List<Color> colors,
+    useCache = true,
   }) async {
     _isLoading = true;
     _error = null;
@@ -214,7 +215,7 @@ class PaletteController extends ChangeNotifier {
 
     try {
       // Use cache service if available and initialized
-      if (_cacheService?.isInitialized == true) {
+      if (_cacheService?.isInitialized == true && useCache) {
         debugPrint('🎨 Creating palette via cache service');
         final success = await _cacheService!.createPalette(
           name: name,
@@ -303,15 +304,16 @@ class PaletteController extends ChangeNotifier {
   Future<bool> addPaintToPalette(
     String paletteId,
     Paint paint,
-    String hex,
-  ) async {
+    String hex, {
+    bool useCache = true,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       // Use cache service if available and initialized
-      if (_cacheService?.isInitialized == true) {
+      if (_cacheService?.isInitialized == true && useCache) {
         debugPrint('🎨 Adding paint to palette via cache service');
         final success = await _cacheService!.addPaintToPalette(
           paletteId,

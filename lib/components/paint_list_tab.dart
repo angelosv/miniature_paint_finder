@@ -1634,6 +1634,7 @@ class _PaintListTabState extends State<PaintListTab> {
                                                                 '',
                                                             colors:
                                                                 paletteColors,
+                                                            useCache: false,
                                                           );
 
                                                   if (createdPalette == null) {
@@ -1672,10 +1673,12 @@ class _PaintListTabState extends State<PaintListTab> {
                                                           PaletteController
                                                         >()
                                                         .addPaintToPalette(
-                                                          createdPalette.id,
+                                                          createdPalette.doc_id
+                                                              as String,
                                                           paintObj,
                                                           paint['hex']
                                                               as String,
+                                                          useCache: false,
                                                         );
                                                   }
 
@@ -2075,20 +2078,21 @@ class _PaintListTabState extends State<PaintListTab> {
                                                   ),
                                               decoration: BoxDecoration(
                                                 color: _getMatchColor(
-                                                  (paint['similarity']
-                                                          as double)
-                                                      .toInt(),
+                                                  (paint['similarity'] as num?)
+                                                          ?.toInt() ??
+                                                      0,
                                                 ).withOpacity(0.2),
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
                                               child: Text(
-                                                '${(paint['similarity'] as double).toInt()}% match',
+                                                '${((paint['similarity'] as num?)?.toInt() ?? 0)}% match',
                                                 style: TextStyle(
                                                   color: _getMatchColor(
                                                     (paint['similarity']
-                                                            as double)
-                                                        .toInt(),
+                                                                as num?)
+                                                            ?.toInt() ??
+                                                        0,
                                                   ),
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -2301,7 +2305,7 @@ class _PaintListTabState extends State<PaintListTab> {
         'paintBrand': selectedPaint!['brand']['name'],
         'paintColor': finalColor,
         'brandAvatar': (selectedPaint!['brand']['name'] as String)[0],
-        'matchPercentage': (selectedPaint!['similarity'] as double).toInt(),
+        'matchPercentage': (selectedPaint?['similarity'] as num?)?.toInt() ?? 0,
         'colorCode': selectedPaint!['code'],
         'barcode': selectedPaint!['barcode'],
         'paintId': selectedPaint!['id'],

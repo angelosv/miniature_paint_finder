@@ -153,6 +153,7 @@ class ApiPaletteRepository implements PaletteRepository {
 
     final convertedPalette = Palette(
       id: apiPalette.id,
+      doc_id: apiPalette.doc_id,
       name: apiPalette.name,
       imagePath: apiPalette.image ?? 'assets/images/placeholder.jpeg',
       colors: colors,
@@ -216,7 +217,7 @@ class ApiPaletteRepository implements PaletteRepository {
         ApiEndpoints.userPalettes,
         item.toJson(),
       );
-      final apiPalette = ApiPalette.fromJson(response);
+      final apiPalette = ApiPalette.fromJson(response['data']);
       return _convertApiPaletteToPalette(apiPalette);
     } catch (e) {
       return item;

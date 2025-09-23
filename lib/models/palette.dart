@@ -5,6 +5,8 @@ class Palette {
   /// Unique identifier for the palette
   final String id;
 
+  final String? doc_id;
+
   /// User-given name for the palette
   final String name;
 
@@ -35,6 +37,7 @@ class Palette {
     this.paintSelections,
     this.totalPaints = 0,
     this.createdAtText,
+    this.doc_id,
   });
 
   /// Convert color to hex string
@@ -59,6 +62,7 @@ class Palette {
           paintSelections?.map((selection) => selection.toJson()).toList(),
       'totalPaints': totalPaints,
       'createdAtText': createdAtText,
+      'doc_id': doc_id ?? '',
     };
   }
 
@@ -81,6 +85,7 @@ class Palette {
               : null,
       totalPaints: json['totalPaints'] ?? 0,
       createdAtText: json['createdAtText'],
+      doc_id: json["doc_id"] ?? '',
     );
   }
 }
