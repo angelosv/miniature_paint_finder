@@ -128,6 +128,7 @@ class Paint {
     bool isTransparent = false,
     List<String> palettes = const [],
     String brandLogo = "",
+    String brandId = "",
   }) {
     // Convert hex to RGB
     final hexColor = hex.startsWith('#') ? hex.substring(1) : hex;
@@ -139,6 +140,7 @@ class Paint {
       id: id,
       name: name,
       brand: brand,
+      brandId: brandId,
       brandLogo: brandLogo,
       hex: hex,
       category: category,

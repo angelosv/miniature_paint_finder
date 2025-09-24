@@ -338,7 +338,7 @@ class PaletteController extends ChangeNotifier {
         );
 
         if (success) {
-          await loadPalettes(); // Reload to get updated data
+          await loadPalettes(forceRefresh: true);
         }
 
         return success;

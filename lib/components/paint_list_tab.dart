@@ -1654,6 +1654,9 @@ class _PaintListTabState extends State<PaintListTab> {
                                                       brand:
                                                           paint['brand']
                                                               as String,
+                                                      brandId:
+                                                          paint['brand_id']
+                                                              as String,
                                                       hex:
                                                           paint['hex']
                                                               as String,
