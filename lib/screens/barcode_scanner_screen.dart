@@ -601,6 +601,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   name: palette.name,
                   imagePath: 'assets/images/placeholder.jpeg',
                   colors: [],
+                  useCache: false,
                 );
 
                 if (createdPalette != null) {
@@ -608,9 +609,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   final paintHex =
                       paint.hex.startsWith('#') ? paint.hex : '#${paint.hex}';
                   final success = await paletteController.addPaintToPalette(
-                    createdPalette.id,
+                    createdPalette.doc_id ?? createdPalette.id as String,
                     paint,
                     paintHex,
+                    useCache: false,
                   );
 
                   if (mounted) {

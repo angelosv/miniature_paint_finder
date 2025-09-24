@@ -1676,8 +1676,9 @@ class _PaintListTabState extends State<PaintListTab> {
                                                           PaletteController
                                                         >()
                                                         .addPaintToPalette(
-                                                          createdPalette.doc_id
-                                                              as String,
+                                                          createdPalette
+                                                                  .doc_id ??
+                                                              createdPalette.id,
                                                           paintObj,
                                                           paint['hex']
                                                               as String,

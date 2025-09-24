@@ -330,6 +330,9 @@ class PaletteController extends ChangeNotifier {
       } else {
         // Fallback to repository
         debugPrint('🎨 Adding paint to palette via repository (fallback)');
+        debugPrint('🎨 brandId');
+        debugPrint(paint.brandId ?? paint.brand);
+
         final success = await _repository.addPaintToPalette(
           paletteId,
           paint.id,
