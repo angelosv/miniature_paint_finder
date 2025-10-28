@@ -39,7 +39,9 @@ class PaletteService {
     return responseData['data'];
   }
 
-  Future<Map<String, dynamic>> createPalette(String name, String token) async {
+  Future<Map<String, dynamic>> createPalette(String name, String token, {
+    bool fullResponse = false,
+}) async {
     final url = Uri.parse('$baseUrl/palettes');
 
     final response = await _client.post(
@@ -52,9 +54,13 @@ class PaletteService {
     );
 
     final responseData = jsonDecode(response.body);
-
+    
     if (responseData['executed'] == false) {
       throw Exception(responseData['message'] ?? 'Error creating palette');
+    }
+
+    if(fullResponse) {
+      return responseData;
     }
 
     return responseData['data'];

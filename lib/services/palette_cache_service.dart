@@ -610,54 +610,70 @@ class PaletteCacheService extends ChangeNotifier {
   }
 
   /// Process pending operations
-  Future<void> _processPendingOperations() async {
-    if (_pendingOperations.isEmpty || !_hasConnection || _isSyncing) {
-      if (_pendingOperations.isNotEmpty && !_hasConnection) {
-        debugPrint(
-          '⏳ ${_pendingOperations.length} pending operations waiting for connection',
-        );
-      }
-      return;
-    }
-
-    debugPrint(
-      '🔄 Processing ${_pendingOperations.length} pending operations...',
-    );
-
-    final operationsToProcess = List<Map<String, dynamic>>.from(
-      _pendingOperations,
-    );
-
-    for (final operation in operationsToProcess) {
-      try {
-        debugPrint(
-          '🔄 Processing operation: ${operation['type']} (${operation['id']})',
-        );
-        await _processOperation(operation);
-        _pendingOperations.remove(operation);
-        debugPrint(
-          '✅ Processed operation: ${operation['type']} (${operation['id']})',
-        );
-      } catch (e) {
-        debugPrint(
-          '❌ Failed to process operation ${operation['type']} (${operation['id']}): $e',
-        );
-        // Keep failed operations in queue for retry
-        break; // Stop processing if one fails
-      }
-    }
-
-    // Save updated pending operations
-    await _saveCachedData();
-
-    if (_pendingOperations.isEmpty) {
-      debugPrint('✅ All pending operations processed successfully');
-    } else {
+Future<void> _processPendingOperations() async {
+  if (_pendingOperations.isEmpty || !_hasConnection || _isSyncing) {
+    if (_pendingOperations.isNotEmpty && !_hasConnection) {
       debugPrint(
-        '⏳ ${_pendingOperations.length} operations still pending (will retry later)',
+        '⏳ ${_pendingOperations.length} pending operations waiting for connection',
       );
     }
+    return;
   }
+
+  _isSyncing = true;
+  debugPrint(
+    '🔄 Processing ${_pendingOperations.length} pending operations...',
+  );
+
+  final operationsToProcess = List<Map<String, dynamic>>.from(
+    _pendingOperations,
+  );
+
+  const operationPriority = {
+    'create': 0,
+    'delete': 1,
+    'removePaint': 2,
+    'addPaint': 3,
+  };
+
+  operationsToProcess.sort((a, b) {
+    final aType = a['type'] as String? ?? '';
+    final bType = b['type'] as String? ?? '';
+    final aPriority = operationPriority[aType] ?? 999;
+    final bPriority = operationPriority[bType] ?? 999;
+    return aPriority.compareTo(bPriority);
+  });
+  for (final operation in operationsToProcess) {
+    try {
+      debugPrint(
+        '🔄 Processing operation: ${operation['type']} (${operation['id']})',
+      );
+      await _processOperation(operation);
+      _pendingOperations.remove(operation);
+      debugPrint(
+        '✅ Processed operation: ${operation['type']} (${operation['id']})',
+      );
+    } catch (e) {
+      debugPrint(
+        '❌ Failed to process operation ${operation['type']} (${operation['id']}): $e',
+      );
+      // Keep failed operations in queue for retry
+      break; // Stop processing if one fails
+    }
+  }
+
+   _isSyncing = false;
+  // Save updated pending operations
+  await _saveCachedData();
+
+  if (_pendingOperations.isEmpty) {
+    debugPrint('✅ All pending operations processed successfully');
+  } else {
+    debugPrint(
+      '⏳ ${_pendingOperations.length} operations still pending (will retry later)',
+    );
+  }
+}
 
   /// Process a single operation
   Future<void> _processOperation(Map<String, dynamic> operation) async {
@@ -679,7 +695,7 @@ class PaletteCacheService extends ChangeNotifier {
         final token = await user.getIdToken();
         if (token == null) throw Exception('Failed to get user token');
 
-        final result = await _paletteService.createPalette(name, token);
+        final result = await _paletteService.createPalette(name, token, fullResponse: true);
 
         if (result['executed'] != true) {
           throw Exception(
@@ -689,7 +705,7 @@ class PaletteCacheService extends ChangeNotifier {
 
         // Update cache with real ID
         final tempId = operation['tempId'] as String;
-        final realId = result['data']['id'] as String;
+        final realId = result['data']['doc_id'] as String;
 
         if (_cachedPalettes != null) {
           final index = _cachedPalettes!.indexWhere((p) => p.id == tempId);
@@ -705,7 +721,7 @@ class PaletteCacheService extends ChangeNotifier {
               totalPaints: tempPalette.totalPaints,
               createdAtText: tempPalette.createdAtText,
             );
-
+            
             // Save updated cache and notify listeners
             await _saveCachedData();
             notifyListeners();
@@ -713,6 +729,12 @@ class PaletteCacheService extends ChangeNotifier {
           }
         }
 
+        for (final op in _pendingOperations) {
+          if (op['paletteId'] == tempId) {
+            op['paletteId'] = realId;
+            debugPrint('🔄 ***Updated pending operation ${op['id']} to use realId: $realId');
+          }
+        }
         debugPrint('✅ Created palette with ID: $realId');
         break;
 
