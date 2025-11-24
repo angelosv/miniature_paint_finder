@@ -75,35 +75,9 @@ class InventoryCacheService extends ChangeNotifier {
       _isInitialized = true;
       debugPrint('✅ Inventory cache service initialized');
 
-      // Cargar inventario automáticamente desde la DB al inicializar
-      if (_hasConnection) {
-        debugPrint('🔄 Loading initial inventory from database...');
-        try {
-          final result = await _inventoryService.loadInventoryFromApi(
-            limit: 1000,
-            page: 1,
-          );
-          final items =
-              result['inventories'] as List<PaintInventoryItem>? ?? [];
-
-          if (items.isNotEmpty) {
-            _cachedInventory = items;
-            _lastCacheUpdate = DateTime.now();
-            await _saveInventoryToCache(items);
-            debugPrint(
-              '✅ Initial inventory loaded and cached (${items.length} items)',
-            );
-          } else {
-            debugPrint('ℹ️ No inventory items found in database');
-          }
-        } catch (e) {
-          debugPrint('❌ Error loading initial inventory: $e');
-        }
-
-        // Intentar sincronización de operaciones pendientes
-        if (_pendingOperations.isNotEmpty) {
-          unawaited(_syncWithBackend());
-        }
+      // Si hay operaciones pendientes, sincronizar en background (no bloquear)
+      if (_hasConnection && _pendingOperations.isNotEmpty) {
+        unawaited(_syncWithBackend());
       }
     } catch (e) {
       debugPrint('❌ Error initializing inventory cache service: $e');

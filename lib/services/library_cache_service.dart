@@ -50,16 +50,8 @@ class LibraryCacheService extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      _isPreloading = true;
-      notifyListeners();
-
-      // Precargar marcas y categorías (datos esenciales)
+      // Solo cargar del cache local (no bloquear con API)
       await Future.wait([_loadBrandsFromCache(), _loadCategoriesFromCache()]);
-
-      // Si no hay datos en cache, cargar del API
-      if (_cachedBrands == null || _cachedCategories == null) {
-        await _preloadEssentialData();
-      }
 
       _isInitialized = true;
 
@@ -68,7 +60,6 @@ class LibraryCacheService extends ChangeNotifier {
     } catch (e) {
       debugPrint('❌ Error initializing LibraryCacheService: $e');
     } finally {
-      _isPreloading = false;
       notifyListeners();
     }
   }

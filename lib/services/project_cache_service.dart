@@ -59,7 +59,7 @@ class ProjectCacheService extends ChangeNotifier {
     try {
       debugPrint('🔧 Initializing project cache service...');
 
-      // Cargar datos del cache local
+      // Cargar datos del cache local SOLAMENTE (no bloquear con API)
       await _loadProjectsFromCache();
       await _loadPendingOperations();
 
@@ -75,34 +75,9 @@ class ProjectCacheService extends ChangeNotifier {
       _isInitialized = true;
       debugPrint('✅ Project cache service initialized');
 
-      // Cargar proyectos automáticamente desde la DB al inicializar
-      if (_hasConnection) {
-        debugPrint('🔄 Loading initial projects from database...');
-        try {
-          final result = await _projectRepository.getUserProjects(
-            limit: 1000,
-            page: 1,
-          );
-          final projects = result['projects'] as List<Project>? ?? [];
-
-          if (projects.isNotEmpty) {
-            _cachedProjects = projects;
-            _lastCacheUpdate = DateTime.now();
-            await _saveProjectsToCache(projects);
-            debugPrint(
-              '✅ Initial projects loaded and cached (${projects.length} items)',
-            );
-          } else {
-            debugPrint('ℹ️ No projects found in database');
-          }
-        } catch (e) {
-          debugPrint('❌ Error loading initial projects: $e');
-        }
-
-        // Intentar sincronización de operaciones pendientes
-        if (_pendingOperations.isNotEmpty) {
-          unawaited(_syncWithBackend());
-        }
+      // Si hay operaciones pendientes, sincronizar en background (no bloquear)
+      if (_hasConnection && _pendingOperations.isNotEmpty) {
+        unawaited(_syncWithBackend());
       }
     } catch (e) {
       debugPrint('❌ Error initializing project cache service: $e');
@@ -140,7 +115,11 @@ class ProjectCacheService extends ChangeNotifier {
         page: 1,
       );
 
-      final projects = result['projects'] as List<Project>? ?? [];
+      // Parse projects from the result
+      final projectsData = result['projects'] as List<dynamic>? ?? [];
+      final projects = projectsData
+          .map((item) => Project.fromJson(item as Map<String, dynamic>))
+          .toList();
 
       // Actualizar cache
       _cachedProjects = projects;

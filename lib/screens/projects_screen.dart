@@ -62,13 +62,38 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   Future<void> _fetchProjects({int page = 1, int limit = 10, bool forceRefresh = false}) async {
+    final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+    
+    // Show cached data immediately if available (for smooth UX)
+    if (!forceRefresh && cacheService.cachedProjects != null && cacheService.cachedProjects!.isNotEmpty) {
+      final cachedProjects = cacheService.cachedProjects!;
+      setState(() {
+        _currentPage = page;
+        _totalPages = (cachedProjects.length / limit).ceil();
+        _totalProjects = cachedProjects.length;
+        _totalDone = cachedProjects.where((p) => p.status == ProjectStatus.completed).length;
+        _totalActive = cachedProjects.where((p) => p.status == ProjectStatus.inProgress).length;
+        _totalShown = cachedProjects.length;
+        _limit = limit;
+        _allProjects = cachedProjects;
+        _filteredProjects = List.from(_allProjects);
+        _isLoading = false; // Don't show loading if we have cache
+      });
+      _applyFiltersAndSort();
+      
+      // Continue loading fresh data in background (don't block UI)
+      if (cacheService.hasConnection) {
+        _loadFreshDataInBackground(page, limit, forceRefresh);
+      }
+      return;
+    }
+    
+    // No cache available, show loading
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
-      
       // Get projects from cache service (cache-first)
       final projects = await cacheService.getProjects(
         forceRefresh: forceRefresh,
@@ -101,6 +126,39 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+  
+  // Load fresh data in background without blocking UI
+  Future<void> _loadFreshDataInBackground(int page, int limit, bool forceRefresh) async {
+    try {
+      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      
+      // Fetch fresh data (this will update the cache)
+      final projects = await cacheService.getProjects(
+        forceRefresh: true, // Always refresh in background
+        page: page,
+        limit: limit,
+      );
+
+      // Update UI with fresh data if mounted
+      if (mounted) {
+        setState(() {
+          _currentPage = page;
+          _totalPages = (projects.length / limit).ceil();
+          _totalProjects = projects.length;
+          _totalDone = projects.where((p) => p.status == ProjectStatus.completed).length;
+          _totalActive = projects.where((p) => p.status == ProjectStatus.inProgress).length;
+          _totalShown = projects.length;
+          _limit = limit;
+          _allProjects = projects;
+          _filteredProjects = List.from(_allProjects);
+        });
+        _applyFiltersAndSort();
+      }
+    } catch (e) {
+      debugPrint('Error loading fresh data in background: $e');
+      // Silently fail, user already has cached data
     }
   }
 
