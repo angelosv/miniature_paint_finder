@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/models/project.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
@@ -325,8 +326,9 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
     );
     
     try {
-      final repo = Provider.of<ProjectRepository>(context, listen: false);
-      await repo.create(project);
+      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      // Create project using cache service (optimistic update)
+      await cacheService.createProject(project);
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -338,7 +340,7 @@ class _CreateProjectModalState extends State<CreateProjectModal> {
         );
       }
     } catch (e) {
-      print('Error creating project: $e');
+      debugPrint('Error creating project: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -7,6 +7,7 @@ import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/components/create_project_modal.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
 import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
@@ -60,104 +61,39 @@ class _ProjectsScreenState extends State<ProjectsScreen>
     super.dispose();
   }
 
-  Future<void> _fetchProjects({int page = 1, int limit = 10}) async {
+  Future<void> _fetchProjects({int page = 1, int limit = 10, bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final repo = Provider.of<ProjectRepository>(context, listen: false);
-      final result = await repo.getUserProjects(page: page, limit: limit);
-      final List<Project> parsed = (result['projects'] as List)
-          .map((raw) {
-            final map = raw as Map<String, dynamic>;
-            // Map items to palettes, images and paints
-            final items = map['items'] as List? ?? [];
-            final palettes = items
-                .where((item) => item['table'] == 'palettes')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  return ProjectPalette(
-                    itemId: (item['id'] ?? '') as String,
-                    paletteId: (item['table_id'] ?? item['id'] ?? '') as String,
-                    name: (data['name'] ?? 'Palette') as String,
-                    linkedAt: DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                    total_paints: (data['total_paints'] ?? 0) as int,
-                  );
-                })
-                .toList();
-            
-            final images = items
-                .where((item) => item['table'] == 'user_color_images')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  return ProjectImage(
-                    id: (item['table_id'] ?? item['id'] ?? '') as String,
-                    imagePath: (data['image_path'] ?? '') as String,
-                    caption: null,
-                    type: ProjectImageType.reference,
-                    isMain: false,
-                    createdAt:
-                        DateTime.tryParse((data['created_at'] ?? '') as String) ??
-                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                  );
-                })
-                .toList();
+      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      
+      // Get projects from cache service (cache-first)
+      final projects = await cacheService.getProjects(
+        forceRefresh: forceRefresh,
+        page: page,
+        limit: limit,
+      );
 
-            final paints = items
-                .where((item) => item['table'] == 'paints')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
-                  return ProjectPaint(
-                    itemId: (item['id'] ?? '') as String,
-                    paintId: (data['id'] ?? item['table_id'] ?? '') as String,
-                    paintName: (data['name'] ?? 'Paint') as String,
-                    paintBrand: (data['set'] ?? brandId) as String,
-                    brandAvatar: brandId.isNotEmpty ? brandId[0] : 'U',
-                    colorHex: (data['hex'] ?? '#000000') as String,
-                    notes: null,
-                    addedAt:
-                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                  );
-                })
-                .toList();
-
-            return Project(
-              id: map['id'] ?? '',
-              name: map['name'] ?? 'Untitled',
-              description: map['description'],
-              images: images,
-              palettes: palettes,
-              paints: paints,
-              createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-              updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
-              status: _parseStatus(map['status']),
-              userId: map['user_id'] ?? '',
-              tags: (map['tags'] is List)
-                  ? List<String>.from(map['tags'] as List)
-                  : const [],
-            );
-          })
-          .toList();
+      // Parse projects (they're already Project objects from cache)
+      final List<Project> parsed = projects;
 
       setState(() {
-        _currentPage = result['currentPage'] ?? page;
-        _totalPages = result['totalPages'] ?? 1;
-        _totalProjects = result['totalProjects'] ?? 0;
-        _totalDone = result['totalDone'] ?? 0;
-        _totalActive = result['totalActive'] ?? 0;
-        _totalShown = result['totalShown'] ?? parsed.length;
-        _limit = result['limit'] ?? limit;
+        _currentPage = page;
+        _totalPages = (parsed.length / limit).ceil();
+        _totalProjects = parsed.length;
+        _totalDone = parsed.where((p) => p.status == ProjectStatus.completed).length;
+        _totalActive = parsed.where((p) => p.status == ProjectStatus.inProgress).length;
+        _totalShown = parsed.length;
+        _limit = limit;
         _allProjects = parsed;
         _filteredProjects = List.from(_allProjects);
       });
 
       _applyFiltersAndSort();
     } catch (e) {
+      debugPrint('Error fetching projects: $e');
       // keep empty state on error
     } finally {
       if (mounted) {
@@ -220,13 +156,82 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cacheService = Provider.of<ProjectCacheService>(context);
+    
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       selectedIndex: 5,
       title: 'My Projects',
       drawer: const SharedDrawer(currentScreen: 'projects'),
+      actions: [
+        // Sync indicator
+        if (cacheService.isSyncing)
+          Padding(
+            padding: EdgeInsets.only(right: 8.w),
+            child: SizedBox(
+              width: 20.w,
+              height: 20.h,
+              child: const CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ),
+        // Refresh button
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => _fetchProjects(forceRefresh: true),
+          tooltip: 'Refresh projects',
+        ),
+      ],
       body: Column(
         children: [
+          // Offline indicator banner
+          if (!cacheService.hasConnection)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              color: Colors.orange,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 16.r, color: Colors.white),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Offline Mode - Showing cached projects',
+                    style: TextStyle(
+                      fontSize: ResponsiveGuidelines.bodySmall,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          // Pending operations indicator
+          if (cacheService.hasPendingOperations)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              color: AppTheme.marineBlue.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.sync, size: 14.r, color: AppTheme.marineBlue),
+                  SizedBox(width: 8.w),
+                  Text(
+                    '${cacheService.pendingOperationsCount} pending changes',
+                    style: TextStyle(
+                      fontSize: ResponsiveGuidelines.labelSmall,
+                      color: AppTheme.marineBlue,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
           // Search and filters
           _buildSearchAndFilters(),
           
@@ -239,20 +244,22 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           // Tab bar
           _buildTabBar(),
           
-          // Content
+          // Content with pull-to-refresh
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildGridView(),
-                          _buildListView(),
-                          _buildStatsView(),
-                          _buildTagsView(),
-                        ],
-                      ),
+            child: RefreshIndicator(
+              onRefresh: () => _fetchProjects(forceRefresh: true),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildGridView(),
+                        _buildListView(),
+                        _buildStatsView(),
+                        _buildTagsView(),
+                      ],
+                    ),
+            ),
           ),
           // Pagination controls (bottom)
           //_buildPaginationBar(),

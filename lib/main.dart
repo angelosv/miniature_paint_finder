@@ -43,6 +43,7 @@ import 'package:miniature_paint_finder/services/palette_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/app_config.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -74,7 +75,8 @@ Future<void> _handleCacheMigration() async {
                     key.startsWith('library_cache_') ||
                     key.startsWith('inventory_cache_') ||
                     key.startsWith('wishlist_cache_') ||
-                    key.startsWith('palette_cache_'),
+                    key.startsWith('palette_cache_') ||
+                    key.startsWith('projects_cache_'),
               )
               .toList();
 
@@ -175,6 +177,11 @@ void main() async {
   // Initialize the palette cache service
   final PaletteCacheService paletteCacheService = PaletteCacheService();
 
+  // Initialize the project cache service
+  final ProjectCacheService projectCacheService = ProjectCacheService(
+    projectRepository,
+  );
+
   // Initialize cache in background without blocking app startup
   Future.microtask(() async {
     try {
@@ -200,6 +207,10 @@ void main() async {
         await Future.delayed(const Duration(milliseconds: 100));
       }
       debugPrint('✅ Palette cache initialized');
+
+      // Initialize project cache
+      await projectCacheService.initialize();
+      debugPrint('✅ Project cache initialized');
     } catch (e) {
       debugPrint('❌ Error during cache initialization: $e');
       // App continues to work even if cache initialization fails
@@ -239,6 +250,9 @@ void main() async {
         ),
         ChangeNotifierProvider<PaletteCacheService>.value(
           value: paletteCacheService,
+        ),
+        ChangeNotifierProvider<ProjectCacheService>.value(
+          value: projectCacheService,
         ),
         Provider<MixpanelService>.value(value: analyticsService),
         ChangeNotifierProvider(
