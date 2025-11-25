@@ -192,7 +192,7 @@ class ApiProjectRepository implements ProjectRepository {
       return Project.fromJson(response as Map<String, dynamic>);
     } catch (e) {
       print('**** error creating project: $e');
-      return item;
+      rethrow; // Re-throw so cache service knows it failed
     }
   }
 
