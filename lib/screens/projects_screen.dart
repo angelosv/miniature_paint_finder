@@ -52,10 +52,25 @@ class _ProjectsScreenState extends State<ProjectsScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _fetchProjects();
+    
+    // Listen to cache service changes to refresh UI when projects are created/updated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      cacheService.addListener(_onCacheChanged);
+    });
+  }
+  
+  void _onCacheChanged() {
+    // Refresh projects list when cache changes (e.g., after creating a project)
+    if (mounted) {
+      _fetchProjects(forceRefresh: false);
+    }
   }
 
   @override
   void dispose() {
+    final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+    cacheService.removeListener(_onCacheChanged);
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -133,6 +148,13 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   Future<void> _loadFreshDataInBackground(int page, int limit, bool forceRefresh) async {
     try {
       final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      
+      // Don't refresh from API if there are pending operations
+      // This prevents overwriting locally created projects that haven't synced yet
+      if (cacheService.hasPendingOperations) {
+        debugPrint('⏸️ Skipping background refresh - pending operations exist');
+        return;
+      }
       
       // Fetch fresh data (this will update the cache)
       final projects = await cacheService.getProjects(
