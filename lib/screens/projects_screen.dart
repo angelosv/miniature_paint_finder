@@ -69,8 +69,15 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   @override
   void dispose() {
-    final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
-    cacheService.removeListener(_onCacheChanged);
+    // Safe to access Provider here because we're checking if mounted
+    try {
+      if (mounted) {
+        final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+        cacheService.removeListener(_onCacheChanged);
+      }
+    } catch (e) {
+      // Widget already disposed, listener will be garbage collected
+    }
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
