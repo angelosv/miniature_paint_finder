@@ -195,6 +195,7 @@ class ProjectCacheService extends ChangeNotifier {
   Future<bool> createProject(Project project) async {
     try {
       debugPrint('➕ Creating project: ${project.name}');
+      debugPrint('📊 Current cached projects count: ${_cachedProjects?.length ?? 0}');
 
       // Crear operación pendiente
       final operation = {
@@ -207,20 +208,28 @@ class ProjectCacheService extends ChangeNotifier {
       // Optimistic update - agregar al cache local inmediatamente
       if (_cachedProjects != null) {
         _cachedProjects!.insert(0, project); // Agregar al inicio
+        debugPrint('✅ Project added to existing cache. New count: ${_cachedProjects!.length}');
       } else {
         _cachedProjects = [project];
+        debugPrint('✅ Project added to new cache. Count: 1');
       }
       await _saveProjectsToCache(_cachedProjects!);
+      debugPrint('💾 Project saved to persistent cache');
 
       // Agregar a la queue de operaciones pendientes
       _pendingOperations.add(operation);
       await _savePendingOperations();
+      debugPrint('📝 Operation added to pending queue. Total pending: ${_pendingOperations.length}');
 
       notifyListeners();
+      debugPrint('🔔 Listeners notified');
 
       // Intentar sincronizar inmediatamente si hay conexión
       if (_hasConnection) {
+        debugPrint('🌐 Connection available, starting sync...');
         unawaited(_syncWithBackend());
+      } else {
+        debugPrint('📴 No connection, sync will happen later');
       }
 
       return true;
@@ -571,8 +580,14 @@ class ProjectCacheService extends ChangeNotifier {
       );
       await _savePendingOperations();
 
-      // Actualizar cache con datos del servidor
-      await getProjects(forceRefresh: true);
+      // Solo actualizar cache con datos del servidor si TODAS las operaciones fueron exitosas
+      // Si alguna falló, mantenemos el caché local para que los proyectos sigan visibles
+      if (completedOperations.length == operationsToProcess.length) {
+        debugPrint('✅ All operations succeeded, refreshing from server...');
+        await getProjects(forceRefresh: true);
+      } else {
+        debugPrint('⚠️ Some operations failed, keeping local cache to preserve data');
+      }
 
       debugPrint(
         '✅ Project sync completed (${completedOperations.length}/${operationsToProcess.length} operations)',
