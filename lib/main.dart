@@ -14,11 +14,6 @@ import 'package:miniature_paint_finder/screens/home_screen.dart';
 import 'package:miniature_paint_finder/screens/library_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_screen.dart';
 import 'package:miniature_paint_finder/screens/debug_analytics_screen.dart';
-import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
-import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
-import 'package:miniature_paint_finder/screens/paint_selector_screen.dart';
-import 'package:miniature_paint_finder/screens/palette_selector_screen.dart';
-import 'package:miniature_paint_finder/screens/projects_screen.dart';
 import 'package:miniature_paint_finder/services/auth_service.dart';
 import 'package:miniature_paint_finder/services/paint_api_service.dart';
 import 'package:miniature_paint_finder/services/library_cache_service.dart';
@@ -98,7 +93,7 @@ Future<void> _handleCacheMigration() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
+  // Load environment variables (with fallback)
   try {
     await dotenv.load(fileName: '.env');
     debugPrint('✅ Environment variables loaded successfully');
@@ -106,8 +101,8 @@ void main() async {
     debugPrint('⚠️ Could not load .env file: $e');
   }
 
-  // Initialize app configuration
-  AppConfig.initialize(env: Environment.development);
+  // Initialize app configuration (auto-detects environment from Git branch)
+  AppConfig.initialize();
   AppConfig.printConfig();
 
   // Configure platform-specific behavior
