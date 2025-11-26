@@ -84,63 +84,59 @@ class ProjectCard extends StatelessWidget {
                     ),
                   ),
 
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 6.h),
 
-                  // Información adicional
+                  // Fecha de creación y número de imágenes en la misma fila
                   Row(
                     children: [
+                      // Fecha de creación
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: ResponsiveGuidelines.iconXS,
+                        color: AppTheme.textGrey,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        _formatDate(project.createdAt),
+                        style: TextStyle(
+                          fontSize: ResponsiveGuidelines.labelSmall,
+                          color: AppTheme.textGrey,
+                        ),
+                      ),
+                      
+                      Spacer(),
+                      
                       // Número de imágenes
-                      if (project.images.isNotEmpty) ...[
-                        Icon(
-                          Icons.photo_library_outlined,
-                          size: ResponsiveGuidelines.iconXS,
-                          color: AppTheme.textGrey,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          '${project.images.length}',
-                          style: TextStyle(
-                            fontSize: ResponsiveGuidelines.labelSmall,
-                            color: AppTheme.textGrey,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                      ],
+                      _buildInfoChip(
+                        Icons.photo_library_outlined,
+                        '${project.images.length}',
+                        'images',
+                      ),
+                    ],
+                  ),
 
+                  SizedBox(height: 6.h),
+
+                  // Paletas y pinturas en una sola fila
+                  Row(
+                    children: [
                       // Número de paletas
-                      if (project.palettes.isNotEmpty) ...[
-                        Icon(
-                          Icons.palette_outlined,
-                          size: ResponsiveGuidelines.iconXS,
-                          color: AppTheme.textGrey,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          '${project.palettes.length}',
-                          style: TextStyle(
-                            fontSize: ResponsiveGuidelines.labelSmall,
-                            color: AppTheme.textGrey,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                      ],
-
+                      _buildInfoChip(
+                        Icons.palette_outlined,
+                        '${project.palettes.length}',
+                        'palettes',
+                      ),
+                      SizedBox(width: 8.w),
+                      
                       // Número de pinturas
-                      if (project.paints.isNotEmpty) ...[
-                        Icon(
-                          Icons.brush_outlined,
-                          size: ResponsiveGuidelines.iconXS,
-                          color: AppTheme.textGrey,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          '${project.paints.length}',
-                          style: TextStyle(
-                            fontSize: ResponsiveGuidelines.labelSmall,
-                            color: AppTheme.textGrey,
-                          ),
-                        ),
-                      ],
+                      _buildInfoChip(
+                        Icons.brush_outlined,
+                        '${project.paints.length}',
+                        'paints',
+                      ),
+                      
+                      // Espacio para mantener alineación
+                      Expanded(child: Container()),
                     ],
                   ),
                 ],
@@ -261,6 +257,63 @@ class ProjectCard extends StatelessWidget {
       case ProjectStatus.onHold:
         return AppTheme.textGrey;
     }
+  }
+
+  /// Formatea la fecha de creación de manera amigable
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return weeks == 1 ? '1 week ago' : '$weeks weeks ago';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return months == 1 ? '1 month ago' : '$months months ago';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return years == 1 ? '1 year ago' : '$years years ago';
+    }
+  }
+
+  /// Construye un chip de información compacto
+  Widget _buildInfoChip(IconData icon, String count, String label) {
+    final hasItems = int.tryParse(count) != null && int.parse(count) > 0;
+    
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: hasItems 
+            ? AppTheme.marineBlue.withOpacity(0.1)
+            : Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12.r,
+            color: hasItems ? AppTheme.marineBlue : AppTheme.textGrey,
+          ),
+          SizedBox(width: 2.w),
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w500,
+              color: hasItems ? AppTheme.marineBlue : AppTheme.textGrey,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

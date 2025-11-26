@@ -4,25 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:miniature_paint_finder/components/barcode_scanner_card.dart';
 import 'package:miniature_paint_finder/components/category_card.dart';
-import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/components/paint_card.dart';
 import 'package:miniature_paint_finder/components/palette_card.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/components/palette_skeleton.dart';
-import 'package:miniature_paint_finder/data/sample_data.dart';
+import 'package:miniature_paint_finder/components/image_color_picker.dart';
 import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
-import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
 import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
 import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:miniature_paint_finder/services/paint_brand_service.dart';
 import 'package:miniature_paint_finder/services/paint_match_service.dart';
-import 'package:miniature_paint_finder/services/color_search_service.dart';
-import 'package:miniature_paint_finder/models/paint_brand.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:miniature_paint_finder/components/add_to_wishlist_modal.dart';
 import 'package:miniature_paint_finder/components/add_to_inventory_modal.dart';
@@ -31,8 +25,6 @@ import 'package:miniature_paint_finder/screens/inventory_screen.dart';
 import 'package:miniature_paint_finder/utils/cache.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/services/paint_service.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
@@ -42,8 +34,10 @@ import 'package:miniature_paint_finder/services/inventory_cache_service.dart';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/inventory_service.dart';
 import 'package:miniature_paint_finder/components/project_card.dart';
-import 'package:miniature_paint_finder/data/sample_projects.dart';
 import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
+import 'package:miniature_paint_finder/screens/projects_screen.dart';
+import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 
 // Clase para crear el recorte diagonal en la tarjeta de promoción
 class DiagonalClipper extends CustomClipper<Path> {
@@ -82,11 +76,6 @@ class _PaintListTabState extends State<PaintListTab> {
   // Cache TTL for most used paints (30 minutes)
   static const Duration _mostUsedPaintsTTL = Duration(minutes: 30);
 
-  final Map<int, List<dynamic>> _matchingPaints = {};
-  final Map<int, int> _currentPages = {};
-  final Map<int, int> _totalPages = {};
-  final Map<int, bool> _isLoadingMore = {};
-  final Map<int, ScrollController> _scrollControllers = {};
   bool _isSavingPalette = false;
   File? _imageFile;
   String? _uploadedImageUrl;
@@ -120,6 +109,7 @@ class _PaintListTabState extends State<PaintListTab> {
     // Verificar si hay argumentos para crear una paleta automáticamente
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForPaletteCreationArguments();
+      _loadProjects();
     });
   }
 
@@ -453,25 +443,159 @@ class _PaintListTabState extends State<PaintListTab> {
             const SizedBox(height: 24),
 
             // === My Projects ===
-            ProjectHorizontalList(
-              title: 'My Projects',
-              projects: SampleProjects.getUserProjects(),
-              onProjectTap: (project) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProjectDetailScreen(project: project),
-                  ),
-                );
-              },
-              onSeeAll: () {
-                // TODO: Navigate to all projects screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening all projects...'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Projects',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton(
+                  onPressed: () {
+                    // Check if user is a guest
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    final isGuestUser =
+                        currentUser == null || currentUser.isAnonymous;
+
+                    if (isGuestUser) {
+                      // Show guest promo modal
+                      GuestPromoModal.showForRestrictedFeature(
+                        context,
+                        'Projects',
+                      );
+                    } else {
+                      // Navigate to projects screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProjectsScreen(),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('See all'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Consumer<ProjectCacheService>(
+              builder: (context, projectCacheService, child) {
+                final currentUser = FirebaseAuth.instance.currentUser;
+                final isGuestUser =
+                    currentUser == null || currentUser.isAnonymous;
+                final isDarkMode =
+                    Theme.of(context).brightness == Brightness.dark;
+                
+                // Force load projects if user is authenticated
+                if (!isGuestUser &&
+                    (projectCacheService.cachedProjects == null || 
+                     projectCacheService.cachedProjects!.isEmpty)) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    projectCacheService.getProjects(forceRefresh: false);
+                  });
+                }
+
+                if (isGuestUser) {
+                  return Column(
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 48,
+                        color:
+                            isDarkMode
+                                ? AppTheme.marineOrange
+                                : AppTheme.marineBlue,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Track your painting projects',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create a free account to organize your miniature painting projects and track your progress',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final authService = Provider.of<IAuthService>(
+                            context,
+                            listen: false,
+                          );
+                          await authService.signOut();
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                            '/',
+                            (route) => false,
+                            arguments: {'showRegistration': true},
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              isDarkMode
+                                  ? AppTheme.marineOrange
+                                  : AppTheme.marineBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                        child: const Text('Sign Up - It\'s Free!'),
+                      ),
+                    ],
+                  );
+                } else {
+                  final recent = projectCacheService.cachedProjects?.take(4).toList() ?? [];
+                  if (projectCacheService.isSyncing || recent.isEmpty) {
+                    return const PaletteSkeletonList(count: 3);
+                  }
+                  return SizedBox(
+                    height: 220,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recent.length,
+                      itemBuilder: (_, i) {
+                        final project = recent[i];
+                        return ProjectCard(
+                          project: project,
+                          isHorizontal: true,
+                          onTap: () {
+                            // Check if user is a guest
+                            final currentUser =
+                                FirebaseAuth.instance.currentUser;
+                            final isGuestUser =
+                                currentUser == null || currentUser.isAnonymous;
+
+                            if (isGuestUser) {
+                              // Show guest promo modal
+                              GuestPromoModal.showForRestrictedFeature(
+                                context,
+                                'Projects',
+                              );
+                            } else {
+                              // Navigate to project detail
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProjectDetailScreen(project: project),
+                                ),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }
               },
             ),
 
@@ -4278,4 +4402,23 @@ class _PaintListTabState extends State<PaintListTab> {
     }
     _mostUsedMemAt = null;
   }
+
+  void _loadProjects() {
+    try {
+      final projectCacheService = Provider.of<ProjectCacheService>(
+        context,
+        listen: false,
+      );
+      
+      // Load projects if not already loaded
+      if (projectCacheService.cachedProjects == null || 
+          projectCacheService.cachedProjects!.isEmpty) {
+        debugPrint('🏠 Loading projects for home screen...');
+        projectCacheService.getProjects(forceRefresh: false);
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading projects for home screen: $e');
+    }
+  }
+
 }
