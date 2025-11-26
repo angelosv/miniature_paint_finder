@@ -18,6 +18,7 @@ class PaletteController extends ChangeNotifier {
   int _totalPalettes = 0;
   int _limit = 10;
   bool _hasInitialLoaded = false;
+  DateTime? _lastLoadAttempt;
 
   /// Constructor
   PaletteController(this._repository, [this._cacheService]) {
@@ -134,6 +135,19 @@ class PaletteController extends ChangeNotifier {
       return;
     }
 
+    // Prevent rapid successive calls (debounce)
+    final now = DateTime.now();
+    if (!forceRefresh && _lastLoadAttempt != null) {
+      final timeSinceLastAttempt = now.difference(_lastLoadAttempt!);
+      if (timeSinceLastAttempt.inSeconds < 2) {
+        debugPrint(
+          '🎨 Debouncing palette load (${timeSinceLastAttempt.inMilliseconds}ms ago)',
+        );
+        return;
+      }
+    }
+    _lastLoadAttempt = now;
+
     // If we have data and this is not a force refresh, skip
     if (_hasInitialLoaded && !forceRefresh && _palettes.isNotEmpty) {
       debugPrint(
@@ -142,12 +156,34 @@ class PaletteController extends ChangeNotifier {
       return;
     }
 
+    // Additional check: if cache service has been recently checked, avoid repeated calls
+    if (!forceRefresh && _cacheService?.isInitialized == true) {
+      final cachedPalettes = _cacheService!.cachedPalettes;
+      final lastUpdate = _cacheService!.lastCacheUpdate;
+
+      // If we have recent cache data (even if empty), use it to avoid loops
+      if (lastUpdate != null) {
+        final cacheAge = DateTime.now().difference(lastUpdate);
+        if (cacheAge.inMinutes < 5) {
+          debugPrint(
+            '🎨 Using recent cache state (${cachedPalettes?.length ?? 0} palettes), skipping API call to prevent loop',
+          );
+          _palettes = cachedPalettes ?? [];
+          _hasInitialLoaded = true;
+          notifyListeners();
+          return;
+        }
+      }
+    }
+
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      debugPrint('🎨 Loading palettes...');
+      debugPrint(
+        '🎨 Loading palettes... (hasInitialLoaded: $_hasInitialLoaded, palettes: ${_palettes.length}, forceRefresh: $forceRefresh)',
+      );
 
       // Use cache service if available and initialized (same pattern as wishlist/inventory)
       if (_cacheService?.isInitialized == true) {

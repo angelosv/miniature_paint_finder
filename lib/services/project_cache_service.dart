@@ -51,6 +51,7 @@ class ProjectCacheService extends ChangeNotifier {
   bool get hasPendingOperations => _pendingOperations.isNotEmpty;
   int get pendingOperationsCount => _pendingOperations.length;
   List<Project>? get cachedProjects => _cachedProjects;
+  DateTime? get lastCacheUpdate => _lastCacheUpdate;
 
   /// Inicializa el cache service
   Future<void> initialize() async {
@@ -117,9 +118,10 @@ class ProjectCacheService extends ChangeNotifier {
 
       // Parse projects from the result
       final projectsData = result['projects'] as List<dynamic>? ?? [];
-      final projects = projectsData
-          .map((item) => Project.fromJson(item as Map<String, dynamic>))
-          .toList();
+      final projects =
+          projectsData
+              .map((item) => Project.fromJson(item as Map<String, dynamic>))
+              .toList();
 
       // Actualizar cache
       _cachedProjects = projects;
@@ -152,7 +154,7 @@ class ProjectCacheService extends ChangeNotifier {
           (p) => p.id == projectId,
           orElse: () => throw Exception('Not found in cache'),
         );
-        
+
         // Si encontramos en cache y es válido, retornar
         if (_isCacheValid()) {
           debugPrint('✅ Project found in cache: $projectId');
@@ -195,7 +197,9 @@ class ProjectCacheService extends ChangeNotifier {
   Future<bool> createProject(Project project) async {
     try {
       debugPrint('➕ Creating project: ${project.name}');
-      debugPrint('📊 Current cached projects count: ${_cachedProjects?.length ?? 0}');
+      debugPrint(
+        '📊 Current cached projects count: ${_cachedProjects?.length ?? 0}',
+      );
 
       // Crear operación pendiente
       final operation = {
@@ -208,7 +212,9 @@ class ProjectCacheService extends ChangeNotifier {
       // Optimistic update - agregar al cache local inmediatamente
       if (_cachedProjects != null) {
         _cachedProjects!.insert(0, project); // Agregar al inicio
-        debugPrint('✅ Project added to existing cache. New count: ${_cachedProjects!.length}');
+        debugPrint(
+          '✅ Project added to existing cache. New count: ${_cachedProjects!.length}',
+        );
       } else {
         _cachedProjects = [project];
         debugPrint('✅ Project added to new cache. Count: 1');
@@ -219,7 +225,9 @@ class ProjectCacheService extends ChangeNotifier {
       // Agregar a la queue de operaciones pendientes
       _pendingOperations.add(operation);
       await _savePendingOperations();
-      debugPrint('📝 Operation added to pending queue. Total pending: ${_pendingOperations.length}');
+      debugPrint(
+        '📝 Operation added to pending queue. Total pending: ${_pendingOperations.length}',
+      );
 
       notifyListeners();
       debugPrint('🔔 Listeners notified');
@@ -433,7 +441,8 @@ class ProjectCacheService extends ChangeNotifier {
 
       if (cachedData != null) {
         final List<dynamic> decoded = json.decode(cachedData);
-        _cachedProjects = decoded.map((item) => Project.fromJson(item)).toList();
+        _cachedProjects =
+            decoded.map((item) => Project.fromJson(item)).toList();
 
         if (timestampMs != null) {
           _lastCacheUpdate = DateTime.fromMillisecondsSinceEpoch(timestampMs);
@@ -583,10 +592,13 @@ class ProjectCacheService extends ChangeNotifier {
       // Solo actualizar cache con datos del servidor si TODAS las operaciones fueron exitosas
       // Si alguna falló, mantenemos el caché local para que los proyectos sigan visibles
       if (completedOperations.length == operationsToProcess.length) {
-        debugPrint('✅ All operations succeeded, refreshing from server...');
-        await getProjects(forceRefresh: true);
+        debugPrint('✅ All operations succeeded, will refresh on next request');
+        // Invalidar cache para que se actualice en la próxima llamada a getProjects()
+        _lastCacheUpdate = null;
       } else {
-        debugPrint('⚠️ Some operations failed, keeping local cache to preserve data');
+        debugPrint(
+          '⚠️ Some operations failed, keeping local cache to preserve data',
+        );
       }
 
       debugPrint(

@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:miniature_paint_finder/components/app_header.dart';
 import 'package:miniature_paint_finder/components/palette_modal.dart';
 import 'package:miniature_paint_finder/components/create_palette_sheet.dart';
 import 'package:miniature_paint_finder/controllers/palette_controller.dart';
+import 'package:miniature_paint_finder/services/palette_cache_service.dart';
 import 'package:miniature_paint_finder/models/palette.dart';
-import 'package:miniature_paint_finder/models/paint.dart';
-import 'package:miniature_paint_finder/providers/theme_provider.dart';
-import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/theme/app_theme.dart';
-import 'package:miniature_paint_finder/theme/app_responsive.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:miniature_paint_finder/screens/barcode_scanner_screen.dart';
@@ -52,7 +47,6 @@ class PaletteCacheManager extends CacheManager {
 }
 
 class _PaletteScreenState extends State<PaletteScreen> {
-  late PaletteController _paletteController;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -562,17 +556,31 @@ class _PaletteScreenState extends State<PaletteScreen> {
     );
 
     if (confirmed == true) {
-      final paletteController = Provider.of<PaletteController>(
+      final cacheService = Provider.of<PaletteCacheService>(
         context,
         listen: false,
       );
-      final success = await paletteController.deletePalette(palette.id);
+      final success = await cacheService.deletePalette(palette.id);
 
       if (mounted) {
         // Si la eliminación fue exitosa, simplemente refrescar la lista
         if (success) {
           // La lista se actualiza automáticamente a través del cache service
-          debugPrint('✅ Palette deleted successfully');
+          debugPrint('✅ Palette deleted successfully via cache service');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Palette "${palette.name}" deleted'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting palette "${palette.name}"'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     }
@@ -581,7 +589,6 @@ class _PaletteScreenState extends State<PaletteScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Consumer<PaletteController>(
       builder: (context, paletteController, child) {

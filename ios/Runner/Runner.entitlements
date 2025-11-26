@@ -8,5 +8,7 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.security.get-task-allow</key>
+	<true/>
 </dict>
 </plist>

@@ -559,9 +559,11 @@ class InventoryCacheService extends ChangeNotifier {
         break;
 
       case 'update':
-        // Aquí necesitaríamos un método en InventoryService para actualizar por ID
-        // Por ahora, simulamos que funciona
-        debugPrint('⚠️ Update operation not fully implemented yet');
+        await _inventoryService.updateInventoryRecord(
+          operation['inventoryId'] as String,
+          operation['quantity'] as int,
+          operation['notes'] as String?,
+        );
         break;
 
       case 'delete':

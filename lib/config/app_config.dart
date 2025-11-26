@@ -43,8 +43,10 @@ class AppConfig {
       final result = Process.runSync('git', ['branch', '--show-current']);
       if (result.exitCode == 0) {
         final branch = result.stdout.toString().trim().toLowerCase();
-        
-        if (branch.contains('main') || branch.contains('master') || branch.contains('prod')) {
+
+        if (branch.contains('main') ||
+            branch.contains('master') ||
+            branch.contains('prod')) {
           return Environment.production;
         } else if (branch.contains('staging') || branch.contains('stage')) {
           return Environment.staging;
@@ -57,7 +59,7 @@ class AppConfig {
     } catch (e) {
       debugPrint('⚠️ Could not detect environment from Git branch: $e');
     }
-    
+
     // Fallback a development
     return Environment.development;
   }
@@ -82,7 +84,8 @@ class AppConfig {
     }
 
     // Check for environment-specific URL override
-    final envSpecificUrl = dotenv.env['${_environment.name.toUpperCase()}_API_URL'];
+    final envSpecificUrl =
+        dotenv.env['${_environment.name.toUpperCase()}_API_URL'];
     if (envSpecificUrl != null && envSpecificUrl.isNotEmpty) {
       return envSpecificUrl;
     }
@@ -205,7 +208,8 @@ class AppConfig {
 
   // Performance Configuration
   static bool get enablePerformanceMonitoring {
-    return _environment != Environment.development && _environment != Environment.qa;
+    return _environment != Environment.development &&
+        _environment != Environment.qa;
   }
 
   // Git Branch Detection

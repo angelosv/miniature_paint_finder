@@ -81,20 +81,24 @@ class Project {
       name: json['name'],
       description: json['description'],
       images:
-          (json['images'] as List)
-              .map((item) => ProjectImage.fromJson(item))
-              .toList(),
-      palettes: (json['palettes'] as List?)
-          ?.map((item) => ProjectPalette.fromJson(item))
-          .toList() ?? [],
+          (json['images'] as List?)
+              ?.map((item) => ProjectImage.fromJson(item))
+              .toList() ??
+          [],
+      palettes:
+          (json['palettes'] as List?)
+              ?.map((item) => ProjectPalette.fromJson(item))
+              .toList() ??
+          [],
       paints:
-          (json['paints'] as List)
-              .map((item) => ProjectPaint.fromJson(item))
-              .toList(),
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+          (json['paints'] as List?)
+              ?.map((item) => ProjectPaint.fromJson(item))
+              .toList() ??
+          [],
+      createdAt: DateTime.parse(json['created_at'] ?? json['createdAt']),
+      updatedAt: DateTime.parse(json['updated_at'] ?? json['updatedAt']),
       status: _statusFromJson(json['status']),
-      userId: json['userId'],
+      userId: json['user_id'] ?? json['userId'],
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     );
   }
@@ -244,7 +248,7 @@ class ProjectPalette {
     required this.paletteId,
     required this.name,
     required this.linkedAt,
-     this.total_paints,
+    this.total_paints,
   });
 
   /// Convert to JSON
@@ -309,6 +313,7 @@ extension ProjectImageTypeExtension on ProjectImageType {
 /// A model representing a paint used in a project
 class ProjectPaint {
   String? itemId;
+
   /// ID of the paint
   final String paintId;
 
@@ -386,9 +391,9 @@ String _statusToSnakeCase(ProjectStatus status) {
 
 ProjectStatus _statusFromJson(dynamic statusValue) {
   if (statusValue == null) return ProjectStatus.planning;
-  
+
   final statusString = statusValue.toString().toLowerCase().trim();
-  
+
   switch (statusString) {
     case 'planning':
       return ProjectStatus.planning;

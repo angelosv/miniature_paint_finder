@@ -45,3 +45,4 @@ echo -e "${GREEN}✅ Configuración aplicada exitosamente:${NC}"
 echo -e "${YELLOW}$(cat .env)${NC}"
 
 echo -e "${GREEN}🚀 ¡Listo! La aplicación usará la configuración de $ENV${NC}"
+
