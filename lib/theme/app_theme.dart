@@ -1,8 +1,68 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  /// Variable para controlar si estamos en modo testing
+  static bool _isTestMode = false;
+  
+  /// Establece el modo de testing
+  static void setTestMode(bool isTest) {
+    _isTestMode = isTest;
+  }
+  
+  /// Detecta si estamos en entorno de testing
+  static bool get isTestEnvironment {
+    return _isTestMode ||
+           Platform.environment.containsKey('FLUTTER_TEST') ||
+           Platform.environment.containsKey('INTEGRATION_TEST') ||
+           kIsWeb; // Web también puede tener problemas con Google Fonts
+  }
+
+  /// Obtiene la familia de fuente apropiada según el entorno
+  static String? get fontFamily {
+    if (isTestEnvironment) {
+      // Usar fuentes del sistema para testing
+      if (Platform.isIOS) {
+        return 'SF Pro Text'; // iOS system font
+      } else if (Platform.isAndroid) {
+        return 'Roboto'; // Android system font
+      } else {
+        return null; // Default system font
+      }
+    } else {
+      // Usar Google Fonts en producción
+      return GoogleFonts.poppins().fontFamily;
+    }
+  }
+
+  /// Obtiene TextStyle con fuente apropiada
+  static TextStyle getTextStyle({
+    FontWeight? fontWeight,
+    double? fontSize,
+    Color? color,
+    double? height,
+  }) {
+    if (isTestEnvironment) {
+      return TextStyle(
+        fontFamily: fontFamily,
+        fontWeight: fontWeight,
+        fontSize: fontSize,
+        color: color,
+        height: height,
+      );
+    } else {
+      return GoogleFonts.poppins(
+        fontWeight: fontWeight,
+        fontSize: fontSize,
+        color: color,
+        height: height,
+      );
+    }
+  }
+
   // Space Marine Theme Colors
   static const Color marineBlue = Color(
     0xFF1F3B6C,
@@ -39,19 +99,19 @@ class AppTheme {
   static const Color darkTextSecondary = Color(0xFFAAAAAA);
 
   // Drawer specific styles
-  static TextStyle get drawerItemTextStyle => GoogleFonts.poppins(
+  static TextStyle get drawerItemTextStyle => getTextStyle(
     fontSize: 17.sp,
     fontWeight: FontWeight.bold,
     height: 1.2,
   );
 
-  static TextStyle get drawerHeaderTextStyle => GoogleFonts.poppins(
+  static TextStyle get drawerHeaderTextStyle => getTextStyle(
     fontSize: 30.sp,
     fontWeight: FontWeight.bold,
     height: 1.2,
   );
 
-  static TextStyle get drawerSubtitleTextStyle => GoogleFonts.poppins(
+  static TextStyle get drawerSubtitleTextStyle => getTextStyle(
     fontSize: 15.sp,
     fontWeight: FontWeight.w500,
     height: 1.3,
@@ -69,31 +129,33 @@ class AppTheme {
   static double get drawerBorderRadius => 14.r;
 
   // Default text styles with the same font - usando .sp para tamaños de fuente responsivos
-  static TextStyle get headingStyle => GoogleFonts.poppins(
+  static TextStyle get headingStyle => getTextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 32.sp,
     height: 1.2,
   );
 
-  static TextStyle get subheadingStyle => GoogleFonts.poppins(
+  static TextStyle get subheadingStyle => getTextStyle(
     fontWeight: FontWeight.w500,
     fontSize: 20.sp,
     height: 1.3,
   );
 
-  static TextStyle get bodyStyle => GoogleFonts.poppins(
+  static TextStyle get bodyStyle => getTextStyle(
     fontWeight: FontWeight.normal,
     fontSize: 16.sp,
     height: 1.5,
   );
 
-  static TextStyle get buttonStyle =>
-      GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16.sp);
+  static TextStyle get buttonStyle => getTextStyle(
+    fontWeight: FontWeight.w600, 
+    fontSize: 16.sp,
+  );
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: backgroundGrey,
-    fontFamily: GoogleFonts.poppins().fontFamily,
+    fontFamily: fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: marineBlue,
       primary: marineBlue,
@@ -107,7 +169,7 @@ class AppTheme {
       elevation: 0,
       backgroundColor: marineBlue,
       foregroundColor: Colors.white,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: getTextStyle(
         color: Colors.white,
         fontWeight: FontWeight.bold,
         fontSize: 18.sp,
@@ -157,13 +219,13 @@ class AppTheme {
       filled: true,
       fillColor: Colors.white,
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      hintStyle: GoogleFonts.poppins(color: textGrey),
+      hintStyle: getTextStyle(color: textGrey),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: marineBlue.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
-      labelStyle: GoogleFonts.poppins(
+      labelStyle: getTextStyle(
         fontSize: 12.sp,
         color: marineBlue,
         fontWeight: FontWeight.w500,
@@ -189,7 +251,7 @@ class AppTheme {
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: darkBackground,
-    fontFamily: GoogleFonts.poppins().fontFamily,
+    fontFamily: fontFamily,
     colorScheme: ColorScheme.fromSeed(
       seedColor: marineBlue,
       primary: marineBlueLight,
@@ -205,7 +267,7 @@ class AppTheme {
       elevation: 0,
       backgroundColor: marineBlueDark,
       foregroundColor: darkTextPrimary,
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: getTextStyle(
         color: darkTextPrimary,
         fontWeight: FontWeight.bold,
         fontSize: 18.sp,
@@ -255,13 +317,13 @@ class AppTheme {
       filled: true,
       fillColor: darkSurface,
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      hintStyle: GoogleFonts.poppins(color: darkTextSecondary),
+      hintStyle: getTextStyle(color: darkTextSecondary),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: marineBlueLight.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 0),
-      labelStyle: GoogleFonts.poppins(
+      labelStyle: getTextStyle(
         fontSize: 12.sp,
         color: marineBlueLight,
         fontWeight: FontWeight.w500,

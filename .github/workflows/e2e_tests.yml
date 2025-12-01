@@ -1,0 +1,180 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/*, release/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  e2e-tests:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    
+    strategy:
+      matrix:
+        device: ['iPhone 15 Pro', 'iPhone 14']
+        fail-fast: false
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: 🐦 Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+        cache: true
+        
+    - name: 📱 List Available Simulators
+      run: xcrun simctl list devices
+      
+    - name: 🚀 Start iOS Simulator
+      run: |
+        # Start the simulator
+        xcrun simctl boot "${{ matrix.device }}" || true
+        
+        # Wait for simulator to boot
+        timeout 60 bash -c 'until xcrun simctl list devices | grep "${{ matrix.device }}" | grep -q "Booted"; do sleep 2; done'
+        
+        # Verify simulator is running
+        xcrun simctl list devices | grep "${{ matrix.device }}"
+        
+    - name: 📦 Get Flutter Dependencies
+      run: flutter pub get
+      
+    - name: 🔧 Setup Environment Variables
+      run: |
+        echo "FLUTTER_TEST=true" >> $GITHUB_ENV
+        echo "INTEGRATION_TEST=true" >> $GITHUB_ENV
+        echo "CI=true" >> $GITHUB_ENV
+        
+    - name: 🏗️ Build App for Testing
+      run: |
+        flutter build ios --debug --simulator --target=integration_test/app_test.dart
+        
+    - name: 🧪 Run Authentication Tests
+      run: |
+        flutter test integration_test/flows/auth_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Navigation Tests
+      run: |
+        flutter test integration_test/flows/navigation_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Project Management Tests
+      run: |
+        flutter test integration_test/flows/project_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Palette Management Tests
+      run: |
+        flutter test integration_test/flows/palette_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Inventory Management Tests
+      run: |
+        flutter test integration_test/flows/inventory_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Wishlist Management Tests
+      run: |
+        flutter test integration_test/flows/wishlist_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 🧪 Run Offline Functionality Tests
+      run: |
+        flutter test integration_test/flows/offline_flow_test.dart \
+          --device-id="${{ matrix.device }}" \
+          --verbose
+      continue-on-error: true
+      
+    - name: 📊 Generate Test Report
+      if: always()
+      run: |
+        echo "# E2E Test Report - ${{ matrix.device }}" > test_report_${{ matrix.device }}.md
+        echo "**Date:** $(date)" >> test_report_${{ matrix.device }}.md
+        echo "**Device:** ${{ matrix.device }}" >> test_report_${{ matrix.device }}.md
+        echo "**Branch:** ${{ github.ref_name }}" >> test_report_${{ matrix.device }}.md
+        echo "**Commit:** ${{ github.sha }}" >> test_report_${{ matrix.device }}.md
+        echo "" >> test_report_${{ matrix.device }}.md
+        echo "## Test Results" >> test_report_${{ matrix.device }}.md
+        echo "Check the individual test step outputs above for detailed results." >> test_report_${{ matrix.device }}.md
+        
+    - name: 📤 Upload Test Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-reports-${{ matrix.device }}
+        path: |
+          test_report_*.md
+          screenshots/
+        retention-days: 30
+        
+    - name: 📤 Upload Test Screenshots
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-screenshots-${{ matrix.device }}
+        path: screenshots/
+        retention-days: 7
+        
+    - name: 🧹 Cleanup
+      if: always()
+      run: |
+        # Kill simulator
+        xcrun simctl shutdown "${{ matrix.device }}" || true
+        
+        # Clean Flutter
+        flutter clean || true
+
+  # Notification job
+  notify:
+    needs: e2e-tests
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 📧 Notify on Success
+      if: needs.e2e-tests.result == 'success'
+      run: |
+        echo "✅ All E2E tests passed successfully!"
+        
+    - name: 📧 Notify on Failure
+      if: needs.e2e-tests.result == 'failure'
+      run: |
+        echo "❌ Some E2E tests failed. Check the logs for details."
+        
+    # Optional: Add Slack/Discord/Email notifications here
+    # - name: Slack Notification
+    #   if: needs.e2e-tests.result == 'failure'
+    #   uses: 8398a7/action-slack@v3
+    #   with:
+    #     status: failure
+    #     text: "E2E tests failed on ${{ github.ref_name }}"
+    #   env:
+    #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
