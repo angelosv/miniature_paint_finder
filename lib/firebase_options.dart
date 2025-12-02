@@ -40,13 +40,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDO9f1l9fuv5kSzwmvfZkn2LJcfqRWD35U',
-    appId: '1:377740311156:ios:e2049f0d3e0389ee09af21',
+    appId: '1:377740311156:ios:6b616b9dc8a33c0f09af21',
     messagingSenderId: '377740311156',
     projectId: 'paints-78769',
     storageBucket: 'paints-78769.firebasestorage.app',
     iosClientId:
-        '377740311156-n4o2p58h1plht8ajofq9p1b45epq1ndq.apps.googleusercontent.com',
-    iosBundleId: 'com.angelosv.miniaturePaintFinder',
+        '377740311156-qlfoqe4qm7jh54ghccg21fhrnr0u2ecv.apps.googleusercontent.com',
+    iosBundleId: 'com.angelovs.miniaturePaintFinder',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

@@ -1505,6 +1505,26 @@ class _InventoryScreenState extends State<InventoryScreen>
 
                 // Stock tag (circular shape)
                 _buildStockContainer(item.stock, isDarkMode),
+
+                const SizedBox(width: 8),
+
+                // Options button
+                GestureDetector(
+                  onTap: () => _showInventoryItemOptions(item),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? Colors.grey[700] : Colors.grey[200])
+                          ?.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.more_vert,
+                      color: isDarkMode ? Colors.grey[300] : Colors.grey[600],
+                      size: 18,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

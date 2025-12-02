@@ -2,7 +2,7 @@ import 'package:miniature_paint_finder/repositories/base_repository.dart';
 import 'package:miniature_paint_finder/services/api_service.dart';
 import 'package:miniature_paint_finder/data/api_constants.dart';
 import 'package:miniature_paint_finder/models/project.dart';
-import 'dart:convert';
+
 /// Repositorio para operaciones con proyectos de pintura
 abstract class ProjectRepository extends BaseRepository<Project> {
   /// Obtiene los proyectos del usuario autenticado con paginación
@@ -17,9 +17,7 @@ abstract class ProjectRepository extends BaseRepository<Project> {
   });
 
   /// Elimina un item ligado al proyecto
-  Future<bool> deleteProjectItem({
-    required String itemId,
-  });
+  Future<bool> deleteProjectItem({required String itemId});
 }
 
 /// Implementación del repositorio de proyectos usando API
@@ -32,36 +30,45 @@ class ApiProjectRepository implements ProjectRepository {
   Future<List<Project>> getAll() async {
     try {
       final response = await _apiService.get(ApiEndpoints.projects);
-      final data = response is Map<String, dynamic> ? response['data'] : response;
-      final items = (data is Map<String, dynamic> && data['projects'] is List)
-          ? data['projects'] as List
-          : (response is List ? response : <dynamic>[]);
-      return items.map((e) => Project.fromJson(e as Map<String, dynamic>)).toList();
+      final data =
+          response is Map<String, dynamic> ? response['data'] : response;
+      final items =
+          (data is Map<String, dynamic> && data['projects'] is List)
+              ? data['projects'] as List
+              : (response is List ? response : <dynamic>[]);
+      return items
+          .map((e) => Project.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       return [];
     }
   }
 
   @override
-  Future<Map<String, dynamic>> getUserProjects({int page = 1, int limit = 10}) async {
-    try {   
+  Future<Map<String, dynamic>> getUserProjects({
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
       final response = await _apiService.get(
         '${ApiEndpoints.projects}?page=$page&limit=$limit',
       );
 
-      final data = response;  
+      final data = response;
       // New backend response uses snake_case keys; normalize to camelCase
       final currentPage = data['current_page'] ?? data['current_page'] ?? page;
       final totalPages = data['total_pages'] ?? data['total_pages'] ?? 1;
-      final totalProjects = data['total_projects'] ?? data['total_projects'] ?? 0;
+      final totalProjects =
+          data['total_projects'] ?? data['total_projects'] ?? 0;
       final totalDone = data['total_done'] ?? 0;
       final totalActive = data['total_active'] ?? 0;
       final totalShown = data['total_shown'] ?? 0;
       final pageLimit = data['limit'] ?? limit;
 
-      final projects = (data['projects'] is List)
-          ? List<Map<String, dynamic>>.from(data['projects'] as List)
-          : <Map<String, dynamic>>[];
+      final projects =
+          (data['projects'] is List)
+              ? List<Map<String, dynamic>>.from(data['projects'] as List)
+              : <Map<String, dynamic>>[];
 
       return {
         'currentPage': int.parse(currentPage.toString()),
@@ -74,7 +81,7 @@ class ApiProjectRepository implements ProjectRepository {
         'projects': projects,
       };
     } catch (e) {
-      print('**** getUserProjects ERROR data: $e');    
+      print('**** getUserProjects ERROR data: $e');
 
       return {
         'currentPage': page,
@@ -98,25 +105,24 @@ class ApiProjectRepository implements ProjectRepository {
         final map = response;
         final List<dynamic> items = (map['items'] as List?) ?? [];
 
-        final palettes = items
-            .where((item) => item['table'] == 'palettes')
-            .map((item) {
+        final palettes =
+            items.where((item) => item['table'] == 'palettes').map((item) {
               final data = item['data'] as Map<String, dynamic>? ?? {};
               return ProjectPalette(
                 itemId: (item['id'] ?? '') as String,
                 paletteId: (item['table_id'] ?? item['id'] ?? '') as String,
                 name: (data['name'] ?? 'Palette') as String,
-                linkedAt: DateTime.tryParse((item['created_at'] ?? '') as String) ??
+                linkedAt:
+                    DateTime.tryParse((item['created_at'] ?? '') as String) ??
                     DateTime.now(),
                 total_paints: (data['total_paints'] ?? 0) as int,
-
               );
-            })
-            .toList();
+            }).toList();
 
-        final images = items
-            .where((item) => item['table'] == 'user_color_images')
-            .map((item) {
+        final images =
+            items.where((item) => item['table'] == 'user_color_images').map((
+              item,
+            ) {
               final data = item['data'] as Map<String, dynamic>? ?? {};
               return ProjectImage(
                 itemId: (item['id'] ?? '') as String,
@@ -130,14 +136,13 @@ class ApiProjectRepository implements ProjectRepository {
                     DateTime.tryParse((item['created_at'] ?? '') as String) ??
                     DateTime.now(),
               );
-            })
-            .toList();
+            }).toList();
 
-        final paints = items
-            .where((item) => item['table'] == 'paints')
-            .map((item) {
+        final paints =
+            items.where((item) => item['table'] == 'paints').map((item) {
               final data = item['data'] as Map<String, dynamic>? ?? {};
-              final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
+              final brandId =
+                  (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
               return ProjectPaint(
                 itemId: (item['id'] ?? '') as String,
                 paintId: (data['id'] ?? item['table_id'] ?? '') as String,
@@ -150,17 +155,18 @@ class ApiProjectRepository implements ProjectRepository {
                     DateTime.tryParse((item['created_at'] ?? '') as String) ??
                     DateTime.now(),
               );
-            })
-            .toList();
+            }).toList();
 
-        String statusStr = (map['status'] ?? 'planning').toString().toLowerCase();
-        final status = statusStr == 'in_progress'
-            ? ProjectStatus.inProgress
-            : statusStr == 'completed'
+        String statusStr =
+            (map['status'] ?? 'planning').toString().toLowerCase();
+        final status =
+            statusStr == 'in_progress'
+                ? ProjectStatus.inProgress
+                : statusStr == 'completed'
                 ? ProjectStatus.completed
                 : statusStr == 'on_hold'
-                    ? ProjectStatus.onHold
-                    : ProjectStatus.planning;
+                ? ProjectStatus.onHold
+                : ProjectStatus.planning;
 
         return Project(
           id: map['id'] ?? id,
@@ -169,11 +175,16 @@ class ApiProjectRepository implements ProjectRepository {
           images: images,
           palettes: palettes,
           paints: paints,
-          createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-          updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
+          createdAt:
+              DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+          updatedAt:
+              DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
           status: status,
           userId: map['user_id'] ?? '',
-          tags: (map['tags'] is List) ? List<String>.from(map['tags'] as List) : const [],
+          tags:
+              (map['tags'] is List)
+                  ? List<String>.from(map['tags'] as List)
+                  : const [],
         );
       }
       return null;
@@ -185,14 +196,31 @@ class ApiProjectRepository implements ProjectRepository {
   @override
   Future<Project> create(Project item) async {
     try {
+      // Send only the fields expected by the backend
+      final requestBody = {
+        'name': item.name,
+        'status': 'planning', // Required field in QA environment
+        'public': false, // Default to private projects
+      };
+
       final response = await _apiService.post(
         ApiEndpoints.projects,
-        item.toJson(),
+        requestBody,
       );
-      return Project.fromJson(response as Map<String, dynamic>);
+
+      // Backend returns {executed: true, message: "", data: {...}}
+      // We need to extract the 'data' field
+      if (response is Map<String, dynamic> && response['executed'] == true) {
+        final projectData = response['data'] as Map<String, dynamic>;
+        return Project.fromJson(projectData);
+      } else {
+        throw Exception(
+          'Failed to create project: ${response['message'] ?? 'Unknown error'}',
+        );
+      }
     } catch (e) {
       print('**** error creating project: $e');
-      return item;
+      rethrow; // Re-throw so cache service knows it failed
     }
   }
 
@@ -236,10 +264,10 @@ class ApiProjectRepository implements ProjectRepository {
         'table_id': tableId,
       };
 
-      print("tableId " +tableId+ " brandId "+ brandId);
-      if (brandId != null && brandId.isNotEmpty) {
+      print("tableId " + tableId + " brandId " + brandId);
+      if (brandId.isNotEmpty) {
         payload['brand_id'] = brandId;
-      } 
+      }
 
       final response = await _apiService.post(
         '${ApiEndpoints.createProjectItem}',
@@ -255,12 +283,9 @@ class ApiProjectRepository implements ProjectRepository {
   }
 
   @override
-  Future<bool> deleteProjectItem({
-    required String itemId,
-  }) async {
+  Future<bool> deleteProjectItem({required String itemId}) async {
     try {
-      final endpoint =
-          '${ApiEndpoints.deleteProjectItem(itemId)}';
+      final endpoint = '${ApiEndpoints.deleteProjectItem(itemId)}';
       final response = await _apiService.delete(endpoint);
       if (response is Map<String, dynamic>) {
         return response['executed'] == true || response['success'] == true;
@@ -271,5 +296,3 @@ class ApiProjectRepository implements ProjectRepository {
     }
   }
 }
-
-

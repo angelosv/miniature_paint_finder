@@ -6,11 +6,10 @@ import 'package:miniature_paint_finder/responsive/responsive_guidelines.dart';
 import 'package:miniature_paint_finder/widgets/app_scaffold.dart';
 import 'package:miniature_paint_finder/widgets/shared_drawer.dart';
 import 'package:miniature_paint_finder/components/create_project_modal.dart';
-import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
 import 'package:provider/provider.dart';
 import 'package:miniature_paint_finder/screens/project_detail_screen.dart';
 import 'package:miniature_paint_finder/screens/edit_project_screen.dart';
-import 'dart:convert';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -51,113 +50,124 @@ class _ProjectsScreenState extends State<ProjectsScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _fetchProjects();
+
+    // Listen to cache service changes to refresh UI when projects are created/updated
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cacheService = Provider.of<ProjectCacheService>(
+        context,
+        listen: false,
+      );
+      cacheService.addListener(_onCacheChanged);
+    });
+  }
+
+  void _onCacheChanged() {
+    // Refresh projects list when cache changes (e.g., after creating a project)
+    if (mounted) {
+      _fetchProjects(forceRefresh: false);
+    }
   }
 
   @override
   void dispose() {
+    // Safe to access Provider here because we're checking if mounted
+    try {
+      if (mounted) {
+        final cacheService = Provider.of<ProjectCacheService>(
+          context,
+          listen: false,
+        );
+        cacheService.removeListener(_onCacheChanged);
+      }
+    } catch (e) {
+      // Widget already disposed, listener will be garbage collected
+    }
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchProjects({int page = 1, int limit = 10}) async {
+  Future<void> _fetchProjects({
+    int page = 1,
+    int limit = 10,
+    bool forceRefresh = false,
+  }) async {
+    final cacheService = Provider.of<ProjectCacheService>(
+      context,
+      listen: false,
+    );
+
+    // Show cached data immediately if available (for smooth UX)
+    if (!forceRefresh &&
+        cacheService.cachedProjects != null &&
+        cacheService.cachedProjects!.isNotEmpty) {
+      final cachedProjects = cacheService.cachedProjects!;
+      setState(() {
+        _currentPage = page;
+        _totalPages = (cachedProjects.length / limit).ceil();
+        _totalProjects = cachedProjects.length;
+        _totalDone =
+            cachedProjects
+                .where((p) => p.status == ProjectStatus.completed)
+                .length;
+        _totalActive =
+            cachedProjects
+                .where((p) => p.status == ProjectStatus.inProgress)
+                .length;
+        _totalShown = cachedProjects.length;
+        _limit = limit;
+        _allProjects = cachedProjects;
+        _filteredProjects = List.from(_allProjects);
+        _isLoading = false; // Don't show loading if we have cache
+      });
+      _applyFiltersAndSort();
+
+      // Continue loading fresh data in background only if cache is old
+      if (cacheService.hasConnection && !cacheService.hasPendingOperations) {
+        // Only refresh if cache is older than 5 minutes
+        final cacheAge = DateTime.now().difference(
+          cacheService.lastCacheUpdate ?? DateTime(2000),
+        );
+        if (cacheAge.inMinutes > 5) {
+          _loadFreshDataInBackground(page, limit, forceRefresh);
+        }
+      }
+      return;
+    }
+
+    // No cache available, show loading
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final repo = Provider.of<ProjectRepository>(context, listen: false);
-      final result = await repo.getUserProjects(page: page, limit: limit);
-      final List<Project> parsed = (result['projects'] as List)
-          .map((raw) {
-            final map = raw as Map<String, dynamic>;
-            // Map items to palettes, images and paints
-            final items = map['items'] as List? ?? [];
-            final palettes = items
-                .where((item) => item['table'] == 'palettes')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  return ProjectPalette(
-                    itemId: (item['id'] ?? '') as String,
-                    paletteId: (item['table_id'] ?? item['id'] ?? '') as String,
-                    name: (data['name'] ?? 'Palette') as String,
-                    linkedAt: DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                    total_paints: (data['total_paints'] ?? 0) as int,
-                  );
-                })
-                .toList();
-            
-            final images = items
-                .where((item) => item['table'] == 'user_color_images')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  return ProjectImage(
-                    id: (item['table_id'] ?? item['id'] ?? '') as String,
-                    imagePath: (data['image_path'] ?? '') as String,
-                    caption: null,
-                    type: ProjectImageType.reference,
-                    isMain: false,
-                    createdAt:
-                        DateTime.tryParse((data['created_at'] ?? '') as String) ??
-                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                  );
-                })
-                .toList();
+      // Get projects from cache service (cache-first)
+      final projects = await cacheService.getProjects(
+        forceRefresh: forceRefresh,
+        page: page,
+        limit: limit,
+      );
 
-            final paints = items
-                .where((item) => item['table'] == 'paints')
-                .map((item) {
-                  final data = item['data'] as Map<String, dynamic>? ?? {};
-                  final brandId = (data['brand_id'] ?? item['brand_id'] ?? 'Unknown') as String;
-                  return ProjectPaint(
-                    itemId: (item['id'] ?? '') as String,
-                    paintId: (data['id'] ?? item['table_id'] ?? '') as String,
-                    paintName: (data['name'] ?? 'Paint') as String,
-                    paintBrand: (data['set'] ?? brandId) as String,
-                    brandAvatar: brandId.isNotEmpty ? brandId[0] : 'U',
-                    colorHex: (data['hex'] ?? '#000000') as String,
-                    notes: null,
-                    addedAt:
-                        DateTime.tryParse((item['created_at'] ?? '') as String) ??
-                        DateTime.now(),
-                  );
-                })
-                .toList();
-
-            return Project(
-              id: map['id'] ?? '',
-              name: map['name'] ?? 'Untitled',
-              description: map['description'],
-              images: images,
-              palettes: palettes,
-              paints: paints,
-              createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-              updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
-              status: _parseStatus(map['status']),
-              userId: map['user_id'] ?? '',
-              tags: (map['tags'] is List)
-                  ? List<String>.from(map['tags'] as List)
-                  : const [],
-            );
-          })
-          .toList();
+      // Parse projects (they're already Project objects from cache)
+      final List<Project> parsed = projects;
 
       setState(() {
-        _currentPage = result['currentPage'] ?? page;
-        _totalPages = result['totalPages'] ?? 1;
-        _totalProjects = result['totalProjects'] ?? 0;
-        _totalDone = result['totalDone'] ?? 0;
-        _totalActive = result['totalActive'] ?? 0;
-        _totalShown = result['totalShown'] ?? parsed.length;
-        _limit = result['limit'] ?? limit;
+        _currentPage = page;
+        _totalPages = (parsed.length / limit).ceil();
+        _totalProjects = parsed.length;
+        _totalDone =
+            parsed.where((p) => p.status == ProjectStatus.completed).length;
+        _totalActive =
+            parsed.where((p) => p.status == ProjectStatus.inProgress).length;
+        _totalShown = parsed.length;
+        _limit = limit;
         _allProjects = parsed;
         _filteredProjects = List.from(_allProjects);
       });
 
       _applyFiltersAndSort();
     } catch (e) {
+      debugPrint('Error fetching projects: $e');
       // keep empty state on error
     } finally {
       if (mounted) {
@@ -165,6 +175,57 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Load fresh data in background without blocking UI
+  Future<void> _loadFreshDataInBackground(
+    int page,
+    int limit,
+    bool forceRefresh,
+  ) async {
+    try {
+      final cacheService = Provider.of<ProjectCacheService>(
+        context,
+        listen: false,
+      );
+
+      // Don't refresh from API if there are pending operations
+      // This prevents overwriting locally created projects that haven't synced yet
+      if (cacheService.hasPendingOperations) {
+        debugPrint('⏸️ Skipping background refresh - pending operations exist');
+        return;
+      }
+
+      // Fetch fresh data (this will update the cache)
+      final projects = await cacheService.getProjects(
+        forceRefresh: true, // Always refresh in background
+        page: page,
+        limit: limit,
+      );
+
+      // Update UI with fresh data if mounted
+      if (mounted) {
+        setState(() {
+          _currentPage = page;
+          _totalPages = (projects.length / limit).ceil();
+          _totalProjects = projects.length;
+          _totalDone =
+              projects.where((p) => p.status == ProjectStatus.completed).length;
+          _totalActive =
+              projects
+                  .where((p) => p.status == ProjectStatus.inProgress)
+                  .length;
+          _totalShown = projects.length;
+          _limit = limit;
+          _allProjects = projects;
+          _filteredProjects = List.from(_allProjects);
+        });
+        _applyFiltersAndSort();
+      }
+    } catch (e) {
+      debugPrint('Error loading fresh data in background: $e');
+      // Silently fail, user already has cached data
     }
   }
 
@@ -176,26 +237,30 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   void _applyFiltersAndSort() {
     setState(() {
-      _filteredProjects = _allProjects.where((project) {
-        // Text search
-        if (_searchController.text.isNotEmpty) {
-          final query = _searchController.text.toLowerCase();
-          final matchesName = project.name.toLowerCase().contains(query);
-          final matchesDescription = project.description?.toLowerCase().contains(query) ?? false;
-          final matchesTags = project.tags.any((tag) => tag.toLowerCase().contains(query));
-          
-          if (!matchesName && !matchesDescription && !matchesTags) {
-            return false;
-          }
-        }
+      _filteredProjects =
+          _allProjects.where((project) {
+            // Text search
+            if (_searchController.text.isNotEmpty) {
+              final query = _searchController.text.toLowerCase();
+              final matchesName = project.name.toLowerCase().contains(query);
+              final matchesDescription =
+                  project.description?.toLowerCase().contains(query) ?? false;
+              final matchesTags = project.tags.any(
+                (tag) => tag.toLowerCase().contains(query),
+              );
 
-        // Status filter
-        if (_selectedStatus != null && project.status != _selectedStatus) {
-          return false;
-        }
+              if (!matchesName && !matchesDescription && !matchesTags) {
+                return false;
+              }
+            }
 
-        return true;
-      }).toList();
+            // Status filter
+            if (_selectedStatus != null && project.status != _selectedStatus) {
+              return false;
+            }
+
+            return true;
+          }).toList();
 
       // Sort
       switch (_selectedSortOption) {
@@ -212,7 +277,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           _filteredProjects.sort((a, b) => b.name.compareTo(a.name));
           break;
         case 'Status':
-          _filteredProjects.sort((a, b) => a.status.index.compareTo(b.status.index));
+          _filteredProjects.sort(
+            (a, b) => a.status.index.compareTo(b.status.index),
+          );
           break;
       }
     });
@@ -220,31 +287,102 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cacheService = Provider.of<ProjectCacheService>(context);
+
     return AppScaffold(
       scaffoldKey: _scaffoldKey,
       selectedIndex: 5,
       title: 'My Projects',
       drawer: const SharedDrawer(currentScreen: 'projects'),
+      actions: [
+        // Sync indicator
+        if (cacheService.isSyncing)
+          Padding(
+            padding: EdgeInsets.only(right: 8.w),
+            child: SizedBox(
+              width: 20.w,
+              height: 20.h,
+              child: const CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ),
+        // Refresh button
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => _fetchProjects(forceRefresh: true),
+          tooltip: 'Refresh projects',
+        ),
+      ],
       body: Column(
         children: [
+          // Offline indicator banner
+          if (!cacheService.hasConnection)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              color: Colors.orange,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 16.r, color: Colors.white),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Offline Mode - Showing cached projects',
+                    style: TextStyle(
+                      fontSize: ResponsiveGuidelines.bodySmall,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Pending operations indicator
+          if (cacheService.hasPendingOperations)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              color: AppTheme.marineBlue.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.sync, size: 14.r, color: AppTheme.marineBlue),
+                  SizedBox(width: 8.w),
+                  Text(
+                    '${cacheService.pendingOperationsCount} pending changes',
+                    style: TextStyle(
+                      fontSize: ResponsiveGuidelines.labelSmall,
+                      color: AppTheme.marineBlue,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Search and filters
           _buildSearchAndFilters(),
-          
+
           // Stats bar
           _buildStatsBar(),
-          
+
           // Pagination controls (top)
           _buildPaginationBar(),
 
           // Tab bar
           _buildTabBar(),
-          
-          // Content
+
+          // Content with pull-to-refresh
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : TabBarView(
+            child: RefreshIndicator(
+              onRefresh: () => _fetchProjects(forceRefresh: true),
+              child:
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : TabBarView(
                         controller: _tabController,
                         children: [
                           _buildGridView(),
@@ -253,6 +391,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                           _buildTagsView(),
                         ],
                       ),
+            ),
           ),
           // Pagination controls (bottom)
           //_buildPaginationBar(),
@@ -262,10 +401,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         onPressed: _showCreateProjectModal,
         backgroundColor: AppTheme.marineOrange,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'New Project',
-          style: TextStyle(color: Colors.white),
-        ),
+        label: const Text('New Project', style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -281,15 +417,16 @@ class _ProjectsScreenState extends State<ProjectsScreen>
             decoration: InputDecoration(
               hintText: 'Search projects...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _applyFiltersAndSort();
-                      },
-                    )
-                  : null,
+              suffixIcon:
+                  _searchController.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _applyFiltersAndSort();
+                        },
+                      )
+                      : null,
             ),
             onChanged: (_) => _applyFiltersAndSort(),
           ),
@@ -332,14 +469,19 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     ),
                   );
                 }),
-                
+
                 SizedBox(width: 16.w),
-                
+
                 // Sort dropdown
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 4.h,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppTheme.textGrey.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppTheme.textGrey.withOpacity(0.3),
+                    ),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: DropdownButton<String>(
@@ -352,17 +494,18 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                       });
                       _applyFiltersAndSort();
                     },
-                    items: _sortOptions.map((option) {
-                      return DropdownMenuItem(
-                        value: option,
-                        child: Text(
-                          option,
-                          style: TextStyle(
-                            fontSize: ResponsiveGuidelines.bodySmall,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    items:
+                        _sortOptions.map((option) {
+                          return DropdownMenuItem(
+                            value: option,
+                            child: Text(
+                              option,
+                              style: TextStyle(
+                                fontSize: ResponsiveGuidelines.bodySmall,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ),
               ],
@@ -377,7 +520,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
     final totalProjects = _totalProjects;
     final completedProjects = _totalDone;
     final inProgressProjects = _totalActive;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: ResponsiveGuidelines.spacingL,
@@ -397,8 +540,16 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem(Icons.folder, totalProjects.toString(), 'Total'),
-          _buildStatItem(Icons.play_circle, inProgressProjects.toString(), 'Active'),
-          _buildStatItem(Icons.check_circle, completedProjects.toString(), 'Done'),
+          _buildStatItem(
+            Icons.play_circle,
+            inProgressProjects.toString(),
+            'Active',
+          ),
+          _buildStatItem(
+            Icons.check_circle,
+            completedProjects.toString(),
+            'Done',
+          ),
           _buildStatItem(Icons.filter_list, _totalShown.toString(), 'Shown'),
         ],
       ),
@@ -486,27 +637,32 @@ class _ProjectsScreenState extends State<ProjectsScreen>
           // Controls
           IconButton(
             tooltip: 'First page',
-            onPressed: _currentPage > 1 && !_isLoading ? () => _goToPage(1) : null,
+            onPressed:
+                _currentPage > 1 && !_isLoading ? () => _goToPage(1) : null,
             icon: const Icon(Icons.first_page),
           ),
           IconButton(
             tooltip: 'Previous page',
             onPressed:
-                _currentPage > 1 && !_isLoading ? () => _goToPage(_currentPage - 1) : null,
+                _currentPage > 1 && !_isLoading
+                    ? () => _goToPage(_currentPage - 1)
+                    : null,
             icon: const Icon(Icons.chevron_left),
           ),
           IconButton(
             tooltip: 'Next page',
-            onPressed: _currentPage < _totalPages && !_isLoading
-                ? () => _goToPage(_currentPage + 1)
-                : null,
+            onPressed:
+                _currentPage < _totalPages && !_isLoading
+                    ? () => _goToPage(_currentPage + 1)
+                    : null,
             icon: const Icon(Icons.chevron_right),
           ),
           IconButton(
             tooltip: 'Last page',
-            onPressed: _currentPage < _totalPages && !_isLoading
-                ? () => _goToPage(_totalPages)
-                : null,
+            onPressed:
+                _currentPage < _totalPages && !_isLoading
+                    ? () => _goToPage(_totalPages)
+                    : null,
             icon: const Icon(Icons.last_page),
           ),
         ],
@@ -556,7 +712,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Project image
+            // Project image with options button
             Expanded(
               flex: 3,
               child: Container(
@@ -567,16 +723,40 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     topRight: Radius.circular(ResponsiveGuidelines.radiusL),
                   ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(ResponsiveGuidelines.radiusL),
-                    topRight: Radius.circular(ResponsiveGuidelines.radiusL),
-                  ),
-                  child: _buildProjectImage(project),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(ResponsiveGuidelines.radiusL),
+                        topRight: Radius.circular(ResponsiveGuidelines.radiusL),
+                      ),
+                      child: _buildProjectImage(project),
+                    ),
+                    // Options button in top-right corner
+                    Positioned(
+                      top: 8.h,
+                      right: 8.w,
+                      child: GestureDetector(
+                        onTap: () => _showProjectOptions(project),
+                        child: Container(
+                          padding: EdgeInsets.all(4.w),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Icon(
+                            Icons.more_vert,
+                            color: Colors.white,
+                            size: 16.r,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            
+
             // Project info
             Expanded(
               flex: 2,
@@ -593,11 +773,14 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
+
                     SizedBox(height: 4.h),
-                    
+
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 2.h,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(project.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8.r),
@@ -611,26 +794,52 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                         ),
                       ),
                     ),
-                    
+
                     const Spacer(),
-                    
+
                     Row(
                       children: [
-                        Icon(Icons.photo_library, size: 14.r, color: AppTheme.textGrey),
+                        Icon(
+                          Icons.photo_library,
+                          size: 14.r,
+                          color: AppTheme.textGrey,
+                        ),
                         SizedBox(width: 2.w),
-                        Text('${project.images.length}', style: TextStyle(fontSize: ResponsiveGuidelines.labelSmall, color: AppTheme.textGrey)),
-                        
+                        Text(
+                          '${project.images.length}',
+                          style: TextStyle(
+                            fontSize: ResponsiveGuidelines.labelSmall,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
+
                         SizedBox(width: 8.w),
-                        
-                        Icon(Icons.palette, size: 14.r, color: AppTheme.textGrey),
+
+                        Icon(
+                          Icons.palette,
+                          size: 14.r,
+                          color: AppTheme.textGrey,
+                        ),
                         SizedBox(width: 2.w),
-                        Text('${project.palettes.length}', style: TextStyle(fontSize: ResponsiveGuidelines.labelSmall, color: AppTheme.textGrey)),
-                        
+                        Text(
+                          '${project.palettes.length}',
+                          style: TextStyle(
+                            fontSize: ResponsiveGuidelines.labelSmall,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
+
                         SizedBox(width: 8.w),
-                        
+
                         Icon(Icons.brush, size: 14.r, color: AppTheme.textGrey),
                         SizedBox(width: 2.w),
-                        Text('${project.paints.length}', style: TextStyle(fontSize: ResponsiveGuidelines.labelSmall, color: AppTheme.textGrey)),
+                        Text(
+                          '${project.paints.length}',
+                          style: TextStyle(
+                            fontSize: ResponsiveGuidelines.labelSmall,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -645,7 +854,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
 
   Widget _buildProjectImage(Project project) {
     ProjectImage? mainImage;
-    
+
     try {
       mainImage = project.images.firstWhere((img) => img.isMain);
     } catch (e) {
@@ -658,13 +867,15 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         return Image.network(
           mainImage.imagePath,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+          errorBuilder:
+              (context, error, stackTrace) => _buildPlaceholderImage(),
         );
       } else {
         return Image.asset(
           mainImage.imagePath,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+          errorBuilder:
+              (context, error, stackTrace) => _buildPlaceholderImage(),
         );
       }
     }
@@ -745,9 +956,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     child: _buildProjectImage(project),
                   ),
                 ),
-                
+
                 SizedBox(width: 16.w),
-                
+
                 // Project info
                 Expanded(
                   child: Column(
@@ -755,13 +966,12 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     children: [
                       Text(
                         project.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      
+
                       if (project.description != null) ...[
                         SizedBox(height: 4.h),
                         Text(
@@ -774,15 +984,20 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      
+
                       SizedBox(height: 8.h),
-                      
+
                       Row(
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 2.h,
+                            ),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(project.status).withOpacity(0.1),
+                              color: _getStatusColor(
+                                project.status,
+                              ).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8.r),
                             ),
                             child: Text(
@@ -794,9 +1009,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                               ),
                             ),
                           ),
-                          
+
                           const Spacer(),
-                          
+
                           Text(
                             _formatDate(project.updatedAt),
                             style: TextStyle(
@@ -809,18 +1024,28 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     ],
                   ),
                 ),
-                
+
                 SizedBox(width: 16.w),
-                
+
                 // Stats
                 Column(
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.photo_library, size: 16.r, color: AppTheme.textGrey),
+                        Icon(
+                          Icons.photo_library,
+                          size: 16.r,
+                          color: AppTheme.textGrey,
+                        ),
                         SizedBox(width: 4.w),
-                        Text('${project.images.length}', style: TextStyle(fontSize: ResponsiveGuidelines.bodySmall, color: AppTheme.textGrey)),
+                        Text(
+                          '${project.images.length}',
+                          style: TextStyle(
+                            fontSize: ResponsiveGuidelines.bodySmall,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
                       ],
                     ),
                     SizedBox(height: 4.h),
@@ -829,10 +1054,35 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                       children: [
                         Icon(Icons.brush, size: 16.r, color: AppTheme.textGrey),
                         SizedBox(width: 4.w),
-                        Text('${project.paints.length}', style: TextStyle(fontSize: ResponsiveGuidelines.bodySmall, color: AppTheme.textGrey)),
+                        Text(
+                          '${project.paints.length}',
+                          style: TextStyle(
+                            fontSize: ResponsiveGuidelines.bodySmall,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
                       ],
                     ),
                   ],
+                ),
+
+                SizedBox(width: 8.w),
+
+                // Options button
+                GestureDetector(
+                  onTap: () => _showProjectOptions(project),
+                  child: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppTheme.textGrey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Icon(
+                      Icons.more_vert,
+                      color: AppTheme.textGrey,
+                      size: 18.r,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -855,13 +1105,13 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         children: [
           Text(
             'Project Statistics',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
-          
+
           SizedBox(height: ResponsiveGuidelines.spacingL),
-          
+
           // Status breakdown
           Container(
             padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
@@ -878,13 +1128,16 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                
+
                 SizedBox(height: ResponsiveGuidelines.spacingM),
-                
+
                 ...ProjectStatus.values.map((status) {
                   final count = statusCounts[status] ?? 0;
-                  final percentage = _allProjects.isNotEmpty ? (count / _allProjects.length * 100) : 0;
-                  
+                  final percentage =
+                      _allProjects.isNotEmpty
+                          ? (count / _allProjects.length * 100)
+                          : 0;
+
                   return Padding(
                     padding: EdgeInsets.only(bottom: 12.h),
                     child: Row(
@@ -897,9 +1150,9 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                             shape: BoxShape.circle,
                           ),
                         ),
-                        
+
                         SizedBox(width: 12.w),
-                        
+
                         Expanded(
                           child: Text(
                             '${status.emoji} ${status.displayName}',
@@ -909,7 +1162,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
                             ),
                           ),
                         ),
-                        
+
                         Text(
                           '$count (${percentage.toStringAsFixed(0)}%)',
                           style: TextStyle(
@@ -940,8 +1193,8 @@ class _ProjectsScreenState extends State<ProjectsScreen>
       tagCounts[tag] = _allProjects.where((p) => p.tags.contains(tag)).length;
     }
 
-    final sortedTags = tagCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sortedTags =
+        tagCounts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     return Padding(
       padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
@@ -950,72 +1203,75 @@ class _ProjectsScreenState extends State<ProjectsScreen>
         children: [
           Text(
             'Popular Tags',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
-          
+
           SizedBox(height: ResponsiveGuidelines.spacingL),
-          
+
           Expanded(
-            child: sortedTags.isNotEmpty
-                ? Wrap(
-                    spacing: 8.w,
-                    runSpacing: 8.h,
-                    children: sortedTags.map((entry) {
-                      return Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 8.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.marineBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20.r),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              entry.key,
-                              style: TextStyle(
-                                fontSize: ResponsiveGuidelines.bodyMedium,
-                                color: AppTheme.marineBlue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Container(
+            child:
+                sortedTags.isNotEmpty
+                    ? Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children:
+                          sortedTags.map((entry) {
+                            return Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 6.w,
-                                vertical: 2.h,
+                                horizontal: 12.w,
+                                vertical: 8.h,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.marineBlue,
-                                borderRadius: BorderRadius.circular(10.r),
+                                color: AppTheme.marineBlue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20.r),
                               ),
-                              child: Text(
-                                entry.value.toString(),
-                                style: TextStyle(
-                                  fontSize: ResponsiveGuidelines.labelSmall,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: TextStyle(
+                                      fontSize: ResponsiveGuidelines.bodyMedium,
+                                      color: AppTheme.marineBlue,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6.w,
+                                      vertical: 2.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.marineBlue,
+                                      borderRadius: BorderRadius.circular(10.r),
+                                    ),
+                                    child: Text(
+                                      entry.value.toString(),
+                                      style: TextStyle(
+                                        fontSize:
+                                            ResponsiveGuidelines.labelSmall,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            );
+                          }).toList(),
+                    )
+                    : Center(
+                      child: Text(
+                        'No tags found',
+                        style: TextStyle(
+                          fontSize: ResponsiveGuidelines.bodyLarge,
+                          color: AppTheme.textGrey,
                         ),
-                      );
-                    }).toList(),
-                  )
-                : Center(
-                    child: Text(
-                      'No tags found',
-                      style: TextStyle(
-                        fontSize: ResponsiveGuidelines.bodyLarge,
-                        color: AppTheme.textGrey,
                       ),
                     ),
-                  ),
           ),
         ],
       ),
@@ -1087,7 +1343,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 30) {
       return '${date.day}/${date.month}/${date.year}';
     } else if (difference.inDays > 0) {
@@ -1100,22 +1356,7 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   }
 
   // Actions
-  ProjectStatus _parseStatus(dynamic value) {
-    if (value == null) return ProjectStatus.planning;
-    final v = value.toString().toLowerCase().trim();
-    switch (v) {
-      case 'planning':
-        return ProjectStatus.planning;
-      case 'in_progress':
-        return ProjectStatus.inProgress;
-      case 'completed':
-        return ProjectStatus.completed;
-      case 'on_hold':
-        return ProjectStatus.onHold;
-      default:
-        return ProjectStatus.planning;
-    }
-  }
+
   void _openProjectDetail(Project project) {
     Navigator.push(
       context,
@@ -1128,38 +1369,42 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   void _showProjectOptions(Project project) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => Container(
-        padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.visibility),
-              title: const Text('View Details'),
-              onTap: () {
-                Navigator.pop(context);
-                _openProjectDetail(project);
-              },
+      builder:
+          (context) => Container(
+            padding: EdgeInsets.all(ResponsiveGuidelines.spacingL),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.visibility),
+                  title: const Text('View Details'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openProjectDetail(project);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: const Text('Edit Project'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _editProject(project);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Project',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteProject(project);
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Project'),
-              onTap: () {
-                Navigator.pop(context);
-                _editProject(project);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete Project', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteProject(project);
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -1179,35 +1424,53 @@ class _ProjectsScreenState extends State<ProjectsScreen>
   void _deleteProject(Project project) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Project'),
-        content: Text('Are you sure you want to delete "${project.name}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Project'),
+            content: Text(
+              'Are you sure you want to delete "${project.name}"? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    final cacheService = Provider.of<ProjectCacheService>(
+                      context,
+                      listen: false,
+                    );
+                    final ok = await cacheService.deleteProject(project.id);
+                    if (ok && mounted) {
+                      // No need to call _fetchProjects since cache service will notify listeners
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Project "${project.name}" deleted'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting project: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                final repo = Provider.of<ProjectRepository>(context, listen: false);
-                final ok = await repo.delete(project.id);
-                if (ok && mounted) {
-                  await _fetchProjects(page: _currentPage);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Project "${project.name}" deleted'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              } catch (_) {}
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 

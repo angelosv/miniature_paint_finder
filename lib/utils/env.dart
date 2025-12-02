@@ -1,4 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../config/app_config.dart';
 
 class Env {
@@ -20,4 +19,5 @@ class Env {
   static bool get isDevelopment => AppConfig.isDevelopment;
   static bool get isStaging => AppConfig.isStaging;
   static bool get isProduction => AppConfig.isProduction;
+  static bool get isQA => AppConfig.isQA;
 }

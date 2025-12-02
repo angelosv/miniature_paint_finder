@@ -8,11 +8,10 @@ import 'package:miniature_paint_finder/screens/paint_selector_screen.dart';
 import 'package:miniature_paint_finder/screens/palette_selector_screen.dart';
 import 'package:miniature_paint_finder/services/image_upload_service.dart';
 import 'package:miniature_paint_finder/repositories/project_repository.dart';
+import 'package:miniature_paint_finder/services/project_cache_service.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:miniature_paint_finder/repositories/project_repository.dart';
-import 'package:provider/provider.dart';
 
 class EditProjectScreen extends StatefulWidget {
   final Project project;
@@ -1126,12 +1125,14 @@ class _EditProjectScreenState extends State<EditProjectScreen>
       updatedAt: DateTime.now(),
     );
     try {
-      final repo = Provider.of<ProjectRepository>(context, listen: false);
-      await repo.update(updatedProject);
+      final cacheService = Provider.of<ProjectCacheService>(context, listen: false);
+      
+      // Update project using cache service (optimistic update)
+      await cacheService.updateProject(updatedProject);
 
       // Link new uploaded images to the project
       for (final recordId in _newImageRecordIds) {
-        await repo.addProjectItem(
+        await cacheService.addProjectItem(
           projectId: updatedProject.id,
           table: 'user_color_images',
           tableId: recordId,
@@ -1141,7 +1142,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
 
       // Link new palettes to the project
       for (final recordId in _newPaletteRecordIds) {
-        await repo.addProjectItem(
+        await cacheService.addProjectItem(
           projectId: updatedProject.id,
           table: 'palettes',
           tableId: recordId,
@@ -1151,7 +1152,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
 
       // Link new paints to the project
       for (final reacordPaint in _newPaintRecordIds) {
-        await repo.addProjectItem(
+        await cacheService.addProjectItem(
           projectId: updatedProject.id,
           table: 'paints',
           tableId: reacordPaint["paintId"] as String ?? '',
@@ -1161,17 +1162,17 @@ class _EditProjectScreenState extends State<EditProjectScreen>
 
       // Delete removed image links from the project
       for (final itemId in _deletedImageItemIds) {
-        await repo.deleteProjectItem(itemId: itemId);
+        await cacheService.deleteProjectItem(itemId: itemId);
       }
 
       // Delete removed palette links from the project
       for (final itemId in _deletedPaletteItemIds) {
-        await repo.deleteProjectItem(itemId: itemId);
+        await cacheService.deleteProjectItem(itemId: itemId);
       }
 
       // Delete removed paint links from the project
       for (final paintItem in _deletedPaintItemIds) {
-        await repo.deleteProjectItem(itemId: paintItem["itemId"] ?? '');
+        await cacheService.deleteProjectItem(itemId: paintItem["itemId"] ?? '');
       }
 
       setState(() {
@@ -1195,7 +1196,7 @@ class _EditProjectScreenState extends State<EditProjectScreen>
         Navigator.pop(context, updatedProject);
       }
     } catch (e) {
-      print("Error: $e");
+      debugPrint("Error saving project: $e");
       setState(() {
         _isSaving = false;
       });
