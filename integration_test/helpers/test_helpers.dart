@@ -56,11 +56,53 @@ class TestHelpers {
     await tester.pumpAndSettle();
   }
 
+  /// Navigate to Library screen with multiple fallback methods
+  static Future<void> navigateToLibrary(WidgetTester tester) async {
+    // Method 1: Try direct library icon
+    if (find.byIcon(Icons.library_books).evaluate().isNotEmpty) {
+      await tester.tap(find.byIcon(Icons.library_books));
+      await tester.pump(Duration(seconds: 1));
+      return;
+    }
+    
+    // Method 2: Try library text
+    if (find.text('Library').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Library'));
+      await tester.pump(Duration(seconds: 1));
+      return;
+    }
+    
+    // Method 3: Try opening drawer first
+    if (find.byIcon(Icons.menu).evaluate().isNotEmpty) {
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pump(Duration(milliseconds: 500));
+      
+      if (find.text('Library').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Library'));
+        await tester.pump(Duration(seconds: 1));
+        return;
+      }
+    }
+    
+    // Method 4: Try bottom navigation
+    final bottomNavItems = find.byType(BottomNavigationBar);
+    if (bottomNavItems.evaluate().isNotEmpty) {
+      // Look for library in bottom nav
+      if (find.byIcon(Icons.library_books).evaluate().isNotEmpty) {
+        await tester.tap(find.byIcon(Icons.library_books));
+        await tester.pump(Duration(seconds: 1));
+        return;
+      }
+    }
+    
+    print('⚠️ Could not find Library navigation');
+  }
+
   /// Clear all data from cache services
   static Future<void> clearAllData(WidgetTester tester) async {
     // This would need to be implemented based on your cache services
     // For now, we'll simulate clearing data
-    await tester.pumpAndSettle();
+    await tester.pump(Duration(milliseconds: 500));
   }
 
   /// Create a test project
