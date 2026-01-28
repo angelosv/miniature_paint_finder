@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniature_paint_finder/models/most_used_paint.dart';
 import 'package:miniature_paint_finder/utils/env.dart';
 
@@ -10,21 +11,27 @@ class PaletteService {
   /// HTTP client for making requests (injected for testing)
   final http.Client _client;
 
-  /// Constructor allowing dependency injection for baseUrl and client
-  PaletteService({String? baseUrl, http.Client? client})
+  /// FirebaseAuth instance (injected for testing)
+  final FirebaseAuth _auth;
+
+  /// Constructor allowing dependency injection for baseUrl, client, and auth
+  PaletteService({String? baseUrl, http.Client? client, FirebaseAuth? auth})
     : baseUrl = baseUrl ?? Env.apiBaseUrl,
-      _client = client ?? http.Client();
+      _client = client ?? http.Client(),
+      _auth = auth ?? FirebaseAuth.instance;
 
   Future<Map<String, dynamic>> uploadImage(
     String imagePath,
     String token,
   ) async {
+    final user = _auth.currentUser;
     final url = Uri.parse('$baseUrl/image/upload');
 
     final response = await _client.post(
       url,
       headers: {
         'Authorization': 'Bearer $token',
+         if (user != null) 'x-user-uid': user.uid,
         'Content-Type': 'application/json',
       },
       body: jsonEncode({'image_path': imagePath}),
@@ -71,6 +78,9 @@ class PaletteService {
     String token,
     List<Map<String, dynamic>> colorData,
   ) async {
+    print('[getImagePicks] imageId: $imageId');
+    print('[getImagePicks] colorData: $colorData');
+    print('[getImagePicks] token: $token');
     final url = Uri.parse('$baseUrl/image/$imageId/picks');
 
     final response = await _client.post(

@@ -4,6 +4,7 @@ import 'package:miniature_paint_finder/models/palette.dart';
 import 'package:miniature_paint_finder/models/paint.dart';
 import 'package:miniature_paint_finder/repositories/palette_repository.dart';
 import 'package:miniature_paint_finder/services/palette_cache_service.dart';
+import 'package:miniature_paint_finder/services/color_search_service.dart';
 
 /// Controller for palette-related operations
 class PaletteController extends ChangeNotifier {
@@ -433,6 +434,55 @@ class PaletteController extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to remove paint from palette: $e';
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Create a palette with image picks using ColorSearchService
+  Future<Palette?> createPaletteWithImagePicks({
+    required String token,
+    required String name,
+    required List<Map<String, dynamic>> paints,
+    required String imagePath,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final colorSearchService = ColorSearchService();
+      print('[createPaletteWithImagePicks] name: $name');
+      print('[createPaletteWithImagePicks] paints: $paints');
+      print('[createPaletteWithImagePicks] imagePath: $imagePath');
+      print('[createPaletteWithImagePicks] token: $token');
+      
+      await colorSearchService.saveColorSearch(
+        token: token,
+        name: name,
+        paints: paints,
+        imagePath: imagePath,
+      );
+
+      // Refresh palettes after creation
+      await refreshPalettes();
+
+      // Find and return the newly created palette
+      if (_palettes.isEmpty) {
+        return null;
+      }
+
+      try {
+        return _palettes.firstWhere((p) => p.name == name);
+      } catch (e) {
+        // If not found by name, return the last one (most recently created)
+        return _palettes.isNotEmpty ? _palettes.last : null;
+      }
+    } catch (e) {
+      debugPrint('❌ Error creating palette with image picks: $e');
+      _error = 'Failed to create palette: $e';
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();

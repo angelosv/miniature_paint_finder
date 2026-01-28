@@ -22,9 +22,12 @@ class ColorSearchService {
     required String imagePath,
   }) async {
     try {
+      print('[saveColorSearch]');
       // Paso 1: Subir la imagen
       final imageData = await _paletteService.uploadImage(imagePath, token);
+      print('[saveColorSearch] imageData: $imageData');
       final imageId = imageData['id'];
+      print('[saveColorSearch] imageId: $imageId');
 
       // Paso 2: Preparar y crear los picks de la imagen
       final colorData =
@@ -44,12 +47,15 @@ class ColorSearchService {
               'y_coord': '1.1',
             };
           }).toList();
-
+      print('[saveColorSearch] colorData: $colorData');
+      print('[saveColorSearch] token: $token');
       final picks = await _paletteService.getImagePicks(
         imageId,
         token,
         colorData,
       );
+    
+      print('[saveColorSearch] picks: $picks');
 
       if (picks.isEmpty) {
         throw Exception('No se crearon picks para la imagen');
@@ -61,7 +67,7 @@ class ColorSearchService {
 
       // Paso 3: Crear la paleta
       final paletteData = await _paletteService.createPalette(name, token);
-      final paletteId = paletteData['id'];
+      final paletteId = paletteData['doc_id'];
 
       // Paso 4: Agregar las pinturas a la paleta
       final paintsToSend = <Map<String, dynamic>>[];

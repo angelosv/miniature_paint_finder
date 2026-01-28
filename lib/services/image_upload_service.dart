@@ -42,6 +42,9 @@ class ImageUploadService {
 
       // Add authentication token
       request.headers['Authorization'] = 'Bearer $token';
+      if(user != null) {
+        request.headers['x-user-uid'] = user.uid;
+      }
 
       // Send request
       var response = await _client.send(request);
@@ -74,6 +77,7 @@ class ImageUploadService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (user != null) 'x-user-uid': user.uid,
         },
         body: json.encode({
           'image_path': imagePath,

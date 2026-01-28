@@ -595,6 +595,7 @@ class _ImageColorPickerState extends State<ImageColorPicker> {
                 const SizedBox(height: 16),
                 Text(
                   'Select an image to find matching paints',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                     fontSize: 16,

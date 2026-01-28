@@ -692,63 +692,75 @@ class _WishlistScreenState extends State<WishlistScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isDarkMode
-                                            ? AppTheme.primaryBlue.withOpacity(
-                                              0.3,
-                                            )
-                                            : AppTheme.primaryBlue.withOpacity(
-                                              0.1,
-                                            ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    paint.category,
-                                    style: TextStyle(
-                                      color:
-                                          isDarkMode
-                                              ? Colors.lightBlue[100]
-                                              : AppTheme.primaryBlue,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                if (paint.isMetallic || paint.isTransparent)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isDarkMode
-                                                ? Colors.amber.withOpacity(0.3)
-                                                : Colors.amber.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        paint.isMetallic
-                                            ? 'Metallic'
-                                            : 'Transparent',
-                                        style: TextStyle(
+                                Expanded(
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
                                           color:
                                               isDarkMode
-                                                  ? Colors.amber[100]
-                                                  : Colors.amber[800],
-                                          fontSize: 12,
+                                                  ? AppTheme.primaryBlue
+                                                      .withOpacity(0.3)
+                                                  : AppTheme.primaryBlue
+                                                      .withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          paint.category,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.lightBlue[100]
+                                                    : AppTheme.primaryBlue,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      if (paint.isMetallic ||
+                                          paint.isTransparent)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                isDarkMode
+                                                    ? Colors.amber.withOpacity(
+                                                      0.3,
+                                                    )
+                                                    : Colors.amber.withOpacity(
+                                                      0.1,
+                                                    ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            paint.isMetallic
+                                                ? 'Metallic'
+                                                : 'Transparent',
+                                            style: TextStyle(
+                                              color:
+                                                  isDarkMode
+                                                      ? Colors.amber[100]
+                                                      : Colors.amber[800],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                const Spacer(),
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
                                   'Added ${_formatDate(addedAt)}',
                                   style: TextStyle(

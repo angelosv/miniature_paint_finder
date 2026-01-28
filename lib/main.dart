@@ -35,6 +35,7 @@ import 'package:miniature_paint_finder/services/mixpanel_service.dart';
 import 'dart:async';
 import 'package:miniature_paint_finder/services/wishlist_cache_service.dart';
 import 'package:miniature_paint_finder/services/palette_cache_service.dart';
+import 'package:miniature_paint_finder/services/palette_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/app_config.dart';
@@ -250,10 +251,14 @@ void main() async {
           value: projectCacheService,
         ),
         Provider<MixpanelService>.value(value: analyticsService),
+        Provider<PaletteService>.value(value: PaletteService()),
         ChangeNotifierProvider(
           create:
               (context) =>
-                  PaletteController(paletteRepository, paletteCacheService),
+                  PaletteController(
+                    paletteRepository,
+                    paletteCacheService,
+                  ),
         ),
         ChangeNotifierProvider(
           create:

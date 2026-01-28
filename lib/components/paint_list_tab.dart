@@ -1535,18 +1535,25 @@ class _PaintListTabState extends State<PaintListTab> {
                                                         const SizedBox(
                                                           width: 8,
                                                         ),
-                                                        Text(
-                                                          "${colorData['paintName']}",
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                            color:
-                                                                isDarkMode
-                                                                    ? Colors
-                                                                        .white
-                                                                    : Colors
-                                                                        .black,
+                                                        Expanded(
+                                                          child: Text(
+                                                            "${colorData['paintName']}",
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color:
+                                                                  isDarkMode
+                                                                      ? Colors
+                                                                          .white
+                                                                      : Colors
+                                                                          .black,
+                                                            ),
                                                           ),
                                                         ),
 
@@ -1717,101 +1724,40 @@ class _PaintListTabState extends State<PaintListTab> {
                                                     '🎨 Pinturas seleccionadas: ${paintsToSend.length}',
                                                   );
 
-                                                  // FIXED: Use PaletteController with cache service instead of ColorSearchService
+                                                  // Migrated: Use PaletteController.createPaletteWithImagePicks
+                                                  // This method handles: upload image, create picks, create palette, add paints with picks
+                                                  
+                                                  // Get authentication token
+                                                  final token = await currentUser.getIdToken();
+                                                  if (token == null) {
+                                                    throw Exception(
+                                                      'No se encontró el token de autenticación',
+                                                    );
+                                                  }
 
-                                                  // Convert the paint data to colors for the palette
-                                                  final List<Color>
-                                                  paletteColors =
-                                                      paintsToSend.map((paint) {
-                                                        final hexString =
-                                                            paint['hex']
-                                                                as String;
-                                                        final cleanHex =
-                                                            hexString
-                                                                    .startsWith(
-                                                                      '#',
-                                                                    )
-                                                                ? hexString
-                                                                    .substring(
-                                                                      1,
-                                                                    )
-                                                                : hexString;
-                                                        return Color(
-                                                          int.parse(
-                                                                cleanHex,
-                                                                radix: 16,
-                                                              ) +
-                                                              0xFF000000,
-                                                        );
-                                                      }).toList();
-
-                                                  // Create palette through cache service (same pattern as My Palettes screen)
+                                                  // Create palette with image picks using the migrated method
                                                   final createdPalette =
                                                       await context
                                                           .read<
                                                             PaletteController
                                                           >()
-                                                          .createPalette(
+                                                          .createPaletteWithImagePicks(
+                                                            token: token,
                                                             name: paletteName,
+                                                            paints: paintsToSend,
                                                             imagePath:
                                                                 _uploadedImageUrl ??
                                                                 '',
-                                                            colors:
-                                                                paletteColors,
-                                                            useCache: false,
                                                           );
 
                                                   if (createdPalette == null) {
                                                     throw Exception(
-                                                      'Failed to create palette through cache service',
+                                                      'Failed to create palette with image picks',
                                                     );
-                                                  }
-
-                                                  // Now add the selected paints to the palette using the cache service
-                                                  for (final paint
-                                                      in paintsToSend) {
-                                                    final paintObj = Paint.fromHex(
-                                                      id: paint['id'] as String,
-                                                      name:
-                                                          paint['name']
-                                                              as String,
-                                                      brand:
-                                                          paint['brand']
-                                                              as String,
-                                                      brandId:
-                                                          paint['brand_id']
-                                                              as String,
-                                                      hex:
-                                                          paint['hex']
-                                                              as String,
-                                                      category:
-                                                          'Base', // Default category for color-matched paints
-                                                      set:
-                                                          paint['brand']
-                                                              as String, // Use brand as set fallback
-                                                      code:
-                                                          paint['colorCode']
-                                                              as String? ??
-                                                          paint['id'] as String,
-                                                    );
-
-                                                    await context
-                                                        .read<
-                                                          PaletteController
-                                                        >()
-                                                        .addPaintToPalette(
-                                                          createdPalette
-                                                                  .doc_id ??
-                                                              createdPalette.id,
-                                                          paintObj,
-                                                          paint['hex']
-                                                              as String,
-                                                          useCache: false,
-                                                        );
                                                   }
 
                                                   debugPrint(
-                                                    '✅ Palette created through cache service: ${createdPalette.name}',
+                                                    '✅ Palette created with image picks: ${createdPalette.name}',
                                                   );
 
                                                   // Verificar si el widget sigue montado después de la operación asíncrona
